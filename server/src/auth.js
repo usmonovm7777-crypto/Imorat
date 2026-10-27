@@ -107,6 +107,6 @@ export function publicUser(u, admins = []) {
   return {
     id: u.id, name: u.name, phone: u.phone ? prettyPhone(u.phone) : "", email: u.email, role: u.role, district: u.district,
     vip: !!u.vip, store_id: u.store_id || null, via: u.google_sub ? "google" : u.apple_sub ? "apple" : "phone",
-    admin: !!u.phone && admins.includes(u.phone), created: u.created_at
+    admin: !!u.phone && admins.includes(u.phone), created: u.created_at, points: u.points || 0
   };
 }

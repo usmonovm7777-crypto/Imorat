@@ -46,6 +46,8 @@ CREATE TABLE IF NOT EXISTS masters(id TEXT PRIMARY KEY, user_id TEXT NOT NULL UN
 CREATE TABLE IF NOT EXISTS master_requests(id INTEGER PRIMARY KEY AUTOINCREMENT, master_id TEXT NOT NULL, user_id TEXT NOT NULL, text TEXT NOT NULL, when_txt TEXT NOT NULL, district TEXT, street TEXT, phone TEXT NOT NULL, name TEXT, status TEXT NOT NULL DEFAULT 'new', stars INTEGER, review TEXT, created_at INTEGER NOT NULL, status_at INTEGER NOT NULL);
 CREATE INDEX IF NOT EXISTS master_requests_m ON master_requests(master_id);
 CREATE INDEX IF NOT EXISTS master_requests_u ON master_requests(user_id);
+CREATE TABLE IF NOT EXISTS points_log(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT NOT NULL, delta INTEGER NOT NULL, reason TEXT NOT NULL, ref TEXT, created_at INTEGER NOT NULL);
+CREATE INDEX IF NOT EXISTS points_log_u ON points_log(user_id, ref);
 CREATE TABLE IF NOT EXISTS tg_links(token TEXT PRIMARY KEY, user_id TEXT NOT NULL, expires_at INTEGER NOT NULL);
 CREATE INDEX IF NOT EXISTS reviews_store ON reviews(store_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS orders_user ON orders(user_id, created_at DESC);
@@ -62,6 +64,8 @@ export function openDb(path, catalogPath) {
   // Columns added after the first release (safe to run on an existing database)
   const addCol = (t, c, def) => { if (!raw.prepare(`PRAGMA table_info(${t})`).all().some(x => x.name === c)) raw.exec(`ALTER TABLE ${t} ADD COLUMN ${c} ${def}`); };
   addCol("users", "tg_chat", "TEXT"); addCol("users", "token_ver", "INTEGER NOT NULL DEFAULT 0");
+  addCol("users", "points", "INTEGER NOT NULL DEFAULT 0"); addCol("users", "ref_code", "TEXT"); addCol("users", "ref_by", "TEXT"); addCol("users", "ref_paid", "INTEGER NOT NULL DEFAULT 0");
+  addCol("orders", "points_used", "INTEGER NOT NULL DEFAULT 0");
   addCol("users", "totp_secret", "TEXT"); addCol("users", "totp_on", "INTEGER NOT NULL DEFAULT 0");
   addCol("shipments", "accepted_at", "INTEGER"); addCol("shipments", "start_at", "INTEGER"); addCol("shipments", "reminded", "INTEGER NOT NULL DEFAULT 0");
   addCol("shipments", "sms_sent", "INTEGER NOT NULL DEFAULT 0"); addCol("shipments", "cancel_reason", "TEXT"); addCol("shipments", "tg_msg", "TEXT");

@@ -770,6 +770,14 @@ html.ds-dragging, html.ds-dragging * { cursor: grabbing !important; user-select:
 .ds-wish { display: flex; gap: 6px; }
 .ds-wish input { flex: 1; min-width: 0; border: 1.5px solid var(--line); border-radius: 12px; padding: 10px 12px; background: var(--raised); font: inherit; color: inherit; }
 .ds-sw { display: flex; flex-wrap: wrap; gap: 6px; }
+.bonus-card { display: grid; gap: 8px; padding: 14px; border-radius: 16px; border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--line)); background: color-mix(in srgb, var(--accent) 7%, var(--surface)); }
+.bonus-card .bc-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.bonus-card .bc-top b { font-size: 26px; color: var(--accent); }
+.bonus-card small { color: var(--muted); }
+.bc-ref { display: grid; gap: 6px; font-size: 14px; border-top: 1px dashed var(--line); padding-top: 8px; }
+.bc-code { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; } .bc-code b { font-size: 18px; letter-spacing: .08em; padding: 4px 10px; border-radius: 10px; background: var(--surface); border: 1px dashed var(--accent); }
+.bc-enter { display: flex; gap: 6px; } .bc-enter input { flex: 1; min-width: 0; text-transform: uppercase; }
+.bonus-card details summary { cursor: pointer; font-size: 13px; color: var(--muted); }
 .ds-roomsh { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
 .flat-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 12px; align-items: start; }
 .flat-grid > .panel { display: grid; gap: 10px; }
@@ -1207,8 +1215,8 @@ function apiErr(e) {
   if (String(e.code || "").startsWith("bad_")) return L("Проверьте данные: ", "Ma’lumotlarni tekshiring: ") + e.message;
   return L("Что-то пошло не так. Попробуйте ещё раз.", "Nimadir xato ketdi. Qayta urinib ko‘ring.");
 }
-const fromApiUser = u => ({ id: u.id, name: u.name, phone: u.phone, email: u.email, via: u.via, role: u.role, district: u.district, vip: u.vip, store_id: u.store_id, admin: u.admin, created: u.created, telegram: !!u.telegram, mfa: !!u.mfa, api: true });
-const mapOrder = o => ({ ...o, api: true, ships: o.ships.map(s => ({ ...s, courier: s.courier || "", plate: null })) });
+const fromApiUser = u => ({ id: u.id, name: u.name, phone: u.phone, email: u.email, via: u.via, role: u.role, district: u.district, vip: u.vip, store_id: u.store_id, admin: u.admin, created: u.created, telegram: !!u.telegram, mfa: !!u.mfa, points: u.points || 0, api: true });
+const mapOrder = o => ({ ...o, disc: (o.disc || 0) + (o.pts || 0), api: true, ships: o.ships.map(s => ({ ...s, courier: s.courier || "", plate: null })) });
 
 /* ================= Geography & stores ================= */
 const DISTRICTS = [
@@ -2296,7 +2304,7 @@ function dCart() {
 }
 function readForm() {
   const el = $("#orderForm"); if (!el) return form;
-  const d = Object.fromEntries(new FormData(el).entries()); d.lift = el.lift?.checked || false; return d;
+  const d = Object.fromEntries(new FormData(el).entries()); d.lift = el.lift?.checked || false; d.usePts = el.usePts?.checked || false; return d;
 }
 function quote(d) {
   const gs = groups();
@@ -2314,7 +2322,8 @@ function quote(d) {
   });
   const goods = gs.reduce((a, g) => a + g.sum, 0), del = ships.reduce((a, s) => a + s.price, 0), svc = svcSum(), disc = bundleDisc();
   const pd = promoDisc(goods);
-  return { ships, goods, del, svc, disc, pd, total: goods + del + svc - disc - pd, cash: vip ? Math.round(goods * 0.03) : 0 };
+  const pts = d.usePts ? Math.max(0, Math.min(bonusBalance(), Math.floor(goods * bonusCfg().maxShare))) : 0;
+  return { ships, goods, del, svc, disc, pd, pts, total: goods + del + svc - disc - pd - pts, cash: vip ? Math.round(goods * 0.03) : 0 };
 }
 function dCheckout() {
   $("#dTitle").textContent = L("Оформление", "Rasmiylashtirish");
@@ -2346,6 +2355,7 @@ function dCheckout() {
       <div class="pay">${(API ? [["store", L("Магазину напрямую", "Do‘konga to‘g‘ridan-to‘g‘ri")], ...(apiCfg?.payments || []).map(x => [x, { click: "Click", payme: "Payme", uzum: "Uzum" }[x] || x])] : [["click", "Click"], ["payme", "Payme"], ["uzum", "Uzum"], ["nasiya", L("Рассрочка", "Muddatli")], ["cash", L("Наличными", "Naqd")]]).map(([val, n]) => `<label><input type="radio" name="pay" value="${val}" ${d.pay === val ? "checked" : ""}>${n}</label>`).join("")}</div>
       <div class="note" id="nasiyaNote" hidden></div>
       <div class="note" id="storePayNote" hidden>${ui("store", 14)} ${L("Платить заранее не нужно. Магазин подтвердит заказ и способ оплаты: наличными или переводом при получении. Если магазин не подтвердит заказ вовремя, он отменится автоматически.", "Oldindan to‘lash shart emas. Do‘kon buyurtmani va to‘lov usulini tasdiqlaydi: olganda naqd yoki o‘tkazma. Do‘kon o‘z vaqtida tasdiqlamasa, buyurtma avtomatik bekor qilinadi.")}</div>
+      ${bonusBalance() > 0 ? `<label class="check"><input type="checkbox" id="fPts" name="usePts" ${d.usePts ? "checked" : ""}><span>${ui("gift", 15)} ${L(`Оплатить бонусами — у вас ${fmtN(bonusBalance())}`, `Bonus bilan to‘lash — sizda ${fmtN(bonusBalance())}`)} <small class="mu">${L(`(до ${Math.round(bonusCfg().maxShare * 100)}% стоимости товаров)`, `(mahsulotlar narxining ${Math.round(bonusCfg().maxShare * 100)}% gacha)`)}</small></span></label>` : ""}
       <div class="f"><label for="fPromo">${L("Промокод", "Promokod")}</label><div class="promo-row"><input id="fPromo" value="${esc(promo)}" placeholder="IMORAT5" autocomplete="off" autocapitalize="characters"><button class="btn btn-line" type="button" data-act="promo">${L("Применить", "Qo‘llash")}</button></div><span class="promo-msg" id="promoMsg"></span></div>
       <div class="f"><label for="fComment">${L("Комментарий курьеру", "Kuryerga izoh")}</label><textarea id="fComment" name="comment" rows="2" placeholder="${L("Позвоните за 10 минут", "10 daqiqa oldin qo‘ng‘iroq qiling")}">${esc(d.comment)}</textarea></div>
     </fieldset>
@@ -2372,6 +2382,8 @@ function updateQuote() {
   nn.innerHTML = `${ui("wallet", 14)} ${L(`Рассрочка на 12 месяцев: от ${fmt(monthly(qt.total))} в месяц. Одобрение через партнёра при оплате; точные условия покажет партнёр.`, `12 oyga muddatli to‘lov: oyiga ${fmt(monthly(qt.total))}dan. To‘lovda hamkor orqali tasdiqlanadi; aniq shartlarni hamkor ko‘rsatadi.`)}`;
   $("#totals").innerHTML = totalsHTML(qt.goods, qt.svc, qt.disc, `<div class="sumrow"><span class="mu">${L("Доставка", "Yetkazish")}</span><span class="num">${fmt(qt.del)}</span></div>`) +
     (qt.pd ? `<div class="sumrow disc"><span>${L("Промокод", "Promokod")} ${esc(promo)}</span><span class="num">−${fmt(qt.pd)}</span></div>` : "") +
+    (qt.pts ? `<div class="sumrow disc"><span>${L("Бонусами", "Bonus bilan")}</span><span class="num">−${fmt(qt.pts)}</span></div>` : "") +
+    (API && !user ? "" : `<div class="sumrow cash"><span>${L("Начислим бонусов после получения", "Olgandan keyin bonus beriladi")}</span><span class="num">+${fmtN(Math.floor(qt.goods * bonusRate()))}</span></div>`) +
     (qt.cash ? `<div class="sumrow cash"><span>${L("Кешбэк VIP 3%", "VIP keshbek 3%")}</span><span class="num">+${fmt(qt.cash)}</span></div>` : "") +
     `<div class="sumrow total"><span>${L("Итого", "Jami")}</span><span class="num">${fmt(qt.total)}</span></div>`;
   $("#payBtn").textContent = d.pay === "cash" || d.pay === "store" ? L("Подтвердить заказ", "Buyurtmani tasdiqlash") : d.pay === "nasiya" ? L("Оформить рассрочку", "Muddatli to‘lovni rasmiylashtirish") : `${L("Оплатить", "To‘lash")} ${fmt(qt.total)}`;
@@ -2388,7 +2400,7 @@ function submitOrder(e) {
   if (API) return submitOrderApi(d, quote(d));
   const qt = quote(d), now = Date.now();
   const o = {
-    num: "IM-" + String(now).slice(-6), t: now, d, goods: qt.goods, del: qt.del, svc: qt.svc, disc: qt.disc + (qt.pd || 0), total: qt.total, cash: qt.cash,
+    num: "IM-" + String(now).slice(-6), t: now, d, goods: qt.goods, del: qt.del, svc: qt.svc, disc: qt.disc + (qt.pd || 0) + (qt.pts || 0), total: qt.total, cash: qt.cash,
     ships: qt.ships.map((s, i) => ({ store: s.g.store.id, tariff: s.t?.id || null, price: s.price, kg: s.g.kg,
       lines: s.g.lines.map(l => ({ id: l.p.id, q: l.q, price: l.price })),
       courier: NAMES[(now / 1000 + i) % NAMES.length | 0],
@@ -2397,6 +2409,8 @@ function submitOrder(e) {
   orders.unshift(o); LS.set("imorat.orders", orders.slice(0, 20));
   if (qt.pd) { LS.set("imorat.promoUsed", [...promoUsed(), user ? user.id : "guest"]); promo = ""; LS.set("imorat.promoCode", ""); }
   if (vip && qt.cash) toast(L(`Начислим ${fmt(qt.cash)} кешбэка`, `${fmt(qt.cash)} keshbek beriladi`));
+  if (qt.pts) { bonusAdd(-qt.pts, "spent"); form.usePts = false; LS.set("imorat.form2", form); }
+  bonusAdd(Math.floor(qt.goods * bonusRate()), "cashback"); // the demo credits at once; the real site after the order arrives
   cart = {}; services = {}; bundlesOn = []; LS.set("imorat.svc", services); LS.set("imorat.bundles", bundlesOn); saveCart(); refreshCards();
   openDrawer("track", o.num);
 }
@@ -2482,6 +2496,7 @@ function dProfile() {
   const last = orders[0];
   $("#dBody").innerHTML = (user ? `<div class="acct"><span class="av">${esc(initial(user.name))}</span><span><b>${esc(user.name)}</b><small class="num">${esc(user.phone)}</small><small>${user.email ? esc(user.email) + " · " : ""}${L("вход через", "kirish:")} ${viaName(user.via)}${user.role === "pro" ? ` · <span class="ws">${L("цены для мастеров", "ustalar narxi")}</span>` : ""}</small></span><button class="ib" type="button" data-act="logout" aria-label="${L("Выйти", "Chiqish")}" title="${L("Выйти", "Chiqish")}">${ui("logout", 16)}</button></div>`
     : `<div class="acct" style="grid-template-columns:1fr"><span><b>${L("Войдите, чтобы сохранять заказы", "Buyurtmalarni saqlash uchun kiring")}</b><small>${L("Google, Apple или номер телефона — займёт меньше минуты", "Google, Apple yoki telefon raqami — bir daqiqadan kam")}</small></span><button class="btn btn-primary" type="button" data-act="login">${L("Войти или зарегистрироваться", "Kirish yoki ro‘yxatdan o‘tish")}</button></div>`) + `
+    ${bonusCardHTML()}
     ${notifyRows()}
     <div class="vip-card"><span class="eyebrow" style="color:var(--signal)">${ui("crown", 14)} Imorat VIP</span>
       <b style="font-size:17px">${vip ? L("VIP подключён", "VIP ulangan") : L("Доставка в точный час и бесплатно", "Aniq soatda va bepul yetkazish")}</b>
@@ -2496,6 +2511,7 @@ function dProfile() {
       <button class="order-row" type="button" data-act="projects"><b>${L("Проекты ремонта", "Ta’mir loyihalari")}</b><b class="num">${projects.length}</b><small>${L("Сохранённые списки материалов", "Saqlangan material ro‘yxatlari")}</small></button>
       <button class="order-row" type="button" data-act="watch"><b>${L("Слежу за ценой", "Narx kuzatuvi")}</b><b class="num">${watch.length}</b><small>${L("Сообщим о снижении цены", "Narx tushsa xabar beramiz")}</small></button>
       <button class="order-row" type="button" data-act="favs"><b>${L("Избранное", "Saralanganlar")}</b><b class="num">${favs.length}</b><small>${L("Сохранённые товары", "Saqlangan mahsulotlar")}</small></button>
+      <button class="order-row" type="button" data-go="masters" data-mtabgo="mine"><b>${L("Заявки мастерам", "Ustalarga so‘rovlar")}</b>${ui("wrench", 18)}<small>${L("Плиточники, электрики, сантехники", "Kafelchi, elektrik, santexnik")}</small></button>
       <button class="order-row" type="button" data-act="ai"><b>Usta AI</b>${ui("spark", 18)}<small>${L("Подбор материалов и советы", "Material tanlash va maslahatlar")}</small></button>
       ${user && user.store_id && myStore ? `<button class="order-row" type="button" data-go="seller"><b>${esc(myStore.name)}</b>${ui("store", 18)}<small>${L("Кабинет продавца", "Sotuvchi kabineti")} · ${(ST_STATUS()[myStore.status] || ST_STATUS().pending)[0]}</small></button>` : `<button class="order-row" type="button" data-act="store-reg"><b>${L("Добавить свой магазин", "Do‘konimni qo‘shish")}</b>${ui("store", 18)}<small>${L("Продавайте на Imorat: витрина, заказы, доставка Яндекс", "Imoratda soting: vitrina, buyurtmalar, Yandex yetkazish")}</small></button>`}${API ? "" : `<button class="order-row" type="button" data-go="seller"><b>${L("Кабинет продавца", "Sotuvchi kabineti")}</b>${ui("chev", 18)}<small>${L("Для магазинов-партнёров", "Hamkor do‘konlar uchun")}</small></button>`}
     </div>`;
@@ -2636,6 +2652,7 @@ function finishAuth(u, token) {
   if (u.district) { district = u.district; LS.set("imorat.district", district); }
   form.name = u.name; form.phone = u.phone; LS.set("imorat.form2", form);
   const then = auth.then; closeAuth(); renderHeader(); renderTabbar(); counts();
+  if (u.api) { bonusApi = null; loadBonus(); } else if (LS.get("imorat.refPending", "")) { const rc = LS.get("imorat.refPending", ""); LS.set("imorat.refPending", ""); setTimeout(() => applyRefCode(rc, true), 400); }
   toast(then === "seller" ? L("Магазин отправлен на проверку", "Do‘kon tekshiruvga yuborildi") : L(`Добро пожаловать, ${u.name}!`, `Xush kelibsiz, ${u.name}!`));
   if (then === "checkout") openDrawer("checkout"); else if (then === "seller") { sellerData = null; go("seller"); } else if (typeof then === "function") setTimeout(then, 0); else if (drawerView === "profile") renderDrawer();
   if (route.view === "masters" && typeof then !== "function") { mApi.list = null; mApi.me = undefined; renderMasters(); }
@@ -3184,13 +3201,14 @@ function showServerTotals(q) {
 async function submitOrderApi(d, qt) {
   const btn = $("#payBtn"), lbl = btn.textContent;
   btn.disabled = true; btn.textContent = L("Оформляем…", "Rasmiylashtirilmoqda…");
-  const body = { lines: cartLines().map(l => ({ id: l.p.id, store: l.store, q: l.q })), services: Object.keys(services).map(Number), bundles: bundlesOn, form: d, promo, expected_total: expectTotal ?? qt.total };
+  const body = { lines: cartLines().map(l => ({ id: l.p.id, store: l.store, q: l.q })), services: Object.keys(services).map(Number), bundles: bundlesOn, form: d, promo, points: qt.pts || 0, expected_total: expectTotal ?? qt.total };
   try {
     const r = await api("POST", "/api/orders", body);
     expectTotal = null;
     const o = mapOrder(r.order);
     orders = [o, ...orders.filter(x => x.num !== o.num)]; LS.set("imorat.orders", orders.slice(0, 30));
     if (r.order.promo) { LS.set("imorat.promoUsed", [...promoUsed(), user.id]); promo = ""; LS.set("imorat.promoCode", ""); }
+    if (r.order.pts) { user.points = Math.max(0, (user.points || 0) - r.order.pts); LS.set("imorat.user", user); form.usePts = false; } bonusApi = null;
     cart = {}; services = {}; bundlesOn = []; LS.set("imorat.svc", services); LS.set("imorat.bundles", bundlesOn); saveCart(); refreshCards();
     openDrawer("track", o.num);
     syncCatalog();
@@ -4854,6 +4872,70 @@ document.addEventListener("click", e => {
   if (act === "cart") { const fe = flatEstimate(flatRooms()); [...fe.mats, ...fe.furn].forEach(l => addToCart(l.p.id, null, l.q, true)); toast(L("Вся квартира в корзине", "Butun kvartira savatda")); return openDrawer("cart"); }
   if (act === "png") return flatPNG();
   if (act === "print") return flatPrint();
+});
+
+/* ================= Bonus points and referrals =================
+   1 bonus = 1 so'm. Cashback after the order arrives (more for masters and foremen), spend up to a share of the goods at checkout.
+   Invite a friend with your code: the friend gets a welcome bonus, you get a bonus when the friend's first order arrives. */
+const BONUS = { rate: .01, ratePro: .02, maxShare: .2, referral: 30000, welcome: 30000 };
+let bonusApi = null; // GET /api/me/bonus
+let bonusDemo = LS.get("imorat.bonus", null);
+{ const rc = (location.search.match(/[?&]ref=([A-Za-z0-9]{4,12})\b/) || [])[1]; if (rc) LS.set("imorat.refPending", rc.toUpperCase()); }
+function bonusDemoState() {
+  if (!bonusDemo) { const A = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; bonusDemo = { points: 0, code: "IM" + Array.from({ length: 5 }, () => A[Math.floor(Math.random() * A.length)]).join(""), refBy: null, log: [], orders: 0 }; LS.set("imorat.bonus", bonusDemo); }
+  return bonusDemo;
+}
+const bonusCfg = () => (bonusApi ? { rate: bonusApi.rate, ratePro: bonusApi.rate_pro, maxShare: bonusApi.max_share, referral: bonusApi.referral, welcome: bonusApi.welcome } : BONUS);
+const bonusBalance = () => (API ? (bonusApi ? bonusApi.points : user?.points || 0) : bonusDemoState().points);
+const bonusRate = () => (user?.role === "pro" ? bonusCfg().ratePro : bonusCfg().rate);
+function bonusAdd(delta, reason) { const b = bonusDemoState(); b.points = Math.max(0, b.points + delta); b.log.unshift({ delta, reason, created_at: Date.now() }); b.log = b.log.slice(0, 40); LS.set("imorat.bonus", b); }
+async function loadBonus() {
+  if (!API || !user) return;
+  try { bonusApi = await api("GET", "/api/me/bonus"); user.points = bonusApi.points; LS.set("imorat.user", user);
+    const pend = LS.get("imorat.refPending", ""); if (pend && bonusApi.can_enter && pend !== bonusApi.code) { LS.set("imorat.refPending", ""); await applyRefCode(pend, true); }
+  } catch (e) { /* keep the old numbers */ }
+  if (drawerView === "profile") renderDrawer();
+}
+async function applyRefCode(code, silent) {
+  code = String(code || "").trim().toUpperCase(); if (!code) return;
+  if (API) {
+    if (!user) { LS.set("imorat.refPending", code); return openAuth(); }
+    try { const r = await api("POST", "/api/me/bonus/referral", { code }); toast(L(`Код друга принят: +${fmt(r.points)} бонусов`, `Do‘st kodi qabul qilindi: +${fmt(r.points)} bonus`)); bonusApi = null; loadBonus(); }
+    catch (e) { if (!silent) toast(e.code === "bad_code" ? L("Такого кода нет", "Bunday kod yo‘q") : e.code === "own_code" ? L("Это ваш собственный код", "Bu o‘zingizning kodingiz") : e.code === "not_new" ? L("Код друга действует только до первого заказа", "Do‘st kodi faqat birinchi buyurtmagacha amal qiladi") : e.code === "already_used" ? L("Код друга уже применён", "Do‘st kodi allaqachon qo‘llangan") : apiErr(e)); }
+    return;
+  }
+  const b = bonusDemoState();
+  if (code === b.code) return toast(L("Это ваш собственный код", "Bu o‘zingizning kodingiz"));
+  if (b.refBy) return toast(L("Код друга уже применён", "Do‘st kodi allaqachon qo‘llangan"));
+  if (orders.length) return toast(L("Код друга действует только до первого заказа", "Do‘st kodi faqat birinchi buyurtmagacha amal qiladi"));
+  if (!/^IM[A-Z2-9]{5}$/.test(code)) return toast(L("Такого кода нет", "Bunday kod yo‘q"));
+  b.refBy = code; bonusAdd(BONUS.welcome, "welcome"); toast(L(`Код друга принят: +${fmt(BONUS.welcome)} бонусов`, `Do‘st kodi qabul qilindi: +${fmt(BONUS.welcome)} bonus`)); if (drawerView) renderDrawer();
+}
+const BONUS_REASON = () => ({ cashback: L("Кешбэк за заказ", "Buyurtma uchun keshbek"), referral: L("Друг сделал первый заказ", "Do‘st birinchi buyurtma qildi"), welcome: L("Подарок по коду друга", "Do‘st kodi bo‘yicha sovg‘a"), spent: L("Оплата бонусами", "Bonus bilan to‘lov"), refund: L("Возврат за отменённый заказ", "Bekor qilingan buyurtma uchun qaytarish") });
+function bonusCardHTML() {
+  if (API && !user) return "";
+  if (API && !bonusApi) { loadBonus(); }
+  const c = bonusCfg(), bal = bonusBalance(), code = API ? bonusApi?.code : bonusDemoState().code, log = (API ? bonusApi?.log : bonusDemoState().log) || [];
+  const canEnter = API ? !!bonusApi?.can_enter : !bonusDemoState().refBy && !orders.length;
+  const R = BONUS_REASON();
+  return `<div class="bonus-card">
+    <div class="bc-top"><span class="eyebrow">${ui("gift", 14)} ${L("Бонусы", "Bonuslar")}</span><b class="num">${fmtN(bal)}</b></div>
+    <small>${L(`1 бонус = 1 сум. Оплачивайте ими до ${Math.round(c.maxShare * 100)}% товаров. Кешбэк ${Math.round(c.rate * 100)}% с каждого заказа, для мастеров и прорабов — ${Math.round(c.ratePro * 100)}%.`, `1 bonus = 1 so‘m. Mahsulotlarning ${Math.round(c.maxShare * 100)}% gacha to‘lang. Har buyurtmadan ${Math.round(c.rate * 100)}% keshbek, ustalar va prorablar uchun — ${Math.round(c.ratePro * 100)}%.`)}</small>
+    ${code ? `<div class="bc-ref"><span>${L(`Пригласите друга: он получит ${fmt(c.welcome)}, а вы — ${fmt(c.referral)}, когда придёт его первый заказ.`, `Do‘stingizni taklif qiling: u ${fmt(c.welcome)} oladi, siz esa uning birinchi buyurtmasi kelganda ${fmt(c.referral)} olasiz.`)}</span>
+      <div class="bc-code"><b class="mono">${esc(code)}</b><button class="btn btn-line" type="button" data-bonus="share">${ui("send", 15)} ${L("Поделиться", "Ulashish")}</button></div>
+      ${API && bonusApi?.invited ? `<small>${L(`Приглашено: ${bonusApi.invited}, заказали: ${bonusApi.invited_paid}`, `Taklif qilingan: ${bonusApi.invited}, buyurtma qilgan: ${bonusApi.invited_paid}`)}</small>` : ""}</div>` : ""}
+    ${canEnter ? `<form class="bc-enter" id="refForm"><label class="visually-hidden" for="refIn">${L("Код друга", "Do‘st kodi")}</label><input id="refIn" placeholder="${L("Код друга, например IMK7Q2M", "Do‘st kodi, masalan IMK7Q2M")}" value="${esc(LS.get("imorat.refPending", ""))}" autocapitalize="characters" autocomplete="off"><button class="btn btn-line" type="submit">${L("Применить", "Qo‘llash")}</button></form>` : ""}
+    ${log.length ? `<details><summary>${L("История", "Tarix")}</summary>${log.slice(0, 12).map(x => `<div class="sumrow"><span>${R[x.reason] || x.reason}<small class="mu"> · ${new Date(x.created_at).toLocaleDateString("ru-RU")}</small></span><span class="num" style="color:${x.delta > 0 ? "var(--ok)" : "var(--muted)"}">${x.delta > 0 ? "+" : "−"}${fmtN(Math.abs(x.delta))}</span></div>`).join("")}</details>` : ""}
+  </div>`;
+}
+document.addEventListener("submit", e => { if (e.target.id === "refForm") { e.preventDefault(); applyRefCode($("#refIn").value); } });
+document.addEventListener("click", async e => {
+  const t = e.target.closest("[data-bonus]"); if (!t) return;
+  const code = API ? bonusApi?.code : bonusDemoState().code; if (!code) return;
+  const url = `${location.origin}${location.pathname}?ref=${code}`, c = bonusCfg();
+  const text = L(`Стройматериалы из магазинов Ташкента с доставкой — Imorat. По моему коду ${code} получите ${fmt(c.welcome)} бонусов на первый заказ: ${url}`, `Toshkent do‘konlaridan qurilish materiallari yetkazib berish bilan — Imorat. Mening ${code} kodim bilan birinchi buyurtmaga ${fmt(c.welcome)} bonus oling: ${url}`);
+  try { if (navigator.share) { await navigator.share({ title: "Imorat", text }); return; } } catch (er) { if (er?.name === "AbortError") return; }
+  try { await navigator.clipboard.writeText(text); toast(L("Приглашение скопировано — отправьте другу", "Taklif nusxalandi — do‘stingizga yuboring")); } catch (er) { toast(code); }
 });
 
 /* ================= Router & render ================= */

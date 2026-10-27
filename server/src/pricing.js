@@ -38,7 +38,7 @@ export function loadLines(db, ref, rawLines, user) {
   return { lines: out, problems };
 }
 
-export function quote(db, ref, { lines, services = [], bundles = [], form = {}, promo = "", user = null, yandexPrices = null }) {
+export function quote(db, ref, { lines, services = [], bundles = [], form = {}, promo = "", user = null, yandexPrices = null, points = 0, maxShare = 0.2 }) {
   const D = Object.fromEntries(ref.districts.map(d => [d.id, d]));
   const dest = D[form.district] || D[user?.district] || D.mirob;
   const vip = !!user?.vip;
@@ -95,9 +95,10 @@ export function quote(db, ref, { lines, services = [], bundles = [], form = {}, 
     const used = user && db.get("SELECT 1 FROM promo_uses WHERE user_id=? AND code=?", user.id, code);
     if (!used) { pd = Math.min(pr.cap, Math.round(goods * pr.pct / 1000) * 1000); promoCode = code; }
   }
-  const total = goods + del + svc - disc - pd;
+  const pts = user ? Math.max(0, Math.min(Math.floor(Number(points) || 0), user.points || 0, Math.floor(goods * maxShare))) : 0;
+  const total = goods + del + svc - disc - pd - pts;
   return {
-    goods, del, svc, disc, pd, total, cash: vip ? Math.round(goods * 0.03) : 0, promo: promoCode, bundles: bundlesApplied, services: svcLines,
+    goods, del, svc, disc, pd, pts, total, cash: vip ? Math.round(goods * 0.03) : 0, promo: promoCode, bundles: bundlesApplied, services: svcLines,
     ships: ships.map(s => ({
       store: s.g.store.id, store_name: s.g.store.name, tariff: s.t?.id || null, price: s.price, full: s.full, kg: Math.round(s.g.kg * 100) / 100,
       dist: Math.round(s.dist * 10) / 10, source: s.source || null,

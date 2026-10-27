@@ -393,3 +393,37 @@ test("Masters: profile → moderation → request → accept shows phone → don
   assert.equal(one.master.stars, 5); assert.equal(one.master.done, 1); assert.equal(one.reviews[0].name, "");
   assert.equal(one.reviews[0].text, "Аккуратно и быстро");
 });
+
+test("Bonus points: referral welcome, spend at checkout, cashback on delivery, referral reward, refund on cancel", async () => {
+  const seller = (await login("996660011")).data.token;
+  const st = await call("POST", "/api/seller/store", { name: "Bonus Qurilish", descr: "Магазин для проверки бонусов и кешбэка", cats: ["build"], phone: "712001122", addr: "ул. Бонусная, 3", hours: "00:00–00:00", district: "yunus" }, seller);
+  const sid = st.data.store.id;
+  await call("PATCH", `/api/admin/stores/${sid}`, { status: "active" }, globalThis.ADMIN);
+  await call("POST", "/api/seller/offers", { product_id: 1, price: 59000, stock: 500 }, seller);
+  const a = (await login("996660022")).data.token, b = (await login("996660033")).data.token;
+  const ab = (await call("GET", "/api/me/bonus", null, a)).data;
+  assert.match(ab.code, /^IM[A-Z2-9]{5}$/); assert.equal(ab.points, 0);
+  assert.equal((await call("POST", "/api/me/bonus/referral", { code: ab.code }, a)).status, 400, "own code");
+  assert.equal((await call("POST", "/api/me/bonus/referral", { code: "IMNOPE1" }, b)).status, 400);
+  const w = await call("POST", "/api/me/bonus/referral", { code: ab.code.toLowerCase() }, b);
+  assert.equal(w.status, 200, JSON.stringify(w.data)); assert.equal(w.data.points, 30000);
+  assert.equal((await call("POST", "/api/me/bonus/referral", { code: ab.code }, b)).status, 409);
+  const form = { name: "Бобур", phone: "998996660033", mode: "pickup", pay: "store" };
+  const q = await call("POST", "/api/quote", { lines: [{ id: 1, store: sid, q: 5 }], form, points: 999999 }, b);
+  assert.equal(q.data.quote.pts, 30000); assert.equal(q.data.quote.total, 295000 - 30000);
+  const o = await call("POST", "/api/orders", { lines: [{ id: 1, store: sid, q: 5 }], form, points: 999999, expected_total: 265000 }, b);
+  assert.equal(o.status, 200, JSON.stringify(o.data)); assert.equal(o.data.order.pts, 30000);
+  assert.equal((await call("GET", "/api/me/bonus", null, b)).data.points, 0);
+  const sh = (await call("GET", "/api/seller/summary", null, seller)).data.orders[0].ship_id;
+  for (const s of ["assembling", "ready", "picked"]) assert.equal((await call("PATCH", `/api/seller/shipments/${sh}`, { status: s }, seller)).status, 200);
+  const bb = (await call("GET", "/api/me/bonus", null, b)).data;
+  assert.equal(bb.points, 2950, "1% cashback of 295 000");
+  assert.equal((await call("GET", "/api/me/bonus", null, a)).data.points, 30000, "referral reward after the friend's first delivery");
+  assert.equal((await call("GET", "/api/me/bonus", null, a)).data.invited_paid, 1);
+  // spend part of the cashback, cancel, points come back
+  const o2 = await call("POST", "/api/orders", { lines: [{ id: 1, store: sid, q: 1 }], form, points: 2000 }, b);
+  assert.equal(o2.data.order.pts, 2000);
+  assert.equal((await call("GET", "/api/me/bonus", null, b)).data.points, 950);
+  assert.equal((await call("POST", `/api/orders/${o2.data.order.num}/cancel`, null, b)).status, 200);
+  assert.equal((await call("GET", "/api/me/bonus", null, b)).data.points, 2950);
+});

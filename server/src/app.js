@@ -15,6 +15,7 @@ import { createPush } from "./push.js";
 import { createNotify } from "./notify.js";
 import { newSecret, checkTotp, otpauthUrl } from "./totp.js";
 import { registerMasters } from "./masters.js";
+import { createBonus } from "./bonus.js";
 
 export const STEPS = {
   yandex: ["new", "assembling", "searching", "to_store", "on_way", "delivered"],
@@ -38,6 +39,7 @@ export function createApp(cfg, log = console) {
   const tg = createTelegram(cfg.telegram, log);
   const push = createPush(db, cfg.pushSubject, log);
   const notify = createNotify({ db, cfg, tg, push, sms, ref, log });
+  const bonus = createBonus({ db, cfg, log });
   const PCAT = new Map(db.all("SELECT id, cat FROM products").map(p => [p.id, p.cat]));
   const rateOf = cat => cfg.commission[cat] ?? cfg.commission["*"] ?? 0;
   const audit = (req, action, target, details) => db.run("INSERT INTO audit(user_id,action,target,details,ip,created_at) VALUES(?,?,?,?,?,?)", req?.user?.id || null, action, target == null ? null : String(target), details ? JSON.stringify(details) : null, req?.ip || null, Date.now());
@@ -218,7 +220,7 @@ export function createApp(cfg, log = console) {
     const form = cleanForm(b.form || {});
     const { lines, problems } = loadLines(db, ref, b.lines, user);
     const yp = await yandexPrices(db, ref, cfg.yandex, lines, form, log);
-    const q = quote(db, ref, { lines, services: b.services || [], bundles: b.bundles || [], form, promo: b.promo, user, yandexPrices: yp });
+    const q = quote(db, ref, { lines, services: b.services || [], bundles: b.bundles || [], form, promo: b.promo, user, yandexPrices: yp, points: b.points, maxShare: cfg.bonus.maxShare });
     return { q, form, lines, problems };
   }
   r.post("/api/quote", async req => { const b = await readJson(req); const { q, problems } = await computeQuote(req, b); return { quote: q, problems }; });
@@ -239,11 +241,13 @@ export function createApp(cfg, log = console) {
         const res = db.run("UPDATE offers SET stock=stock-?, updated_at=? WHERE product_id=? AND store_id=? AND stock>=?", l.q, now, l.p.id, l.store, l.q);
         if (!res.changes) throw new HttpError(409, "cart_changed", "Some items just went out of stock", { problems: [{ id: l.p.id, store: l.store, reason: "stock" }] });
       }
-      const ins = db.run(`INSERT INTO orders(num,user_id,created_at,status,pay,pay_status,form,goods,del,svc,disc,promo_disc,total,cash,promo,services)
-        VALUES(?,?,?,'active',?,?,?,?,?,?,?,?,?,?,?,?)`,
+      if (q.pts && !db.run("UPDATE users SET points=points-? WHERE id=? AND points>=?", q.pts, u.id, q.pts).changes) throw new HttpError(409, "total_changed", "Bonus balance changed, check the new total", { quote: { ...q, pts: 0, total: q.total + q.pts } });
+      const ins = db.run(`INSERT INTO orders(num,user_id,created_at,status,pay,pay_status,form,goods,del,svc,disc,promo_disc,total,cash,promo,services,points_used)
+        VALUES(?,?,?,'active',?,?,?,?,?,?,?,?,?,?,?,?,?)`,
         "tmp-" + randomBytes(6).toString("hex"), u.id, now, form.pay, ["cash", "store"].includes(form.pay) ? "to_store" : "pending", JSON.stringify(form),
-        q.goods, q.del, q.svc, q.disc, q.pd, q.total, q.cash, q.promo, JSON.stringify(q.services));
+        q.goods, q.del, q.svc, q.disc, q.pd, q.total, q.cash, q.promo, JSON.stringify(q.services), q.pts || 0);
       const id = Number(ins.lastInsertRowid), num = "IM-" + (100000 + id);
+      if (q.pts) db.run("INSERT INTO points_log(user_id,delta,reason,ref,created_at) VALUES(?,?,?,?,?)", u.id, -q.pts, "spent", "order:" + id, now);
       db.run("UPDATE orders SET num=? WHERE id=?", num, id);
       for (const s of q.ships) {
         const goods = s.lines.reduce((a, l) => a + l.price * l.q, 0);
@@ -265,7 +269,7 @@ export function createApp(cfg, log = console) {
     const ships = db.all("SELECT * FROM shipments WHERE order_id=? ORDER BY id", o.id).filter(s => !forStore || s.store_id === forStore);
     return {
       num: o.num, t: o.created_at, status: o.status, pay: o.pay, pay_status: o.pay_status, d: JSON.parse(o.form),
-      goods: o.goods, del: o.del, svc: o.svc, disc: o.disc + o.promo_disc, total: o.total, cash: o.cash, promo: o.promo,
+      goods: o.goods, del: o.del, svc: o.svc, disc: o.disc + o.promo_disc, pts: o.points_used || 0, total: o.total, cash: o.cash, promo: o.promo,
       ships: ships.map(s => ({ id: s.id, store: s.store_id, tariff: s.tariff, price: s.price, kg: s.kg, dist: s.dist, status: s.status, status_at: s.status_at,
         step: (STEPS[s.tariff ? "yandex" : "pickup"].indexOf(s.status)), history: JSON.parse(s.history), lines: JSON.parse(s.lines), courier: s.courier,
         cancel_reason: s.cancel_reason, accept_by: s.status === "new" ? (s.start_at || s.status_at) + cfg.timers.cancel * 60000 : null,
@@ -309,6 +313,8 @@ export function createApp(cfg, log = console) {
     const all = db.all("SELECT status FROM shipments WHERE order_id=?", s.order_id).map(x => x.status);
     const st = all.every(x => x === "cancelled") ? "cancelled" : all.every(x => ["delivered", "picked", "cancelled"].includes(x)) ? "done" : "active";
     db.run("UPDATE orders SET status=? WHERE id=?", st, s.order_id);
+    if (status === "delivered" || status === "picked") bonus.shipDone({ ...s, status });
+    if (st === "cancelled") bonus.orderCancelled(s.order_id);
   }
 
   /* ---------- AI ---------- */
@@ -668,6 +674,7 @@ export function createApp(cfg, log = console) {
   });
 
   registerMasters({ r, db, cfg, ref, need, needAdmin, audit, lim, tg, push, sms, log });
+  bonus.routes(r, need, lim);
 
   /* ---------- HTTP server ---------- */
   const server = createServer(async (req, res) => {
