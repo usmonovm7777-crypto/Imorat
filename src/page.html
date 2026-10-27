@@ -764,6 +764,10 @@ html.ds-dragging, html.ds-dragging * { cursor: grabbing !important; user-select:
 .ds-wish { display: flex; gap: 6px; }
 .ds-wish input { flex: 1; min-width: 0; border: 1.5px solid var(--line); border-radius: 12px; padding: 10px 12px; background: var(--raised); font: inherit; color: inherit; }
 .ds-sw { display: flex; flex-wrap: wrap; gap: 6px; }
+.ds-walls { display: grid; grid-template-columns: 1fr 150px; gap: 12px; align-items: start; }
+.ds-mini { color: var(--muted); }
+.ds-mini .ds-svg { width: 100%; height: auto; max-height: 200px; }
+@media (max-width: 520px) { .ds-walls { grid-template-columns: 1fr 110px; } }
 .sw { width: 34px; height: 34px; border-radius: 50%; background: var(--c); border: 2px solid var(--surface); box-shadow: 0 0 0 1.5px var(--line-strong); }
 .sw.plank { border-radius: 9px; background: repeating-linear-gradient(90deg, var(--c) 0 9px, color-mix(in srgb, var(--c) 82%, #000) 9px 10px); }
 .sw.wt { border-radius: 7px; background-color: var(--c); background-image: linear-gradient(rgba(0,0,0,.2) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,.2) 1px, transparent 1px); background-size: 9px 13px; }
@@ -3482,7 +3486,7 @@ function installApp() {
 const DS_KEY = "imorat.design";
 let DS = LS.get(DS_KEY, null);
 const dsSave = () => LS.set(DS_KEY, DS);
-const dsNew = () => ({ step: 1, photo: "", notes: "", type: "", W: 3.5, L: 4.2, H: 2.7, win: 1, doors: 1, q: { who: "girl", age: "4-7", colors: [], hobby: [], style: "modern", seats: "4", tv: true, dining: false, bed: "double", desk: true, budget: "std", walls: "paint", floorKind: "lam", bathKind: "bath", wc: true, ward: true }, wall: 0, floor: 0, wp: 0, wtile: 0, accent: null, items: [], sel: null, say: "", chat: [], busy: false });
+const dsNew = () => ({ step: 1, photo: "", notes: "", type: "", W: 3.5, L: 4.2, H: 2.7, win: 1, doors: 1, q: { who: "girl", age: "4-7", colors: [], hobby: [], style: "modern", seats: "4", tv: true, dining: false, bed: "double", desk: true, budget: "std", walls: "paint", floorKind: "lam", bathKind: "bath", wc: true, ward: true, kshape: "corner" }, winWall: "A", doorWall: "B", doorPos: "end", wall: 0, floor: 0, wp: 0, wtile: 0, accent: null, items: [], sel: null, say: "", chat: [], busy: false });
 const ROOMS = () => [["kids", L("Детская", "Bolalar xonasi"), "🧸"], ["bed", L("Спальня", "Yotoqxona"), "🛏️"], ["living", L("Гостиная / зал", "Mehmonxona / zal"), "🛋️"], ["study", L("Кабинет", "Ish xonasi"), "💻"], ["kitchen", L("Кухня", "Oshxona"), "🍳"], ["bath", L("Ванная / санузел", "Vannaxona / sanuzel"), "🛁"], ["hall", L("Прихожая", "Dahliz"), "🚪"]];
 const XP = Object.fromEntries(XPRODUCTS.map(r => [r[0], { key: r[1], model: r[11], col: r[12], size: r[13], place: r[14] }]));
 /* Designer info for every product that can stand in the room */
@@ -3501,8 +3505,8 @@ function dInfo(p) {
   return null;
 }
 Object.assign(XMODELS, {
-  krow: (a = XW.white, n = 4) => { const P = []; const w = n * .6; for (let i = 0; i < n; i++) { const x = -w / 2 + .3 + i * .6; P.push(XB(x, .43, 0, .295, .4, .29, a, 1, .01), XB(x, 1.75, -.12, .295, .35, .17, a, 1, .01)); }
-    P.push(XB(0, .87, .01, w / 2, .02, .31, "#3b3f42", 2, .006), XB(-w / 2 + .9, .9, .02, .25, .012, .2, XW.steel, 3, .01)); return P; },
+  krow: (a = XW.white, n = 4, opt = 0) => { const P = []; const w = n * .6; for (let i = 0; i < n; i++) { const x = -w / 2 + .3 + i * .6; P.push(XB(x, .43, 0, .295, .4, .29, a, 1, .01)); if (!(opt & 1)) P.push(XB(x, 1.75, -.12, .295, .35, .17, a, 1, .01)); }
+    P.push(XB(0, .87, .01, w / 2, .02, .31, "#3b3f42", 2, .006)); if (!(opt & 2)) { P.push(XB(-w / 2 + .9, .9, .02, .25, .012, .2, XW.steel, 3, .01)); if (n >= 4) P.push(XB(w / 2 - .9, .896, .02, .28, .006, .25, "#1d1f21", 2, .01)); } return P; },
   rack: (a = "#9aa0a4") => { const P = [XB(-.43, .9, 0, .015, .9, .19, a, 3, .005), XB(.43, .9, 0, .015, .9, .19, a, 3, .005)]; for (let i = 0; i < 5; i++) P.push(XB(0, .05 + i * .42, 0, .43, .012, .19, a, 3, .004)); P.push(XB(-.15, .62, 0, .14, .14, .14, "#c9a46b", 6, .01), XB(.2, 1.06, 0, .16, .1, .12, "#2f6b5a", 1, .01)); return P; }
 });
 function swatchPaint(p) {
@@ -3526,10 +3530,9 @@ const isTile = p => p && p.cat === "tile";
 /* World walls: A x=0 (windows), B z=0 (door), C x=W, D z=L */
 const DS_WALLS = ["A", "B", "C", "D"];
 function dsWallArea(d, w) {
-  const len = w === "A" || w === "C" ? d.L : d.W;
-  let a = len * d.H;
-  if (w === "A") a -= Math.max(0, d.win | 0) * 1.35 * 1.5;
-  if (w === "B") a -= Math.max(0, d.doors | 0) ? .8 * 2.05 : 0;
+  const o = dsOpen(d);
+  let a = o.G[w].len * d.H - o.wins.filter(x => x.w === w).length * 1.35 * 1.5;
+  if (o.door && o.door.w === w) a -= .8 * 2.05;
   return Math.max(0, a);
 }
 /* What a wall looks like: colour and optional tile grid */
@@ -3602,7 +3605,7 @@ function dsTemplate(d) {
     if (!eco) add(byXKey(q.style === "loft" ? "rug_graphite" : "rug_beige"));
     wall ||= findName(q.style === "loft" ? /«Графит»/ : q.style === "oriental" ? /«Терракота»/ : /«Песок»/); floor = findName(q.style === "loft" ? /Керамогранит.*бетон|Керамогранит 60×60, серый/ : /Керамогранит 60×60, бежевый/);
   } else if (t === "kitchen") {
-    out.push("krow"); add(byXKey("table_dining")); add(byXKey("chair_grey"), Math.min(6, +q.seats || 4)); add(byXKey("curt_linen")); add(findName(/Люстра потолочная, 3 плафона/));
+    out.push("krow"); if (q.kshape !== "line") out.push("krow2"); add(byXKey("table_dining")); add(byXKey("chair_grey"), Math.min(6, +q.seats || 4)); add(byXKey("curt_linen")); add(findName(/Люстра потолочная, 3 плафона/));
     wall ||= findName(/белая матовая/); floor = findName(prem ? /белый мрамор/ : /Керамогранит 60×60, бежевый/);
   }
   if (q.floorKind === "keep") floor = null;
@@ -3615,45 +3618,99 @@ function dsTemplate(d) {
 function dsApplyTemplate() {
   const t = dsTemplate(DS);
   DS.wall = t.wall; DS.floor = t.floor; if (!PROD[DS.wtile]) DS.wtile = t.wtile; if (DS.type === "bath" && DS.q.walls === "tile") DS.wtile = t.wtile;
-  DS.items = t.items.map(id => id === "krow" ? { uid: dsUid(), pid: (findName(/Кухонный модуль 60 см, белый/) || findName(/Кухонный модуль напольный 60/))?.id, krow: true } : { uid: dsUid(), pid: id });
+  const st = DS.q.style, mod = (findName(st === "loft" ? /Кухонный модуль 60 см, графит/ : st === "scandi" || st === "oriental" ? /Кухонный модуль 60 см, дуб/ : /Кухонный модуль 60 см, белый/) || findName(/Кухонный модуль напольный 60/))?.id;
+  DS.items = t.items.map(id => id === "krow" || id === "krow2" ? { uid: dsUid(), pid: mod, krow: true } : { uid: dsUid(), pid: id });
   dsLayout();
 }
 let dsU = 0; const dsUid = () => "i" + Date.now().toString(36) + (dsU++);
 
 /* ---------- Auto layout in the floor plan (x along the right wall, z along the left wall) ---------- */
-function dsWindows(d) { const n = Math.max(0, Math.min(3, d.win | 0)); const w = Math.min(1.5, d.L / (n + 1) * .9); return Array.from({ length: n }, (_, i) => { const c = d.L * (i + 1) / (n + 1); return [c - w / 2, c + w / 2]; }); }
+/* Walls: A x=0, B z=0, C x=W, D z=L. u runs along a wall, dp goes into the room; rot turns an item's back to that wall */
+function dsWG(d) {
+  const W = d.W, Lr = d.L;
+  return { A: { len: Lr, at: (u, dp) => [dp, u], rot: 1 }, B: { len: W, at: (u, dp) => [u, dp], rot: 0 }, C: { len: Lr, at: (u, dp) => [W - dp, u], rot: 3 }, D: { len: W, at: (u, dp) => [u, Lr - dp], rot: 2 } };
+}
+const DS_OPP = { A: "C", C: "A", B: "D", D: "B" };
+/* wall + end (0: u=0, 1: u=len) → the other wall meeting it in that corner, and its end */
+const DS_CORNER = { A0: ["B", 0], A1: ["D", 0], B0: ["A", 0], B1: ["C", 0], C0: ["B", 1], C1: ["D", 1], D0: ["A", 1], D1: ["C", 1] };
+function dsRectW(g, ua, ub, da, db) { const p = g.at(ua, da), q = g.at(ub, db); return { x0: Math.min(p[0], q[0]), x1: Math.max(p[0], q[0]), z0: Math.min(p[1], q[1]), z1: Math.max(p[1], q[1]) }; }
+function dsOpen(d) {
+  const G = dsWG(d), ww = d.winWall || "A", dw = d.doorWall || "B";
+  let door = null;
+  if (d.doors > 0) { const len = G[dw].len, pos = d.doorPos || "end"; let u0 = pos === "start" ? .35 : pos === "mid" ? len / 2 - .4 : len - 1.15; u0 = Math.max(.05, Math.min(u0, len - .85)); door = { w: dw, u0, u1: u0 + .8 }; }
+  const n = Math.max(0, Math.min(3, d.win | 0)), wins = [];
+  if (n) {
+    let a = 0, b = G[ww].len;
+    if (door && door.w === ww) { const left = door.u0 - .2, right = b - door.u1 - .2; if (left >= right) b = Math.max(.4, left); else a = Math.min(G[ww].len - .4, door.u1 + .2); }
+    const span = b - a, w = Math.min(1.5, span / (n + 1) * .9);
+    for (let i = 0; i < n; i++) { const c = a + span * (i + 1) / (n + 1); wins.push({ w: ww, u0: c - w / 2, u1: c + w / 2 }); }
+  }
+  return { G, wins, door };
+}
+function dsDoorBlock(d) { const o = dsOpen(d); if (!o.door) return null; const g = o.G[o.door.w]; return dsRectW(g, Math.max(0, o.door.u0 - .1), Math.min(g.len, o.door.u1 + .1), 0, 1.05); }
+const dsWallName = (d, w) => { const ww = d.winWall || "A", dw = d.doorWall || "B", t = d.win > 0 && w === ww ? L("с окном", "derazali") : d.doors > 0 && w === dw ? L("с дверью", "eshikli") : d.win > 0 && w === DS_OPP[ww] ? L("напротив окна", "deraza qarshisida") : d.doors > 0 && w === DS_OPP[dw] ? L("напротив двери", "eshik qarshisida") : ""; return `${L("Стена", "Devor")} ${DS_WALLS.indexOf(w) + 1}${t ? " · " + t : ""}`; };
+/* Turn the 3D view so the window and door walls are in sight */
+function dsAutoView() { const vis = [["A", "B"], ["B", "C"], ["C", "D"], ["D", "A"]], ww = DS.win > 0 ? DS.winWall || "A" : null, dw = DS.doors > 0 ? DS.doorWall || "B" : null; let v = vis.findIndex(p => (!ww || p.includes(ww)) && (!dw || p.includes(dw))); if (v < 0) v = vis.findIndex(p => p.includes(ww || dw)); if (v >= 0) DS.view = v; }
 function dsLayout() {
-  const d = DS, W = d.W, Lr = d.L, wins = dsWindows(d), placed = [];
-  const door = d.doors > 0 ? { x0: Math.max(0, W - 1.25), x1: W, z0: 0, z1: 1.05 } : null;
+  const d = DS, W = d.W, Lr = d.L, O = dsOpen(d), G = O.G, wins = O.wins, placed = [];
+  const door = dsDoorBlock(d);
   const blocks = door ? [door] : [];
-  const hit = r => [...placed.filter(o => !o.flat && !o.air).map(o => o.r), ...blocks].some(o => r.x0 < o.x1 - .005 && r.x1 > o.x0 + .005 && r.z0 < o.z1 - .005 && r.z1 > o.z0 + .005);
+  const ovl = (r, o) => r.x0 < o.x1 - .005 && r.x1 > o.x0 + .005 && r.z0 < o.z1 - .005 && r.z1 > o.z0 + .005;
+  const winZ = wins.map(w => dsRectW(G[w.w], w.u0, w.u1, 0, .4));
+  const hit = r => [...placed.filter(o => !o.flat && !o.air).map(o => o.r), ...blocks].some(o => ovl(r, o));
   const inside = r => r.x0 >= -.001 && r.z0 >= -.001 && r.x1 <= W + .001 && r.z1 <= Lr + .001;
   const rectOf = (cx, cz, w, dp, rot) => { const [ww, dd] = rot % 2 ? [dp, w] : [w, dp]; return { x0: cx - ww / 2, x1: cx + ww / 2, z0: cz - dd / 2, z1: cz + dd / 2 }; };
-  const underWin = (z0, z1) => wins.some(([a, b]) => z0 < b && z1 > a);
-  const tryAt = (it, cx, cz, rot) => { const r = rectOf(cx, cz, it.w, it.d, rot); if (!inside(r) || hit(r)) return false; Object.assign(it, { x: cx, z: cz, rot, r }); placed.push(it); return true; };
+  let noWin = false; // tall furniture keeps windows free unless there is no other place
+  const tryAt = (it, cx, cz, rot) => { const r = rectOf(cx, cz, it.w, it.d, rot); if (!inside(r) || hit(r) || (it.tall && !noWin && winZ.some(z => ovl(r, z)))) return false; Object.assign(it, { x: cx, z: cz, rot, r }); placed.push(it); return true; };
   const along = (len, w) => { const c = len / 2, steps = []; for (let s = 0; s <= len; s += .1) { steps.push(c - s, c + s); } return steps.filter(v => v - w / 2 >= -.001 && v + w / 2 <= len + .001); };
-  const wallR = it => along(W, it.w).some(x => tryAt(it, x, it.d / 2 + .02, 0));
-  const wallL = it => along(Lr, it.w).some(z => (!it.tall || !underWin(z - it.w / 2, z + it.w / 2)) && tryAt(it, it.d / 2 + .02, z, 1));
-  const wallF2 = (it, force) => (force || !it.tall) && along(W, it.w).some(x => tryAt(it, x, Lr - it.d / 2 - .02, 2));
-  const wallF1 = (it, force) => (force || !it.tall) && along(Lr, it.w).some(z => tryAt(it, W - it.d / 2 - .02, z, 3));
+  const onWall = (it, w) => { const g = G[w]; return along(g.len, it.w).some(u => tryAt(it, ...g.at(u, it.d / 2 + .02), g.rot)); };
+  const wallR = it => onWall(it, "B"), wallL = it => onWall(it, "A");
+  const wallF2 = (it, force) => (force || !it.tall) && onWall(it, "D");
+  const wallF1 = (it, force) => (force || !it.tall) && onWall(it, "C");
   const items = d.items.map(it => { const p = PROD[it.pid], inf = dInfo(p); if (!p || !inf) return null;
-    let [w, dp] = inf.size; if (it.krow) { it.n = Math.max(3, Math.min(8, Math.floor((W - (door ? 1.3 : .1)) / .6))); w = it.n * .6; }
+    let [w, dp] = inf.size; if (it.krow) { it.n ||= 4; w = it.n * .6; }
     return Object.assign(it, { w, d: dp, tall: inf.tall || 0, place: it.krow ? "krow" : inf.place, model: inf.model, flat: inf.place === "rug", air: ["ceiling", "curtain", "hang", "above"].includes(inf.place), ok: true }); }).filter(Boolean);
   const hitAir = r => placed.filter(o => o.place === "hang" || o.place === "above").some(o => r.x0 < o.r.x1 + .05 && r.x1 > o.r.x0 - .05 && r.z0 < o.r.z1 + .05 && r.z1 > o.r.z0 - .05);
-  const hangAt = (it, x, z, rot) => { const r = rectOf(x, z, it.w, it.d, rot); if (!inside(r) || hitAir(r)) return false; Object.assign(it, { x, z, rot, r }); placed.push(it); return true; };
+  const hangAt = (it, x, z, rot) => { const r = rectOf(x, z, it.w, it.d, rot); if (!inside(r) || hitAir(r) || winZ.some(q => ovl(r, q))) return false; Object.assign(it, { x, z, rot, r }); placed.push(it); return true; };
   const order = ["krow", "wall", "tv", "window", "center", "corner", "front", "desk", "rug", "curtain", "ceiling", "hang", "above"];
-  const sorted = [...items].sort((a, b) => order.indexOf(a.place) - order.indexOf(b.place) || b.w * b.d - a.w * a.d);
+  const sorted = [...items].sort((a, b) => order.indexOf(a.place) - order.indexOf(b.place) || (a.krow && b.krow ? items.indexOf(a) - items.indexOf(b) : b.w * b.d - a.w * a.d));
+  /* Kitchen: the main run from a corner and, for a corner kitchen, a second run along the next wall */
+  const krows = items.filter(i => i.krow);
+  const kitchen = (k1, k2) => {
+    const fitsR = r => inside(r) && !hit(r); let best = null;
+    for (const M of DS_WALLS) for (const end of [0, 1]) {
+      const g = G[M];
+      for (let n1 = Math.min(6, Math.floor((g.len - .04) / .6)); n1 >= 2; n1--) {
+        const w1 = n1 * .6, u1 = end ? g.len - w1 / 2 - .02 : w1 / 2 + .02, [x1, z1] = g.at(u1, .33), r1 = rectOf(x1, z1, w1, .62, g.rot);
+        if (!fitsR(r1)) continue;
+        let leg = null;
+        if (k2) { const [N, e2] = DS_CORNER[M + end], h = G[N]; for (let n2 = Math.min(5, Math.floor((h.len - .7) / .6)); n2 >= 2 && !leg; n2--) { const w2 = n2 * .6, u2 = e2 ? h.len - .66 - w2 / 2 : .66 + w2 / 2, [x2, z2] = h.at(u2, .33), r2 = rectOf(x2, z2, w2, .62, h.rot); if (fitsR(r2) && !ovl(r1, r2)) leg = { n: n2, w: w2, x: x2, z: z2, rot: h.rot, r: r2 }; } }
+        const sc = n1 + (leg ? leg.n * 1.2 : k2 ? -3 : 0) - (winZ.some(z => ovl(r1, z)) ? 1.5 : 0);
+        if (!best || sc > best.sc + .01) best = { sc, n: n1, w: w1, x: x1, z: z1, rot: g.rot, r: r1, leg };
+        break;
+      }
+    }
+    if (!best) return [false, false];
+    Object.assign(k1, { n: best.n, w: best.w, x: best.x, z: best.z, rot: best.rot, r: best.r, k2: false }); placed.push(k1);
+    const L2 = best.leg; if (k2 && L2) { Object.assign(k2, { n: L2.n, w: L2.w, x: L2.x, z: L2.z, rot: L2.rot, r: L2.r, k2: true }); placed.push(k2); }
+    return [true, !!(k2 && L2)];
+  };
   let sofa = null, deskIt = null, table = null;
   for (const it of sorted.filter(i => i.pin && i.x != null)) { const r = rectOf(it.x, it.z, it.w, it.d, it.rot || 0); if (it.flat || it.air || (inside(r) && !hit(r))) { Object.assign(it, { r, ok: true, coll: false, _pinned: 1 }); placed.push(it); } else it.pin = false; }
   sofa = placed.find(o => /sofa/.test(o.model) && o.model !== "armchair") || null; deskIt = placed.find(o => /desk/.test(o.model)) || null; table = placed.find(o => o.model === "table_dining") || null;
   for (const it of sorted) {
     if (it._pinned) { delete it._pinned; continue; }
-    let ok = false; it.coll = false;
+    it.coll = false;
     const isSofa = /sofa/.test(it.model) && it.model !== "armchair";
-    if (it.place === "krow") ok = along(W, it.w).some(x => tryAt(it, x, it.d / 2 + .02, 0)) || wallL(it);
+    const place1 = () => { let ok = false;
+    if (it.place === "krow") {
+      if (it === krows[0]) { const k2 = krows[1] && !krows[1].pin ? krows[1] : null, [a, b] = kitchen(it, k2); ok = a; if (k2) { k2._kdone = 1; k2._kok = b; } }
+      else if (it._kdone) { ok = it._kok; delete it._kdone; delete it._kok; }
+      else { it.n = it.n || 3; it.w = it.n * .6; it.k2 = true; ok = wallR(it) || wallL(it) || wallF1(it) || wallF2(it); }
+    }
     else if (it.model === "tvstand") ok = sofa ? (sofa.rot === 0 ? wallF2(it) : sofa.rot === 1 ? wallF1(it) : wallR(it)) || wallR(it) || wallL(it) : wallR(it) || wallL(it);
     else if (it.place === "wall") ok = (isSofa ? wallR(it) || wallL(it) : /bed/.test(it.model) ? wallR(it) || wallL(it) : wallR(it) || wallL(it) || wallF1(it) || wallF2(it)) || wallF1(it, 1) || wallF2(it, 1);
-    else if (it.place === "window") ok = (wins.length ? along(Lr, it.w).sort((a, b) => Math.abs(a - (wins[0][0] + wins[0][1]) / 2) - Math.abs(b - (wins[0][0] + wins[0][1]) / 2)).some(z => tryAt(it, it.d / 2 + .02, z, 1)) : false) || wallR(it) || wallL(it) || wallF1(it);
+    else if (it.place === "window") { const w0 = wins[0], g = w0 && G[w0.w], c = w0 && (w0.u0 + w0.u1) / 2; ok = (w0 ? along(g.len, it.w).sort((a, b) => Math.abs(a - c) - Math.abs(b - c)).some(u => tryAt(it, ...g.at(u, it.d / 2 + .02), g.rot)) : false) || wallR(it) || wallL(it) || wallF1(it); }
     else if (it.place === "center") { const cands = []; for (let dx = 0; dx <= W / 2; dx += .1) for (let dz = 0; dz <= Lr / 2; dz += .1) cands.push([W / 2 + dx, Lr / 2 + dz], [W / 2 - dx, Lr / 2 - dz], [W / 2 + dx, Lr / 2 - dz], [W / 2 - dx, Lr / 2 + dz]); cands.sort((a, b) => Math.hypot(a[0] - W * .55, a[1] - Lr * .6) - Math.hypot(b[0] - W * .55, b[1] - Lr * .6)); ok = cands.some(([x, z]) => tryAt(it, x, z, 0)); }
     else if (it.place === "corner") ok = [[it.w / 2 + .05, it.d / 2 + .05, 0], [it.d / 2 + .05, Lr - it.w / 2 - .05, 1], [W - it.d / 2 - .05, Lr - it.w / 2 - .05, 3], [it.w / 2 + .05, Lr - it.d / 2 - .05, 2]].some(([x, z, r]) => tryAt(it, x, z, r)) || wallL(it) || wallR(it);
     else if (it.place === "front") { const s = sofa || placed.find(o => /bed/.test(o.model)); if (s) { const gap = .42 + it.d / 2 + s.d / 2; const v = [[0, 1], [1, 0], [0, -1], [-1, 0]][s.rot]; ok = tryAt(it, s.x + v[0] * gap, s.z + v[1] * gap, s.rot); } ok ||= wallF2(it) || wallR(it); }
@@ -3663,12 +3720,15 @@ function dsLayout() {
         ok = spots.some(([x, z, r]) => tryAt(it, x, z, r)); } ok ||= wallF2(it) || wallR(it); }
     else if (it.place === "rug") { const s = sofa || placed.find(o => /bed/.test(o.model)); let cx = W / 2, cz = Lr / 2; if (s) { const v = [[0, 1], [1, 0], [0, -1], [-1, 0]][s.rot]; cx = s.x + v[0] * (s.d / 2 + .6); cz = s.z + v[1] * (s.d / 2 + .6); if (/bed/.test(s.model)) { cx = s.x; cz = s.z + .2; } }
       const r = rectOf(cx, cz, it.w, it.d, s ? s.rot : 0); Object.assign(it, { x: Math.min(Math.max(cx, (r.x1 - r.x0) / 2), W - (r.x1 - r.x0) / 2), z: Math.min(Math.max(cz, (r.z1 - r.z0) / 2), Lr - (r.z1 - r.z0) / 2), rot: s ? s.rot : 0 }); it.r = rectOf(it.x, it.z, it.w, it.d, it.rot); placed.push(it); ok = true; }
-    else if (it.place === "curtain") { const k = placed.filter(o => o.place === "curtain").length; const w = wins[k] || wins[0]; if (w) { Object.assign(it, { x: .1, z: (w[0] + w[1]) / 2, rot: 1, r: rectOf(.1, (w[0] + w[1]) / 2, it.w, .1, 1) }); placed.push(it); ok = true; } }
-    else if (it.place === "hang") ok = along(W, it.w).some(x => hangAt(it, x, it.d / 2 + .02, 0)) || along(Lr, it.w).some(z => !underWin(z - it.w / 2, z + it.w / 2) && hangAt(it, it.d / 2 + .02, z, 1)) || along(W, it.w).some(x => hangAt(it, x, Lr - it.d / 2 - .02, 2));
+    else if (it.place === "curtain") { const k = placed.filter(o => o.place === "curtain").length; const w = wins[k] || wins[0]; if (w) { const g = G[w.w], [x, z] = g.at((w.u0 + w.u1) / 2, .1); Object.assign(it, { x, z, rot: g.rot, r: rectOf(x, z, it.w, .1, g.rot) }); placed.push(it); ok = true; } }
+    else if (it.place === "hang") ok = ["B", "A", "D", "C"].some(w => along(G[w].len, it.w).some(u => hangAt(it, ...G[w].at(u, it.d / 2 + .02), G[w].rot)));
     else if (it.place === "above") { const b = placed.find(o => o.model === "vanity" || o.model === "basin_ped"); if (b) { Object.assign(it, { x: b.x, z: b.z, rot: b.rot, r: rectOf(b.x, b.z, it.w, .5, b.rot) }); placed.push(it); ok = true; } else ok = along(W, it.w).some(x => hangAt(it, x, .22, 0)); }
     else if (it.place === "ceiling") { const k = placed.filter(o => o.place === "ceiling").length; Object.assign(it, { x: W / 2, z: Lr / 2 + k * .8, rot: 0, r: rectOf(W / 2, Lr / 2, .6, .6, 0) }); placed.push(it); ok = true; }
+    return ok; };
+    let ok = place1(); if (!ok && it.tall) { noWin = true; ok = place1(); noWin = false; }
     it.ok = ok; if (ok && isSofa) sofa = it; if (ok && /desk/.test(it.model)) deskIt = it; if (ok && it.model === "table_dining") table = it;
   }
+  for (const k of krows) k.noTop = !!(k.r && winZ.some(z => ovl(k.r, z)));
   dsSave();
 }
 
@@ -3682,13 +3742,13 @@ function dsView(d) {
   return { v, xf, back, Wv: v % 2 ? Lr : W, Lv: v % 2 ? W : Lr };
 }
 function dsOpenings(d) {
-  const W = d.W, out = dsWindows(d).map(([a, b]) => ({ k: "win", p0: [0, a], p1: [0, b] }));
-  if (d.doors > 0) out.push({ k: "door", p0: [W - 1.15, 0], p1: [W - .35, 0] });
+  const o = dsOpen(d), out = o.wins.map(w => ({ k: "win", p0: o.G[w.w].at(w.u0, 0), p1: o.G[w.w].at(w.u1, 0) }));
+  if (o.door) out.push({ k: "door", p0: o.G[o.door.w].at(o.door.u0, 0), p1: o.G[o.door.w].at(o.door.u1, 0) });
   return out;
 }
 function dsPartsWorld(it, H) {
   const inf = dInfo(PROD[it.pid]); if (!inf) return [];
-  const parts = it.krow ? XMODELS.krow(inf.col[0], it.n) : XMODELS[it.model](...(inf.col || []));
+  const parts = it.krow ? XMODELS.krow(inf.col[0], it.n, (it.noTop ? 1 : 0) | (it.k2 ? 2 : 0)) : XMODELS[it.model](...(inf.col || []));
   return parts.map(q => {
     let [px, py, pz] = q.p, [hx, hy, hz] = q.h; if (q.s === 1) hz = hx;
     let wx, wz, ex, ez;
@@ -3704,7 +3764,7 @@ function roomSVG(d, opt = {}) {
   const pts = a => a.map(([x, y, z]) => P(x, y, z).map(v => v.toFixed(3)).join(",")).join(" ");
   const fl = d.floor ? swatchFloor(PROD[d.floor]) : { c: "#cdbfa6", kind: "plank" };
   const wOf = test => DS_WALLS.find(w => { const m = { A: [0, d.L / 2], B: [d.W / 2, 0], C: [d.W, d.L / 2], D: [d.W / 2, d.L] }[w], v = V.xf(...m); return test(v); });
-  const lookL = dsWallLook(d, wOf(v => Math.abs(v[0]) < .01)), lookR = dsWallLook(d, wOf(v => Math.abs(v[1]) < .01));
+  const wl = wOf(v => Math.abs(v[0]) < .01), wr = wOf(v => Math.abs(v[1]) < .01), lookL = dsWallLook(d, wl), lookR = dsWallLook(d, wr);
   let g = "";
   g += `<polygon class="ds-floor" points="${pts([[0, 0, 0], [W, 0, 0], [W, 0, Lr], [0, 0, Lr]])}" fill="${fl.c}"/>`;
   if (fl.kind !== "plain") { const step = fl.kind === "plank" ? .2 : .6; let ln = ""; for (let z = step; z < Lr; z += step) ln += `M${P(0, 0, z).join(",")}L${P(W, 0, z).join(",")}`; if (fl.kind === "tile") for (let x = step; x < W; x += step) ln += `M${P(x, 0, 0).join(",")}L${P(x, 0, Lr).join(",")}`;
@@ -3748,6 +3808,7 @@ function roomSVG(d, opt = {}) {
     const top = pts([[x0, y1, z0], [x1, y1, z0], [x1, y1, z1], [x0, y1, z1]]), fx = pts([[x1, y0, z0], [x1, y0, z1], [x1, y1, z1], [x1, y1, z0]]), fz = pts([[x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1]]);
     g += `<g data-dsuid="${f.uid}"${sel}><polygon points="${fz}" fill="${dsShade(c, .8 * k)}"/><polygon points="${fx}" fill="${dsShade(c, .92 * k)}"/><polygon points="${top}" fill="${dsShade(c, 1.04 * k)}"/></g>`;
   }
+  if (opt.nums) for (const [w, pt] of [[wl, P(0, H - .35, Lr / 2)], [wr, P(W / 2, H - .35, 0)]]) g += `<g pointer-events="none"><circle cx="${pt[0].toFixed(3)}" cy="${pt[1].toFixed(3)}" r=".17" fill="#131b1a"/><text x="${pt[0].toFixed(3)}" y="${(pt[1] + .07).toFixed(3)}" font-size=".2" font-weight="700" fill="#fff" text-anchor="middle">${DS_WALLS.indexOf(w) + 1}</text></g>`;
   const xs = [P(0, 0, Lr)[0], P(W, 0, 0)[0]], ys = [P(0, H, 0)[1], P(W, 0, Lr)[1]];
   const pad = .35, vb = [xs[0] - pad, ys[0] - pad, xs[1] - xs[0] + pad * 2, ys[1] - ys[0] + pad * 2].map(v => v.toFixed(2)).join(" ");
   return `<svg class="ds-svg${opt.edit ? " edit" : ""}" data-dsmode="3d" viewBox="${vb}" role="img" aria-label="${L("3D-вид комнаты", "Xonaning 3D ko‘rinishi")} ${d.W}×${d.L} ${L("м", "m")}"><defs><linearGradient id="dsSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#bfe0f2"/><stop offset="1" stop-color="#eaf6fb"/></linearGradient></defs>${g}</svg>`;
@@ -3760,10 +3821,11 @@ function planSVG(d, opt = {}) {
   for (let z = 0; z <= Lr + 1e-6; z += .5) g += `<line x1="0" y1="${n(z)}" x2="${W}" y2="${n(z)}" stroke="#000" stroke-opacity=".06" stroke-width=".01"/>`;
   g += `<rect x="-.06" y="-.06" width="${W + .12}" height="${Lr + .12}" fill="none" stroke="${dsShade(wallC, .6)}" stroke-width=".12"/>`;
   if (d.accent && PROD[d.accent.pid]) { const c = dsWallLook(d, d.accent.w).c, seg = { A: [-.06, -.06, -.06, Lr + .06], B: [-.06, -.06, W + .06, -.06], C: [W + .06, -.06, W + .06, Lr + .06], D: [-.06, Lr + .06, W + .06, Lr + .06] }[d.accent.w]; g += `<line x1="${n(seg[0])}" y1="${n(seg[1])}" x2="${n(seg[2])}" y2="${n(seg[3])}" stroke="${c}" stroke-width=".12"/><line x1="${n(seg[0])}" y1="${n(seg[1])}" x2="${n(seg[2])}" y2="${n(seg[3])}" stroke="#000" stroke-opacity=".25" stroke-width=".012" stroke-dasharray=".08 .06"/>`; }
-  for (const o of dsOpenings(d)) {
-    if (o.k === "win") g += `<line x1="-.06" y1="${n(o.p0[1])}" x2="-.06" y2="${n(o.p1[1])}" stroke="#8fc7e6" stroke-width=".14"/>`;
-    else { const [a, b] = [o.p0[0], o.p1[0]], r = b - a; g += `<line x1="${n(a)}" y1="-.06" x2="${n(b)}" y2="-.06" stroke="#fff" stroke-width=".14"/><path d="M${n(b)},0 L${n(b)},${n(r)} A${n(r)},${n(r)} 0 0 1 ${n(a)},0" fill="none" stroke="#9a7353" stroke-width=".02" stroke-dasharray=".05 .04"/>`; }
-  }
+  { const O = dsOpen(d), ln = (a, b, c) => `<line x1="${n(a[0])}" y1="${n(a[1])}" x2="${n(b[0])}" y2="${n(b[1])}" stroke="${c}" stroke-width=".14"/>`;
+    for (const w of O.wins) { const gw = O.G[w.w]; g += ln(gw.at(w.u0, -.06), gw.at(w.u1, -.06), "#8fc7e6"); }
+    if (O.door) { const gw = O.G[O.door.w], { u0, u1 } = O.door, r = u1 - u0, Hn = gw.at(u1, 0), E = gw.at(u1, r), C0 = gw.at(u0, 0), sw = (E[0] - Hn[0]) * (C0[1] - Hn[1]) - (E[1] - Hn[1]) * (C0[0] - Hn[0]) > 0 ? 1 : 0;
+      g += ln(gw.at(u0, -.06), gw.at(u1, -.06), "#fff") + `<path d="M${n(Hn[0])},${n(Hn[1])} L${n(E[0])},${n(E[1])} A${n(r)},${n(r)} 0 0 ${sw} ${n(C0[0])},${n(C0[1])}" fill="none" stroke="#9a7353" stroke-width=".02" stroke-dasharray=".05 .04"/>`; }
+    if (opt.nums) for (const w of DS_WALLS) { const gw = O.G[w], [x, z] = gw.at(gw.len / 2, .3); g += `<circle cx="${n(x)}" cy="${n(z)}" r=".17" fill="#131b1a"/><text x="${n(x)}" y="${n(z + .07)}" font-size=".2" font-weight="700" fill="#fff" text-anchor="middle">${DS_WALLS.indexOf(w) + 1}</text>`; } }
   const order = [...d.items].filter(i => i.ok && i.x != null && i.r).sort((a, b) => (b.flat ? 1 : 0) - (a.flat ? 1 : 0));
   for (const it of order) {
     const r = it.r, p = PROD[it.pid], inf = dInfo(p), col = (it.krow ? inf.col[0] : (XMODELS[it.model](...(inf.col || []))[0]?.c)) || "#999";
@@ -3783,7 +3845,7 @@ function dsRect(it, x, z, rot) { const [ww, dd] = rot % 2 ? [it.d, it.w] : [it.w
 function dsFits(it, r) {
   const d = DS; if (r.x0 < -.001 || r.z0 < -.001 || r.x1 > d.W + .001 || r.z1 > d.L + .001) return false;
   if (it.flat || it.air) return true;
-  const door = d.doors > 0 ? [{ x0: Math.max(0, d.W - 1.25), x1: d.W, z0: 0, z1: 1.05 }] : [];
+  const db = dsDoorBlock(d), door = db ? [db] : [];
   return ![...d.items.filter(o => o !== it && o.ok && o.r && !o.flat && !o.air).map(o => o.r), ...door].some(o => r.x0 < o.x1 - .005 && r.x1 > o.x0 + .005 && r.z0 < o.z1 - .005 && r.z1 > o.z0 + .005);
 }
 let dsDrag = null;
@@ -3810,7 +3872,7 @@ window.addEventListener("pointermove", e => {
   const r0 = dsRect(it, x, z, it.rot), hw = (r0.x1 - r0.x0) / 2, hd = (r0.z1 - r0.z0) / 2;
   x = Math.min(Math.max(x, hw), DS.W - hw); z = Math.min(Math.max(z, hd), DS.L - hd);
   if (!it.flat && !it.air) { if (x - hw < .2) x = hw + .02; if (DS.W - x - hw < .2) x = DS.W - hw - .02; if (z - hd < .2) z = hd + .02; if (DS.L - z - hd < .2) z = DS.L - hd - .02; } // stick to walls
-  if (it.place === "curtain") { x = it.x; }
+  if (it.place === "curtain") { if (it.rot % 2) x = it.x; else z = it.z; }
   const r = dsRect(it, x, z, it.rot), ok = dsFits(it, r);
   it.x = x; it.z = z; it.r = r; it.coll = !ok;
   if (ok) { D.lx = x; D.lz = z; }
@@ -3878,7 +3940,12 @@ function dsEstimate(d) {
   if (d.floor) { const p = PROD[d.floor], tile = p.cat === "tile"; add(p, Math.ceil(area * (tile ? 1.1 : 1.07)), `${area.toFixed(1).replace(".", ",")} ${L("м²", "m²")} + ${tile ? 10 : 7}%`); if (tile) add(byKey("glue"), Math.ceil(area * 5 / 25), L("плиточный клей 5 кг/м²", "kafel yelimi 5 kg/m²")); }
   const furn = {}; for (const it of d.items) if (it.ok !== false && PROD[it.pid]) { const q = it.krow ? it.n || 4 : 1; furn[it.pid] = (furn[it.pid] || 0) + q; }
   if (d.type === "bath") { const sinks = d.items.filter(i => i.ok !== false && ["vanity", "basin_ped"].includes(dInfo(PROD[i.pid])?.model)).length; if (sinks) add(findName(d.q.style === "loft" || d.q.style === "modern" ? /Смеситель для раковины, чёрный/ : d.q.style === "classic" ? /Смеситель для раковины, золото/ : /Смеситель для раковины, хром/), sinks, L("для раковины", "rakovina uchun")); add(findName(/Вентилятор вытяжной 100 мм/), 1, L("вытяжка в ванной обязательна", "vannada ventilyator shart")); }
-  if (d.items.some(it => it.krow && it.ok !== false)) { add(findName(/Столешница 3 м, бетон/), Math.ceil(((d.items.find(i => i.krow).n || 4) * .6) / 3), ""); add(findName(/Мойка гранитная 60×50, чёрная/), 1, ""); add(findName(/Вытяжка наклонная 60 см, белая/), 1, ""); }
+  const ks = d.items.filter(it => it.krow && it.ok !== false);
+  if (ks.length) { const st = d.q.style, mods = ks.reduce((a, k) => a + (k.n || 4), 0), dark = st === "loft" || st === "modern";
+    add(findName(st === "loft" ? /Столешница 3 м, бетон/ : st === "scandi" || st === "oriental" ? /Столешница 3 м, дуб/ : st === "modern" ? /Столешница 3 м, чёрный камень/ : /Столешница 3 м, 38 мм/), ks.reduce((a, k) => a + Math.ceil((k.n || 4) * .6 / 3), 0), L(`${fmtN(mods * .6)} м${ks.length > 1 ? ", угловая" : ""}`, `${fmtN(mods * .6)} m${ks.length > 1 ? ", burchakli" : ""}`));
+    add(findName(dark ? /Мойка гранитная 60×50, чёрная/ : st === "classic" ? /Мойка гранитная 60×50, бежевая/ : /Мойка из нержавейки/), 1, "");
+    add(findName(dark ? /Смеситель для кухни, чёрный/ : st === "classic" ? /Смеситель для кухни с гибким/ : /Смеситель для кухни, нержавеющая/), 1, "");
+    add(findName(mods >= 7 ? /Вытяжка наклонная 90 см/ : /Вытяжка наклонная 60 см, белая/), 1, ""); }
   const mats = [...lines];
   const furnL = Object.entries(furn).map(([id, q]) => ({ p: PROD[id], q }));
   const sum = a => a.reduce((s, l) => s + minPrice(l.p) * l.q, 0);
@@ -3898,7 +3965,7 @@ async function dsAI(prompt, imageUrl) {
 }
 const dsCtx = d => {
   const it = d.items.filter(i => PROD[i.pid]).map(i => `${i.pid} ${PROD[i.pid].ru}`).join("; ") || "нет";
-  return `Комната: ${ROOMS().find(r => r[0] === d.type)?.[1] || d.type}, ${d.W}×${d.L} м, высота ${d.H} м, окон ${d.win}, дверей ${d.doors}. Ответы клиента: ${JSON.stringify(d.q)}. Сейчас: стены — ${d.q.walls === "tile" ? PROD[d.wtile]?.ru || "плитка" : PROD[d.wall]?.ru || "—"}, стена-акцент — ${d.accent && PROD[d.accent.pid] ? `${d.accent.w}: ${PROD[d.accent.pid].ru}` : "нет"}, пол — ${PROD[d.floor]?.ru || "—"}, мебель — ${it}.${d.notes ? " По фото: " + d.notes : ""} Стены: A — с окнами, B — с дверью, C — напротив окон, D — напротив двери.`;
+  return `Комната: ${ROOMS().find(r => r[0] === d.type)?.[1] || d.type}, ${d.W}×${d.L} м, высота ${d.H} м, окон ${d.win}, дверей ${d.doors}. Ответы клиента: ${JSON.stringify(d.q)}. Сейчас: стены — ${d.q.walls === "tile" ? PROD[d.wtile]?.ru || "плитка" : PROD[d.wall]?.ru || "—"}, стена-акцент — ${d.accent && PROD[d.accent.pid] ? `${d.accent.w}: ${PROD[d.accent.pid].ru}` : "нет"}, пол — ${PROD[d.floor]?.ru || "—"}, мебель — ${it}.${d.notes ? " По фото: " + d.notes : ""} Стены: ${DS_WALLS.map(w => `${w} — ${dsWallName(d, w)}`).join("; ")}.`;
 };
 async function dsAnalyzePhoto() {
   if (!DS.photo || !dsAIon()) return;
@@ -3948,10 +4015,13 @@ function dsRules(text) {
   if (has("ковёр", "ковер", "gilam") && !has("без ковр")) put(DS.type === "kids" ? "rug_kid" : "rug_beige") && did.push(L("добавил ковёр", "gilam qo‘shdim"));
   if (has("тв", "телевиз", "televizor")) put("tvstand") && did.push(L("добавил тумбу под ТВ", "TV tumbasi qo‘shdim"));
   const paint = has("розов", "pushti") ? byXKey("paint_rose") : has("мят", "зелён", "зелен", "yalpiz", "yashil") ? byXKey("paint_mint") : has("лаванд", "фиолет", "lavanda") ? byXKey("paint_lav") : has("голуб", "син", "havorang", "ko‘k") ? findName(/«Небо»/) : has("бежев", "тёпл", "bej") ? findName(/«Песок»/) : has("тёмн", "темн", "сер", "графит", "kulrang") ? findName(/«Графит»/) : has("светл", "бел", "oq", "yorug") ? findName(/белая матовая/) : null;
-  if (has("акцент", "одну стену", "одна стена", "aksent", "bitta devor")) { const p = paint || findName(/«Терракота»/); DS.accent = { w: DS.win > 0 ? "C" : "D", pid: p.id }; did.push(L(`стена-акцент — ${p.ru.match(/«.+»|белая/)?.[0] || ""}`, "aksent devor qo‘shdim")); }
+  if (has("акцент", "одну стену", "одна стена", "aksent", "bitta devor")) { const p = paint || findName(/«Терракота»/); DS.accent = { w: DS.win > 0 ? DS_OPP[DS.winWall || "A"] : DS_OPP[DS.doorWall || "B"], pid: p.id }; did.push(L(`стена-акцент — ${p.ru.match(/«.+»|белая/)?.[0] || ""}`, "aksent devor qo‘shdim")); }
   else if (paint) { DS.wall = paint.id; did.push(L(`стены — ${paint.ru.match(/«.+»|белая/)?.[0] || ""}`, "devor rangini o‘zgartirdim")); }
   if (has("душ", "dush") && !has("без душ")) { const p = findName(/Душевая стойка с тропическим/); if (drop(/^Ванна/) || !DS.items.some(i => /Душев/.test(PROD[i.pid]?.ru))) { put(p); did.push(L("поставил душ вместо ванны", "vanna o‘rniga dush qo‘ydim")); } }
   else if (has("ванну", "ванна", "vanna") && DS.type === "bath") { if (drop(/Душевая/)) { put(findName(/Ванна акриловая 170×70/)); did.push(L("поставил ванну вместо душа", "dush o‘rniga vanna qo‘ydim")); } }
+  const kr = DS.items.filter(i => i.krow);
+  if (has("углов", "burchak") && kr.length === 1) { DS.items.splice(DS.items.indexOf(kr[0]) + 1, 0, { uid: dsUid(), pid: kr[0].pid, krow: true }); DS.q.kshape = "corner"; did.push(L("сделал угловой гарнитур", "burchakli garnitur qildim")); }
+  else if (has("прям", "to‘g‘ri", "togri") && kr.length > 1) { DS.items = DS.items.filter(i => i !== kr[1]); DS.q.kshape = "line"; did.push(L("сделал прямой гарнитур", "to‘g‘ri garnitur qildim")); }
   if (has("дешевл", "эконом", "arzon")) { drop(/Торшер|Кресло/); DS.q.budget = "eco"; did.push(L("убрал необязательное, чтобы было дешевле", "arzonroq bo‘lishi uchun ortiqchasini olib tashladim")); }
   if (has("паркет", "parket")) { const p = findName(/Паркетная доска, дуб/); if (p) { DS.floor = p.id; did.push(L("пол — паркет", "pol — parket")); } }
   if (has("плитк", "kafel", "керамогран")) { const p = findName(/Керамогранит 60×60, бежевый/); if (p) { DS.floor = p.id; did.push(L("пол — керамогранит", "pol — keramogranit")); } }
@@ -3964,6 +4034,7 @@ function renderDesign() {
   if (!DS) { DS = dsNew(); dsSave(); }
   const d = DS, st = d.step;
   const steps = [L("Фото", "Rasm"), L("Размеры", "O‘lcham"), L("Опрос", "So‘rovnoma"), L("Дизайн и смета", "Dizayn va smeta")];
+  const wchips = (name, cur) => `<div class="chips ds-chips">${DS_WALLS.map((w, i) => `<button type="button" class="chip" data-dsw="${name}" data-v="${w}" aria-pressed="${cur === w}">${L("Стена", "Devor")} ${i + 1}</button>`).join("")}</div>`;
   const chips = (name, opts, cur, multi) => `<div class="chips ds-chips">${opts.map(([v, t]) => `<button type="button" class="chip" data-dsq="${name}" data-v="${v}" aria-pressed="${multi ? (cur || []).includes(v) : cur === v}">${t}</button>`).join("")}</div>`;
   let panel = "";
   if (st === 1) panel = `<h2 class="h-m">${L("Сфотографируйте комнату", "Xonani suratga oling")}</h2>
@@ -3974,6 +4045,7 @@ function renderDesign() {
     ${dsRooms().length ? `<b class="ds-q">${L("Мои комнаты", "Mening xonalarim")}</b><div class="ds-rooms">${dsRooms().map(r => `<div class="ds-room"><button type="button" data-dsroom="${r.id}">${roomSVG(r.d)}<span><b>${esc(r.name)}</b><small>${new Date(r.t).toLocaleDateString("ru-RU")}</small></span></button><button type="button" class="ib" data-dsroomdel="${r.id}" aria-label="${L("Удалить", "O‘chirish")}">${ui("trash", 15)}</button></div>`).join("")}</div>` : ""}`;
   else if (st === 2) panel = `<h2 class="h-m">${L("Размеры комнаты", "Xona o‘lchamlari")}</h2><p class="mu">${L("Измерьте рулеткой. 3D-коробка справа сразу меняется.", "Ruletka bilan o‘lchang. 3D quti darhol o‘zgaradi.")}</p>
     <div class="ds-grid">${[["W", L("Ширина, м", "Eni, m"), 1.5, 12, .1], ["L", L("Длина, м", "Bo‘yi, m"), 1.5, 15, .1], ["H", L("Высота, м", "Balandligi, m"), 2.2, 4.5, .05], ["win", L("Окон", "Derazalar"), 0, 3, 1], ["doors", L("Дверей", "Eshiklar"), 0, 2, 1]].map(([k, t, mn, mx, sp]) => `<div class="f"><label for="ds_${k}">${t}</label><input id="ds_${k}" type="number" inputmode="decimal" min="${mn}" max="${mx}" step="${sp}" value="${d[k]}" data-dsdim="${k}"></div>`).join("")}</div>
+    ${d.win > 0 || d.doors > 0 ? `<div class="ds-walls"><div>${d.win > 0 ? `<b class="ds-q">${L("Окна на стене", "Derazalar devorda")}</b>${wchips("winWall", d.winWall || "A")}` : ""}${d.doors > 0 ? `<b class="ds-q">${L("Дверь на стене", "Eshik devorda")}</b>${wchips("doorWall", d.doorWall || "B")}<b class="ds-q">${L("Где дверь", "Eshik qayerda")}</b><div class="chips ds-chips">${[["start", L("У одного угла", "Bir burchakda")], ["mid", L("По центру", "O‘rtada")], ["end", L("У другого угла", "Boshqa burchakda")]].map(([v, t]) => `<button type="button" class="chip" data-dsw="doorPos" data-v="${v}" aria-pressed="${(d.doorPos || "end") === v}">${t}</button>`).join("")}</div>` : ""}</div><div class="ds-mini" aria-hidden="true">${planSVG(d, { nums: 1 })}</div></div>` : ""}
     <p class="mu" style="font-size:13px">${L("Площадь", "Maydon")}: <b>${(d.W * d.L).toFixed(1).replace(".", ",")} м²</b> · ${L("стены", "devorlar")}: <b>${fmtN(dsEstimate(d).wallA)} м²</b></p>
     <div class="ds-nav"><button class="btn btn-line" type="button" data-ds="back">${L("Назад", "Orqaga")}</button><button class="btn btn-primary" type="button" data-ds="next">${L("Дальше: опрос", "Keyingisi: so‘rovnoma")}</button></div>`;
   else if (st === 3) {
@@ -3987,6 +4059,7 @@ function renderDesign() {
     if (t === "living" || t === "kitchen") panel += `<b class="ds-q">${L("Сколько человек в семье", "Oilada necha kishi")}</b>${chips("seats", [["2", "1–2"], ["4", "3–4"], ["6", "5–6"]], q.seats)}`;
     if (t === "living") panel += `<b class="ds-q">${L("Телевизор", "Televizor")}</b>${chips("tv", [["1", L("Да", "Ha")], ["0", L("Нет", "Yo‘q")]], q.tv ? "1" : "0")}<b class="ds-q">${L("Обеденный стол в зале", "Zalda ovqat stoli")}</b>${chips("dining", [["1", L("Да", "Ha")], ["0", L("Нет", "Yo‘q")]], q.dining ? "1" : "0")}`;
     if (t === "bath") panel += `<b class="ds-q">${L("Ванна или душ", "Vanna yoki dush")}</b>${chips("bathKind", [["bath", L("Ванна", "Vanna")], ["shower", L("Душ", "Dush")]], q.bathKind)}<b class="ds-q">${L("Унитаз в этой комнате", "Unitaz shu xonada")}</b>${chips("wc", [["1", L("Да, совмещённый", "Ha, birga")], ["0", L("Нет, отдельно", "Yo‘q, alohida")]], q.wc ? "1" : "0")}`;
+    if (t === "kitchen") panel += `<b class="ds-q">${L("Кухонный гарнитур", "Oshxona garnituri")}</b>${chips("kshape", [["corner", L("Угловой", "Burchakli")], ["line", L("Прямой", "To‘g‘ri")]], q.kshape || "corner")}`;
     if (t === "hall") panel += `<b class="ds-q">${L("Шкаф-купе", "Shkaf-kupe")}</b>${chips("ward", [["1", L("Нужен", "Kerak")], ["0", L("Без шкафа, вешалка", "Shkafsiz, ilgich")]], q.ward ? "1" : "0")}`;
     if (t && t !== "kids") panel += `<b class="ds-q">${L("Стиль", "Uslub")}</b>${chips("style", [["modern", L("Современный", "Zamonaviy")], ["scandi", L("Скандинавский", "Skandinav")], ["classic", L("Классика", "Klassika")], ["oriental", L("Восточный", "Sharqona")], ["loft", L("Лофт", "Loft")]], q.style)}`;
     if (t) panel += `<b class="ds-q">${L("Стены", "Devorlar")}</b>${chips("walls", [["paint", L("Покрасить", "Bo‘yash")], ...(t === "bath" ? [] : [["wp", L("Обои", "Gulqog‘oz")]]), ["tile", L("Плитка", "Kafel")], ["keep", L("Оставить", "Qoldirish")]], q.walls)}
@@ -4001,7 +4074,7 @@ function renderDesign() {
       ${d.picker ? `<div class="ds-picker">${furnAll().filter(p => !d.picker.sub || p.sub === d.picker.sub).map(p => `<button type="button" class="ds-pick" data-dsadd="${p.id}">${mini(p)}<span>${esc(pName(p))}<small>${fmt(minPrice(p))}</small></span></button>`).join("")}</div>` : ""}
       <b class="ds-q">${L("Цвет стен", "Devor rangi")}</b><div class="ds-sw">${paintsAll().map(p => `<button type="button" class="sw" data-dswall="${p.id}" style="--c:${swatchPaint(p)}" aria-pressed="${d.q.walls !== "tile" && d.wall === p.id}" title="${esc(pName(p))}"><span class="visually-hidden">${esc(pName(p))}</span></button>`).join("")}</div>
       <b class="ds-q">${L("Плитка на стены", "Devorga kafel")}</b><div class="ds-sw">${tilesAll().map(p => `<button type="button" class="sw wt" data-dswtile="${p.id}" style="--c:${swatchTile(p).c}" aria-pressed="${d.q.walls === "tile" && d.wtile === p.id}" title="${esc(pName(p))}"><span class="visually-hidden">${esc(pName(p))}</span></button>`).join("")}</div>
-      <b class="ds-q">${L("Стена-акцент", "Aksent devor")}</b><div class="chips ds-chips">${[["", L("Нет", "Yo‘q")], ["A", d.win > 0 ? L("С окном", "Derazali") : L("Слева", "Chapdagi")], ["B", d.doors > 0 ? L("С дверью", "Eshikli") : L("Справа", "O‘ngdagi")], ["C", d.win > 0 ? L("Напротив окна", "Deraza qarshisida") : L("Дальняя", "Uzoqdagi")], ["D", d.doors > 0 ? L("Напротив двери", "Eshik qarshisida") : L("Задняя", "Orqadagi")]].map(([w, t]) => `<button type="button" class="chip" data-dsacc="${w || "none"}" aria-pressed="${(d.accent?.w || "") === w}">${t}</button>`).join("")}</div>
+      <b class="ds-q">${L("Стена-акцент", "Aksent devor")}</b><div class="chips ds-chips">${[["", L("Нет", "Yo‘q")], ...DS_WALLS.map(w => [w, dsWallName(d, w)])].map(([w, t]) => `<button type="button" class="chip" data-dsacc="${w || "none"}" aria-pressed="${(d.accent?.w || "") === w}">${t}</button>`).join("")}</div>
       ${d.accent ? `<div class="ds-sw">${[...paintsAll(), ...tilesAll()].map(p => `<button type="button" class="sw${isTile(p) ? " wt" : ""}" data-dsaccp="${p.id}" style="--c:${isTile(p) ? swatchTile(p).c : swatchPaint(p)}" aria-pressed="${d.accent.pid === p.id}" title="${esc(pName(p))}"><span class="visually-hidden">${esc(pName(p))}</span></button>`).join("")}</div>` : ""}
       <b class="ds-q">${L("Пол", "Pol")}</b><div class="ds-sw">${floorsAll().map(p => { const f = swatchFloor(p); return `<button type="button" class="sw ${f.kind}" data-dsfloor="${p.id}" style="--c:${f.c}" aria-pressed="${d.floor === p.id}" title="${esc(pName(p))}"><span class="visually-hidden">${esc(pName(p))}</span></button>`; }).join("")}</div>
       <b class="ds-q">${L("Мебель в комнате", "Xonadagi mebel")}</b>
@@ -4024,15 +4097,17 @@ function renderDesign() {
         ${(d.mode || "3d") === "3d" ? `<button class="ib" type="button" data-ds="view-l" aria-label="${L("Повернуть комнату влево", "Xonani chapga burish")}" title="${L("Повернуть комнату", "Xonani burish")}">⟲</button><button class="ib" type="button" data-ds="view-r" aria-label="${L("Повернуть комнату вправо", "Xonani o‘ngga burish")}" title="${L("Повернуть комнату", "Xonani burish")}">⟳</button>` : ""}
         <button class="btn ${d.edit ? "btn-primary" : "btn-line"} ds-edit" type="button" data-ds="edit" aria-pressed="${!!d.edit}">✋ ${d.edit ? L("Двигаю мебель", "Mebelni suryapman") : L("Двигать мебель", "Mebelni surish")}</button>
         <button class="ib" type="button" data-ds="share" aria-label="${L("Поделиться картинкой", "Rasm bilan ulashish")}" title="${L("Поделиться", "Ulashish")}">${ui("photo", 17)}</button>
-      </div>` : ""}${st === 4 ? dsSVG(d, { edit: d.edit }) : roomSVG(d)}${st === 4 ? `<small class="mu ds-hint">${matchMedia("(pointer: fine)").matches ? L("Перетаскивайте мебель мышкой. Кнопка ↻ в списке поворачивает предмет.", "Mebelni sichqoncha bilan suring. Ro‘yxatdagi ↻ tugmasi buradi.") : d.edit ? L("Ведите пальцем по мебели, чтобы переставить. Нажмите «Двигаю мебель», чтобы снова листать страницу.", "Mebelni barmoq bilan suring. Sahifani aylantirish uchun «Mebelni suryapman» ni bosing.") : L("Нажмите «Двигать мебель», чтобы переставлять пальцем.", "Barmoq bilan surish uchun «Mebelni surish» ni bosing.")}</small>` : ""}<div class="ds-dims mu">${String(d.W).replace(".", ",")} × ${String(d.L).replace(".", ",")} ${L("м", "m")} · ${L("высота", "balandlik")} ${String(d.H).replace(".", ",")} ${L("м", "m")}${d.type ? " · " + ROOMS().find(r => r[0] === d.type)[1] : ""}</div>${!dsAIon() ? `<small class="mu ds-ai-note">${L("Подбор по ответам работает всегда. Свободные пожелания и разбор фото понимает Usta AI, когда он подключён.", "Javoblar bo‘yicha tanlash doim ishlaydi. Erkin istaklar va rasm tahlilini Usta AI ulanganda tushunadi.")}</small>` : ""}</div>
+      </div>` : ""}${st === 4 ? dsSVG(d, { edit: d.edit }) : roomSVG(d, { nums: st === 2 })}${st === 4 ? `<small class="mu ds-hint">${matchMedia("(pointer: fine)").matches ? L("Перетаскивайте мебель мышкой. Кнопка ↻ в списке поворачивает предмет.", "Mebelni sichqoncha bilan suring. Ro‘yxatdagi ↻ tugmasi buradi.") : d.edit ? L("Ведите пальцем по мебели, чтобы переставить. Нажмите «Двигаю мебель», чтобы снова листать страницу.", "Mebelni barmoq bilan suring. Sahifani aylantirish uchun «Mebelni suryapman» ni bosing.") : L("Нажмите «Двигать мебель», чтобы переставлять пальцем.", "Barmoq bilan surish uchun «Mebelni surish» ni bosing.")}</small>` : ""}<div class="ds-dims mu">${String(d.W).replace(".", ",")} × ${String(d.L).replace(".", ",")} ${L("м", "m")} · ${L("высота", "balandlik")} ${String(d.H).replace(".", ",")} ${L("м", "m")}${d.type ? " · " + ROOMS().find(r => r[0] === d.type)[1] : ""}</div>${!dsAIon() ? `<small class="mu ds-ai-note">${L("Подбор по ответам работает всегда. Свободные пожелания и разбор фото понимает Usta AI, когда он подключён.", "Javoblar bo‘yicha tanlash doim ishlaydi. Erkin istaklar va rasm tahlilini Usta AI ulanganda tushunadi.")}</small>` : ""}</div>
       <div class="ds-panel panel">${panel}</div></div></div>`;
   const fl = $("#dsFile");
   if (fl) fl.addEventListener("change", async e => { const f = e.target.files?.[0]; if (!f) return; try { DS.photo = await resizeImg(f); DS.notes = ""; dsSave(); renderDesign(); dsAnalyzePhoto(); } catch (er) { toast(L("Не удалось открыть фото", "Rasmni ochib bo‘lmadi")); } });
-  document.querySelectorAll("[data-dsdim]").forEach(i => i.addEventListener("input", e => { const k = e.target.dataset.dsdim, v = parseFloat(String(e.target.value).replace(",", ".")); const lim = { W: [1.5, 12], L: [1.5, 15], H: [2.2, 4.5], win: [0, 3], doors: [0, 2] }[k]; if (!(v >= lim[0] && v <= lim[1])) return; DS[k] = k === "win" || k === "doors" ? Math.round(v) : Math.round(v * 100) / 100; dsLayout(); $(".ds-view svg").outerHTML = roomSVG(DS); }));
+  document.querySelectorAll("[data-dsdim]").forEach(i => i.addEventListener("input", e => { const k = e.target.dataset.dsdim, v = parseFloat(String(e.target.value).replace(",", ".")); const lim = { W: [1.5, 12], L: [1.5, 15], H: [2.2, 4.5], win: [0, 3], doors: [0, 2] }[k]; if (!(v >= lim[0] && v <= lim[1])) return; const old = DS[k]; DS[k] = k === "win" || k === "doors" ? Math.round(v) : Math.round(v * 100) / 100; dsLayout();
+    if ((k === "win" || k === "doors") && (!old) !== (!DS[k])) { dsAutoView(); renderDesign(); const el = $("#ds_" + k); if (el) { el.focus(); } return; }
+    $(".ds-view svg").outerHTML = roomSVG(DS, { nums: true }); const mini = $(".ds-mini"); if (mini) mini.innerHTML = planSVG(DS, { nums: 1 }); }));
   const wf = $("#dsWish"); if (wf) wf.addEventListener("submit", e => { e.preventDefault(); const v = $("#dsWishIn").value; $("#dsWishIn").value = ""; dsWish(v); });
 }
 document.addEventListener("click", e => {
-  const t = e.target.closest("[data-dsroom],[data-dsroomdel],.ds-teaser-v") || e.target.closest("[data-ds],[data-dsq],[data-dsstep],[data-dswall],[data-dswtile],[data-dsacc],[data-dsaccp],[data-dsfloor],[data-dsdel],[data-dsalt],[data-dssel],[data-dsadd],[data-dsuid],[data-dsturn]"); if (!t || route.view !== "design") return;
+  const t = e.target.closest("[data-dsroom],[data-dsroomdel],.ds-teaser-v") || e.target.closest("[data-ds],[data-dsq],[data-dsw],[data-dsstep],[data-dswall],[data-dswtile],[data-dsacc],[data-dsaccp],[data-dsfloor],[data-dsdel],[data-dsalt],[data-dssel],[data-dsadd],[data-dsuid],[data-dsturn]"); if (!t || route.view !== "design") return;
   const s = t.dataset;
   if (s.dsturn) return dsTurn(s.dsturn);
   if (s.dsroomdel) { LS.set("imorat.rooms", dsRooms().filter(r => r.id !== s.dsroomdel)); return renderDesign(); }
@@ -4040,12 +4115,13 @@ document.addEventListener("click", e => {
   if (s.dsq) { const k = s.dsq, v = s.v; if (k === "type") { DS.type = v; if (v === "bath") { if (DS.q.walls !== "keep") DS.q.walls = "tile"; if (DS.q.floorKind !== "keep") DS.q.floorKind = "tile"; } else if (DS.q.walls === "tile" && v !== "hall") DS.q.walls = "paint"; if (v === "hall" && DS.q.floorKind === "lam") DS.q.floorKind = "tile"; } else if (["colors", "hobby"].includes(k)) { const a = DS.q[k] || []; DS.q[k] = a.includes(v) ? a.filter(x => x !== v) : [...a, v]; } else if (["tv", "dining", "desk", "wc", "ward"].includes(k)) DS.q[k] = v === "1"; else DS.q[k] = v; dsSave(); return renderDesign(); }
   if (s.dsstep) { DS.step = +s.dsstep; dsSave(); return renderDesign(); }
   if (s.dswall) { DS.wall = +s.dswall; DS.q.walls = "paint"; dsSave(); return renderDesign(); }
+  if (s.dsw) { DS[s.dsw] = s.v; dsAutoView(); dsLayout(); return renderDesign(); }
   if (s.dswtile) { DS.wtile = +s.dswtile; DS.q.walls = "tile"; dsSave(); return renderDesign(); }
   if (s.dsacc) { if (s.dsacc === "none") DS.accent = null; else { const keep = DS.accent?.pid, def = DS.type === "bath" ? findName(/Мозаика стеклянная 30×30, зелёная/) : findName(DS.type === "kids" ? /«Небо»/ : /«Терракота»/); DS.accent = { w: s.dsacc, pid: keep || def?.id }; const vis = [["A", "B"], ["B", "C"], ["C", "D"], ["D", "A"]]; if ((DS.mode || "3d") === "3d" && !vis[(DS.view || 0) % 4].includes(s.dsacc)) DS.view = vis.findIndex(v => v.includes(s.dsacc)); } dsSave(); return renderDesign(); }
   if (s.dsaccp) { if (DS.accent) DS.accent.pid = +s.dsaccp; dsSave(); return renderDesign(); }
   if (s.dsfloor) { DS.floor = +s.dsfloor; dsSave(); return renderDesign(); }
   if (s.dsdel) { DS.items = DS.items.filter(i => i.uid !== s.dsdel); dsLayout(); return renderDesign(); }
-  if (s.dsalt) { const it = DS.items.find(i => i.uid === s.dsalt), p = PROD[it.pid], inf = dInfo(p); const fam = m => ({ toilet: 1, basin_ped: 2, shower: 3, bath: 4 })[m] || 0, alts = furnAll().filter(x => x.sub === p.sub && dInfo(x).place === inf.place && fam(dInfo(x).model) === fam(inf.model)); const i = alts.findIndex(x => x.id === p.id); it.pid = alts[(i + 1) % alts.length].id; DS.sel = it.uid; dsLayout(); return renderDesign(); }
+  if (s.dsalt) { const it = DS.items.find(i => i.uid === s.dsalt), p = PROD[it.pid], inf = dInfo(p); const fam = m => ({ toilet: 1, basin_ped: 2, shower: 3, bath: 4 })[m] || 0, alts = furnAll().filter(x => x.sub === p.sub && dInfo(x).place === inf.place && fam(dInfo(x).model) === fam(inf.model)); const i = alts.findIndex(x => x.id === p.id); it.pid = alts[(i + 1) % alts.length].id; if (it.krow) DS.items.forEach(k => { if (k.krow) k.pid = it.pid; }); DS.sel = it.uid; dsLayout(); return renderDesign(); }
   if (s.dssel || s.dsuid) { DS.sel = s.dssel || s.dsuid; dsSave(); return renderDesign(); }
   if (s.dsadd) { DS.items.push({ uid: dsUid(), pid: +s.dsadd, krow: dInfo(PROD[s.dsadd]).model === "krow" }); DS.picker = null; DS.sel = DS.items.at(-1).uid; dsLayout(); return renderDesign(); }
   switch (s.ds) {
