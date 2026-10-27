@@ -14,6 +14,7 @@ import { createTelegram } from "./telegram.js";
 import { createPush } from "./push.js";
 import { createNotify } from "./notify.js";
 import { newSecret, checkTotp, otpauthUrl } from "./totp.js";
+import { registerMasters } from "./masters.js";
 
 export const STEPS = {
   yandex: ["new", "assembling", "searching", "to_store", "on_way", "delivered"],
@@ -665,6 +666,8 @@ export function createApp(cfg, log = console) {
     audit(req, "order.pay." + b.pay_status, p.num);
     return { ok: true };
   });
+
+  registerMasters({ r, db, cfg, ref, need, needAdmin, audit, lim, tg, push, sms, log });
 
   /* ---------- HTTP server ---------- */
   const server = createServer(async (req, res) => {

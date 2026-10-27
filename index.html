@@ -781,6 +781,39 @@ html.ds-dragging, html.ds-dragging * { cursor: grabbing !important; user-select:
 .ds-wish { display: flex; gap: 6px; }
 .ds-wish input { flex: 1; min-width: 0; border: 1.5px solid var(--line); border-radius: 12px; padding: 10px 12px; background: var(--raised); font: inherit; color: inherit; }
 .ds-sw { display: flex; flex-wrap: wrap; gap: 6px; }
+.mgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 12px; }
+.mcard { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 16px; display: grid; gap: 10px; align-content: start; }
+.mc-top { display: flex; gap: 12px; align-items: center; }
+.mc-top h3 { margin: 0; font-size: 16px; }
+.mav { flex: none; width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; color: #fff; background: hsl(var(--h) 45% 42%); }
+.mav.big { width: 64px; height: 64px; font-size: 22px; }
+.mc-rate { font-size: 13px; color: var(--muted); display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+.mc-rate .s, .mreq .s, .mrev .s { color: #E3A008; display: inline-flex; align-items: center; gap: 2px; font-weight: 600; }
+.mc-specs { display: flex; flex-wrap: wrap; gap: 6px; }
+.mc-about { margin: 0; font-size: 14px; color: var(--muted); }
+.mc-meta { font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 4px; }
+.mc-buy { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: auto; }
+.mc-buy .price { font-weight: 700; } .mc-buy .price small { font-weight: 400; color: var(--muted); }
+.mc-demo { position: absolute; top: 10px; right: 12px; font-size: 11px; color: var(--faint); }
+.mtabs { margin: 4px 0 14px; flex-wrap: wrap; }
+.mfil { display: grid; gap: 10px; margin-bottom: 12px; }
+.mspec { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin; }
+.mspec .chip { flex: none; }
+.mfil-r { display: flex; gap: 8px; flex-wrap: wrap; }
+.mprof-grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 12px; align-items: start; margin-top: 10px; }
+.mp-info, .mp-req { display: grid; gap: 12px; }
+.mp-req { position: sticky; top: calc(var(--hdr-h, 120px) + 8px); }
+.mp-req textarea, #mForm textarea { width: 100%; font: inherit; font-size: 14px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); resize: vertical; }
+.mrev { border-top: 1px solid var(--line); padding-top: 10px; } .mrev p { margin: 4px 0 0; }
+.mreqs { display: grid; gap: 10px; }
+.mreq { display: grid; gap: 4px; } .panel .mreq + .mreq { border-top: 1px solid var(--line); padding-top: 10px; margin-top: 10px; }
+.mreq-h { display: flex; justify-content: space-between; gap: 8px; align-items: center; } .mreq p { margin: 0; }
+.mreq-a { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 4px; }
+.mstars button { border: 0; background: none; font-size: 24px; color: #E3A008; cursor: pointer; padding: 0 2px; }
+.mstars button:hover ~ button { color: var(--line); }
+.lnkbox { width: 100%; text-align: left; cursor: pointer; font: inherit; color: inherit; }
+.rail-nav .ms-l { font-weight: 600; }
+@media (max-width: 760px) { .mprof-grid { grid-template-columns: 1fr; } .mp-req { position: static; } }
 .imp { display: grid; gap: 12px; }
 .imp-in { display: grid; grid-template-columns: minmax(200px, 280px) 1fr; gap: 12px; align-items: start; }
 .imp-in > .btn { grid-column: 2; }
@@ -1132,7 +1165,7 @@ const ui = (k, s = 20) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" f
    window.IMORAT_API (set in config.js on the website) is the address of the Imorat server.
    Without it the page runs as a self-contained demo: data stays in this browser. */
 const API = String(window.IMORAT_API || "").replace(/\/+$/, "");
-let apiToken = LS.get("imorat.token", ""), apiCfg = null, apiCat = null, myStore = LS.get("imorat.myStore", null), sellerData = null, adminStores = null;
+let apiToken = LS.get("imorat.token", ""), apiCfg = null, apiCat = null, myStore = LS.get("imorat.myStore", null), sellerData = null, adminStores = null, adminMasters = null;
 async function api(method, path, body, opts = {}) {
   const isBlob = typeof Blob !== "undefined" && body instanceof Blob;
   const headers = {};
@@ -1728,6 +1761,7 @@ function renderHeader() {
   </div>
   <div class="wrap"><nav class="rail-nav" aria-label="${L("Популярные разделы", "Ommabop bo‘limlar")}">
     <button type="button" class="ai-l" data-act="ai">${ui("spark", 15)}Usta AI</button>
+    <button type="button" class="ms-l" data-go="masters">${ui("wrench", 15)}${L("Мастера", "Ustalar")}</button>
     ${quick.map(id => `<button type="button" data-go="cat-${id}">${catName(id)}</button>`).join("")}
     <button type="button" class="hl" data-scroll="bundles">${L("Комплекты", "To‘plamlar")}</button>
     <button type="button" class="hl" data-scroll="vip">Imorat VIP</button>
@@ -1746,8 +1780,8 @@ function renderFooter() {
       <p style="margin:10px 0 0;max-width:36ch">${L("Маркетплейс строительных магазинов Узбекистана. Прототип интерфейса: магазины, цены и доставка демонстрационные.", "O‘zbekiston qurilish do‘konlari marketpleysi. Interfeys prototipi: do‘konlar, narxlar va yetkazish namunaviy.")}</p>
       <p class="num" style="margin:10px 0 0">+998 71 200 00 00 · 08:00–22:00</p></div>
     <div><b>${L("Покупателям", "Xaridorlarga")}</b><ul><li><button type="button" data-go="catalog">${L("Весь каталог", "Butun katalog")}</button></li><li><button type="button" data-act="ai">Usta AI</button></li><li><button type="button" data-scroll="calc">${L("Калькуляторы ремонта", "Ta’mir kalkulyatorlari")}</button></li><li><button type="button" data-act="orders">${L("Мои заказы", "Buyurtmalarim")}</button></li></ul></div>
-    <div><b>${L("Доставка и оплата", "Yetkazish va to‘lov")}</b><ul><li>${L("Яндекс Доставка", "Yandex Yetkazib berish")}</li><li><button type="button" data-scroll="vip">Imorat VIP</button></li><li>${L("Рассрочка на 12 месяцев", "12 oyga muddatli to‘lov")}</li><li>${L("Установка мастером", "Usta o‘rnatishi")}</li></ul></div>
-    <div><b>${L("Партнёрам", "Hamkorlarga")}</b><ul><li><button type="button" data-go="seller">${L("Кабинет продавца", "Sotuvchi kabineti")}</button></li><li><button type="button" data-scroll="stores">${L("Магазины", "Do‘konlar")}</button></li></ul></div>
+    <div><b>${L("Доставка и оплата", "Yetkazish va to‘lov")}</b><ul><li>${L("Яндекс Доставка", "Yandex Yetkazib berish")}</li><li><button type="button" data-scroll="vip">Imorat VIP</button></li><li>${L("Рассрочка на 12 месяцев", "12 oyga muddatli to‘lov")}</li><li><button type="button" data-go="masters">${L("Мастера для ремонта", "Ta’mir ustalari")}</button></li></ul></div>
+    <div><b>${L("Партнёрам", "Hamkorlarga")}</b><ul><li><button type="button" data-go="seller">${L("Кабинет продавца", "Sotuvchi kabineti")}</button></li><li><button type="button" data-scroll="stores">${L("Магазины", "Do‘konlar")}</button></li><li><button type="button" data-go="masters" data-mtabgo="me">${L("Стать мастером", "Usta bo‘lish")}</button></li></ul></div>
   </div>`;
 }
 function renderTabbar() {
@@ -1829,6 +1863,7 @@ function renderHome() {
     </section>
 
     ${designTeaser()}
+    ${mastersTeaser()}
 
     <section class="sec" id="bundles">
       <div class="sec-head"><div><h2 class="h-l">${L("Комплекты под ключ", "Tayyor to‘plamlar")}</h2><p>${L("Всё для типовой задачи одной кнопкой, на 5% дешевле", "Oddiy vazifa uchun hammasi bir tugmada, 5% arzonroq")}</p></div></div>
@@ -2177,6 +2212,7 @@ function openProduct(id) {
       <div><h3 class="h-m" style="margin-bottom:10px">${L("Цены в магазинах", "Do‘konlardagi narxlar")}</h3>
       <div class="offers">${offers.map((o, i) => { const s = STORE[o.store], st = stockOf(p, o.store); return `<div class="offer ${i === 0 && offers.length > 1 ? "best" : ""}"><div><b>${esc(s.name)}</b><small>${dName(s.d)} · ${openState(s).text}</small><small>${ratingHTML(s)}</small>${i === 0 && offers.length > 1 ? `<small style="color:var(--accent);font-weight:600">${L("Лучшая цена", "Eng yaxshi narx")}</small>` : ""}</div><div style="display:grid;justify-items:end;gap:4px"><span class="pr">${fmt(o.price)}</span>${stockTxt(st)}</div><button class="btn btn-primary" type="button" data-addo="${p.id}|${o.store}">${L("В корзину", "Savatga")}</button></div>`; }).join("")}</div></div>
       ${svc ? `<label class="infobox" for="svcChk">${ui("wrench", 20)}<span><b>${L("Установка мастером", "Usta o‘rnatishi")}</b><small>${fmt(svc)} ${L("за", "har")} ${unitName(p.unit)} · ${L("мастер приедет после доставки", "usta yetkazilgandan keyin keladi")}</small></span><span class="check"><input type="checkbox" id="svcChk" data-svc="${p.id}" ${svcOn ? "checked" : ""}></span></label>` : ""}
+      ${SUB_SPEC[p.sub] ? `<button class="infobox lnkbox" type="button" data-mfind="${SUB_SPEC[p.sub]}">${ui("wrench", 20)}<span><b>${L("Найти мастера", "Usta topish")}: ${esc(mSpecName(SUB_SPEC[p.sub]).toLowerCase())}</b><small>${L("С отзывами покупателей, в вашем районе", "Xaridorlar sharhlari bilan, tumaningizda")}</small></span>${ui("chev", 16)}</button>` : ""}
       ${mp >= 500000 ? `<div class="infobox">${ui("wallet", 20)}<span><b>${L("Рассрочка на 12 месяцев", "12 oyga muddatli to‘lov")}</b><small>${L(`от ${fmt(monthly(mp))} в месяц`, `oyiga ${fmt(monthly(mp))}dan`)} · ${L("оформление при оплате, условия партнёра", "to‘lovda rasmiylashtiriladi, hamkor shartlari")}</small></span></div>` : ""}
       <div class="infobox">${ui(t.icon, 20)}<span><b>${L("Доставка Яндекс в", "Yandex yetkazish:")} ${dName(district)}</b><small>${tName(t)} · ${fromP(round(t.base + t.perKm * dist))} · ${etaStr(t)}${vip ? " · VIP" : ""}</small></span></div>
       ${TIER_CATS.includes(p.cat) ? `<div class="infobox">${ui("store", 20)}<span style="flex:1"><b>${L("Оптом дешевле — для мастеров и прорабов", "Ulgurji arzonroq — ustalar va prorablar uchun")}</b><span class="tier"><span class="on">${L("1–9", "1–9")}<b>${fmt(mp)}</b></span><span>${L("от 10", "10 dan")}<b>${fmt(round(mp * .97))}</b></span><span>${L("от 50", "50 dan")}<b>${fmt(round(mp * .94))}</b></span></span></span></div>` : ""}
@@ -2597,7 +2633,8 @@ function finishAuth(u, token) {
   form.name = u.name; form.phone = u.phone; LS.set("imorat.form2", form);
   const then = auth.then; closeAuth(); renderHeader(); renderTabbar(); counts();
   toast(then === "seller" ? L("Магазин отправлен на проверку", "Do‘kon tekshiruvga yuborildi") : L(`Добро пожаловать, ${u.name}!`, `Xush kelibsiz, ${u.name}!`));
-  if (then === "checkout") openDrawer("checkout"); else if (then === "seller") { sellerData = null; go("seller"); } else if (drawerView === "profile") renderDrawer();
+  if (then === "checkout") openDrawer("checkout"); else if (then === "seller") { sellerData = null; go("seller"); } else if (typeof then === "function") setTimeout(then, 0); else if (drawerView === "profile") renderDrawer();
+  if (route.view === "masters" && typeof then !== "function") { mApi.list = null; mApi.me = undefined; renderMasters(); }
   if (route.view === "catalog") renderList(true); else if (route.view === "seller" && then !== "seller") { sellerData = null; renderSeller(); }
 }
 
@@ -3179,7 +3216,7 @@ async function loadSeller() {
 }
 async function loadAdmin() {
   if (adminState.loading) return; adminState.loading = true;
-  try { adminStores = (await adminApi("GET", "/api/admin/stores")).stores; } catch (e) { adminStores = adminState.need ? null : []; }
+  try { adminStores = (await adminApi("GET", "/api/admin/stores")).stores; adminMasters = (await adminApi("GET", "/api/admin/masters").catch(() => ({ masters: [] }))).masters; } catch (e) { adminStores = adminState.need ? null : []; }
   adminState.loading = false; if (route.view === "seller") renderSeller();
 }
 function storeBanner(s, demo) {
@@ -3195,6 +3232,22 @@ function storeCardHTML(s) {
     <div class="cat-picks" style="margin-top:4px">${(s.cats || []).map(c => `<span class="pill mute">${esc(catName(c))}</span>`).join("")}</div>
     <small style="color:var(--muted)">${ui("pin", 13)} ${dName(s.d)}, ${esc(s.addr)}${s.landmark ? " · " + esc(s.landmark) : ""}${s.la != null && s.loc_src !== "district" ? ` · <a href="${yaLink(s.la, s.lo)}" target="_blank" rel="noopener">${L("на карте", "xaritada")}</a>` : ""} · ${ui("clock", 13)} ${esc(s.hours)} · ${esc(s.phone ? "+" + digitsOf(s.phone) : "")}${s.telegram ? " · @" + esc(s.telegram) : ""}</small></div>`;
 }
+function adminMastersHTML() {
+  if (!adminMasters?.length) return "";
+  const pend = adminMasters.filter(m => m.status === "pending"), S = ST_STATUS();
+  return `<div class="panel" style="margin-top:12px"><div class="panel-h"><h2 class="h-m">${L("Модерация мастеров", "Ustalar moderatsiyasi")}</h2><span class="pill ${pend.length ? "warn" : "ok"}">${pend.length} ${L("ждут", "kutmoqda")}</span></div>
+    <div class="tbl-wrap"><table><thead><tr><th>${L("Мастер", "Usta")}</th><th>${L("Статус", "Holat")}</th><th></th></tr></thead><tbody>
+    ${adminMasters.slice(0, 60).map(m => { const [lb, c] = S[m.status] || [m.status, "mute"]; return `<tr><td><b>${esc(m.name)}</b> · <span class="num">+${esc(String(m.phone || "").replace(/\D/g, ""))}</span><br><small style="color:var(--muted)">${m.specs.map(mSpecName).join(", ")} · ${m.districts.map(dName).join(", ")} · ${m.exp} ${L("лет", "yil")}</small><br><small>${esc(m.about).slice(0, 160)}</small></td>
+      <td><span class="pill ${c}">${lb}</span></td><td style="white-space:nowrap">${m.status !== "active" ? `<button class="btn btn-primary" type="button" data-admm="${esc(m.id)}|active">${L("Одобрить", "Tasdiqlash")}</button>` : ""} ${m.status === "pending" ? `<button class="btn btn-line" type="button" data-admm="${esc(m.id)}|rejected">${L("Отклонить", "Rad etish")}</button>` : m.status === "active" ? `<button class="btn btn-line" type="button" data-admm="${esc(m.id)}|blocked">${L("Заблокировать", "Bloklash")}</button>` : ""}</td></tr>`; }).join("")}
+    </tbody></table></div></div>`;
+}
+document.addEventListener("click", async e => {
+  const t = e.target.closest("[data-admm],[data-mtabgo]"); if (!t) return;
+  if (t.dataset.mtabgo) { mf.tab = t.dataset.mtabgo; mf.sel = null; return; }
+  const [id, st] = t.dataset.admm.split("|"); t.disabled = true;
+  try { await adminApi("PATCH", "/api/admin/masters/" + encodeURIComponent(id), { status: st }); toast(st === "active" ? L("Мастер одобрен и виден покупателям", "Usta tasdiqlandi va xaridorlarga ko‘rinadi") : L("Статус мастера изменён", "Usta holati o‘zgardi")); adminStores = null; adminMasters = null; renderSeller(); }
+  catch (er) { t.disabled = false; toast(apiErr(er)); }
+});
 function adminHTML() {
   if (!user?.admin) return "";
   if (adminState.need) return adminGateHTML();
@@ -3205,7 +3258,7 @@ function adminHTML() {
     <div class="tbl-wrap"><table><thead><tr><th>${L("Магазин", "Do‘kon")}</th><th>${L("Владелец", "Egasi")}</th><th>${L("Статус", "Holat")}</th><th></th></tr></thead><tbody>
     ${adminStores.slice(0, 40).map(s => { const [lb, c] = ST_STATUS()[s.status] || ["?", "mute"]; return `<tr><td><b>${esc(s.name)}</b><br><small style="color:var(--muted)">${dName(s.d)}, ${esc(s.addr)} · ${(s.cats || []).map(catName).join(", ")}</small><br><small>${esc(s.descr || "")}</small></td><td style="font-size:13px">${esc(s.owner_name || "—")}<br><span class="num">${esc(s.owner_phone ? "+" + s.owner_phone : "")}</span></td><td><span class="pill ${c}">${lb}</span></td>
       <td style="white-space:nowrap">${s.status !== "active" ? `<button class="btn btn-primary" type="button" data-adm="${esc(s.id)}|active">${L("Одобрить", "Tasdiqlash")}</button>` : ""} ${s.status === "pending" ? `<button class="btn btn-line" type="button" data-adm="${esc(s.id)}|rejected">${L("Отклонить", "Rad etish")}</button>` : s.status === "active" ? `<button class="btn btn-line" type="button" data-adm="${esc(s.id)}|blocked">${L("Скрыть", "Yashirish")}</button>` : ""}</td></tr>`; }).join("")}
-    </tbody></table></div></div>${adminFinanceHTML()}`;
+    </tbody></table></div></div>${adminMastersHTML()}${adminFinanceHTML()}`;
 }
 function renderSellerApi() {
   const crumbs = `<nav class="crumbs"><button type="button" data-go="home">${L("Главная", "Asosiy")}</button>${ui("chev", 12)}<span>${L("Кабинет продавца", "Sotuvchi kabineti")}</span></nav>`;
@@ -4115,7 +4168,7 @@ function renderDesign() {
         <div class="sumrow"><span class="mu">${L("Мебель", "Mebel")} · ${e.furn.reduce((a, l) => a + l.q, 0)} ${L("шт", "dona")}</span><span class="num">${fmt(e.furnSum)}</span></div>
         <div class="sumrow total"><span>${L("Итого", "Jami")}</span><span class="num">${fmt(e.total)}</span></div>
         <div class="ds-nav"><button class="btn btn-line" type="button" data-ds="proj">${ui("folder", 16)} ${L("В проект", "Loyihaga")}</button><button class="btn btn-primary" type="button" data-ds="cart">${ui("cart", 16)} ${L("Всё в корзину", "Hammasini savatga")}</button></div>
-        <div class="ds-nav" style="justify-content:flex-start"><button class="btn btn-line" type="button" data-ds="save-room">${ui("heart", 16)} ${L("Сохранить комнату", "Xonani saqlash")}</button><button class="btn btn-line" type="button" data-ds="share">${ui("photo", 16)} ${L("Поделиться", "Ulashish")}</button><button class="btn btn-line" type="button" data-ds="relayout">${ui("repeat", 16)} ${L("Расставить заново", "Qayta joylash")}</button></div>
+        <div class="ds-nav" style="justify-content:flex-start"><button class="btn btn-line" type="button" data-ds="save-room">${ui("heart", 16)} ${L("Сохранить комнату", "Xonani saqlash")}</button><button class="btn btn-line" type="button" data-ds="share">${ui("photo", 16)} ${L("Поделиться", "Ulashish")}</button><button class="btn btn-line" type="button" data-mfind="${{ bath: "tile", kitchen: "furn", hall: "furn" }[d.type] || "paint"}">${ui("wrench", 16)} ${L("Найти мастера", "Usta topish")}</button><button class="btn btn-line" type="button" data-ds="relayout">${ui("repeat", 16)} ${L("Расставить заново", "Qayta joylash")}</button></div>
         <button class="lnk" type="button" data-ds="restart" style="justify-self:start;color:var(--muted)">${L("Начать заново", "Qaytadan boshlash")}</button></div>`;
   }
   $("#app").innerHTML = `<div class="wrap">
@@ -4471,11 +4524,226 @@ function renderSeller() {
   });
 }
 
+/* ================= Masters: tilers, electricians, plumbers… =================
+   Demo mode shows sample profiles (marked as samples) and keeps requests in the browser.
+   With the server: real profiles approved by a moderator, requests go to the master in Telegram. */
+const MSPECS = () => [["tile", L("Плиточник", "Kafelchi"), "🧱"], ["elec", L("Электрик", "Elektrik"), "⚡"], ["plumb", L("Сантехник", "Santexnik"), "🚿"], ["paint", L("Маляр-штукатур", "Bo‘yoqchi-suvoqchi"), "🎨"], ["floor", L("Полы и ламинат", "Pol va laminat"), "🪵"],
+  ["drywall", L("Гипсокартон", "Gipsokarton"), "📐"], ["weld", L("Сварщик", "Payvandchi"), "🔥"], ["roof", L("Кровельщик", "Tomchi"), "🏠"], ["furn", L("Сборка мебели и кухонь", "Mebel va oshxona yig‘ish"), "🪑"], ["ac", L("Кондиционеры", "Konditsionerlar"), "❄️"], ["door", L("Двери и окна", "Eshik va derazalar"), "🚪"]];
+const MUNITS = () => ({ job: L("за работу", "ish uchun"), m2: L("за м²", "m² uchun"), hour: L("в час", "soatiga"), day: L("в день", "kuniga"), pt: L("за точку", "nuqta uchun") });
+const mSpecName = id => MSPECS().find(x => x[0] === id)?.[1] || id;
+/* which master is needed for a product subcategory */
+const SUB_SPEC = { wallt: "tile", porcel: "tile", floort: "tile", mosaic: "tile", glue: "tile", sock: "elec", auto: "elec", chand: "elec", lamps: "elec", cable: "elec", led: "elec", mixer: "plumb", wc: "plumb", bath: "plumb", wheat: "plumb", pipe: "plumb", boiler: "plumb", rad: "plumb",
+  ac: "ac", vent: "ac", lam: "floor", parq: "floor", lino: "floor", inner: "door", entry: "door", win: "door", locks: "door", mod: "furn", ward: "furn", bathf: "furn", hood: "furn", ksink: "plumb", inter: "paint", exter: "paint", primer: "paint", wp: "paint", gkl: "drywall", prof: "drywall", roof: "roof", sheet: "weld", pipe2: "weld" };
+const MASTERS_DEMO = [
+  ["d1", "Бахтиёр Каримов", "Baxtiyor Karimov", ["tile", "plumb"], ["yunus", "mirzo", "shayx"], 9, 65000, "m2", "Кафель в ванной и на кухне под ключ: выравнивание, гидроизоляция, затирка. Работаю с крупным форматом 60×120.", "Vannaxona va oshxonada kafel: tekislash, gidroizolyatsiya, zatirka. 60×120 katta format bilan ishlayman.", 4.9, 38, 112],
+  ["d2", "Шерзод Алиев", "Sherzod Aliyev", ["elec"], ["chil", "ucht", "olmaz"], 12, 45000, "pt", "Электрика квартиры с нуля, щиток, розетки и свет. Даю схему разводки и гарантию год.", "Kvartira elektrikasi noldan, shit, rozetka va yoritish. Sxema va bir yil kafolat beraman.", 4.8, 54, 190],
+  ["d3", "Рустам Юсупов", "Rustam Yusupov", ["plumb", "ac"], ["mirob", "yakka", "shayx"], 7, 250000, "job", "Установка унитазов, ванн, бойлеров и смесителей. Монтаж кондиционеров с вакуумированием.", "Unitaz, vanna, boyler va aralashtirgich o‘rnatish. Konditsionerlarni vakuum bilan o‘rnatish.", 4.7, 29, 86],
+  ["d4", "Дилшод Назаров", "Dilshod Nazarov", ["paint", "drywall"], ["serg", "yangi", "chil"], 10, 35000, "m2", "Штукатурка по маякам, шпаклёвка под покраску, потолки из гипсокартона.", "Mayoq bo‘yicha suvoq, bo‘yoq ostiga shpaklyovka, gipsokarton shiftlar.", 4.8, 41, 130],
+  ["d5", "Ойбек Рахимов", "Oybek Rahimov", ["floor", "door"], ["yunus", "mirzo", "yash"], 6, 30000, "m2", "Ламинат, паркетная доска, плинтус. Установка межкомнатных дверей с доборами.", "Laminat, parket taxta, plintus. Xona eshiklarini dobor bilan o‘rnatish.", 4.6, 22, 64],
+  ["d6", "Санжар Тошпулатов", "Sanjar Toshpulatov", ["weld", "roof"], ["bekt", "serg", "yangi"], 15, 400000, "day", "Навесы, ворота, каркасы, кровля из профнастила и металлочерепицы.", "Ayvon, darvoza, karkas, profnastil va metallocherepitsa tom.", 4.9, 33, 98],
+  ["d7", "Фарход Исмоилов", "Farhod Ismoilov", ["furn"], ["chil", "olmaz", "ucht", "shayx"], 8, 200000, "job", "Сборка и установка кухонь, шкафов-купе, врезка мойки и варочной панели.", "Oshxona va shkaf-kupe yig‘ish, rakovina va plita o‘rnatish.", 4.8, 47, 150],
+  ["d8", "Алишер Хамидов", "Alisher Hamidov", ["ac", "elec"], ["mirob", "yash", "mirzo"], 5, 450000, "job", "Монтаж сплит-систем под ключ: трасса до 3 м, кронштейны, запуск.", "Split tizimlarni o‘rnatish: 3 m gacha trassa, kronshteyn, ishga tushirish.", 4.7, 19, 57],
+  ["d9", "Нодира Салимова", "Nodira Salimova", ["paint"], ["yunus", "shayx", "mirob"], 11, 28000, "m2", "Покраска стен и потолков, обои, декоративная штукатурка. Аккуратно, с укрывкой мебели.", "Devor va shiftni bo‘yash, gulqog‘oz, dekorativ suvoq. Mebelni yopib, ozoda ishlayman.", 5.0, 26, 74],
+  ["d10", "Жасур Мирзаев", "Jasur Mirzayev", ["tile", "floor"], ["serg", "chil", "bekt"], 4, 55000, "m2", "Плитка и керамогранит на пол и стены, тёплый пол под плитку.", "Pol va devorga kafel va keramogranit, kafel ostiga issiq pol.", 4.5, 12, 31],
+  ["d11", "Умид Абдуллаев", "Umid Abdullayev", ["drywall", "paint"], ["olmaz", "ucht", "yakka"], 9, 60000, "m2", "Перегородки и многоуровневые потолки из гипсокартона, ниши и короба.", "Gipsokarton to‘siqlar va ko‘p qavatli shiftlar, nisha va qutilar.", 4.7, 31, 95],
+  ["d12", "Тимур Ким", "Temur Kim", ["elec", "ac"], ["mirzo", "yash", "yunus"], 13, 60000, "hour", "Сложная электрика, умный дом, подключение котлов и кондиционеров.", "Murakkab elektrika, aqlli uy, qozon va konditsionerlarni ulash.", 4.9, 62, 210]
+].map(([id, ru, uz, specs, districts, exp, price, price_unit, aboutRu, aboutUz, stars, reviews, done]) => ({ id, name: ru, nameUz: uz, specs, districts, exp, price, price_unit, aboutRu, aboutUz, stars, reviews, done, demo: true }));
+const M_REV = [["Азиз", "Aziz", 5, "Пришёл вовремя, всё сделал аккуратно и убрал за собой.", "Vaqtida keldi, hammasini ozoda qildi va tozalab ketdi."], ["Малика", "Malika", 5, "Подсказал, сколько материала брать — лишнего не купили.", "Qancha material olishni aytdi — ortiqcha olmadik."], ["Рустам", "Rustam", 4, "Хорошая работа, но задержался на час.", "Yaxshi ish, lekin bir soat kechikdi."], ["Нилуфар", "Nilufar", 5, "Цена как договаривались, без сюрпризов.", "Narx kelishilgandek, kutilmagan narsasiz."]];
+let mf = { spec: "", d: "", sort: "rating", tab: "find", sel: null, form: null };
+let mApi = { list: null, me: undefined, mine: null, one: {}, busy: false };
+let myMasterDemo = LS.get("imorat.master", null), mReqsDemo = LS.get("imorat.mreqs", []);
+const mName = m => (lang === "uz" && m.nameUz ? uzNew(m.nameUz) : m.name);
+const mAbout = m => (m.demo ? L(m.aboutRu, m.aboutUz) : m.about || "");
+const mInitials = n => String(n || "?").split(/\s+/).map(w => w[0]).join("").slice(0, 2).toUpperCase();
+const mHue = id => [...String(id)].reduce((a, c) => a + c.charCodeAt(0) * 37, 0) % 360;
+function mastersAll() {
+  if (API) return mApi.list || [];
+  return [...(myMasterDemo ? [{ ...myMasterDemo, mine: true, stars: null, reviews: 0, done: 0 }] : []), ...MASTERS_DEMO];
+}
+async function loadMasters(force) {
+  if (!API || (mApi.busy && !force)) return; mApi.busy = true;
+  try {
+    const [l, me, mine] = await Promise.all([api("GET", "/api/masters"), user ? api("GET", "/api/masters/me").catch(() => null) : null, user ? api("GET", "/api/me/master-requests").catch(() => null) : null]);
+    mApi.list = l.masters; mApi.me = me; mApi.mine = mine?.requests || [];
+  } catch (e) { mApi.list = mApi.list || []; toast(apiErr(e)); }
+  mApi.busy = false; if (route.view === "masters") renderMasters();
+}
+function masterCard(m) {
+  const U = MUNITS(), ds = m.districts || [];
+  return `<article class="mcard">
+    <div class="mc-top"><span class="mav" style="--h:${mHue(m.id)}">${esc(mInitials(m.name))}</span><div><h3>${esc(mName(m))}</h3><div class="mc-rate">${m.stars ? `<span class="s">${ui("star", 13)}${Number(m.stars).toFixed(1).replace(".", ",")}</span> ${m.reviews} ${L(plural(m.reviews, ["отзыв", "отзыва", "отзывов"]), "sharh")}` : L("Новый мастер", "Yangi usta")}${m.done ? ` · ${m.done} ${L("работ", "ish")}` : ""}</div></div></div>
+    <div class="mc-specs">${(m.specs || []).map(s => `<span class="pill mute">${MSPECS().find(x => x[0] === s)?.[2] || ""} ${esc(mSpecName(s))}</span>`).join("")}</div>
+    <p class="mc-about">${esc(mAbout(m)).slice(0, 140)}</p>
+    <div class="mc-meta">${ui("pin", 14)} ${ds.slice(0, 2).map(dName).join(", ")}${ds.length > 2 ? ` +${ds.length - 2}` : ""} · ${m.exp} ${L(plural(m.exp, ["год", "года", "лет"]), "yil")} ${L("опыта", "tajriba")}</div>
+    <div class="mc-buy"><div class="price">${m.price ? `${L("от", "")} ${fmt(m.price)}${L("", "dan")} <small>${U[m.price_unit] || ""}</small>` : L("Цена по договорённости", "Narx kelishiladi")}</div>
+      <button class="btn btn-primary" type="button" data-mopen="${esc(m.id)}">${L("Позвать", "Chaqirish")}</button></div>
+    ${m.demo ? `<span class="mc-demo">${L("пример анкеты", "namuna anketa")}</span>` : m.mine ? `<span class="mc-demo">${L("ваш профиль", "sizning profilingiz")}</span>` : ""}
+  </article>`;
+}
+function masterProfileHTML(m) {
+  const U = MUNITS(), revs = m.demo ? M_REV.map((r, i) => ({ name: L(r[0], r[1]), stars: r[2], text: L(r[3], r[4]) })).filter((_, i) => (i + m.id.length) % 4 !== 0) : (mApi.one[m.id]?.reviews || []);
+  if (!m.demo && API && !mApi.one[m.id]) api("GET", "/api/masters/" + encodeURIComponent(m.id)).then(r => { mApi.one[m.id] = r; if (mf.sel === m.id) renderMasters(); }).catch(() => {});
+  const wq = [["today", L("Сегодня", "Bugun")], ["tomorrow", L("Завтра", "Ertaga")], ["week", L("На этой неделе", "Shu hafta")], ["agree", L("Договоримся", "Kelishamiz")]];
+  const fm = mf.form || (mf.form = { text: "", when: "week", d: district, street: form.street || "" });
+  return `<div class="mprof">
+    <button class="lnk" type="button" data-mback>${ui("back", 16)} ${L("Все мастера", "Barcha ustalar")}</button>
+    <div class="mprof-grid"><div class="panel mp-info">
+      <div class="mc-top"><span class="mav big" style="--h:${mHue(m.id)}">${esc(mInitials(m.name))}</span><div><h1 class="h-l" style="margin:0">${esc(mName(m))}</h1><div class="mc-rate">${m.stars ? `<span class="s">${ui("star", 14)}${Number(m.stars).toFixed(1).replace(".", ",")}</span> ${m.reviews} ${L(plural(m.reviews, ["отзыв", "отзыва", "отзывов"]), "sharh")}` : L("Новый мастер — пока без отзывов", "Yangi usta — hali sharh yo‘q")}${m.done ? ` · ${m.done} ${L("выполненных работ", "bajarilgan ish")}` : ""}</div></div></div>
+      ${m.demo ? `<div class="note">${L("Это пример анкеты, чтобы показать, как будет работать раздел. Настоящие мастера появятся после запуска.", "Bu bo‘lim qanday ishlashini ko‘rsatish uchun namuna anketa. Haqiqiy ustalar ishga tushgandan keyin paydo bo‘ladi.")}</div>` : ""}
+      <div class="mc-specs">${(m.specs || []).map(s => `<span class="pill mute">${MSPECS().find(x => x[0] === s)?.[2] || ""} ${esc(mSpecName(s))}</span>`).join("")}</div>
+      <p>${esc(mAbout(m))}</p>
+      <dl class="specs"><dt>${L("Опыт", "Tajriba")}</dt><dd>${m.exp} ${L(plural(m.exp, ["год", "года", "лет"]), "yil")}</dd><dt>${L("Цена", "Narx")}</dt><dd>${m.price ? `${L("от", "")} ${fmt(m.price)}${L("", "dan")} ${U[m.price_unit] || ""}` : L("по договорённости", "kelishiladi")}</dd><dt>${L("Районы", "Tumanlar")}</dt><dd>${(m.districts || []).map(dName).join(", ")}</dd></dl>
+      <h2 class="h-m">${L("Отзывы", "Sharhlar")}</h2>
+      ${revs.length ? revs.map(r => `<div class="mrev"><b>${esc(r.name || L("Покупатель", "Xaridor"))}</b> <span class="s">${"★".repeat(r.stars)}${"☆".repeat(5 - r.stars)}</span>${r.text ? `<p>${esc(r.text)}</p>` : ""}</div>`).join("") : `<p class="mu">${L("Отзывов пока нет.", "Hozircha sharh yo‘q.")}</p>`}
+    </div>
+    <form class="panel mp-req" id="mReqForm" novalidate><h2 class="h-m">${L("Позвать мастера", "Ustani chaqirish")}</h2>
+      ${m.mine ? `<p class="mu">${L("Это ваш профиль — так его видят клиенты.", "Bu sizning profilingiz — mijozlar shunday ko‘radi.")}</p>` : `
+      <div class="f"><label for="mText">${L("Что нужно сделать", "Nima qilish kerak")}</label><textarea id="mText" rows="4" placeholder="${L("Например: положить плитку в ванной 6 м², стены и пол", "Masalan: vannaxonaga 6 m² kafel, devor va pol")}">${esc(fm.text)}</textarea></div>
+      <b class="ds-q">${L("Когда", "Qachon")}</b><div class="chips ds-chips">${wq.map(([v, t]) => `<button type="button" class="chip" data-mwhen="${v}" aria-pressed="${fm.when === v}">${t}</button>`).join("")}</div>
+      <div class="ds-grid"><div class="f"><label for="mDist">${L("Район", "Tuman")}</label><select class="sel" id="mDist">${DISTRICTS.map(d => `<option value="${d.id}" ${d.id === fm.d ? "selected" : ""}>${L(d.ru, d.uz)}</option>`).join("")}</select></div><div class="f"><label for="mStreet">${L("Улица, дом", "Ko‘cha, uy")}</label><input id="mStreet" value="${esc(fm.street)}"></div></div>
+      ${(m.districts || []).includes(fm.d) ? "" : `<small style="color:var(--signal)">${L("Мастер обычно работает в других районах — уточните, приедет ли он к вам.", "Usta odatda boshqa tumanlarda ishlaydi — sizga kelishini aniqlang.")}</small>`}
+      <span class="err" id="mErr" hidden></span>
+      <button class="btn btn-primary" type="submit">${ui("send", 16)} ${L("Отправить заявку", "So‘rov yuborish")}</button>
+      <small class="mu">${L("Мастер получит заявку с вашим номером и позвонит, чтобы договориться о цене и времени. Его номер вы увидите, когда он примет заявку.", "Usta raqamingiz bilan so‘rovni oladi va narx hamda vaqtni kelishish uchun qo‘ng‘iroq qiladi. Uning raqamini u qabul qilganda ko‘rasiz.")}</small>`}
+    </form></div></div>`;
+}
+function mStatusPill(st) {
+  const M = { new: [L("Ждёт ответа", "Javob kutilmoqda"), "warn"], accepted: [L("Мастер принял", "Usta qabul qildi"), "acc"], declined: [L("Мастер отказался", "Usta rad etdi"), "mute"], done: [L("Работа выполнена", "Ish bajarildi"), "ok"], cancelled: [L("Отменена", "Bekor qilindi"), "mute"] };
+  const [t, c] = M[st] || [st, "mute"]; return `<span class="pill ${c}">${t}</span>`;
+}
+function myRequestsHTML() {
+  const list = API ? mApi.mine || [] : mReqsDemo;
+  if (!list.length) return `<div class="panel"><p class="mu" style="margin:0">${L("Заявок пока нет. Выберите мастера и нажмите «Позвать».", "Hozircha so‘rov yo‘q. Ustani tanlab «Chaqirish» ni bosing.")}</p></div>`;
+  return `<div class="mreqs">${list.map(q => `<div class="panel mreq"><div class="mreq-h"><b>${esc(q.master)}</b>${mStatusPill(q.status)}</div>
+    <p>${esc(q.text)}</p><small class="mu">${esc(q.when)} · ${new Date(q.created).toLocaleDateString("ru-RU")}</small>
+    ${q.phone ? `<p style="margin:6px 0 0">${ui("user", 14)} ${L("Телефон мастера", "Usta telefoni")}: <a href="tel:+${esc(String(q.phone).replace(/\D/g, ""))}" class="num">+${esc(String(q.phone).replace(/\D/g, ""))}</a></p>` : ""}
+    <div class="mreq-a">${["new", "accepted"].includes(q.status) ? `<button class="btn btn-line" type="button" data-mreq="${q.id}|cancelled">${L("Отменить", "Bekor qilish")}</button>` : ""}
+    ${q.status === "done" && !q.stars ? `<span class="mstars" role="group" aria-label="${L("Оценка", "Baho")}">${[1, 2, 3, 4, 5].map(n => `<button type="button" data-mrate="${q.id}|${n}" aria-label="${n}">★</button>`).join("")}</span>` : q.stars ? `<span class="s">${"★".repeat(q.stars)}</span>` : ""}</div></div>`).join("")}</div>`;
+}
+function masterCabinetHTML() {
+  const me = API ? mApi.me?.master : myMasterDemo, reqs = API ? mApi.me?.requests || [] : [];
+  if (!me || mf.edit) return masterFormHTML(me);
+  const stl = { pending: [L("На проверке у модератора", "Moderator tekshiruvida"), "warn"], active: [L("Опубликован", "E’lon qilingan"), "ok"], rejected: [L("Отклонён", "Rad etildi"), "sig"], blocked: [L("Заблокирован", "Bloklangan"), "sig"] }[me.status || "active"] || ["", "mute"];
+  return `<div class="panel" style="display:grid;gap:10px"><div class="panel-h"><h2 class="h-m">${L("Мой профиль мастера", "Usta profilim")}</h2><span class="pill ${stl[1]}">${stl[0]}</span></div>
+    ${me.note ? `<p class="note" style="margin:0">${esc(me.note)}</p>` : ""}
+    <div>${(me.specs || []).map(s => `<span class="pill mute">${esc(mSpecName(s))}</span>`).join(" ")}</div>
+    <p style="margin:0">${esc(me.about || "")}</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-line" type="button" data-medit>${L("Изменить анкету", "Anketani o‘zgartirish")}</button>${me.id ? `<button class="btn btn-line" type="button" data-mopen="${esc(me.id)}">${L("Как видят клиенты", "Mijozlar qanday ko‘radi")}</button>` : ""}</div></div>
+    <div class="panel" style="margin-top:12px"><div class="panel-h"><h2 class="h-m">${L("Заявки от клиентов", "Mijozlardan so‘rovlar")}</h2>${API ? `<button class="btn btn-line" type="button" data-mreload>${ui("repeat", 16)} ${L("Обновить", "Yangilash")}</button>` : ""}</div>
+    ${reqs.length ? reqs.map(q => `<div class="mreq"><div class="mreq-h"><b>${esc(q.name || L("Клиент", "Mijoz"))}</b>${mStatusPill(q.status)}</div><p>${esc(q.text)}</p><small class="mu">${esc(q.when)}${q.district ? ` · ${dName(q.district)}${q.street ? ", " + esc(q.street) : ""}` : ""} · <a href="tel:+${esc(String(q.phone).replace(/\D/g, ""))}">+${esc(String(q.phone).replace(/\D/g, ""))}</a></small>
+      <div class="mreq-a">${q.status === "new" ? `<button class="btn btn-primary" type="button" data-mreq="${q.id}|accepted">${L("Принять", "Qabul qilish")}</button><button class="btn btn-line" type="button" data-mreq="${q.id}|declined">${L("Отказаться", "Rad etish")}</button>` : q.status === "accepted" ? `<button class="btn btn-primary" type="button" data-mreq="${q.id}|done">${L("Работа выполнена", "Ish bajarildi")}</button>` : ""}${q.stars ? `<span class="s">${"★".repeat(q.stars)}</span> ${esc(q.review || "")}` : ""}</div></div>`).join("") : `<p class="mu" style="margin:0">${API ? L("Заявок пока нет. Когда клиент позовёт вас, заявка придёт сюда и в Telegram, если он подключён в профиле.", "Hozircha so‘rov yo‘q. Mijoz chaqirsa, so‘rov shu yerga va profilda ulangan bo‘lsa Telegramga keladi.") : L("В демо-версии заявки от клиентов не приходят — на настоящем сайте они появятся здесь и в Telegram.", "Demo versiyada mijozlardan so‘rov kelmaydi — haqiqiy saytda shu yerda va Telegramda chiqadi.")}</p>`}</div>`;
+}
+function masterFormHTML(me) {
+  const v = me || { name: user?.name || "", specs: [], districts: [district], exp: 3, price: 0, price_unit: "m2", about: "" };
+  const U = MUNITS();
+  return `<form class="panel" id="mForm" style="display:grid;gap:12px" novalidate><h2 class="h-m">${me ? L("Анкета мастера", "Usta anketasi") : L("Стать мастером на Imorat", "Imoratda usta bo‘lish")}</h2>
+    ${me ? "" : `<p class="mu" style="margin:0">${L("Покупатели материалов сразу ищут, кто их уложит и установит. Заполните анкету — после проверки модератором вы появитесь в разделе «Мастера», а заявки будут приходить в кабинет и в Telegram. Это бесплатно.", "Material xaridorlari ularni kim o‘rnatishini darhol qidiradi. Anketani to‘ldiring — moderator tekshirgach «Ustalar» bo‘limida chiqasiz, so‘rovlar kabinetga va Telegramga keladi. Bu bepul.")}</p>`}
+    <div class="f"><label for="mfName">${L("Имя и фамилия", "Ism va familiya")}</label><input id="mfName" value="${esc(v.name)}" autocomplete="name"></div>
+    <b class="ds-q">${L("Что вы делаете", "Nima qilasiz")}</b><div class="chips ds-chips">${MSPECS().map(([id, t, e]) => `<button type="button" class="chip" data-mfspec="${id}" aria-pressed="${v.specs.includes(id)}">${e} ${t}</button>`).join("")}</div>
+    <b class="ds-q">${L("Где работаете", "Qayerda ishlaysiz")}</b><div class="chips ds-chips">${DISTRICTS.map(d => `<button type="button" class="chip" data-mfdist="${d.id}" aria-pressed="${v.districts.includes(d.id)}">${L(d.ru, d.uz)}</button>`).join("")}</div>
+    <div class="ds-grid"><div class="f"><label for="mfExp">${L("Опыт, лет", "Tajriba, yil")}</label><input id="mfExp" type="number" min="0" max="60" inputmode="numeric" value="${v.exp}"></div>
+      <div class="f"><label for="mfPrice">${L("Цена от, сум", "Narx, so‘mdan")}</label><input id="mfPrice" type="number" min="0" step="1000" inputmode="numeric" value="${v.price || ""}" placeholder="50000"></div>
+      <div class="f"><label for="mfUnit">${L("За что", "Nima uchun")}</label><select class="sel" id="mfUnit">${Object.entries(U).map(([k, t]) => `<option value="${k}" ${v.price_unit === k ? "selected" : ""}>${t}</option>`).join("")}</select></div></div>
+    <div class="f"><label for="mfAbout">${L("О себе и работах", "O‘zingiz va ishlaringiz haqida")}</label><textarea id="mfAbout" rows="4" placeholder="${L("Какие работы делаете, с какими материалами, есть ли гарантия", "Qanday ishlar, qaysi materiallar bilan, kafolat bormi")}">${esc(v.about)}</textarea></div>
+    <span class="err" id="mfErr" hidden></span>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-primary" type="submit">${me ? L("Сохранить", "Saqlash") : L("Отправить анкету", "Anketani yuborish")}</button>${me ? `<button class="btn btn-line" type="button" data-mcancel>${L("Отмена", "Bekor qilish")}</button>` : ""}</div></form>`;
+}
+function renderMasters() {
+  if (API && mApi.list === null) { loadMasters(); }
+  const all = mastersAll(), myReq = API ? mApi.mine || [] : mReqsDemo, isMaster = API ? !!mApi.me?.master : !!myMasterDemo;
+  const sel = mf.sel && (all.find(m => m.id === mf.sel) || (API && mApi.me?.master?.id === mf.sel ? { ...mApi.me.master, mine: true } : null));
+  let list = all.filter(m => (!mf.spec || m.specs.includes(mf.spec)) && (!mf.d || m.districts.includes(mf.d)));
+  list.sort((a, b) => mf.sort === "price" ? (a.price || 9e15) - (b.price || 9e15) : mf.sort === "exp" ? b.exp - a.exp : (b.stars || 0) - (a.stars || 0) || b.reviews - a.reviews);
+  const tabs = [["find", L("Найти мастера", "Usta topish")], ["mine", `${L("Мои заявки", "So‘rovlarim")}${myReq.length ? ` · ${myReq.length}` : ""}`], ["me", isMaster ? L("Кабинет мастера", "Usta kabineti") : L("Стать мастером", "Usta bo‘lish")]];
+  let body;
+  if (sel) body = masterProfileHTML(sel);
+  else if (mf.tab === "mine") body = API && !user ? `<div class="panel"><p style="margin:0 0 10px">${L("Войдите, чтобы видеть свои заявки.", "So‘rovlaringizni ko‘rish uchun kiring.")}</p><button class="btn btn-primary" type="button" data-act="login">${L("Войти", "Kirish")}</button></div>` : myRequestsHTML();
+  else if (mf.tab === "me") body = API && !user ? `<div class="panel"><p style="margin:0 0 10px">${L("Войдите по номеру телефона, чтобы заполнить анкету мастера.", "Usta anketasini to‘ldirish uchun telefon raqami bilan kiring.")}</p><button class="btn btn-primary" type="button" data-mlogin>${L("Войти", "Kirish")}</button></div>` : masterCabinetHTML();
+  else body = `<div class="mfil"><div class="chips ds-chips mspec">${[["", L("Все", "Hammasi"), "🧰"], ...MSPECS()].map(([id, t, e]) => `<button type="button" class="chip" data-mspec="${id}" aria-pressed="${mf.spec === id}">${e} ${t}</button>`).join("")}</div>
+      <div class="mfil-r"><label class="visually-hidden" for="mfD">${L("Район", "Tuman")}</label><select class="sel" id="mfD"><option value="">${L("Все районы", "Barcha tumanlar")}</option>${DISTRICTS.map(d => `<option value="${d.id}" ${mf.d === d.id ? "selected" : ""}>${L(d.ru, d.uz)}</option>`).join("")}</select>
+      <label class="visually-hidden" for="mfS">${L("Сортировка", "Saralash")}</label><select class="sel" id="mfS"><option value="rating" ${mf.sort === "rating" ? "selected" : ""}>${L("Сначала с высоким рейтингом", "Avval yuqori reytinglilar")}</option><option value="price" ${mf.sort === "price" ? "selected" : ""}>${L("Сначала дешевле", "Avval arzonroq")}</option><option value="exp" ${mf.sort === "exp" ? "selected" : ""}>${L("Сначала опытные", "Avval tajribalilar")}</option></select></div></div>
+    ${!API ? `<p class="mu" style="font-size:13px;margin:0">${L("Сейчас показаны примеры анкет — так раздел будет выглядеть. Настоящие мастера появятся, когда сайт заработает.", "Hozir namuna anketalar ko‘rsatilgan — bo‘lim shunday ko‘rinadi. Haqiqiy ustalar sayt ishga tushganda paydo bo‘ladi.")}</p>` : ""}
+    ${API && mApi.list === null ? `<p class="mu">${L("Загружаем мастеров…", "Ustalar yuklanmoqda…")}</p>` : list.length ? `<div class="mgrid">${list.map(masterCard).join("")}</div>` : `<div class="panel"><p style="margin:0">${L("Под этот фильтр мастеров пока нет. Попробуйте другой район или вид работ.", "Bu filtr bo‘yicha hozircha usta yo‘q. Boshqa tuman yoki ish turini tanlang.")}</p></div>`}`;
+  $("#app").innerHTML = `<div class="wrap mpage">
+    <nav class="crumbs"><button type="button" data-go="home">${L("Главная", "Asosiy")}</button>${ui("chev", 12)}<span>${L("Мастера", "Ustalar")}</span></nav>
+    ${sel ? "" : `<div class="ds-head"><h1 class="h-l">${L("Мастера для ремонта", "Ta’mir ustalari")}</h1><p class="mu">${L("Плиточники, электрики, сантехники и другие мастера Ташкента с отзывами покупателей. Купили материалы — позовите мастера здесь же.", "Toshkentning kafelchi, elektrik, santexnik va boshqa ustalari xaridorlar sharhlari bilan. Material oldingizmi — ustani shu yerda chaqiring.")}</p></div>
+    <div class="seg mtabs" role="tablist">${tabs.map(([id, t]) => `<button type="button" role="tab" data-mtab="${id}" aria-selected="${mf.tab === id}" aria-pressed="${mf.tab === id}">${t}</button>`).join("")}</div>`}
+    ${body}</div>`;
+  const dsel = $("#mfD"); if (dsel) dsel.addEventListener("change", e => { mf.d = e.target.value; renderMasters(); });
+  const ssel = $("#mfS"); if (ssel) ssel.addEventListener("change", e => { mf.sort = e.target.value; renderMasters(); });
+  const keep = id => { const el = $(id); if (el) el.addEventListener("input", e => { mf.form[id === "#mText" ? "text" : "street"] = e.target.value; }); };
+  keep("#mText"); keep("#mStreet"); const md = $("#mDist"); if (md) md.addEventListener("change", e => { mf.form.d = e.target.value; renderMasters(); });
+}
+function masterFormRead() {
+  const specs = [...document.querySelectorAll("[data-mfspec][aria-pressed=true]")].map(b => b.dataset.mfspec), districts = [...document.querySelectorAll("[data-mfdist][aria-pressed=true]")].map(b => b.dataset.mfdist);
+  return { name: $("#mfName").value.trim(), specs, districts, exp: Math.max(0, parseInt($("#mfExp").value, 10) || 0), price: Math.max(0, parseInt($("#mfPrice").value, 10) || 0), price_unit: $("#mfUnit").value, about: $("#mfAbout").value.trim() };
+}
+document.addEventListener("submit", async e => {
+  if (e.target.id === "mForm") {
+    e.preventDefault(); const v = masterFormRead(), er = $("#mfErr");
+    const msg = v.name.length < 2 ? L("Укажите имя", "Ismingizni kiriting") : !v.specs.length ? L("Выберите хотя бы один вид работ", "Kamida bitta ish turini tanlang") : !v.districts.length ? L("Выберите районы, где работаете", "Ishlaydigan tumanlarni tanlang") : "";
+    if (msg) { er.textContent = msg; er.hidden = false; return; }
+    if (API) { try { const r = await api("POST", "/api/masters/me", v); mApi.me = { master: r.master, requests: mApi.me?.requests || [] }; mf.edit = false; toast(r.master.status === "pending" ? L("Анкета отправлена — модератор проверит её в течение дня", "Anketa yuborildi — moderator bir kun ichida tekshiradi") : L("Анкета сохранена", "Anketa saqlandi")); renderMasters(); } catch (e2) { er.textContent = apiErr(e2); er.hidden = false; } return; }
+    myMasterDemo = { ...(myMasterDemo || { id: "me" + Date.now().toString(36), status: "active" }), ...v }; LS.set("imorat.master", myMasterDemo); mf.edit = false;
+    toast(L("Анкета сохранена. В демо-версии она сразу видна в списке мастеров", "Anketa saqlandi. Demo versiyada u darhol ustalar ro‘yxatida ko‘rinadi")); renderMasters();
+  }
+  if (e.target.id === "mReqForm") {
+    e.preventDefault(); const m = mastersAll().find(x => x.id === mf.sel), er = $("#mErr"), fm = mf.form;
+    fm.text = $("#mText").value.trim(); fm.street = $("#mStreet").value.trim(); fm.d = $("#mDist").value;
+    if (fm.text.length < 5) { er.textContent = L("Опишите работу в паре слов", "Ishni bir-ikki so‘z bilan yozing"); er.hidden = false; return; }
+    const whenT = { today: L("сегодня", "bugun"), tomorrow: L("завтра", "ertaga"), week: L("на этой неделе", "shu hafta"), agree: L("договоримся", "kelishamiz") }[fm.when];
+    if (API) {
+      if (!user) return openAuth(() => { go("masters"); });
+      try { await api("POST", `/api/masters/${encodeURIComponent(m.id)}/requests`, { text: fm.text, when: whenT, district: fm.d, street: fm.street }); mf.form = null; mf.sel = null; mf.tab = "mine"; toast(L("Заявка отправлена мастеру", "So‘rov ustaga yuborildi")); loadMasters(true); }
+      catch (e2) { er.textContent = apiErr(e2); er.hidden = false; }
+      return;
+    }
+    mReqsDemo.unshift({ id: "q" + Date.now().toString(36), master_id: m.id, master: mName(m), text: fm.text, when: whenT, status: "new", created: Date.now() }); LS.set("imorat.mreqs", mReqsDemo);
+    mf.form = null; mf.sel = null; mf.tab = "mine"; renderMasters(); window.scrollTo(0, 0);
+    toast(L("Заявка сохранена. В демо-версии мастер её не получит — на настоящем сайте она придёт ему в Telegram", "So‘rov saqlandi. Demo versiyada usta uni olmaydi — haqiqiy saytda Telegramga keladi"));
+  }
+});
+document.addEventListener("click", async e => {
+  const t = e.target.closest("[data-mopen],[data-mback],[data-mtab],[data-mspec],[data-mwhen],[data-mfspec],[data-mfdist],[data-medit],[data-mcancel],[data-mreq],[data-mrate],[data-mreload],[data-mlogin],[data-mfind]"); if (!t) return;
+  const s = t.dataset;
+  if (s.mfind != null) { mf = { ...mf, spec: s.mfind, sel: null, tab: "find" }; return go("masters"); }
+  if (s.mopen && route.view !== "masters") { mf = { ...mf, sel: s.mopen, form: null, tab: "find" }; return go("masters"); }
+  if (route.view !== "masters") return;
+  if (s.mopen) { mf.sel = s.mopen; mf.form = null; renderMasters(); return window.scrollTo(0, 0); }
+  if (s.mback != null) { mf.sel = null; renderMasters(); return; }
+  if (s.mtab) { mf.tab = s.mtab; mf.sel = null; mf.edit = false; if (API && user && s.mtab !== "find") loadMasters(true); return renderMasters(); }
+  if (s.mspec != null) { mf.spec = s.mspec; return renderMasters(); }
+  if (s.mwhen) { mf.form.when = s.mwhen; document.querySelectorAll("[data-mwhen]").forEach(b => b.setAttribute("aria-pressed", b.dataset.mwhen === s.mwhen)); return; }
+  if (s.mfspec || s.mfdist) { t.setAttribute("aria-pressed", t.getAttribute("aria-pressed") !== "true"); return; }
+  if (s.medit != null) { mf.edit = true; return renderMasters(); }
+  if (s.mcancel != null) { mf.edit = false; return renderMasters(); }
+  if (s.mlogin != null) return openAuth(() => { mf.tab = "me"; loadMasters(true); go("masters"); });
+  if (s.mreload != null) return loadMasters(true);
+  if (s.mreq) {
+    const [id, st] = s.mreq.split("|");
+    if (API) { t.disabled = true; try { await api("PATCH", "/api/masters/requests/" + id, { status: st }); toast(L("Статус заявки обновлён", "So‘rov holati yangilandi")); loadMasters(true); } catch (er) { t.disabled = false; toast(apiErr(er)); } return; }
+    const q = mReqsDemo.find(x => x.id === id); if (q) { q.status = st; LS.set("imorat.mreqs", mReqsDemo); } return renderMasters();
+  }
+  if (s.mrate) {
+    const [id, n] = s.mrate.split("|");
+    if (API) { try { await api("POST", `/api/masters/requests/${id}/review`, { stars: +n, text: "" }); toast(L("Спасибо за оценку!", "Baho uchun rahmat!")); loadMasters(true); } catch (er) { toast(apiErr(er)); } return; }
+    const q = mReqsDemo.find(x => x.id === id); if (q) { q.stars = +n; LS.set("imorat.mreqs", mReqsDemo); } return renderMasters();
+  }
+});
+/* Home teaser: top masters */
+function mastersTeaser() {
+  const top = [...mastersAll()].filter(m => !m.mine).sort((a, b) => (b.stars || 0) - (a.stars || 0) || b.reviews - a.reviews).slice(0, 4);
+  if (!top.length) return `<section class="sec rv" id="masters"><div class="sec-head"><div><h2 class="h-l">${L("Мастера для ремонта", "Ta’mir ustalari")}</h2><p>${L("Плиточники, электрики, сантехники — с отзывами покупателей", "Kafelchi, elektrik, santexnik — xaridorlar sharhlari bilan")}</p></div><button class="link" type="button" data-go="masters">${L("Стать мастером", "Usta bo‘lish")} ${ui("chev", 16)}</button></div></section>`;
+  return `<section class="sec rv" id="masters"><div class="sec-head"><div><h2 class="h-l">${L("Мастера для ремонта", "Ta’mir ustalari")}</h2><p>${L("Купили материалы — позовите мастера здесь же", "Material oldingizmi — ustani shu yerda chaqiring")}</p></div><button class="link" type="button" data-go="masters">${L("Все мастера", "Barcha ustalar")} ${ui("chev", 16)}</button></div>
+    <div class="mgrid">${top.map(masterCard).join("")}</div></section>`;
+}
+
 /* ================= Router & render ================= */
 function parseHash() {
   const h = location.hash.slice(1);
   if (h === "seller") return { view: "seller", cat: null };
   if (h === "design") return { view: "design", cat: null };
+  if (h === "masters") return { view: "masters", cat: null };
   if (h === "catalog") return { view: "catalog", cat: null };
   if (h.startsWith("cat-") && CAT[h.slice(4)]) return { view: "catalog", cat: h.slice(4) };
   if (/^p-\d+$/.test(h) && PROD[+h.slice(2)]) return { view: "catalog", cat: PROD[+h.slice(2)].cat, prod: +h.slice(2) };
@@ -4485,6 +4753,7 @@ function renderMain() {
   if (route.view === "catalog") renderCatalog();
   else if (route.view === "seller") renderSeller();
   else if (route.view === "design") renderDesign();
+  else if (route.view === "masters") renderMasters();
   else renderHome();
   renderTabbar(); counts(); settleMotion();
   if (route.prod) { const id = route.prod; route.prod = 0; setTimeout(() => openProduct(id), 0); }

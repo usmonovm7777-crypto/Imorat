@@ -42,6 +42,10 @@ CREATE TABLE IF NOT EXISTS reviews(
 CREATE TABLE IF NOT EXISTS settlements(id INTEGER PRIMARY KEY AUTOINCREMENT, store_id TEXT NOT NULL, amount INTEGER NOT NULL, note TEXT NOT NULL DEFAULT '', admin_id TEXT, created_at INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS audit(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT, action TEXT NOT NULL, target TEXT, details TEXT, ip TEXT, created_at INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS push_subs(endpoint TEXT PRIMARY KEY, user_id TEXT NOT NULL, p256dh TEXT NOT NULL, auth TEXT NOT NULL, created_at INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS masters(id TEXT PRIMARY KEY, user_id TEXT NOT NULL UNIQUE, name TEXT NOT NULL, specs TEXT NOT NULL, districts TEXT NOT NULL, exp INTEGER NOT NULL DEFAULT 0, price INTEGER NOT NULL DEFAULT 0, price_unit TEXT NOT NULL DEFAULT 'job', about TEXT NOT NULL DEFAULT '', phone TEXT, status TEXT NOT NULL DEFAULT 'pending', note TEXT, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS master_requests(id INTEGER PRIMARY KEY AUTOINCREMENT, master_id TEXT NOT NULL, user_id TEXT NOT NULL, text TEXT NOT NULL, when_txt TEXT NOT NULL, district TEXT, street TEXT, phone TEXT NOT NULL, name TEXT, status TEXT NOT NULL DEFAULT 'new', stars INTEGER, review TEXT, created_at INTEGER NOT NULL, status_at INTEGER NOT NULL);
+CREATE INDEX IF NOT EXISTS master_requests_m ON master_requests(master_id);
+CREATE INDEX IF NOT EXISTS master_requests_u ON master_requests(user_id);
 CREATE TABLE IF NOT EXISTS tg_links(token TEXT PRIMARY KEY, user_id TEXT NOT NULL, expires_at INTEGER NOT NULL);
 CREATE INDEX IF NOT EXISTS reviews_store ON reviews(store_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS orders_user ON orders(user_id, created_at DESC);

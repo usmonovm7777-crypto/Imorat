@@ -61,6 +61,7 @@ export function loadConfig(env = process.env) {
     adminMfa: env.ADMIN_MFA !== "0",
     backupDir: env.BACKUP_DIR || "",
     smsSellerTemplate: env.SMS_SELLER_TEMPLATE || "Imorat: yangi buyurtma {num}. Iltimos, qabul qiling.",
+    smsMasterTemplate: env.SMS_MASTER_TEMPLATE ?? "Imorat: sizga ustalik uchun yangi so‘rov keldi. Saytda qabul qiling.",
     paymentsOnline: list(env.PAYMENTS) // e.g. "click,payme" once the company and contracts exist
   };
 }
