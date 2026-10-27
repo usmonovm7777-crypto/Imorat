@@ -770,6 +770,20 @@ html.ds-dragging, html.ds-dragging * { cursor: grabbing !important; user-select:
 .ds-wish { display: flex; gap: 6px; }
 .ds-wish input { flex: 1; min-width: 0; border: 1.5px solid var(--line); border-radius: 12px; padding: 10px 12px; background: var(--raised); font: inherit; color: inherit; }
 .ds-sw { display: flex; flex-wrap: wrap; gap: 6px; }
+.shop-grid { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: 12px; align-items: start; }
+.shop-in, .shop-out { display: grid; gap: 10px; }
+.shop-in textarea { width: 100%; font: inherit; font-size: 15px; padding: 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); resize: vertical; }
+.shop-rows { display: grid; gap: 6px; }
+.shop-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.shop-row.off .sr-l select { opacity: .6; }
+.shop-row.chk { background: color-mix(in srgb, var(--signal) 8%, transparent); border-radius: 10px; padding: 8px; }
+
+.sr-l { display: grid; gap: 4px; min-width: 0; } .sr-l select { width: 100%; }
+.sr-r { display: grid; justify-items: end; gap: 2px; }
+@media (max-width: 760px) { .shop-grid { grid-template-columns: 1fr; } }
+.opt-box { display: grid; grid-template-columns: auto 1fr; gap: 6px 10px; align-items: center; padding: 12px; border-radius: 14px; background: color-mix(in srgb, var(--ok, #1f8a5b) 10%, var(--surface)); border: 1px solid color-mix(in srgb, var(--ok, #1f8a5b) 35%, var(--line)); }
+.opt-box .ob-ic { color: var(--ok, #1f8a5b); } .opt-box b { display: block; } .opt-box small { color: var(--muted); }
+.opt-box .btn { grid-column: 1 / -1; justify-self: start; }
 .st { display: grid; gap: 12px; }
 .st-chart-w { display: grid; gap: 4px; }
 .st-chart { width: 100%; height: 140px; display: block; }
@@ -1796,7 +1810,7 @@ function renderFooter() {
     <div><button class="logo" type="button" data-go="home"><span class="logo-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span><b>imorat</b></button>
       <p style="margin:10px 0 0;max-width:36ch">${L("Маркетплейс строительных магазинов Узбекистана. Прототип интерфейса: магазины, цены и доставка демонстрационные.", "O‘zbekiston qurilish do‘konlari marketpleysi. Interfeys prototipi: do‘konlar, narxlar va yetkazish namunaviy.")}</p>
       <p class="num" style="margin:10px 0 0">+998 71 200 00 00 · 08:00–22:00</p></div>
-    <div><b>${L("Покупателям", "Xaridorlarga")}</b><ul><li><button type="button" data-go="catalog">${L("Весь каталог", "Butun katalog")}</button></li><li><button type="button" data-act="ai">Usta AI</button></li><li><button type="button" data-scroll="calc">${L("Калькуляторы ремонта", "Ta’mir kalkulyatorlari")}</button></li><li><button type="button" data-act="orders">${L("Мои заказы", "Buyurtmalarim")}</button></li></ul></div>
+    <div><b>${L("Покупателям", "Xaridorlarga")}</b><ul><li><button type="button" data-go="catalog">${L("Весь каталог", "Butun katalog")}</button></li><li><button type="button" data-act="ai">Usta AI</button></li><li><button type="button" data-scroll="calc">${L("Калькуляторы ремонта", "Ta’mir kalkulyatorlari")}</button></li><li><button type="button" data-go="list">${L("Список покупок → корзина", "Xaridlar ro‘yxati → savat")}</button></li><li><button type="button" data-act="orders">${L("Мои заказы", "Buyurtmalarim")}</button></li></ul></div>
     <div><b>${L("Доставка и оплата", "Yetkazish va to‘lov")}</b><ul><li>${L("Яндекс Доставка", "Yandex Yetkazib berish")}</li><li><button type="button" data-scroll="vip">Imorat VIP</button></li><li>${L("Рассрочка на 12 месяцев", "12 oyga muddatli to‘lov")}</li><li><button type="button" data-go="masters">${L("Мастера для ремонта", "Ta’mir ustalari")}</button></li></ul></div>
     <div><b>${L("Партнёрам", "Hamkorlarga")}</b><ul><li><button type="button" data-go="seller">${L("Кабинет продавца", "Sotuvchi kabineti")}</button></li><li><button type="button" data-scroll="stores">${L("Магазины", "Do‘konlar")}</button></li><li><button type="button" data-go="masters" data-mtabgo="me">${L("Стать мастером", "Usta bo‘lish")}</button></li></ul></div>
   </div>`;
@@ -1860,7 +1874,7 @@ function renderHome() {
         <h1 class="h-xl">${L("Ремонт без лишних поездок. <em>Подберём, сравним, привезём.</em>", "Ortiqcha qatnovsiz ta’mir. <em>Tanlaymiz, solishtiramiz, yetkazamiz.</em>")}</h1>
         <p class="lead">${L("Опишите задачу своими словами — Usta AI посчитает материалы и соберёт корзину из 9 магазинов. Курьер или грузовое авто Яндекса привезут всё в один день.", "Vazifani o‘z so‘zingiz bilan yozing — Usta AI materiallarni hisoblaydi va 9 do‘kondan savat yig‘adi. Yandex kuryeri yoki yuk mashinasi bir kunda olib keladi.")}</p>
         <form class="askbar" id="heroAsk">${ui("spark", 20).replace("<svg", '<svg class="sp"')}<label class="visually-hidden" for="heroQ">${L("Вопрос для Usta AI", "Usta AI uchun savol")}</label><input id="heroQ" placeholder="${L("Например: штукатурка стен 30 м², что купить?", "Masalan: 30 m² devor suvog‘i uchun nima olish kerak?")}" autocomplete="off"><button class="btn btn-ai" type="submit">${ui("send", 18)}<span>${L("Спросить", "So‘rash")}</span></button></form>
-        <div class="hero-q"><button type="button" data-go="design" class="hq-ds">${ui("spark", 14)} ${L("Спроектировать комнату в 3D", "Xonani 3D da loyihalash")}</button>${asks.map(a => `<button type="button" data-ask="${esc(a)}">${esc(a)}</button>`).join("")}</div>
+        <div class="hero-q"><button type="button" data-go="design" class="hq-ds">${ui("spark", 14)} ${L("Спроектировать комнату в 3D", "Xonani 3D da loyihalash")}</button><button type="button" data-go="list" class="hq-ds">${ui("camera", 14)} ${L("Список по фото → корзина", "Ro‘yxat rasmi → savat")}</button>${asks.map(a => `<button type="button" data-ask="${esc(a)}">${esc(a)}</button>`).join("")}</div>
         <div class="stats"><div><b class="num">${STORES.length}</b><span>${L("магазинов", "do‘kon")}</span></div><div><b class="num">${PRODUCTS.length}</b><span>${L("товаров", "mahsulot")}</span></div><div><b class="num">${CATS.length}</b><span>${L("категорий", "toifa")}</span></div><div><b class="num">40 ${L("мин", "daq")}</b><span>${L("доставка курьером", "kuryer yetkazishi")}</span></div></div>
       </div>
       <div class="collage" aria-hidden="false">${collage.map(p => `<button class="tile studio" type="button" data-open="${p.id}" style="--h:${hueOf(p)}">${art(p, "", true)}<span>${esc(pName(p))}</span></button>`).join("")}</div>
@@ -2294,7 +2308,7 @@ function dCart() {
   const gs = groups(), sv = svcLines();
   if (!gs.length) {
     $("#dBody").innerHTML = `<div class="empty"><b>${L("Корзина пуста", "Savat bo‘sh")}</b><span>${L("Добавьте товары из каталога или попросите Usta AI собрать корзину под вашу задачу.", "Katalogdan mahsulot qo‘shing yoki Usta AI dan vazifangizga savat yig‘ishni so‘rang.")}</span><button class="btn btn-ai" type="button" data-act="ai">${ui("spark", 16)} Usta AI</button></div>`;
-    $("#dFoot").innerHTML = `<button class="btn btn-primary" type="button" data-go="catalog">${L("Перейти в каталог", "Katalogga o‘tish")}</button>`; return;
+    $("#dFoot").innerHTML = `<div style="display:grid;gap:8px"><button class="btn btn-primary" type="button" data-go="catalog">${L("Перейти в каталог", "Katalogga o‘tish")}</button><button class="btn btn-line" type="button" data-go="list">${ui("camera", 16)} ${L("Есть список от прораба?", "Prorab ro‘yxati bormi?")}</button></div>`; return;
   }
   $("#dBody").innerHTML = gs.map(g => { const t = pickTariff(g.kg); return `<div>
     <div class="gh"><span><b>${esc(g.store.name)}</b> · ${dName(g.store.d)}</span><span class="pill acc">${ui(t.icon, 14)} ${fmtKg(g.kg)}</span></div>
@@ -2304,6 +2318,7 @@ function dCart() {
   (sv.length ? `<div><div class="gh"><span><b>${L("Услуги мастеров", "Usta xizmatlari")}</b></span></div>${sv.map(s => `<div class="line"><span class="svc-ico">${ui("wrench", 22)}</span><div class="nm">${L("Установка", "O‘rnatish")}: ${esc(pName(s.p))}<small>${fmt(s.price)} × ${s.q}</small></div><div class="rt"><b class="num" style="font-size:14px">${fmt(s.price * s.q)}</b><button class="link" type="button" data-svcoff="${s.p.id}" style="font-size:12px;color:var(--muted)">${L("Убрать", "Olib tashlash")}</button></div></div>`).join("")}</div>` : "") +
   (gs.length > 1 ? `<div class="note">${L(`Товары из ${gs.length} магазинов приедут ${gs.length} отдельными доставками: Яндекс забирает заказ в каждом магазине.`, `${gs.length} ta do‘kondan mahsulotlar ${gs.length} ta alohida yetkaziladi: Yandex har bir do‘kondan oladi.`)}</div>` : "");
   if (!promoUsed().includes(user ? user.id : "guest") && promo !== "IMORAT5") $("#dBody").insertAdjacentHTML("afterbegin", `<div class="hint-promo">${ui("gift", 16)} <span>${L("Первый заказ? Промокод", "Birinchi buyurtma? Promokod")} <b>IMORAT5</b> ${L("— скидка 5% на товары", "— mahsulotlarga 5% chegirma")}</span></div>`);
+  { const ph = cartPlanHTML(); if (ph) $("#dBody").insertAdjacentHTML("afterbegin", ph); }
   $("#dBody").insertAdjacentHTML("beforeend", `<div class="save-proj" id="saveProj" hidden><label class="visually-hidden" for="projName">${L("Название проекта", "Loyiha nomi")}</label><input id="projName" placeholder="${L("Например: Ремонт ванной", "Masalan: Vannaxona ta’miri")}"><button class="btn btn-primary" type="button" data-act="proj-save" style="padding:8px 12px">${L("Сохранить", "Saqlash")}</button></div><button class="lnk" type="button" data-act="proj-open" style="justify-self:start">${ui("folder", 15)} ${L("Сохранить корзину как проект ремонта", "Savatni ta’mir loyihasi sifatida saqlash")}</button>`);
   const goods = gs.reduce((a, g) => a + g.sum, 0), svc = svcSum(), disc = bundleDisc();
   $("#dFoot").innerHTML = totalsHTML(goods, svc, disc) + `<div class="sumrow total"><span>${L("Итого без доставки", "Yetkazishsiz jami")}</span><span class="num">${fmt(goods + svc - disc)}</span></div>
@@ -2539,6 +2554,7 @@ function renderWidgets() {
     const tile = (act, icon, ru, uz, sru, suz, cnt, extra = "") => `<button class="wtile ${extra}" type="button" ${act}><span class="wi">${ui(icon, extra ? 26 : 22)}</span><span style="display:grid;gap:3px"><b>${L(ru, uz)}</b><small>${L(sru, suz)}</small></span>${cnt ? `<span class="cnt">${cnt}</span>` : ""}${extra ? ui("chev", 18) : ""}</button>`;
     body.innerHTML = `<div class="wgrid">
       ${tile('data-act="ai"', "spark", "Usta AI", "Usta AI", "Подберёт материалы, сравнит и посчитает", "Materiallarni tanlaydi va hisoblaydi", 0, "feat alt")}
+      ${tile('data-go="list"', "camera", "Список покупок → корзина", "Xaridlar ro‘yxati → savat", "Текст или фото списка от прораба — сразу в корзину", "Prorab ro‘yxati matni yoki rasmi — darhol savatga", 0)}
       ${tile('data-go="design"', "home", "AI-дизайнер комнаты", "AI xona dizayneri", "Фото и размеры → комната в 3D с мебелью и сметой", "Rasm va o‘lcham → mebelli 3D xona va smeta", 0, "feat")}
       ${tile('data-wview="calc"', "calc", "Калькуляторы ремонта", "Ta’mir kalkulyatorlari", `${CALCS.length} калькуляторов: подвал, фундамент, бетон, плитка, кровля, отопление…`, `${CALCS.length} ta kalkulyator: yerto‘la, poydevor, beton, kafel, tom, isitish…`, 0, "feat")}
       ${tile('data-wview="deliv"', "truck", "Доставка", "Yetkazish", "Какая машина приедет и сколько стоит", "Qaysi mashina va narxi")}
@@ -5028,6 +5044,137 @@ document.addEventListener("click", e => {
   sellerStats = null; loadSellerStats();
 });
 
+/* ================= Cheaper cart: fewer stores, less delivery =================
+   Tries every set of stores (there are few), puts each product in the cheapest store of the set that has it in stock,
+   and compares goods + delivery with the current cart. */
+function cartCost(assign, mode, dist) {
+  const g = {};
+  for (const a of assign) { const o = a.p.offers.find(x => x.store === a.store); if (!o) return Infinity; const tr = tierOf(a.p, a.q), pr = tr ? round(o.price * (1 - tr)) : o.price; const x = (g[a.store] ||= { sum: 0, kg: 0 }); x.sum += pr * a.q; x.kg += a.p.kg * a.q; }
+  let goods = 0, del = 0;
+  for (const [sid, x] of Object.entries(g)) { goods += x.sum; if (mode !== "pickup") { const t = pickTariff(x.kg); del += round(t.base + t.perKm * km(STORE[sid].d, dist)); } }
+  return { goods, del, total: goods + del, stores: Object.keys(g).length };
+}
+function cartPlan() {
+  const mode = form.mode || "yandex", dist = form.district || district, lines = cartLines();
+  if (lines.length < 2 || mode === "pickup") return null;
+  const need = new Map(); lines.forEach(l => need.set(l.p.id, (need.get(l.p.id) || 0) + l.q));
+  const items = [...need].map(([id, q]) => ({ p: PROD[id], q }));
+  const now = cartCost(lines.map(l => ({ p: l.p, q: l.q, store: l.store })), mode, dist);
+  const can = it => { const ok = it.p.offers.filter(o => STORE[o.store] && stockOf(it.p, o.store) >= it.q).map(o => o.store); return ok.length ? ok : it.p.offers.filter(o => STORE[o.store]).map(o => o.store); };
+  const cand = items.map(can);
+  let sids = [...new Set(cand.flat())];
+  if (sids.length > 12) { const cover = s => cand.filter(c => c.includes(s)).length; sids = sids.sort((a, b) => cover(b) - cover(a)).slice(0, 12); }
+  let best = null;
+  for (let mask = 1; mask < 1 << sids.length; mask++) {
+    const set = sids.filter((_, i) => mask >> i & 1);
+    if (best && set.length > best.cost.stores + 2) continue;
+    const assign = [];
+    for (let i = 0; i < items.length; i++) {
+      const opts = cand[i].filter(s => set.includes(s)); if (!opts.length) { assign.length = 0; break; }
+      const it = items[i], s = opts.sort((a, b) => it.p.offers.find(o => o.store === a).price - it.p.offers.find(o => o.store === b).price)[0];
+      assign.push({ p: it.p, q: it.q, store: s });
+    }
+    if (assign.length !== items.length) continue;
+    const c = cartCost(assign, mode, dist);
+    if (!best || c.total < best.cost.total) best = { assign, cost: c };
+  }
+  if (!best || now.total - best.cost.total < 5000) return null;
+  return { now, best: best.cost, assign: best.assign, save: now.total - best.cost.total };
+}
+function applyCartPlan() {
+  const plan = cartPlan(); if (!plan) return;
+  cart = {}; plan.assign.forEach(a => { cart[a.p.id + "|" + a.store] = a.q; }); saveCart(); refreshCards();
+  toast(L(`Корзина пересобрана: экономия ${fmt(plan.save)}`, `Savat qayta yig‘ildi: tejash ${fmt(plan.save)}`)); renderDrawer();
+}
+function cartPlanHTML() {
+  const plan = cartPlan(); if (!plan) return "";
+  const { now, best } = plan;
+  return `<div class="opt-box"><span class="ob-ic">${ui("truck", 20)}</span><div><b>${L(`Можно сэкономить ${fmt(plan.save)}`, `${fmt(plan.save)} tejash mumkin`)}</b>
+    <small>${L(`${best.stores} ${plural(best.stores, ["магазин", "магазина", "магазинов"])} вместо ${now.stores}: доставка ${fmt(now.del)} → ${fmt(best.del)}${best.goods !== now.goods ? `, товары ${best.goods > now.goods ? "+" : "−"}${fmt(Math.abs(best.goods - now.goods))}` : ""}`, `${now.stores} o‘rniga ${best.stores} ta do‘kon: yetkazish ${fmt(now.del)} → ${fmt(best.del)}${best.goods !== now.goods ? `, mahsulotlar ${best.goods > now.goods ? "+" : "−"}${fmt(Math.abs(best.goods - now.goods))}` : ""}`)}</small></div>
+    <button class="btn btn-primary" type="button" data-act="cart-opt">${L("Собрать выгоднее", "Arzonroq yig‘ish")}</button></div>`;
+}
+
+/* ================= Shopping list → cart =================
+   A foreman's list typed, pasted from Telegram or photographed (handwriting is read by Usta AI).
+   Each line becomes a product and a quantity; the buyer checks and adds everything to the cart. */
+let shop = { text: LS.get("imorat.shopText", ""), rows: null, busy: false };
+const SH_UNIT = /(шт|штук[аи]?|меш(?:ок|ка|ков)?|мешк\w*|кг|kg|м²|м2|кв\.?\s?м|лист(?:а|ов)?|рул(?:он|она|онов)?|упак\w*|пач\w*|банк\w*|ведр\w*|л|литр\w*|м|метр\w*|пог\.?\s?м|dona|ta|qop|metr|list|rulon|paket)(?![a-zа-яё])/i;
+function shopParse(line) {
+  let t = line.replace(/^\s*(?:[-–—•*·]|\d{1,3}[.)])\s+/, "").trim();
+  if (t.length < 2) return null;
+  let q = null, unit = "";
+  const m1 = t.match(new RegExp(`(?:^|\\s|[-–—:=x×*])(\\d+(?:[.,]\\d+)?)\\s*${SH_UNIT.source}`, "i"));
+  if (m1) { q = parseFloat(m1[1].replace(",", ".")); unit = m1[2].toLowerCase(); t = (t.slice(0, m1.index) + " " + t.slice(m1.index + m1[0].length)).trim(); }
+  else {
+    const m2 = t.match(/(?:\s[-–—:=x×*]\s?|\s)(\d+(?:[.,]\d+)?)\s*$/) || t.match(/^(\d+(?:[.,]\d+)?)\s+(?=[^\d\s])/);
+    if (m2 && !/[×x*]\s*$/.test(t.slice(0, m2.index))) { q = parseFloat(m2[1].replace(",", ".")); t = (t.slice(0, m2.index) + " " + t.slice(m2.index + m2[0].length)).trim(); }
+  }
+  t = t.replace(/[-–—:=,;]+\s*$/, "").replace(/\s{2,}/g, " ").trim();
+  return t.length > 1 ? { line: line.trim(), name: t, q: q && q > 0 ? q : 1, unit } : null;
+}
+/* "500 кг" of cement in 50 kg bags = 10 bags; "20 м²" of tile sold per m² stays 20 */
+function shopQty(p, r) {
+  if (!p) return Math.max(1, Math.ceil(r.q));
+  if (/^(кг|kg)$/.test(r.unit) && p.kg > 1.5 && p.unit !== "m2") return Math.max(1, Math.ceil(r.q / p.kg));
+  return Math.max(1, Math.ceil(r.q));
+}
+function shopBuild(text) {
+  const rows = String(text || "").split(/\r?\n|;/).map(shopParse).filter(Boolean).slice(0, 150).map(r => {
+    const cands = impMatch(r.name), best = cands[0];
+    const pick = best && best.s >= .4 ? best.id : "skip";
+    return { ...r, cands, pick, sure: !!(best && best.s >= .6), qty: shopQty(PROD[pick], r) };
+  });
+  shop.rows = rows;
+}
+function renderShop() {
+  if (route.view !== "shop") return;
+  const rows = shop.rows, chosen = (rows || []).filter(r => PROD[r.pick]);
+  const total = chosen.reduce((a, r) => a + minPrice(PROD[r.pick]) * r.qty, 0);
+  $("#app").innerHTML = `<div class="wrap shop">
+    <nav class="crumbs"><button type="button" data-go="home">${L("Главная", "Asosiy")}</button>${ui("chev", 12)}<span>${L("Список покупок", "Xaridlar ro‘yxati")}</span></nav>
+    <div class="ds-head"><h1 class="h-l">${L("Список покупок → корзина", "Xaridlar ro‘yxati → savat")}</h1><p class="mu">${L("Вставьте список от прораба или сфотографируйте листок — даже написанный от руки. Сайт найдёт каждый товар, посчитает количество и цену, а вы добавите всё в корзину одной кнопкой.", "Prorab ro‘yxatini qo‘ying yoki varaqni suratga oling — hatto qo‘lda yozilgan bo‘lsa ham. Sayt har bir mahsulotni topadi, miqdor va narxni hisoblaydi, siz esa hammasini bir tugma bilan savatga qo‘shasiz.")}</p></div>
+    <div class="shop-grid"><div class="panel shop-in">
+      <label for="shopText"><b>${L("Список", "Ro‘yxat")}</b> <small class="mu">${L("— по одному товару в строке", "— har qatorda bitta mahsulot")}</small></label>
+      <textarea id="shopText" rows="9" placeholder="${L("Цемент М400 — 20 мешков\nКирпич красный 1500 шт\nПрофиль ПП 60×27 30 шт\nСаморезы по дереву 2 кг\nШпаклёвка финишная 5", "Sement M400 — 20 qop\nQizil g‘isht 1500 dona\nProfil PP 60×27 30 dona\nYog‘och shuruplari 2 kg\nFinish shpaklyovka 5")}">${esc(shop.text)}</textarea>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-primary" type="button" data-shop="parse">${ui("check", 16)} ${L("Разобрать список", "Ro‘yxatni tahlil qilish")}</button>
+        ${photoAIon() ? `<label class="btn btn-line" style="cursor:pointer">${ui("camera", 16)} ${shop.busy ? L("Читаем фото…", "Rasm o‘qilmoqda…") : L("Фото списка", "Ro‘yxat rasmi")}<input type="file" id="shopPhoto" accept="image/*" capture="environment" hidden></label>` : ""}
+        <button class="btn btn-line" type="button" data-shop="example">${L("Пример", "Namuna")}</button></div>
+      ${photoAIon() ? "" : `<small class="mu">${L("Фото рукописного списка читает Usta AI — кнопка появится, когда он подключён. Текст разбирается всегда.", "Qo‘lda yozilgan ro‘yxat rasmini Usta AI o‘qiydi — u ulanganda tugma chiqadi. Matn har doim tahlil qilinadi.")}</small>`}
+    </div>
+    <div class="panel shop-out">${!rows ? `<p class="mu" style="margin:0">${L("Здесь появятся найденные товары.", "Topilgan mahsulotlar shu yerda chiqadi.")}</p>` : !rows.length ? `<p class="mu" style="margin:0">${L("Не нашли в тексте ни одного товара.", "Matnda birorta mahsulot topilmadi.")}</p>` : `
+      <div class="panel-h"><h2 class="h-m">${L("Нашли", "Topildi")} ${chosen.length} ${L("из", "/")} ${rows.length}</h2><span class="num"><b>${fmt(total)}</b></span></div>
+      <div class="shop-rows">${rows.map((r, i) => { const p = PROD[r.pick]; return `<div class="shop-row ${p ? (r.sure ? "" : "chk") : "off"}"><div class="sr-l"><small class="mu">${esc(r.line)}</small>
+        <label class="visually-hidden" for="shp${i}">${L("Товар", "Mahsulot")}</label><select class="sel" id="shp${i}" data-shoppick="${i}">${r.cands.map(c => `<option value="${c.id}" ${r.pick === c.id ? "selected" : ""}>${esc(pName(PROD[c.id]))}</option>`).join("")}<option value="skip" ${r.pick === "skip" ? "selected" : ""}>${r.cands.length ? L("Не нужно", "Kerak emas") : L("Не нашли в каталоге", "Katalogda topilmadi")}</option></select>
+        ${!p && !r.cands.length ? `<button class="lnk" type="button" data-shopask="${i}">${ui("spark", 13)} ${L("Спросить Usta AI", "Usta AI dan so‘rash")}</button>` : ""}</div>
+        ${p ? `<div class="sr-r"><div class="qty"><button type="button" data-shopq="${i}|-1" aria-label="${L("Меньше", "Kamroq")}">−</button><span>${r.qty}</span><button type="button" data-shopq="${i}|1" aria-label="${L("Больше", "Ko‘proq")}">+</button></div><small class="mu">${unitName(p.unit)}</small><b class="num">${fmt(minPrice(p) * r.qty)}</b></div>` : ""}</div>`; }).join("")}</div>
+      <button class="btn btn-primary" type="button" data-shop="cart" ${chosen.length ? "" : "disabled"}>${ui("cart", 16)} ${L("Добавить в корзину", "Savatga qo‘shish")} · ${chosen.length}</button>
+      <small class="mu">${L("Цены — самые низкие в магазинах. В корзине сайт предложит, как собрать заказ из меньшего числа магазинов, чтобы сэкономить на доставке.", "Narxlar — do‘konlardagi eng past narxlar. Savatda sayt yetkazishni tejash uchun kamroq do‘kondan yig‘ishni taklif qiladi.")}</small>`}</div></div></div>`;
+  $("#shopText")?.addEventListener("input", e => { shop.text = e.target.value; LS.set("imorat.shopText", shop.text); });
+}
+async function shopFromPhoto(file) {
+  let url; try { url = await resizeImg(file); } catch (e) { return toast(L("Не удалось открыть фото", "Rasmni ochib bo‘lmadi")); }
+  shop.busy = true; renderShop();
+  const r = await dsAI(`На фото — список покупок для ремонта или стройки, возможно написанный от руки, на русском или узбекском. Перепиши его построчно как есть: название и количество с единицами. Ответь ТОЛЬКО JSON: {"lines":["цемент М400 20 мешков", "..."]}. Если на фото нет списка — {"lines":[]}.`, url);
+  shop.busy = false;
+  const lines = r && Array.isArray(r.lines) ? r.lines.map(String).filter(Boolean).slice(0, 150) : [];
+  if (!lines.length) { renderShop(); return toast(L("Не удалось прочитать список — снимите ближе и ровнее или вставьте текстом", "Ro‘yxatni o‘qib bo‘lmadi — yaqinroq va tekisroq suratga oling yoki matn bilan qo‘ying")); }
+  shop.text = lines.join("\n"); LS.set("imorat.shopText", shop.text); shopBuild(shop.text); renderShop();
+  toast(L(`Прочитали ${lines.length} строк — проверьте товары`, `${lines.length} qator o‘qildi — mahsulotlarni tekshiring`));
+}
+document.addEventListener("change", e => {
+  if (e.target.id === "shopPhoto") { const f = e.target.files?.[0]; e.target.value = ""; if (f) shopFromPhoto(f); }
+  if (e.target.dataset?.shoppick != null && shop.rows) { const r = shop.rows[+e.target.dataset.shoppick], v = e.target.value; r.pick = v === "skip" ? "skip" : +v; r.sure = true; if (PROD[r.pick]) r.qty = shopQty(PROD[r.pick], r); renderShop(); }
+});
+document.addEventListener("click", e => {
+  const t = e.target.closest("[data-shop],[data-shopq],[data-shopask]"); if (!t || route.view !== "shop") return;
+  if (t.dataset.shopq) { const [i, d] = t.dataset.shopq.split("|"); const r = shop.rows[+i]; r.qty = Math.max(1, r.qty + +d); return renderShop(); }
+  if (t.dataset.shopask) { const r = shop.rows[+t.dataset.shopask]; return openAI(L(`Что купить: «${r.line}»?`, `Nima olish kerak: «${r.line}»?`)); }
+  const a = t.dataset.shop;
+  if (a === "example") { shop.text = L("Цемент М400 — 20 мешков\nКирпич красный М150 1500 шт\nПрофиль ПП 60×27 30 шт\nСаморезы по дереву 3,5×35 2 кг\nШпаклёвка финишная 5\nГрунтовка глубокого проникновения 2", "Sement M400 — 20 qop\nQizil g‘isht M150 1500 dona\nProfil PP 60×27 30 dona\nYog‘och shuruplari 3,5×35 2 kg\nFinish shpaklyovka 5\nChuqur singuvchi gruntovka 2"); LS.set("imorat.shopText", shop.text); shopBuild(shop.text); return renderShop(); }
+  if (a === "parse") { shop.text = $("#shopText").value; LS.set("imorat.shopText", shop.text); shopBuild(shop.text); return renderShop(); }
+  if (a === "cart") { const ch = shop.rows.filter(r => PROD[r.pick]); ch.forEach(r => addToCart(r.pick, null, r.qty, true)); toast(L(`В корзине: ${ch.length} товаров из списка`, `Savatda: ro‘yxatdan ${ch.length} ta mahsulot`)); return openDrawer("cart"); }
+});
+
 /* ================= Router & render ================= */
 function parseHash() {
   const h = location.hash.slice(1);
@@ -5035,6 +5182,7 @@ function parseHash() {
   if (h === "design") return { view: "design", cat: null };
   if (h === "masters") return { view: "masters", cat: null };
   if (h === "flat") return { view: "flat", cat: null };
+  if (h === "list") return { view: "shop", cat: null };
   if (h === "catalog") return { view: "catalog", cat: null };
   if (h.startsWith("cat-") && CAT[h.slice(4)]) return { view: "catalog", cat: h.slice(4) };
   if (/^p-\d+$/.test(h) && PROD[+h.slice(2)]) return { view: "catalog", cat: PROD[+h.slice(2)].cat, prod: +h.slice(2) };
@@ -5046,6 +5194,7 @@ function renderMain() {
   else if (route.view === "design") renderDesign();
   else if (route.view === "masters") renderMasters();
   else if (route.view === "flat") renderFlat();
+  else if (route.view === "shop") renderShop();
   else renderHome();
   renderTabbar(); counts(); settleMotion();
   if (route.prod) { const id = route.prod; route.prod = 0; setTimeout(() => openProduct(id), 0); }
@@ -5163,6 +5312,7 @@ document.addEventListener("click", e => {
     case "ai-clear": aiCtl?.abort(); aiMsgs = []; return renderAI();
     case "ai-unattach": aiFile = null; aiFileURL = ""; $("#aiAtt").hidden = true; $("#aiFile").value = ""; return;
     case "voice": return voiceSearch();
+    case "cart-opt": return applyCartPlan();
     case "photo-search": return $("#psFile")?.click();
     case "ask-search": return openAI(f.q.trim() ? L(`Помоги выбрать: ${f.q.trim()}`, `Tanlashga yordam ber: ${f.q.trim()}`) : undefined);
     case "ai-cat": return openAI(route.cat ? L(`Помоги выбрать в разделе «${CAT[route.cat].ru}»: что лучше и на что смотреть?`, `«${CAT[route.cat].uz}» bo‘limida tanlashga yordam ber: qaysi biri yaxshi?`) : undefined, { send: !!route.cat });
