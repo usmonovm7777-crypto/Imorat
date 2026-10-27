@@ -1,0 +1,819 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><style>body{margin:0;background:#222}canvas{display:block}</style></head>
+<body><canvas id="c"></canvas>
+<script id="fs" type="x-shader/x-fragment">#version 300 es
+precision highp float;
+uniform vec2 uRes;
+uniform int uModel;
+uniform float uV;          // variant
+uniform vec3 uA, uB, uBg, uE;
+uniform int uMA, uMB;
+uniform vec4 uCam;         // target y, dist, pitch, yaw
+uniform sampler2D uLabel;
+uniform int uLabMode;
+uniform vec4 uLabRect;
+uniform vec3 uLabC;
+uniform vec2 uJit;
+uniform vec3 uCh;
+uniform float uChR, uChM;
+out vec4 outCol;
+
+#define PI 3.14159265
+float hash(vec3 p){p=fract(p*.3183099+.1);p*=17.;return fract(p.x*p.y*p.z*(p.x+p.y+p.z));}
+float noise(vec3 x){vec3 i=floor(x),f=fract(x);f=f*f*(3.-2.*f);
+ return mix(mix(mix(hash(i),hash(i+vec3(1,0,0)),f.x),mix(hash(i+vec3(0,1,0)),hash(i+vec3(1,1,0)),f.x),f.y),
+            mix(mix(hash(i+vec3(0,0,1)),hash(i+vec3(1,0,1)),f.x),mix(hash(i+vec3(0,1,1)),hash(i+vec3(1,1,1)),f.x),f.y),f.z);}
+float fbm(vec3 p){float a=.5,s=0.;for(int i=0;i<4;i++){s+=a*noise(p);p*=2.03;a*=.5;}return s;}
+mat2 rot(float a){float c=cos(a),s=sin(a);return mat2(c,-s,s,c);}
+float sdBox(vec3 p,vec3 b){vec3 q=abs(p)-b;return length(max(q,0.))+min(max(q.x,max(q.y,q.z)),0.);}
+float sdRBox(vec3 p,vec3 b,float r){return sdBox(p,b-r)-r;}
+float sdCyl(vec3 p,float r,float h){vec2 d=abs(vec2(length(p.xz),p.y))-vec2(r,h);return min(max(d.x,d.y),0.)+length(max(d,0.));}
+float sdRCyl(vec3 p,float r,float h,float rr){vec2 d=vec2(length(p.xz)-r+rr,abs(p.y)-h+rr);return min(max(d.x,d.y),0.)+length(max(d,0.))-rr;}
+float sdTorus(vec3 p,vec2 t){vec2 q=vec2(length(p.xz)-t.x,p.y);return length(q)-t.y;}
+float sdCap(vec3 p,vec3 a,vec3 b,float r){vec3 pa=p-a,ba=b-a;float h=clamp(dot(pa,ba)/dot(ba,ba),0.,1.);return length(pa-ba*h)-r;}
+float sdSph(vec3 p,float r){return length(p)-r;}
+float sdEll(vec3 p,vec3 r){float k0=length(p/r);float k1=length(p/(r*r));return k0*(k0-1.)/k1;}
+float smin(float a,float b,float k){float h=clamp(.5+.5*(b-a)/k,0.,1.);return mix(b,a,h)-k*h*(1.-h);}
+vec2 U(vec2 a,vec2 b){return a.x<b.x?a:b;}
+// cylinders along x / z
+float cylX(vec3 p,float r,float h){return sdCyl(p.yxz,r,h);}
+float cylZ(vec3 p,float r,float h){return sdCyl(p.xzy,r,h);}
+float rcylX(vec3 p,float r,float h,float rr){return sdRCyl(p.yxz,r,h,rr);}
+float rcylZ(vec3 p,float r,float h,float rr){return sdRCyl(p.xzy,r,h,rr);}
+
+vec2 model(vec3 p){
+ vec2 r=vec2(1e5,0.);
+ int M=uModel; float V=uV;
+ if(M==0){ // bag
+  vec3 q=p-vec3(0.,1.0,0.);
+  float d=sdRBox(q,vec3(.7,.98,.22),.14);
+  d=smin(d,sdEll(q-vec3(0.,-.05,0.),vec3(.64,.9,.33)),.12);
+  d=min(d,sdRBox(p-vec3(0.,1.96,0.),vec3(.64,.05,.05),.03));
+  r=vec2(d*.9,1.);
+ } else if(M==1){ // bricks
+  vec3 b=vec3(.62,.16,.3);
+  float d=sdRBox(p-vec3(-.02,.16,-.33),b,.025);
+  d=min(d,sdRBox(p-vec3(.04,.16,.31),b,.025));
+  vec3 q=p-vec3(0.,.485,0.);q.xz=rot(1.45)*q.xz;d=min(d,sdRBox(q,b,.025));
+  q=p-vec3(-.05,.81,.0);q.xz=rot(1.6)*q.xz;d=min(d,sdRBox(q,b,.025));
+  r=vec2(d,1.);
+ } else if(M==2){ // gas block
+  float d=sdRBox(p-vec3(0.,.3,0.),vec3(.9,.3,.45),.02);
+  vec3 q=p-vec3(.12,.9,-.04);q.xz=rot(.22)*q.xz;d=min(d,sdRBox(q,vec3(.9,.3,.45),.02));
+  r=vec2(d,1.);
+ } else if(M==3){ // sheets stack
+  float d=1e5;
+  for(int i=0;i<6;i++){float fi=float(i);vec3 q=p-vec3(sin(fi*2.1)*.05,.035+fi*.072,cos(fi*1.7)*.035);d=min(d,sdRBox(q,vec3(1.05,.032,.72),.008));}
+  r=vec2(d,1.);
+ } else if(M==4){ // steel channels
+  float d=1e5;
+  for(int i=0;i<5;i++){float row=i<3?0.:1.;float col=i<3?float(i)-1.:float(i-3)-.5;vec3 q=p-vec3(0.,.06+row*.12,col*.32);
+   float c=sdBox(q,vec3(1.25,.055,.14));c=max(c,-sdBox(q-vec3(0.,.016,0.),vec3(1.4,.05,.125)));d=min(d,c);}
+  r=vec2(d,1.);
+ } else if(M==5){ // insulation pack
+  float d=sdRBox(p-vec3(0.,.62,0.),vec3(.95,.6,.55),.24);
+  d=smin(d,sdEll(p-vec3(0.,.62,0.),vec3(.9,.66,.6)),.1);
+  r=vec2(d*.9,1.);
+ } else if(M==6){ // foam boards
+  float d=1e5;
+  for(int i=0;i<4;i++){float fi=float(i);vec3 q=p-vec3(sin(fi*1.3)*.06,.1+fi*.205,cos(fi*2.)*.05);d=min(d,sdRBox(q,vec3(.95,.1,.6),.012));}
+  r=vec2(d,1.);
+ } else if(M==7){ // corrugated / metal tile
+  float d=1e5;
+  for(int i=0;i<3;i++){float fi=float(i);vec3 q=p-vec3(fi*.07,.07+fi*.1,fi*.06);
+   float w=V>.5? .045*sin(q.x*11.)+.03*sin(q.z*7.) : .04*sin(q.x*16.);
+   q.y-=w;d=min(d,sdBox(q,vec3(1.1,.011,.75))*.55);}
+  r=vec2(d,1.);
+ } else if(M==8){ // beams
+  float d=1e5;
+  for(int i=0;i<3;i++)d=min(d,sdRBox(p-vec3(0.,.1,-.43+float(i)*.43),vec3(1.25,.1,.205),.012));
+  for(int i=0;i<2;i++)d=min(d,sdRBox(p-vec3(.1,.302,-.215+float(i)*.43),vec3(1.25,.1,.205),.012));
+  r=vec2(d,1.);
+ } else if(M==9){ // rebar bundle
+  float d=1e5;
+  for(int i=0;i<7;i++){vec2 o=i==0?vec2(0.):vec2(cos(float(i)*1.0472),sin(float(i)*1.0472))*.135;vec3 q=p-vec3(0.,.2+o.y,o.x);
+   float rr=.062+.009*sin(q.x*60.+o.x*30.);d=min(d,(length(q.yz)-rr)*.8);}
+  d=max(d,abs(p.x)-1.3);
+  vec2 t=vec2(1e5,2.);
+  for(int k=-1;k<=1;k+=2){vec3 q=p-vec3(float(k)*.7,.2,0.);t.x=min(t.x,sdTorus(q.yxz,vec2(.21,.014)));}
+  r=U(vec2(d,1.),t);
+ } else if(M==10){ // profile pipe
+  float d=1e5;
+  for(int i=0;i<5;i++){float row=i<3?0.:1.;float col=i<3?float(i)-1.:float(i-3)-.5;vec3 q=p-vec3(0.,.1+row*.2,col*.43);
+   float c=sdRBox(q,vec3(1.25,.1,.2),.015);c=max(c,-sdRBox(q,vec3(1.4,.082,.182),.01));d=min(d,c);}
+  r=vec2(d,1.);
+ } else if(M==11){ // drill / perforator
+  float L0=V>.5?-.85:-.5;
+  vec2 body=vec2(sdCap(p,vec3(L0,1.3,0.),vec3(.4,1.3,0.),V>.5?.26:.23),1.);
+  body.x=smin(body.x,sdRBox(p-vec3(L0+.1,1.3,0.),vec3(.22,.3,.2),.12),.08);
+  vec2 grip=vec2(sdCap(p,vec3(V>.5?-.62:-.12,1.1,0.),vec3(V>.5?-.72:-.28,.45,0.),.14),4.);
+  vec2 bat=vec2(sdRBox(p-vec3(V>.5?-.62:-.25,.22,0.),vec3(.38,.2,.27),.06),V>.5?1.:4.);
+  if(V>.5){bat.x=sdRBox(p-vec3(-.7,.3,0.),vec3(.24,.12,.2),.08);grip.x=min(grip.x,sdCap(p,vec3(-.7,.4,0.),vec3(-.95,1.15,0.),.1));}
+  vec2 chuck=vec2(rcylX(p-vec3(.55,1.3,0.),.12,.16,.03),4.);
+  vec2 bit=vec2(sdCap(p,vec3(.7,1.3,0.),vec3(V>.5?1.35:1.15,1.3,0.),.03),3.);
+  vec2 side=vec2(1e5,4.);
+  if(V>.5)side.x=sdCap(p,vec3(.35,1.3,.1),vec3(.45,1.05,.75),.07);
+  vec2 stripe=vec2(sdRBox(p-vec3(L0+.1,1.3,0.),vec3(.235,.31,.205),.12)+.0,2.);
+  stripe.x=max(stripe.x,abs(p.y-1.42)-.03);
+  r=U(U(U(body,grip),U(bat,chuck)),U(U(bit,side),stripe));
+ } else if(M==12){ // grinder
+  vec2 body=vec2(sdCap(p,vec3(-1.0,.24,0.),vec3(.15,.24,0.),.2),1.);
+  vec2 grip=vec2(sdCap(p,vec3(-1.05,.24,0.),vec3(-.55,.24,0.),.205),4.);
+  vec2 head=vec2(sdRBox(p-vec3(.38,.27,0.),vec3(.22,.17,.2),.07),9.);
+  vec2 disc=vec2(sdCyl(p-vec3(.55,.06,0.),.5,.012),2.);
+  vec3 q=p-vec3(.55,.09,0.);
+  vec2 guard=vec2(max(max(sdCyl(q,.54,.05),-sdCyl(q,.5,.2)),q.x-.05),9.);
+  vec2 handle=vec2(sdCap(p,vec3(.35,.27,.1),vec3(.35,.27,.65),.06),4.);
+  r=U(U(body,grip),U(U(head,disc),U(guard,handle)));
+ } else if(M==13){ // hammer
+  vec3 q=p;q.xz=rot(.42)*q.xz;
+  vec2 h=vec2(sdCap(q,vec3(-1.0,.075,0.),vec3(.45,.075,0.),.075),2.);
+  vec2 g=vec2(sdCap(q,vec3(-1.02,.08,0.),vec3(-.45,.08,0.),.085),4.);
+  vec2 hd=vec2(sdRBox(q-vec3(.58,.13,0.),vec3(.11,.11,.34),.02),9.);
+  hd.x=min(hd.x,rcylZ(q-vec3(.58,.13,.36),.1,.08,.02));
+  r=U(U(h,g),hd);
+ } else if(M==14){ // screwdriver set
+  float dd=1e5,hh=1e5,ss=1e5;
+  for(int i=0;i<5;i++){float fi=float(i)-2.;vec3 q=p-vec3(fi*.05,.09,fi*.27);q.xz=rot(fi*.05)*q.xz;
+   float hand=smin(sdCap(q,vec3(-.85,0.,0.),vec3(-.35,0.,0.),.09),sdCap(q,vec3(-.35,0.,0.),vec3(-.28,0.,0.),.06),.05);
+   if(mod(fi+2.,2.)<1.)hh=min(hh,hand);else dd=min(dd,hand);
+   ss=min(ss,sdCap(q,vec3(-.3,0.,0.),vec3(.55,0.,0.),.026));}
+  r=U(U(vec2(hh,1.),vec2(dd,2.)),vec2(ss,3.));
+ } else if(M==15){ // tape measure
+  vec2 b=vec2(sdRBox(p-vec3(0.,.55,0.),vec3(.52,.52,.22),.18),1.);
+  vec2 s=vec2(sdRBox(p-vec3(0.,.55,0.),vec3(.4,.4,.235),.12),4.);
+  s.x=max(s.x,-(sdCyl((p-vec3(0.,.55,0.)).xzy,.22,.5)));
+  vec2 t=vec2(sdBox(p-vec3(.95,.07,0.),vec3(.48,.007,.1)),2.);
+  t.x=min(t.x,sdBox(p-vec3(1.43,.1,0.),vec3(.01,.05,.11)));
+  vec2 btn=vec2(sdRBox(p-vec3(0.,1.07,.0),vec3(.1,.04,.08),.03),4.);
+  r=U(U(b,s),U(t,btn));
+ } else if(M==16){ // laser level
+  vec2 b=vec2(sdRBox(p-vec3(0.,.38,0.),vec3(.4,.34,.34),.1),1.);
+  vec2 g=vec2(sdCyl(p-vec3(0.,.86,0.),.25,.15),6.);
+  vec2 c=vec2(sdRCyl(p-vec3(0.,1.04,0.),.29,.04,.02),4.);
+  vec2 k=vec2(rcylZ(p-vec3(.18,.42,.34),.07,.03,.01),4.);
+  vec2 f=vec2(sdRBox(p-vec3(0.,.04,0.),vec3(.44,.04,.38),.03),4.);
+  r=U(U(b,g),U(c,U(k,f)));
+ } else if(M==17){ // cutting discs
+  float d=1e5;
+  for(int i=0;i<7;i++){float fi=float(i);vec3 q=p-vec3(sin(fi*2.3)*.03,.02+fi*.032,cos(fi*1.9)*.03);d=min(d,sdCyl(q,.85,.013));}
+  d=max(d,-sdCyl(p,.11,1.));
+  vec2 hub=vec2(max(sdCyl(p-vec3(0.,.235,0.),.2,.012),-sdCyl(p,.11,1.)),9.);
+  r=U(vec2(d,1.),hub);
+ } else if(M==18){ // fasteners pile
+  float sh=1e5,hd=1e5,ex=1e5;
+  for(int i=0;i<8;i++){float fi=float(i);
+   vec3 c=vec3(sin(fi*2.4)*.55,0.,cos(fi*1.7)*.5-.05);
+   vec3 q=p-c;q.xz=rot(fi*1.1+.3)*q.xz;
+   float rad=V>1.5?.07:(V>.5?.06:.045);
+   q.y-=rad+(V>1.5?.06:.05);
+   float th=V>.5&&V<1.5?0.:.012*sin(q.x*70.);
+   sh=min(sh,(sdCap(q,vec3(-.35,0.,0.),vec3(.35,0.,0.),rad)+th)*.8);
+   if(V<.5)hd=min(hd,rcylX(q-vec3(-.38,0.,0.),.1,.025,.01));
+   else if(V<1.5){ex=min(ex,sdCap(q,vec3(-.42,0.,0.),vec3(.3,0.,0.),.028));hd=min(hd,rcylX(q-vec3(-.45,0.,0.),.09,.012,.006));}
+   else {hd=min(hd,sdRBox(q-vec3(.2,0.,0.),vec3(.06,.11,.11),.02));ex=min(ex,rcylX(q-vec3(.29,0.,0.),.12,.01,.005));}
+  }
+  if(V>.5&&V<1.5)r=U(U(vec2(sh,1.),vec2(hd,1.)),vec2(ex,3.));
+  else r=U(U(vec2(sh,1.),vec2(hd,1.)),vec2(ex,9.));
+ } else if(M==19){ // faucet
+  vec2 pl=vec2(sdRCyl(p-vec3(0.,.025,0.),.32,.025,.012),3.);
+  float d;
+  if(V<.5){
+   d=sdRCyl(p-vec3(0.,.42,0.),.17,.4,.06);
+   d=smin(d,sdCap(p,vec3(0.,.68,0.),vec3(0.,.68,.58),.07),.05);
+   d=min(d,sdRCyl(p-vec3(0.,.64,.6),.075,.08,.03));
+   d=min(d,sdRCyl(p-vec3(0.,.86,0.),.17,.04,.02));
+   d=min(d,sdCap(p,vec3(0.,.92,-.02),vec3(0.,1.02,-.5),.05));
+  } else {
+   d=sdRCyl(p-vec3(0.,.32,0.),.16,.3,.05);
+   d=min(d,sdCap(p,vec3(0.,.55,0.),vec3(0.,1.25,0.),.06));
+   vec3 q=p-vec3(0.,1.25,.36);
+   float tor=length(vec2(length(q.yz)-.36,q.x))-.06;tor=max(tor,-q.y);
+   d=min(d,tor);
+   d=min(d,sdCap(p,vec3(0.,1.25,.72),vec3(0.,.98,.72),.065));
+   d=min(d,sdCap(p,vec3(.12,.45,0.),vec3(.42,.6,0.),.045));
+  }
+  r=U(pl,vec2(d,3.));
+ } else if(M==20){ // toilet
+  vec3 q=p-vec3(0.,.43,.12);
+  float bowl=sdEll(q,vec3(.45,.4,.6));bowl=max(bowl,q.y-.3);
+  bowl=max(bowl,-max(sdEll(q-vec3(0.,.12,.0),vec3(.36,.38,.5)),-(q.y-.1)));
+  float ped=sdRBox(p-vec3(0.,.2,.0),vec3(.24,.2,.3),.08);
+  float b=smin(bowl,ped,.12);
+  vec3 s=p-vec3(0.,.75,.12);s.z*=.82;
+  float seat=sdTorus(s,vec2(.33,.05))*.8;
+  float tank=sdRBox(p-vec3(0.,1.08,-.43),vec3(.48,.35,.17),.07);
+  vec2 btn=vec2(sdCyl(p-vec3(0.,1.44,-.43),.07,.02),3.);
+  r=U(U(vec2(b,5.),vec2(seat,5.)),U(vec2(tank,5.),btn));
+ } else if(M==21){ // basin variants
+  if(V<.5){
+   vec3 q=p-vec3(0.,.45,0.);float k=clamp(1.-.2*(q.y/.45),.75,1.25);
+   float ped=sdRCyl(vec3(q.x/k,q.y,q.z/k),.17,.45,.05)*k;
+   vec3 b=p-vec3(0.,.98,.05);
+   float basin=sdRBox(b,vec3(.62,.1,.42),.1);
+   basin=smin(basin,sdEll(b-vec3(0.,-.02,0.),vec3(.6,.22,.4)),.08);
+   basin=max(basin,-sdEll(b-vec3(0.,.15,.06),vec3(.48,.22,.3)));
+   vec2 tap=vec2(sdCap(p,vec3(0.,1.08,-.25),vec3(0.,1.3,-.25),.05),3.);
+   tap.x=min(tap.x,sdCap(p,vec3(0.,1.3,-.25),vec3(0.,1.3,-.05),.04));
+   r=U(vec2(smin(ped,basin,.05),5.),tap);
+  } else if(V<1.5){
+   vec3 q=p-vec3(0.,.12,0.);
+   float s=sdRBox(q,vec3(.8,.11,.58),.03);
+   s=max(s,-sdRBox(q-vec3(-.15,.12,0.),vec3(.48,.2,.44),.08));
+   vec2 dr=vec2(sdCyl(p-vec3(-.15,.02,0.),.09,.03),4.);
+   vec2 tap=vec2(sdCap(p,vec3(.6,.22,-.35),vec3(.6,.75,-.35),.045),3.);
+   tap.x=min(tap.x,sdCap(p,vec3(.6,.75,-.35),vec3(.6,.75,-.05),.04));
+   r=U(U(vec2(s,1.),dr),tap);
+  } else {
+   float cab=sdRBox(p-vec3(0.,.45,0.),vec3(.62,.45,.42),.03);
+   float seam=sdBox(p-vec3(0.,.45,.42),vec3(.006,.4,.02));
+   cab=max(cab,-seam);
+   vec2 h=vec2(sdCap(p,vec3(-.1,.78,.45),vec3(.1,.78,.45),.022),3.);
+   h.x=min(h.x,sdCap(p,vec3(-.1,.6,.45),vec3(-.1,.6,.45),.022));
+   vec3 b=p-vec3(0.,.97,0.);
+   float top=sdRBox(b,vec3(.66,.07,.46),.05);
+   top=max(top,-sdEll(b-vec3(0.,.07,.05),vec3(.5,.13,.32)));
+   vec2 tap=vec2(sdCap(p,vec3(0.,1.04,-.32),vec3(0.,1.32,-.32),.045),3.);
+   tap.x=min(tap.x,sdCap(p,vec3(0.,1.32,-.32),vec3(0.,1.32,-.12),.04));
+   r=U(U(vec2(cab,1.),vec2(top,5.)),U(h,tap));
+  }
+ } else if(M==22){ // bath
+  float b=sdRBox(p-vec3(0.,.36,0.),vec3(1.25,.36,.6),.18);
+  b=max(b,-sdRBox(p-vec3(0.,.64,0.),vec3(1.1,.45,.47),.28));
+  vec2 dr=vec2(sdCyl(p-vec3(-.75,.62,.0).xzy,.04,.02),3.);
+  r=U(vec2(b,5.),vec2(1e5,3.));
+ } else if(M==23){ // shower column + wall
+  vec2 w=vec2(sdBox(p-vec3(0.,1.2,-.12),vec3(.9,1.2,.02)),2.);
+  float d=sdCap(p,vec3(0.,.8,0.),vec3(0.,2.05,0.),.035);
+  d=min(d,sdCap(p,vec3(0.,2.05,0.),vec3(0.,2.05,.42),.03));
+  d=min(d,sdRCyl(p-vec3(0.,2.0,.48),.3,.02,.015));
+  d=min(d,sdRBox(p-vec3(0.,.85,.02),vec3(.26,.08,.07),.05));
+  d=min(d,rcylZ(p-vec3(-.3,.85,.04),.07,.05,.02));
+  d=min(d,rcylZ(p-vec3(.3,.85,.04),.07,.05,.02));
+  d=min(d,sdCap(p,vec3(.12,1.2,.05),vec3(.12,1.55,.12),.045));
+  d=min(d,rcylZ(p-vec3(0.,.85,-.08),.08,.04,.02));
+  r=U(w,vec2(d,3.));
+ } else if(M==24){ // pipes / fittings
+  float d=1e5;
+  if(V<.5){
+   for(int i=0;i<6;i++){float row=i<3?0.:(i<5?1.:2.);float col=i<3?float(i)-1.:(i<5?float(i-3)-.5:0.);
+    vec3 q=p-vec3(0.,.1+row*.172,col*.2);float c=cylX(q,.1,1.3);c=max(c,-cylX(q,.075,1.4));d=min(d,c);}
+   r=vec2(d,1.);
+  } else {
+   for(int i=0;i<7;i++){float fi=float(i);vec3 c=vec3(sin(fi*2.6)*.55,.11,cos(fi*1.9)*.45);vec3 q=p-c;q.xz=rot(fi*1.3)*q.xz;
+    float e;
+    if(mod(fi,2.)<1.){vec3 t=q-vec3(-.14,0.,-.14);e=sdTorus(t,vec2(.2,.1));e=max(e,max(-t.x,-t.z));e=min(e,rcylX(q-vec3(-.14,0.,.06),.115,.06,.01));e=min(e,rcylZ(q-vec3(.06,0.,-.14),.115,.06,.01));}
+    else {e=rcylX(q,.11,.26,.015);e=min(e,rcylZ(q-vec3(0.,0.,.14),.11,.14,.015));}
+    d=min(d,e);}
+   r=vec2(d,1.);
+  }
+ } else if(M==25){ // water heater
+  vec2 b=vec2(sdRCyl(p-vec3(0.,1.08,0.),.48,.98,.38),1.);
+  vec2 dp=vec2(rcylZ(p-vec3(0.,.92,.46),.12,.03,.01),10.);
+  vec2 e=vec2(rcylZ(p-vec3(0.,.92,.485),.07,.01,.005),7.);
+  vec2 pi=vec2(min(sdCap(p,vec3(-.15,.0,.0),vec3(-.15,.2,0.),.035),sdCap(p,vec3(.15,0.,0.),vec3(.15,.2,0.),.035)),3.);
+  r=U(U(b,dp),U(e,pi));
+ } else if(M==26){ // gas boiler
+  vec2 b=vec2(sdRBox(p-vec3(0.,1.0,0.),vec3(.62,.82,.3),.07),1.);
+  vec2 pn=vec2(sdRBox(p-vec3(0.,.45,.29),vec3(.5,.14,.03),.02),10.);
+  vec2 e=vec2(sdBox(p-vec3(-.15,.47,.32),vec3(.13,.05,.005)),7.);
+  vec2 kn=vec2(rcylZ(p-vec3(.25,.45,.31),.06,.03,.01),3.);
+  float pp=1e5;for(int i=0;i<4;i++)pp=min(pp,sdCap(p,vec3(-.33+float(i)*.22,.0,0.),vec3(-.33+float(i)*.22,.2,0.),.035));
+  r=U(U(b,pn),U(U(e,kn),vec2(pp,8.)));
+ } else if(M==27){ // radiator / convector
+  if(V<.5){
+   float d=1e5;
+   for(int i=0;i<10;i++)d=min(d,sdRBox(p-vec3(-.72+float(i)*.16,.66,0.),vec3(.066,.54,.085),.035));
+   d=smin(d,sdCap(p,vec3(-.8,1.1,0.),vec3(.8,1.1,0.),.045),.03);
+   d=smin(d,sdCap(p,vec3(-.8,.22,0.),vec3(.8,.22,0.),.045),.03);
+   vec2 f=vec2(min(sdRBox(p-vec3(-.55,.05,0.),vec3(.05,.08,.1),.02),sdRBox(p-vec3(.55,.05,0.),vec3(.05,.08,.1),.02)),4.);
+   vec2 v=vec2(rcylX(p-vec3(.86,1.1,0.),.05,.06,.01),3.);
+   r=U(U(vec2(d,1.),f),v);
+  } else {
+   vec3 q=p-vec3(0.,.55,0.);
+   float d=sdRBox(q,vec3(.9,.36,.08),.04);
+   vec3 s=q-vec3(0.,.36,0.);s.x=mod(s.x+.03,.06)-.03;
+   d=max(d,-max(sdBox(s,vec3(.012,.03,.05)),abs(q.x)-.8));
+   vec2 legs=vec2(min(sdRBox(p-vec3(-.6,.1,0.),vec3(.05,.12,.22),.02),sdRBox(p-vec3(.6,.1,0.),vec3(.05,.12,.22),.02)),1.);
+   vec2 kn=vec2(rcylZ(p-vec3(.72,.4,.09),.06,.025,.01),4.);
+   r=U(U(vec2(d,1.),legs),kn);
+  }
+ } else if(M==28){ // split AC
+  vec2 in_=vec2(sdRBox(p-vec3(0.,1.55,0.),vec3(1.05,.27,.23),.12),1.);
+  float sl=sdBox(p-vec3(0.,1.37,.2),vec3(.95,.035,.08));
+  in_.x=max(in_.x,-sl);
+  vec2 lv=vec2(sdBox(p-vec3(0.,1.36,.15),vec3(.93,.012,.06)),4.);
+  vec2 e=vec2(sdBox(p-vec3(.75,1.5,.235),vec3(.06,.02,.004)),7.);
+  vec2 out_=vec2(sdRBox(p-vec3(-.05,.5,.05),vec3(.78,.5,.28),.04),1.);
+  vec3 g=p-vec3(-.25,.5,.34);
+  float gr=1e5;for(int i=1;i<5;i++)gr=min(gr,sdTorus(g.xzy,vec2(float(i)*.085,.009)));
+  gr=min(gr,cylZ(g+vec3(0.,0.,.01),.38,.02));
+  vec2 grill=vec2(gr,4.);
+  vec2 side=vec2(sdBox(p-vec3(.5,.5,.335),vec3(.2,.38,.005)),9.);
+  r=U(U(in_,lv),U(U(e,out_),U(grill,side)));
+ } else if(M==29){ // vent fan
+  vec2 pl=vec2(sdRBox(p-vec3(0.,.6,0.),vec3(.58,.58,.06),.06),1.);
+  vec3 g=p-vec3(0.,.6,.08);
+  float gr=1e5;for(int i=1;i<5;i++)gr=min(gr,sdTorus(g.xzy,vec2(float(i)*.095,.012)));
+  gr=min(gr,cylZ(g,.08,.03));
+  pl.x=max(pl.x,-cylZ(g,.42,.04));
+  vec2 inner=vec2(cylZ(p-vec3(0.,.6,.02),.42,.01),4.);
+  r=U(U(pl,vec2(gr,1.)),inner);
+ } else if(M==30){ // cable coil
+  float R=V>.5?.42:.62, t=V>.5?.03:.06;
+  float d=1e5;
+  for(int k=0;k<6;k++){vec3 q=p-vec3(0.,t+float(k)*t*1.85,0.);d=min(d,sdTorus(q,vec2(R+.02*sin(float(k)*2.),t)));}
+  vec2 tape=vec2(1e5,2.);
+  for(int k=0;k<3;k++){float a=float(k)*2.094;vec3 q=p;q.xz=rot(a)*q.xz;q-=vec3(0.,t*5.6*.5+.0,R);tape.x=min(tape.x,sdRBox(q,vec3(.06,t*3.4,t*1.25),.01));}
+  vec2 end=vec2(sdCap(p,vec3(R*.7,t*11.,R*.7),vec3(R*1.15,t*11.4,R*1.15),t*.95),1.);
+  vec2 cu=vec2(sdCap(p,vec3(R*1.15,t*11.4,R*1.15),vec3(R*1.3,t*11.5,R*1.3),t*.45),8.);
+  r=U(U(vec2(d,1.),tape),U(end,cu));
+ } else if(M==31){ // socket / switch
+  if(V<.5){
+   vec2 pl=vec2(sdRBox(p-vec3(0.,.55,0.),vec3(.9,.47,.06),.07),1.);
+   float d=1e5;
+   for(int i=-1;i<=1;i+=2){vec3 q=p-vec3(float(i)*.45,.55,.09);
+    float s=rcylZ(q,.32,.03,.02);s=max(s,-rcylZ(q-vec3(0.,0.,.05),.25,.06,.01));d=min(d,s);}
+   vec2 face=vec2(d,1.);
+   float h=1e5;for(int i=-1;i<=1;i+=2)for(int j=-1;j<=1;j+=2)h=min(h,cylZ(p-vec3(float(i)*.45+float(j)*.1,.55,.08),.03,.05));
+   vec2 holes=vec2(h,4.);
+   float c=1e5;for(int i=-1;i<=1;i+=2)c=min(c,sdBox(p-vec3(float(i)*.45,.79,.08),vec3(.05,.02,.04)));
+   r=U(U(pl,face),U(holes,vec2(c,3.)));
+  } else {
+   vec2 pl=vec2(sdRBox(p-vec3(0.,.55,0.),vec3(.47,.47,.06),.07),1.);
+   vec3 q=p-vec3(0.,.55,.08);q.yz=rot(.07)*q.yz;
+   vec2 key=vec2(sdRBox(q,vec3(.35,.35,.045),.06),1.);
+   vec2 led=vec2(sdBox(p-vec3(0.,.32,.13),vec3(.04,.008,.01)),7.);
+   r=U(U(pl,key),led);
+  }
+ } else if(M==32){ // breakers / panel
+  if(V<.5){
+   float d=1e5,t=1e5,f=1e5;
+   for(int i=-1;i<=1;i++){vec3 q=p-vec3(float(i)*.37,0.,0.);
+    d=min(d,sdRBox(q-vec3(0.,.5,0.),vec3(.17,.5,.34),.025));
+    f=min(f,sdRBox(q-vec3(0.,.5,.34),vec3(.16,.24,.07),.02));
+    t=min(t,sdRBox(q-vec3(0.,.58,.43),vec3(.07,.05,.06),.02));}
+   r=U(U(vec2(d,1.),vec2(f,1.)),vec2(t,2.));
+  } else {
+   float box=sdRBox(p-vec3(0.,.65,0.),vec3(.85,.62,.22),.05);
+   box=max(box,-sdBox(p-vec3(0.,.65,.2),vec3(.68,.16,.1)));
+   float m=1e5,t=1e5;
+   for(int i=0;i<8;i++){float x=-.6+float(i)*.17;m=min(m,sdRBox(p-vec3(x,.65,.1),vec3(.075,.15,.1),.01));t=min(t,sdBox(p-vec3(x,.69,.2),vec3(.03,.03,.03)));}
+   vec2 rail=vec2(sdBox(p-vec3(0.,.65,.02),vec3(.68,.04,.04)),9.);
+   vec2 lab=vec2(sdBox(p-vec3(0.,1.05,.22),vec3(.4,.05,.004)),2.);
+   r=U(U(vec2(box,1.),vec2(m,5.)),U(U(vec2(t,4.),rail),lab));
+  }
+ } else if(M==33){ // power strip
+  vec3 q=p-vec3(.1,.12,0.);
+  float b=sdRBox(q,vec3(1.0,.12,.26),.09);
+  float h=1e5;for(int i=0;i<4;i++){vec3 s=q-vec3(-.68+float(i)*.4,.12,0.);h=min(h,sdCyl(s,.15,.03));}
+  b=max(b,-h);
+  float pins=1e5;for(int i=0;i<4;i++){vec3 s=q-vec3(-.68+float(i)*.4,.1,0.);pins=min(pins,min(sdCyl(s-vec3(.06,0.,0.),.025,.02),sdCyl(s-vec3(-.06,0.,0.),.025,.02)));}
+  vec2 sw=vec2(sdRBox(q-vec3(.92,.14,0.),vec3(.07,.06,.12),.03),2.);
+  float cab=sdCap(p,vec3(-.9,.1,0.),vec3(-1.3,.06,.25),.04);
+  cab=min(cab,sdCap(p,vec3(-1.3,.06,.25),vec3(-1.1,.06,.62),.04));
+  vec2 plug=vec2(sdRBox(p-vec3(-1.05,.12,.72),vec3(.1,.12,.14),.05),1.);
+  r=U(U(vec2(b,1.),vec2(pins,4.)),U(U(sw,vec2(cab,4.)),plug));
+ } else if(M==34){ // bulb
+  float g=sdSph(p-vec3(0.,1.25,0.),.52);
+  g=smin(g,sdCyl(p-vec3(0.,.8,0.),.2,.22),.2);
+  vec3 q=p-vec3(0.,.42,0.);
+  float base=(sdCyl(q,.205+.018*sin(q.y*55.),.2))*.8;
+  float ins=sdCyl(p-vec3(0.,.18,0.),.14,.04);
+  float tip=sdRCyl(p-vec3(0.,.1,0.),.07,.05,.02);
+  r=U(U(vec2(g,6.),vec2(base,9.)),U(vec2(ins,4.),vec2(tip,8.)));
+ } else if(M==35){ // LED panel
+  vec3 q=p-vec3(0.,.92,0.);q.yz=rot(-1.15)*q.yz;
+  vec2 b=vec2(sdRCyl(q,.92,.05,.03),1.);
+  vec2 f=vec2(sdCyl(q-vec3(0.,.05,0.),.84,.01),7.);
+  vec2 st=vec2(sdCap(p,vec3(0.,.0,-.25),vec3(0.,.55,-.15),.02),4.);
+  r=U(U(b,f),st);
+ } else if(M==36){ // chandelier
+  vec2 c=vec2(sdRCyl(p-vec3(0.,2.42,0.),.2,.04,.02),2.);
+  float st=sdCap(p,vec3(0.,2.4,0.),vec3(0.,1.45,0.),.025);
+  st=min(st,sdSph(p-vec3(0.,1.38,0.),.13));
+  float arms=1e5,sh=1e5,cup=1e5;
+  for(int i=0;i<5;i++){float a=float(i)*1.2566+.3;vec3 e=vec3(cos(a)*.78,1.32,sin(a)*.78);
+   arms=min(arms,sdCap(p,vec3(cos(a)*.1,1.36,sin(a)*.1),e-vec3(0.,.04,0.),.028));
+   cup=min(cup,sdRCyl(p-e+vec3(0.,.02,0.),.07,.04,.015));
+   vec3 s=p-e-vec3(0.,.2,0.);float shd=sdEll(s,vec3(.17,.22,.17));shd=max(shd,s.y-.16);sh=min(sh,shd);}
+  r=U(U(c,vec2(min(st,min(arms,cup)),2.)),vec2(sh,6.));
+ } else if(M==37){ // flood light
+  vec2 b=vec2(sdRBox(p-vec3(0.,.82,0.),vec3(.55,.42,.11),.04),1.);
+  vec2 f=vec2(sdBox(p-vec3(0.,.82,.11),vec3(.47,.34,.006)),7.);
+  float fins=1e5;for(int i=0;i<9;i++)fins=min(fins,sdBox(p-vec3(-.4+float(i)*.1,.82,-.16),vec3(.012,.36,.06)));
+  float br=sdCap(p,vec3(-.6,.82,0.),vec3(-.6,.2,0.),.03);br=min(br,sdCap(p,vec3(.6,.82,0.),vec3(.6,.2,0.),.03));
+  br=min(br,sdCap(p,vec3(-.6,.2,0.),vec3(.6,.2,0.),.03));br=min(br,sdRBox(p-vec3(0.,.05,0.),vec3(.3,.05,.18),.02));
+  br=min(br,sdCap(p,vec3(0.,.1,0.),vec3(0.,.2,0.),.04));
+  r=U(U(b,f),U(vec2(fins,1.),vec2(br,4.)));
+ } else if(M==38){ // bucket / canister
+  if(V<1.5){
+   float s=V>.5?1.12:1.;
+   vec3 q=(p-vec3(0.,.6*s,0.))/s;float k=clamp(1.-.06*(1.-(q.y+.6)/1.2),.9,1.1);
+   float b=sdRCyl(vec3(q.x/k,q.y,q.z/k),.6,.58,.04)*k;
+   b=min(b,sdTorus(q-vec3(0.,.57,0.),vec2(.6,.035)));
+   b=min(b,sdRCyl(q-vec3(0.,.61,0.),.62,.03,.015));
+   vec2 lid=vec2(sdRCyl(q-vec3(0.,.645,0.),.5,.012,.008),1.);
+   vec3 h=q-vec3(0.,.35,0.);float hw=length(vec2(length(h.xy)-.64,h.z))-.012;hw=max(hw,-h.y);
+   vec2 handle=vec2(hw*s,9.);
+   vec2 grip=vec2(sdCap(q,vec3(-.13,.99,0.),vec3(.13,.99,0.),.04)*s,2.);
+   r=U(U(vec2(b*s,1.),vec2(lid.x*s,2.)),U(handle,grip));
+  } else {
+   vec2 b=vec2(sdRBox(p-vec3(0.,.6,0.),vec3(.45,.58,.28),.09),1.);
+   vec3 h=p-vec3(-.08,1.18,0.);float hw=length(vec2(length(h.xy)-.17,h.z))-.05;hw=max(hw,-h.y);
+   b.x=smin(b.x,hw,.04);
+   vec2 cap=vec2(sdRCyl(p-vec3(.28,1.22,0.),.1,.07,.02),2.);
+   r=U(b,cap);
+  }
+ } else if(M==39){ // roller + brushes
+  vec2 roll=vec2(rcylX(p-vec3(-.05,.2,.1),.2,.32,.06),1.);
+  float fr=sdCap(p,vec3(.3,.2,.1),vec3(.38,.2,.1),.025);
+  fr=min(fr,sdCap(p,vec3(.38,.2,.1),vec3(.38,.36,.5),.025));
+  vec2 frame=vec2(fr,9.);
+  vec2 hand=vec2(sdCap(p,vec3(.38,.36,.5),vec3(.42,.44,1.15),.06),2.);
+  float bh=1e5,bf=1e5,bb=1e5;
+  for(int i=0;i<2;i++){float fi=float(i);vec3 q=p-vec3(-.25+fi*.15,.05+fi*.0,-.55+fi*.32);q.xz=rot(.5+fi*.25)*q.xz;
+   bh=min(bh,sdCap(q,vec3(-.75,.0,0.),vec3(-.2,0.,0.),.045+fi*.01));
+   bf=min(bf,sdRBox(q-vec3(-.12,0.,0.),vec3(.09,.04,.1+fi*.04),.02));
+   bb=min(bb,sdRBox(q-vec3(.08,0.,0.),vec3(.14,.035,.1+fi*.04),.03));}
+  r=U(U(roll,frame),U(U(hand,vec2(bh,2.)),U(vec2(bf,3.),vec2(bb,4.))));
+ } else if(M==40){ // aerosol / cartridge
+  if(V<.5){
+   float b=sdRCyl(p-vec3(0.,.8,0.),.3,.8,.05);
+   b=smin(b,sdEll(p-vec3(0.,1.58,0.),vec3(.3,.18,.3)),.03);
+   vec2 v=vec2(sdCyl(p-vec3(0.,1.78,0.),.07,.06),2.);
+   v.x=min(v.x,sdCap(p,vec3(0.,1.85,0.),vec3(0.,1.9,.12),.06));
+   vec2 st=vec2(sdCap(p,vec3(0.,1.9,.12),vec3(.05,1.95,.75),.02),2.);
+   r=U(U(vec2(b,1.),v),st);
+  } else {
+   vec3 q=p-vec3(0.,.26,0.);q.xz=rot(-.25)*q.xz;
+   float b=rcylX(q,.26,.6,.03);
+   vec2 n=vec2(sdCap(q,vec3(.6,0.,0.),vec3(1.25,0.,0.),.05),2.);
+   n.x=smin(n.x,rcylX(q-vec3(.66,0.,0.),.12,.08,.02),.04);
+   vec2 bk=vec2(rcylX(q-vec3(-.62,0.,0.),.24,.03,.01),2.);
+   r=U(U(vec2(b,1.),n),bk);
+  }
+ } else if(M==41){ // wallpaper rolls
+  float d=min(rcylX(p-vec3(-.15,.2,.32),.2,.53,.02),rcylX(p-vec3(-.1,.2,-.12),.2,.53,.02));
+  d=min(d,rcylX(p-vec3(-.12,.545,.1),.2,.53,.02));
+  d=min(d,sdRCyl(p-vec3(.75,.53,-.35),.2,.53,.02));
+  r=vec2(d,1.);
+ } else if(M==42){ // PVC panels
+  float d=1e5;
+  for(int i=0;i<5;i++){float fi=float(i);vec3 q=p-vec3(sin(fi)*.05,.035+fi*.065,-.2+fi*.1);q.xz=rot(fi*.03)*q.xz;
+   float s=sdRBox(q,vec3(1.35,.03,.25),.01);
+   s=max(s,-sdBox(vec3(q.x,q.y-.03,mod(q.z+.0625,.125)-.0625),vec3(1.4,.006,.006)));
+   d=min(d,s);}
+  r=vec2(d,1.);
+ } else if(M==43){ // tiles
+  float d=1e5;
+  for(int i=0;i<6;i++){float fi=float(i);vec3 q=p-vec3(sin(fi*1.9)*.03,.02+fi*.034,cos(fi*2.7)*.03+.15);q.xz=rot(fi*.02)*q.xz;d=min(d,sdRBox(q,vec3(.72,.016,.72),.006));}
+  vec3 q=p-vec3(-.15,.83,-.72);q.yz=rot(.22)*q.yz;
+  float lean;
+  if(V>2.5){lean=sdBox(q,vec3(.75,.78,.008));
+   vec3 c=q;c.xy=mod(c.xy+.0535,.107)-.0535;float t=sdRBox(c-vec3(0.,0.,.012),vec3(.048,.048,.012),.006);t=max(t,sdBox(q,vec3(.75,.78,.05)));
+   r=U(vec2(d,2.),U(vec2(lean,4.),vec2(t,1.)));
+  } else {lean=sdRBox(q,vec3(.75,.78,.016),.006);r=U(vec2(d,1.),vec2(lean,1.));}
+ } else if(M==44){ // planks
+  float d=1e5;
+  for(int i=0;i<8;i++){float row=floor(float(i)/2.),col=mod(float(i),2.);vec3 q=p-vec3((row-1.5)*.12*(col-.5)*2.,.03+row*.06,-.22+col*.44);d=min(d,sdRBox(q,vec3(1.3,.028,.2),.006));}
+  vec3 q=p-vec3(.1,.33,.05);q.xz=rot(.35)*q.xz;q.xy=rot(.06)*q.xy;
+  d=min(d,sdRBox(q,vec3(1.3,.028,.2),.006));
+  r=vec2(d,1.);
+ } else if(M==45){ // big roll + sheet
+  float d=rcylX(p-vec3(0.,.38,-.25),.38,1.15,.02);
+  d=min(d,sdBox(p-vec3(0.,.012,.5),vec3(1.15,.012,.62)));
+  d=min(d,max(rcylX(p-vec3(0.,.38,-.25),.39,1.15,.02),-(p.y-.0)));
+  r=vec2(d,1.);
+ } else if(M==46){ // door
+  vec3 q=p-vec3(0.,1.05,0.);
+  float s=sdBox(q,vec3(.46,1.0,.025));
+  float grooves=V<.5?min(sdBox(q-vec3(0.,.42,.03),vec3(.32,.42,.012))-.0,sdBox(q-vec3(0.,-.48,.03),vec3(.32,.38,.012))):1e5;
+  float g2=V<.5?max(grooves,-min(sdBox(q-vec3(0.,.42,.03),vec3(.29,.39,.02)),sdBox(q-vec3(0.,-.48,.03),vec3(.29,.35,.02)))):1e5;
+  s=max(s,-g2+.0);
+  if(V>.5){vec3 g=q;g.y=mod(g.y+.15,.3)-.15;s=max(s,-max(sdBox(g-vec3(0.,0.,.027),vec3(.36,.006,.01)),abs(q.y)-.85));}
+  vec2 slab=vec2(s,1.);
+  float fr=min(sdBox(p-vec3(-.51,1.07,0.),vec3(.05,1.07,.06)),sdBox(p-vec3(.51,1.07,0.),vec3(.05,1.07,.06)));
+  fr=min(fr,sdBox(p-vec3(0.,2.1,0.),vec3(.56,.05,.06)));
+  vec2 frame=vec2(fr,2.);
+  float h=rcylZ(p-vec3(.34,1.0,.04),.06,.02,.008);
+  h=min(h,sdCap(p,vec3(.34,1.0,.07),vec3(.12,1.0,.09),.022));
+  if(V>.5){h=min(h,rcylZ(p-vec3(.34,1.25,.04),.05,.02,.008));h=min(h,rcylZ(p-vec3(.34,.78,.04),.05,.02,.008));}
+  r=U(U(slab,frame),vec2(h,3.));
+ } else if(M==47){ // window
+  vec3 q=p-vec3(0.,.8,0.);
+  float of=sdRBox(q,vec3(.66,.76,.05),.01);of=max(of,-sdBox(q,vec3(.58,.68,.1)));
+  float mu=sdBox(q,vec3(.035,.68,.05));
+  float sa=1e5;for(int i=-1;i<=1;i+=2){vec3 s=q-vec3(float(i)*.3,0.,.01);float f=sdRBox(s,vec3(.26,.66,.045),.008);f=max(f,-sdBox(s,vec3(.2,.6,.1)));sa=min(sa,f);}
+  vec2 gl=vec2(min(sdBox(q-vec3(-.3,0.,.0),vec3(.2,.6,.006)),sdBox(q-vec3(.3,0.,0.),vec3(.2,.6,.006))),6.);
+  vec2 h=vec2(sdRBox(q-vec3(.08,0.,.07),vec3(.018,.08,.02),.01),3.);
+  vec2 sill=vec2(sdRBox(p-vec3(0.,.03,.08),vec3(.75,.03,.16),.01),1.);
+  r=U(U(vec2(min(of,min(mu,sa)),1.),gl),U(h,sill));
+ } else if(M==48){ // door handle on door piece
+  vec2 w=vec2(sdBox(p-vec3(-.1,.75,-.08),vec3(.75,.75,.04)),2.);
+  float h=rcylZ(p-vec3(0.,.9,0.),.18,.02,.008);
+  h=min(h,smin(sdCap(p,vec3(0.,.9,.03),vec3(0.,.9,.14),.05),sdCap(p,vec3(0.,.9,.14),vec3(.55,.88,.16),.045),.05));
+  h=min(h,rcylZ(p-vec3(0.,.48,0.),.11,.02,.008));
+  float kh=cylZ(p-vec3(0.,.48,.02),.025,.03);
+  r=U(w,vec2(max(h,-kh),3.));
+ } else if(M==49){ // cabinet / wardrobe / safe
+  if(V<.5){
+   vec2 body=vec2(sdRBox(p-vec3(0.,.52,0.),vec3(.6,.42,.56),.01),5.);
+   vec2 pl=vec2(sdBox(p-vec3(0.,.05,-.02),vec3(.58,.05,.5)),4.);
+   vec2 door=vec2(sdRBox(p-vec3(0.,.52,.57),vec3(.58,.4,.02),.008),1.);
+   vec2 top=vec2(sdRBox(p-vec3(0.,.97,.02),vec3(.64,.03,.6),.008),2.);
+   vec2 h=vec2(sdCap(p,vec3(-.3,.83,.61),vec3(.3,.83,.61),.018),3.);
+   r=U(U(U(body,pl),U(door,top)),h);
+  } else if(V<1.5){
+   vec2 body=vec2(sdRBox(p-vec3(0.,1.12,0.),vec3(.9,1.12,.34),.01),1.);
+   vec2 m=vec2(sdBox(p-vec3(-.44,1.12,.345),vec3(.42,1.04,.006)),3.);
+   vec2 dr=vec2(sdBox(p-vec3(.44,1.12,.36),vec3(.42,1.04,.012)),1.);
+   float pr=1e5;for(int i=0;i<3;i++)pr=min(pr,sdBox(p-vec3(-.88+float(i)*.88,1.12,.37),vec3(.018,1.06,.02)));
+   r=U(U(body,m),U(dr,vec2(pr,9.)));
+  } else {
+   vec2 b=vec2(sdRBox(p-vec3(0.,.52,0.),vec3(.46,.52,.42),.04),1.);
+   float sm=sdBox(p-vec3(0.,.52,.42),vec3(.4,.46,.012));b.x=max(b.x,-max(sm,-sdBox(p-vec3(0.,.52,.42),vec3(.39,.45,.03))));
+   vec2 dial=vec2(rcylZ(p-vec3(-.1,.62,.44),.11,.03,.01),3.);
+   vec2 h=vec2(sdCap(p,vec3(.18,.62,.46),vec3(.18,.42,.46),.025),3.);
+   vec2 kp=vec2(sdBox(p-vec3(-.1,.36,.425),vec3(.1,.06,.006)),7.);
+   r=U(U(b,dial),U(h,kp));
+  }
+ } else if(M==50){ // countertops
+  float d=sdRBox(p-vec3(0.,.04,.1),vec3(1.3,.038,.42),.008);
+  vec3 q=p-vec3(.08,.12,-.05);q.xz=rot(.14)*q.xz;d=min(d,sdRBox(q,vec3(1.3,.038,.42),.008));
+  r=vec2(d,1.);
+ } else if(M==51){ // hood
+  vec2 ch=vec2(sdBox(p-vec3(0.,1.62,-.25),vec3(.2,.5,.15)),1.);
+  vec2 b=vec2(sdRBox(p-vec3(0.,1.0,-.12),vec3(.6,.1,.28),.02),1.);
+  vec3 q=p-vec3(0.,1.25,.08);q.yz=rot(.75)*q.yz;
+  vec2 gl=vec2(sdRBox(q,vec3(.6,.012,.28),.005),10.);
+  vec2 bt=vec2(1e5,7.);for(int i=0;i<3;i++)bt.x=min(bt.x,sdBox(p-vec3(.2+float(i)*.1,.96,.17),vec3(.02,.01,.005)));
+  r=U(U(ch,b),U(gl,bt));
+ } else if(M==52){ // rack / wall shelf
+  if(V<.5){
+   float po=1e5;for(int i=0;i<4;i++){vec2 s=vec2(i<2?-.75:.75,mod(float(i),2.)<1.?-.3:.3);po=min(po,sdBox(p-vec3(s.x,1.0,s.y),vec3(.03,1.0,.03)));}
+   float sh=1e5;for(int i=0;i<5;i++)sh=min(sh,sdRBox(p-vec3(0.,.12+float(i)*.42,0.),vec3(.78,.015,.33),.006));
+   float bx=sdRBox(p-vec3(-.35,.32,0.),vec3(.25,.18,.22),.01);bx=min(bx,sdRBox(p-vec3(.3,1.15,.0),vec3(.3,.2,.24),.01));
+   bx=min(bx,sdRBox(p-vec3(-.3,1.6,.0),vec3(.22,.15,.2),.01));
+   r=U(U(vec2(po,1.),vec2(sh,1.)),vec2(bx,2.));
+  } else {
+   vec2 w=vec2(sdBox(p-vec3(0.,1.0,-.18),vec3(1.2,1.0,.02)),2.);
+   vec2 sh=vec2(sdRBox(p-vec3(0.,1.0,0.),vec3(.8,.03,.16),.005),1.);
+   float v=sdRCyl(p-vec3(-.45,1.22,0.),.08,.19,.04);v=smin(v,sdSph(p-vec3(-.45,1.15,0.),.13),.05);
+   vec2 vase=vec2(v,5.);
+   float bk=1e5;for(int i=0;i<4;i++)bk=min(bk,sdBox(p-vec3(.15+float(i)*.075,1.2+float(i%2)*.02,0.),vec3(.03,.17+float(i%2)*.02,.12)));
+   vec2 books=vec2(bk,4.);
+   r=U(U(w,sh),U(vase,books));
+  }
+ } else if(M==53){ // shovel
+  vec3 q=p;q.xz=rot(-.4)*q.xz;
+  vec2 h=vec2(sdCap(q,vec3(-1.15,.05,0.),vec3(.35,.05,0.),.045),2.);
+  vec2 g=vec2(sdCap(q,vec3(-1.2,.05,-.15),vec3(-1.2,.05,.15),.04),4.);
+  vec3 b=q-vec3(.72,.06,0.);
+  float bl=sdRBox(b,vec3(.32,.012,.24),.01);bl=max(bl,length(b.xz-vec2(-.25,0.))-.62);
+  vec2 blade=vec2(bl,1.);
+  vec2 sk=vec2(rcylX(q-vec3(.38,.06,0.),.06,.1,.01),1.);
+  r=U(U(h,g),U(blade,sk));
+ } else if(M==54){ // hose coil
+  float d=1e5;
+  for(int k=0;k<6;k++){vec3 q=p-vec3(0.,.05+float(k)*.088,0.);d=min(d,sdTorus(q,vec2(.6+.03*sin(float(k)*1.7),.045)));}
+  vec2 n=vec2(sdCap(p,vec3(.55,.05,.3),vec3(.95,.06,.6),.04),8.);
+  n.x=min(n.x,sdCap(p,vec3(.95,.06,.6),vec3(1.15,.06,.75),.06));
+  r=U(vec2(d,1.),n);
+ } else if(M==55){ // mangal
+  vec3 q=p-vec3(0.,.8,0.);
+  float b=sdBox(q,vec3(1.0,.17,.3));b=max(b,-sdBox(q-vec3(0.,.04,0.),vec3(.97,.2,.27)));
+  vec3 hq=q-vec3(0.,-.08,.3);hq.x=mod(hq.x+.1,.2)-.1;b=max(b,-max(cylZ(hq,.028,.1),abs(q.x)-.9));
+  float lg=1e5;for(int i=0;i<4;i++){vec2 s=vec2(i<2?-.9:.9,mod(float(i),2.)<1.?-.24:.24);lg=min(lg,sdCap(p,vec3(s.x,.65,s.y),vec3(s.x*1.06,0.,s.y*1.15),.03));}
+  float sk=1e5;for(int i=0;i<5;i++){float x=-.6+float(i)*.3;sk=min(sk,sdCap(p,vec3(x,.99,-.45),vec3(x,.99,.42),.012));sk=min(sk,sdTorus((p-vec3(x,.99,.5)).xzy,vec2(.05,.01)));}
+  r=U(vec2(min(b,lg),1.),vec2(sk,3.));
+ } else if(M==56){ // garden set
+  float t=sdRCyl(p-vec3(0.,.74,0.),.55,.025,.01);
+  float l=sdCap(p,vec3(0.,.72,0.),vec3(0.,.05,0.),.045);l=min(l,sdRCyl(p-vec3(0.,.025,0.),.3,.025,.01));
+  float ch=1e5;
+  for(int i=-1;i<=1;i+=2){vec3 c=p-vec3(float(i)*.95,0.,.05);c.xz=rot(float(i)*-1.1)*c.xz;
+   ch=min(ch,sdRBox(c-vec3(0.,.45,0.),vec3(.26,.03,.26),.02));
+   ch=min(ch,sdRBox(c-vec3(0.,.8,-.24),vec3(.26,.32,.025),.02));
+   for(int j=0;j<4;j++){vec2 s=vec2(j<2?-.22:.22,mod(float(j),2.)<1.?-.22:.22);ch=min(ch,sdCap(c,vec3(s.x,.45,s.y),vec3(s.x,0.,s.y),.025));}}
+  r=U(vec2(t,1.),vec2(min(l,ch),2.));
+ } else if(M==57){ // lock + keys
+  vec2 b=vec2(sdRBox(p-vec3(0.,.65,0.),vec3(.34,.5,.06),.01),9.);
+  vec2 fp=vec2(sdRBox(p-vec3(.37,.65,0.),vec3(.025,.68,.11),.008),8.);
+  vec2 cy=vec2(rcylZ(p-vec3(.05,.48,.06),.1,.06,.02),8.);
+  vec2 bo=vec2(sdRBox(p-vec3(.48,.82,0.),vec3(.1,.06,.035),.01),3.);
+  float k=1e5;for(int i=0;i<2;i++){vec3 q=p-vec3(-.3+float(i)*.35,.02,.45+float(i)*.12);q.xz=rot(.4+float(i)*.6)*q.xz;
+   k=min(k,sdBox(q-vec3(.15,0.,0.),vec3(.22,.012,.035)));k=min(k,sdTorus(q-vec3(-.15,0.,0.),vec2(.1,.03)));}
+  r=U(U(b,fp),U(U(cy,bo),vec2(k,8.)));
+ } else if(M==58){ // camera
+  vec2 bp=vec2(sdRCyl(p-vec3(0.,.03,0.),.32,.03,.01),1.);
+  vec2 arm=vec2(sdCap(p,vec3(0.,.05,0.),vec3(0.,.42,.05),.06),1.);
+  arm.x=min(arm.x,sdSph(p-vec3(0.,.45,.05),.09));
+  vec2 bd=vec2(sdCap(p,vec3(0.,.65,-.32),vec3(0.,.65,.32),.2),1.);
+  vec3 hq=p-vec3(0.,.68,.08);float hood=max(rcylZ(hq,.235,.36,.02),-rcylZ(hq,.21,.5,.01));hood=max(hood,-(hq.y+.02));
+  vec2 ln=vec2(cylZ(p-vec3(0.,.65,.47),.14,.025),10.);
+  r=U(U(bp,arm),U(U(bd,vec2(hood,1.)),ln));
+ } else if(M==59){ // gloves
+  float d=1e5;
+  for(int i=0;i<2;i++){vec3 q=p-vec3(-.35+float(i)*.62,.05+float(i)*.06,.0+float(i)*.12);q.xz=rot(-.3+float(i)*.7)*q.xz;
+   float g=sdRBox(q-vec3(0.,0.,.1),vec3(.27,.04,.33),.04);
+   for(int f=0;f<4;f++){float x=-.2+float(f)*.135;g=smin(g,sdCap(q,vec3(x,0.,-.2),vec3(x*1.15,0.,-.62+abs(float(f)-1.5)*.06),.055),.04);}
+   g=smin(g,sdCap(q,vec3(.25,0.,0.),vec3(.52,0.,-.25),.06),.05);
+   g=smin(g,sdRBox(q-vec3(0.,0.,.5),vec3(.28,.04,.1),.04),.02);
+   d=min(d,g);}
+  r=vec2(d*.9,1.);
+ } else if(M==60){ // helmet
+  vec3 q=p-vec3(0.,.22,0.);
+  float s=sdEll(q,vec3(.5,.44,.58));s=max(s,-q.y);
+  float br=sdEll(q-vec3(0.,.0,.1),vec3(.62,.035,.78));
+  float rg=sdRBox(q-vec3(0.,.43,0.),vec3(.05,.03,.45),.02);rg=max(rg,sdEll(q,vec3(.53,.47,.61)));
+  r=vec2(smin(min(s,rg),br,.04),1.);
+ } else if(M==61){ // boots
+  float up=1e5,so=1e5;
+  for(int i=0;i<2;i++){vec3 q=p-vec3(-.32+float(i)*.62,0.,float(i)*-.1);q.xz=rot(-.2+float(i)*.35)*q.xz;
+   float u=sdRBox(q-vec3(0.,.55,-.25),vec3(.2,.45,.24),.12);
+   u=smin(u,sdEll(q-vec3(0.,.22,.18),vec3(.22,.2,.42)),.15);
+   up=min(up,u);
+   so=min(so,sdRBox(q-vec3(0.,.05,.02),vec3(.24,.05,.62),.04));}
+  r=U(vec2(up,1.),vec2(so,4.));
+ } else if(M==62){ // bucket + mop
+  vec3 q=p-vec3(0.,.38,0.);float k=clamp(1.-.12*(1.-(q.y+.38)/.76),.85,1.15);
+  float b=sdRCyl(vec3(q.x/k,q.y,q.z/k),.48,.38,.04)*k;b=max(b,-sdCyl(q-vec3(0.,.1,0.),.43,.35));
+  b=min(b,sdTorus(q-vec3(0.,.37,0.),vec2(.49,.03)));
+  vec2 wr=vec2(sdRBox(p-vec3(.0,.75,-.18),vec3(.32,.06,.18),.03),2.);
+  vec2 st=vec2(sdCap(p,vec3(.05,.3,.05),vec3(.45,2.1,-.25),.03),2.);
+  vec2 hd=vec2(sdRBox(p-vec3(.05,.35,.05),vec3(.18,.12,.18),.08),4.);
+  r=U(U(vec2(b,1.),wr),U(st,hd));
+ } else if(M==63){ // ladder
+  float rl=1e5;for(int i=-1;i<=1;i+=2){float x=float(i);rl=min(rl,sdCap(p,vec3(x*.4,0.,.48),vec3(x*.32,1.9,0.),.03));rl=min(rl,sdCap(p,vec3(x*.4,0.,-.55),vec3(x*.32,1.9,0.),.025));}
+  float st=1e5;for(int i=0;i<5;i++){float y=.3+float(i)*.32;float z=.48*(1.-y/1.9);st=min(st,sdRBox(p-vec3(0.,y,z),vec3(.37-y*.03,.018,.075),.008));}
+  vec2 tp=vec2(sdRBox(p-vec3(0.,1.92,-.02),vec3(.34,.035,.17),.02),2.);
+  r=U(vec2(min(rl,st),1.),tp);
+ } else if(M==64){ // storage container
+  vec2 b=vec2(sdRBox(p-vec3(0.,.42,0.),vec3(.75,.42,.5),.06),6.);
+  vec2 l=vec2(sdRBox(p-vec3(0.,.86,0.),vec3(.78,.05,.53),.03),2.);
+  vec2 c=vec2(min(sdRBox(p-vec3(-.79,.76,0.),vec3(.03,.08,.16),.02),sdRBox(p-vec3(.79,.76,0.),vec3(.03,.08,.16),.02)),2.);
+  vec2 inside=vec2(sdRBox(p-vec3(-.2,.35,0.),vec3(.35,.3,.3),.03),4.);
+  r=U(U(b,l),U(c,inside));
+ }
+ return r;
+}
+vec2 map(vec3 p){return model(p);}
+float mapD(vec3 p){return model(p).x;}
+vec3 calcN(vec3 p){vec2 e=vec2(.0007,-.0007);return normalize(e.xyy*mapD(p+e.xyy)+e.yyx*mapD(p+e.yyx)+e.yxy*mapD(p+e.yxy)+e.xxx*mapD(p+e.xxx));}
+float soft(vec3 ro,vec3 rd){float res=1.,t=.01;for(int i=0;i<56;i++){float h=mapD(ro+rd*t);res=min(res,9.*h/t);t+=clamp(h,.012,.25);if(res<.002||t>8.)break;}return clamp(res,0.,1.);}
+float calcAO(vec3 p,vec3 n){float o=0.,s=1.;for(int i=0;i<6;i++){float h=.012+.07*float(i);float d=mapD(p+n*h);o+=(h-d)*s;s*=.8;}return clamp(1.-1.6*o,0.,1.);}
+vec3 toLin(vec3 c){return pow(c,vec3(2.2));}
+vec3 LKEY=normalize(vec3(-.55,1.,.65));
+vec3 env(vec3 d){
+ vec3 sky=mix(vec3(.07)+uBg*.12,vec3(1.15),smoothstep(.02,.55,d.y));
+ float s1=smoothstep(.82,.96,dot(d,normalize(vec3(-.6,.75,.45))));
+ float s2=smoothstep(.88,.97,dot(d,normalize(vec3(.85,.45,-.25))));
+ float s3=smoothstep(.07,.0,abs(d.y-.25))*smoothstep(-.2,.6,-d.x);
+ float flag=smoothstep(.55,.92,dot(d,normalize(vec3(.75,.15,.65))));
+ vec3 c=sky*(1.-.75*flag)+vec3(3.2)*s1+vec3(1.7)*s2+vec3(.9)*s3;
+ if(d.y<0.)c=mix(uBg*.62,c,smoothstep(-.25,0.,d.y));
+ return c;
+}
+struct Mt{vec3 alb;float rough;float metal;vec3 emi;int kind;};
+Mt matType(vec3 col,int t,vec3 p){
+ Mt m;m.alb=col;m.rough=.5;m.metal=0.;m.emi=vec3(0.);m.kind=0;
+ if(t==0){m.rough=.85;}
+ else if(t==1){m.rough=.42;}
+ else if(t==2){m.rough=.14;}
+ else if(t==3){m.rough=.18;m.metal=1.;}
+ else if(t==4){m.rough=.38;m.metal=1.;float b=noise(vec3(p.x*400.,p.y*4.,p.z*4.));m.alb*=.9+.15*b;}
+ else if(t==5){vec3 q=p*vec3(1.,1.,1.);float w=fbm(q*vec3(1.5,14.,14.));float ring=sin((q.y*30.+q.z*22.+w*9.));m.alb=mix(col*.68,col*1.06,smoothstep(-.6,.9,ring));m.alb*=.9+.2*noise(q*vec3(2.,60.,60.));m.rough=.55;}
+ else if(t==6){float n=fbm(p*14.);float sp=step(.78,noise(p*90.));m.alb=col*(.84+.3*n)*(1.-.35*sp);m.rough=.9;}
+ else if(t==7){m.rough=.97;m.alb*=.85+.3*noise(p*120.);m.kind=2;}
+ else if(t==8){m.emi=col*2.5;}
+ else if(t==11){float v=abs(sin(p.x*2.5+p.z*1.7+fbm(p*2.2)*5.));m.alb=mix(col*.55,col*1.04,smoothstep(0.,.18,v));m.rough=.12;}
+ else if(t==12){vec3 q=p*16.;float f=sin(q.x)*sin(q.y+q.z)+.4*sin(q.x*.5+q.y*.5);m.alb=mix(col,uB,smoothstep(.55,.75,f));m.rough=.6;}
+ else if(t==13){vec2 c=floor((p.xy)/.107);float h=hash(vec3(c,3.));m.alb=mix(col*.55,mix(col*1.25,uB,step(.8,h)),h);m.rough=.08;}
+ else if(t==14){m.rough=.32;m.metal=.35;}
+ return m;
+}
+Mt getMat(vec3 p,vec3 n,float id){
+ Mt m;
+ if(id<1.5){m=matType(uA,uMA,p);
+  if(uLabMode>0){
+   vec2 uv=vec2(-1.);bool ok=false;
+   if(uLabMode==1){uv=vec2((p.x-uLabRect.x)/(uLabRect.z-uLabRect.x),(p.y-uLabRect.y)/(uLabRect.w-uLabRect.y));ok=n.z>.25;}
+   else if(uLabMode==2){vec3 q=p-uLabC;uv=vec2(atan(q.x,q.z)/(2.*PI)+.5,(p.y-uLabRect.y)/(uLabRect.w-uLabRect.y));ok=abs(n.y)<.6;}
+   else if(uLabMode==3){uv=vec2((p.x-uLabRect.x)/(uLabRect.z-uLabRect.x),(uLabRect.w-p.z)/(uLabRect.w-uLabRect.y));ok=n.y>.6;}
+   else if(uLabMode==4){vec3 q=p-vec3(0.,uLabC.y,uLabC.z);q.xz=rot(uLabC.x)*q.xz;uv=vec2((q.x-uLabRect.y)/(uLabRect.w-uLabRect.y),atan(q.y,q.z)/(2.*PI)+.5);ok=true;}
+   if(ok&&uv.x>=0.&&uv.x<=1.&&uv.y>=0.&&uv.y<=1.){vec4 t=texture(uLabel,uv);m.alb=mix(m.alb,toLin(t.rgb),t.a);}
+  }
+  if(uModel==59&&n.y>.6){vec2 c=fract(p.xz*14.)-.5;if(length(c)<.17)m.alb=uB;}
+ }
+ else if(id<2.5){m=matType(uB,uMB,p);}
+ else if(id<3.5){m.alb=uCh;m.rough=uChR;m.metal=uChM;m.emi=vec3(0.);m.kind=0;}
+ else if(id<4.5){m.alb=vec3(.025);m.rough=.55;m.metal=0.;m.emi=vec3(0.);m.kind=0;}
+ else if(id<5.5){m.alb=vec3(.86,.86,.85);m.rough=.07;m.metal=0.;m.emi=vec3(0.);m.kind=0;}
+ else if(id<6.5){m.alb=uModel==64?uA:(uModel==34?vec3(.95):vec3(.6,.75,.8));m.rough=.05;m.metal=0.;m.emi=uModel==34?vec3(1.,.92,.75)*1.6:(uModel==36?vec3(1.,.85,.6)*1.2:vec3(0.));m.kind=uModel==34||uModel==36?3:1;}
+ else if(id<7.5){m.alb=vec3(0.);m.rough=.5;m.metal=0.;m.emi=uE*3.;m.kind=0;if(uModel==37){vec2 c=fract(p.xy*11.)-.5;m.emi*=.25+.9*smoothstep(.22,.12,length(c));m.alb=vec3(.02);}}
+ else if(id<8.5){m.alb=vec3(.95,.62,.32);m.rough=.25;m.metal=1.;m.emi=vec3(0.);m.kind=0;}
+ else if(id<9.5){m=matType(vec3(.8,.8,.82),4,p);}
+ else {m.alb=vec3(.02);m.rough=.04;m.metal=0.;m.emi=vec3(0.);m.kind=0;}
+ return m;
+}
+vec3 aces(vec3 x){return clamp((x*(2.51*x+.03))/(x*(2.43*x+.59)+.14),0.,1.);}
+void main(){
+ vec2 fc=gl_FragCoord.xy+uJit;
+ vec2 uv=(fc-.5*uRes)/uRes.y;
+ vec3 ta=vec3(0.,uCam.x,0.);float pit=uCam.z,yaw=uCam.w;
+ vec3 ro=ta+uCam.y*vec3(sin(yaw)*cos(pit),sin(pit),cos(yaw)*cos(pit));
+ vec3 ww=normalize(ta-ro),uu=normalize(cross(ww,vec3(0,1,0))),vv=cross(uu,ww);
+ vec3 rd=normalize(uv.x*uu+uv.y*vv+3.4*ww);
+ float floorUn=2.1*LKEY.y+.55;
+ // march model
+ float t=.0;vec2 h;bool hit=false;
+ for(int i=0;i<240;i++){vec3 p=ro+rd*t;h=map(p);if(h.x<.0004*t){hit=true;break;}t+=h.x*.85;if(t>30.)break;}
+ float tf=rd.y<0.?-ro.y/rd.y:1e9;
+ vec3 col;
+ if(hit&&t<tf){
+  vec3 p=ro+rd*t;vec3 n=calcN(p);
+  Mt m=getMat(p,n,h.y);
+  float sh=soft(p+n*.003,LKEY);
+  float ao=calcAO(p,n);
+  vec3 v=-rd;float ndv=max(dot(n,v),.001);
+  vec3 F0=mix(vec3(.04),m.alb,m.metal);
+  vec3 Fr=F0+(max(vec3(1.-m.rough),F0)-F0)*pow(1.-ndv,5.);
+  vec3 Ldir[3];Ldir[0]=LKEY;Ldir[1]=normalize(vec3(.85,.45,.55));Ldir[2]=normalize(vec3(.25,.6,-1.));
+  vec3 Lc[3];Lc[0]=vec3(1.,.97,.93)*2.1;Lc[1]=vec3(.9,.95,1.)*.55;Lc[2]=vec3(1.)*1.1;
+  vec3 diff=vec3(0.),spec=vec3(0.);
+  for(int k=0;k<3;k++){vec3 l=Ldir[k];float s=k==0?sh:1.;float ndl=max(dot(n,l),0.);vec3 hv=normalize(l+v);float ndh=max(dot(n,hv),0.);
+   float a=max(m.rough*m.rough,.002),a2=a*a;float D=a2/(PI*pow(ndh*ndh*(a2-1.)+1.,2.));
+   vec3 F=F0+(1.-F0)*pow(1.-max(dot(hv,v),0.),5.);
+   spec+=Lc[k]*s*ndl*D*F*.25/max(ndv*.5+.5,.2);
+   float wrap=m.kind==2?.3:0.;
+   diff+=Lc[k]*s*max((dot(n,l)+wrap)/(1.+wrap),0.);}
+  vec3 amb=mix(uBg*.45,vec3(.75),n.y*.5+.5)*.6*ao;
+  vec3 refl=reflect(rd,n);
+  vec3 envS=mix(env(refl),mix(uBg*.5,vec3(.9),n.y*.5+.5),m.rough*m.rough);
+  float specOcc=clamp(ao*1.2,0.,1.)*mix(.4,1.,sh);
+  col=m.alb*(1.-m.metal)*(diff+amb)+spec*(1.-m.rough*.5)+envS*Fr*specOcc*(m.metal>.5?1.:.85);
+  if(m.kind==1){col=mix(env(rd)*mix(vec3(1.),m.alb,.5)*.85,env(refl),Fr)+spec;}
+  if(m.kind==2){col+=m.alb*pow(1.-ndv,3.)*.25;}
+  if(m.kind==3){col=m.alb*(.55+.45*diff)+m.emi+spec*.6+env(refl)*Fr*.6;}
+  col+=m.emi;
+  col=aces(col*.82);
+  float fogk=smoothstep(10.,18.,t);col=mix(col,uBg,fogk);
+ } else if(rd.y<0.){
+  vec3 p=ro+rd*tf;vec3 n=vec3(0,1,0);
+  float sh=soft(p+n*.002,LKEY);float ao=calcAO(p,n);
+  float lit=2.1*LKEY.y*sh+.55*ao;
+  float k=lit/floorUn;
+  col=uBg*mix(k,1.,smoothstep(5.,12.,tf));
+  // floor reflection hint
+  col*=mix(.97,1.,smoothstep(0.,1.,length(p.xz)*.2));
+ } else {col=uBg;}
+ // subtle vignette and gradient
+ vec2 q=fc/uRes;col*=1.-.12*pow(length(q-vec2(.5,.55))*1.2,2.2);
+ col*=mix(.97,1.03,q.y);
+ outCol=vec4(pow(clamp(col,0.,1.),vec3(1./2.2)),1.);
+}
+</script>
+<script>
+const cv=document.getElementById('c');
+const gl=cv.getContext('webgl2',{preserveDrawingBuffer:true,antialias:false});
+gl.getExtension('EXT_color_buffer_float');
+function sh(type,src){const s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw new Error(gl.getShaderInfoLog(s));return s;}
+const vs=`#version 300 es
+in vec2 a;void main(){gl_Position=vec4(a,0.,1.);}`;
+const pr=gl.createProgram();gl.attachShader(pr,sh(gl.VERTEX_SHADER,vs));gl.attachShader(pr,sh(gl.FRAGMENT_SHADER,document.getElementById('fs').textContent.trim()));gl.linkProgram(pr);
+if(!gl.getProgramParameter(pr,gl.LINK_STATUS))throw new Error(gl.getProgramInfoLog(pr));
+gl.useProgram(pr);
+const buf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buf);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,3,-1,-1,3]),gl.STATIC_DRAW);
+const al=gl.getAttribLocation(pr,'a');gl.enableVertexAttribArray(al);gl.vertexAttribPointer(al,2,gl.FLOAT,false,0,0);
+const U=n=>gl.getUniformLocation(pr,n);
+const tex=gl.createTexture();
+const lin=h=>{const v=parseInt(h.slice(1),16);return[(v>>16)&255,(v>>8)&255,v&255].map(c=>Math.pow(c/255,2.2));};
+window.LIN=lin;
+function setLabel(canvas){
+  gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,tex);
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,true);
+  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,canvas);
+  gl.generateMipmap(gl.TEXTURE_2D);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.REPEAT);
+}
+window.renderSpec=function(s,size,label){
+  cv.width=size;cv.height=size;gl.viewport(0,0,size,size);
+  const blank=document.createElement('canvas');blank.width=blank.height=4;
+  setLabel(label||blank);
+  gl.uniform1i(U('uLabel'),0);
+  gl.uniform2f(U('uRes'),size,size);
+  gl.uniform1i(U('uModel'),s.m);gl.uniform1f(U('uV'),s.v||0);
+  gl.uniform3fv(U('uA'),lin(s.a||'#cccccc'));gl.uniform3fv(U('uB'),lin(s.b||'#333333'));
+  gl.uniform3fv(U('uBg'),lin(s.bg||'#e8ebe8'));gl.uniform3fv(U('uE'),lin(s.e||'#fff4e0'));
+  gl.uniform1i(U('uMA'),s.ma??1);gl.uniform1i(U('uMB'),s.mb??1);
+  gl.uniform4fv(U('uCam'),s.cam||[.75,5.,.36,.62]);
+  gl.uniform1i(U('uLabMode'),label?s.lm||0:0);
+  gl.uniform4fv(U('uLabRect'),s.lr||[0,0,1,1]);gl.uniform3fv(U('uLabC'),s.lc||[0,0,0]);
+  gl.uniform2f(U('uJit'),0,0);
+  gl.uniform3fv(U('uCh'),lin(s.ch||'#f5f5f5'));gl.uniform1f(U('uChR'),s.chr??.06);gl.uniform1f(U('uChM'),s.chm??1);
+  gl.drawArrays(gl.TRIANGLES,0,3);
+  gl.finish();
+  return cv.toDataURL('image/png');
+};
+</script></body></html>
