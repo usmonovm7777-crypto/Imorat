@@ -22,6 +22,7 @@ import { registerDisputes } from "./disputes.js";
 import { registerQuestions } from "./questions.js";
 import { registerCatalogExtras } from "./catalogx.js";
 import { registerTeams } from "./teams.js";
+import { registerDashboard } from "./dashboard.js";
 
 export const STEPS = {
   yandex: ["new", "assembling", "searching", "to_store", "on_way", "delivered"],
@@ -695,6 +696,7 @@ export function createApp(cfg, log = console) {
   channel.routes(r, needAdmin);
   registerQuestions({ r, db, cfg, need, needSeller, lim, tg, push, log });
   registerTeams({ r, db, cfg, need, lim, tg, log });
+  registerDashboard({ r, db, needAdmin });
   const cx = registerCatalogExtras({ r, db, cfg, need, lim, tg, push, saveImage, mediaUrl, log });
   registerDisputes({ r, db, cfg, need, needSeller, needAdmin, isAdmin, audit, lim, tg, push, saveImage, mediaUrl, log });
 

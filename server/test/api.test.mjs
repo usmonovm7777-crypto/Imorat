@@ -571,3 +571,14 @@ test("Team projects: create, join by code, add items, notify, leave and delete",
   assert.equal((await call("GET", "/api/team-projects", null, worker)).data.projects.length, 0);
   assert.equal((await call("DELETE", `/api/team-projects/${pr.id}`, null, boss)).data.deleted, true);
 });
+
+test("Owner dashboard: totals, daily series, top products and stores, slow stores", async () => {
+  assert.equal((await call("GET", "/api/admin/dashboard", null, (await login("990009988")).data.token)).status, 403);
+  const d = (await call("GET", "/api/admin/dashboard?days=30", null, globalThis.ADMIN)).data;
+  assert.equal(d.series.length, 30);
+  assert.ok(d.totals.orders >= 3, JSON.stringify(d.totals)); assert.ok(d.totals.gmv > 0); assert.ok(d.counts.users >= 10);
+  assert.ok(d.top_products.length >= 1 && d.top_products[0].sum > 0);
+  assert.ok(d.top_stores.length >= 1);
+  assert.equal(d.series.reduce((a, x) => a + x.orders, 0), d.totals.orders);
+  assert.ok(Array.isArray(d.slow_stores));
+});

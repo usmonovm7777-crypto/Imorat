@@ -770,6 +770,11 @@ html.ds-dragging, html.ds-dragging * { cursor: grabbing !important; user-select:
 .ds-wish { display: flex; gap: 6px; }
 .ds-wish input { flex: 1; min-width: 0; border: 1.5px solid var(--line); border-radius: 12px; padding: 10px 12px; background: var(--raised); font: inherit; color: inherit; }
 .ds-sw { display: flex; flex-wrap: wrap; gap: 6px; }
+.adm-att { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; } .adm-att .chip { border-color: color-mix(in srgb, var(--signal) 45%, var(--line)); }
+.adm-k { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.adm-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+.st-leg .lg.o { background: var(--signal); height: 3px; vertical-align: 3px; }
+@media (max-width: 860px) { .adm-k { grid-template-columns: repeat(2, minmax(0, 1fr)); } .adm-grid { grid-template-columns: 1fr; } }
 .ds-photo-btns { display: flex; gap: 8px; flex-wrap: wrap; } .ds-photo-btns .btn { cursor: pointer; }
 .ds-photo small { display: block; font-weight: 400; }
 .team { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--line); border-radius: 14px; margin-top: 8px; }
@@ -1858,7 +1863,7 @@ function renderFooter() {
       <p class="num" style="margin:10px 0 0">+998 71 200 00 00 · 08:00–22:00</p></div>
     <div><b>${L("Покупателям", "Xaridorlarga")}</b><ul><li><button type="button" data-go="catalog">${L("Весь каталог", "Butun katalog")}</button></li><li><button type="button" data-act="ai">Usta AI</button></li><li><button type="button" data-scroll="calc">${L("Калькуляторы ремонта", "Ta’mir kalkulyatorlari")}</button></li><li><button type="button" data-go="list">${L("Список покупок → корзина", "Xaridlar ro‘yxati → savat")}</button></li><li><button type="button" data-act="orders">${L("Мои заказы", "Buyurtmalarim")}</button></li></ul></div>
     <div><b>${L("Доставка и оплата", "Yetkazish va to‘lov")}</b><ul><li>${L("Яндекс Доставка", "Yandex Yetkazib berish")}</li><li><button type="button" data-scroll="vip">Imorat VIP</button></li><li>${L("Рассрочка на 12 месяцев", "12 oyga muddatli to‘lov")}</li><li><button type="button" data-go="masters">${L("Мастера для ремонта", "Ta’mir ustalari")}</button></li></ul></div>
-    <div><b>${L("Партнёрам", "Hamkorlarga")}</b><ul><li><button type="button" data-go="seller">${L("Кабинет продавца", "Sotuvchi kabineti")}</button></li><li><button type="button" data-scroll="stores">${L("Магазины", "Do‘konlar")}</button></li><li><button type="button" data-go="masters" data-mtabgo="me">${L("Стать мастером", "Usta bo‘lish")}</button></li></ul></div>
+    <div><b>${L("Партнёрам", "Hamkorlarga")}</b><ul><li><button type="button" data-go="seller">${L("Кабинет продавца", "Sotuvchi kabineti")}</button></li><li><button type="button" data-scroll="stores">${L("Магазины", "Do‘konlar")}</button></li><li><button type="button" data-go="admin">${L("Панель владельца", "Egasi paneli")}</button></li><li><button type="button" data-go="masters" data-mtabgo="me">${L("Стать мастером", "Usta bo‘lish")}</button></li></ul></div>
   </div>`;
 }
 function renderTabbar() {
@@ -2584,6 +2589,7 @@ function dProfile() {
       <button class="order-row" type="button" data-act="projects"><b>${L("Проекты ремонта", "Ta’mir loyihalari")}</b><b class="num">${projects.length}</b><small>${L("Сохранённые списки материалов", "Saqlangan material ro‘yxatlari")}</small></button>
       <button class="order-row" type="button" data-act="watch"><b>${L("Слежу за ценой", "Narx kuzatuvi")}</b><b class="num">${watch.length}</b><small>${L("Сообщим о снижении цены", "Narx tushsa xabar beramiz")}</small></button>
       <button class="order-row" type="button" data-act="favs"><b>${L("Избранное", "Saralanganlar")}</b><b class="num">${favs.length}</b><small>${L("Сохранённые товары", "Saqlangan mahsulotlar")}</small></button>
+      ${user?.admin ? `<button class="order-row" type="button" data-go="admin"><b>${L("Панель Imorat", "Imorat paneli")}</b>${ui("calc", 18)}<small>${L("Оборот, заказы, магазины, модерация", "Aylanma, buyurtmalar, do‘konlar, moderatsiya")}</small></button>` : ""}
       <button class="order-row" type="button" data-go="masters" data-mtabgo="mine"><b>${L("Заявки мастерам", "Ustalarga so‘rovlar")}</b>${ui("wrench", 18)}<small>${L("Плиточники, электрики, сантехники", "Kafelchi, elektrik, santexnik")}</small></button>
       <button class="order-row" type="button" data-act="ai"><b>Usta AI</b>${ui("spark", 18)}<small>${L("Подбор материалов и советы", "Material tanlash va maslahatlar")}</small></button>
       ${user && user.store_id && myStore ? `<button class="order-row" type="button" data-go="seller"><b>${esc(myStore.name)}</b>${ui("store", 18)}<small>${L("Кабинет продавца", "Sotuvchi kabineti")} · ${(ST_STATUS()[myStore.status] || ST_STATUS().pending)[0]}</small></button>` : `<button class="order-row" type="button" data-act="store-reg"><b>${L("Добавить свой магазин", "Do‘konimni qo‘shish")}</b>${ui("store", 18)}<small>${L("Продавайте на Imorat: витрина, заказы, доставка Яндекс", "Imoratda soting: vitrina, buyurtmalar, Yandex yetkazish")}</small></button>`}${API ? "" : `<button class="order-row" type="button" data-go="seller"><b>${L("Кабинет продавца", "Sotuvchi kabineti")}</b>${ui("chev", 18)}<small>${L("Для магазинов-партнёров", "Hamkor do‘konlar uchun")}</small></button>`}
@@ -2730,6 +2736,7 @@ function finishAuth(u, token) {
   toast(then === "seller" ? L("Магазин отправлен на проверку", "Do‘kon tekshiruvga yuborildi") : L(`Добро пожаловать, ${u.name}!`, `Xush kelibsiz, ${u.name}!`));
   if (then === "checkout") openDrawer("checkout"); else if (then === "seller") { sellerData = null; go("seller"); } else if (typeof then === "function") setTimeout(then, 0); else if (drawerView === "profile") renderDrawer();
   if (route.view === "masters" && typeof then !== "function") { mApi.list = null; mApi.me = undefined; renderMasters(); }
+  if (["admin", "store", "shop", "flat"].includes(route.view) && typeof then !== "function") { dash = null; renderMain(); }
   if (route.view === "catalog") renderList(true); else if (route.view === "seller" && then !== "seller") { sellerData = null; renderSeller(); }
 }
 
@@ -3348,7 +3355,7 @@ async function loadSeller() {
 async function loadAdmin() {
   if (adminState.loading) return; adminState.loading = true;
   try { adminStores = (await adminApi("GET", "/api/admin/stores")).stores; adminMasters = (await adminApi("GET", "/api/admin/masters").catch(() => ({ masters: [] }))).masters; } catch (e) { adminStores = adminState.need ? null : []; }
-  adminState.loading = false; if (route.view === "seller") renderSeller();
+  adminState.loading = false; if (route.view === "seller" || route.view === "admin") renderMain();
 }
 function storeBanner(s, demo) {
   const [lbl, cls] = ST_STATUS()[s.status] || ST_STATUS().pending;
@@ -3366,7 +3373,7 @@ function storeCardHTML(s) {
 /* Telegram channel autoposts: status, preview and "post now" */
 let adminChannel = null;
 function adminChannelHTML() {
-  if (adminChannel === null) { adminChannel = false; adminApi("GET", "/api/admin/channel").then(r => { adminChannel = r; if (route.view === "seller") renderSeller(); }).catch(() => { adminChannel = { error: true }; }); return ""; }
+  if (adminChannel === null) { adminChannel = false; adminApi("GET", "/api/admin/channel").then(r => { adminChannel = r; if (route.view === "seller" || route.view === "admin") renderMain(); }).catch(() => { adminChannel = { error: true }; }); return ""; }
   if (!adminChannel || adminChannel.error) return "";
   const c = adminChannel, K = { day: L("Товар дня", "Kun mahsuloti"), new: L("Новинки", "Yangi mahsulotlar"), drop: L("Снижения цен", "Narx tushishi") };
   const plain = t => esc(String(t).replace(/<[^>]+>/g, "")).replace(/\n/g, "<br>");
@@ -3378,7 +3385,7 @@ function adminChannelHTML() {
 }
 document.addEventListener("click", async e => {
   const t = e.target.closest("[data-chpost]"); if (!t) return; t.disabled = true;
-  try { const r = await adminApi("POST", "/api/admin/channel/post", { kind: t.dataset.chpost }); toast(r.posted ? L("Опубликовано в канале", "Kanalda e’lon qilindi") : L("Пока нечего публиковать", "Hozircha e’lon qiladigan narsa yo‘q")); adminChannel = null; renderSeller(); }
+  try { const r = await adminApi("POST", "/api/admin/channel/post", { kind: t.dataset.chpost }); toast(r.posted ? L("Опубликовано в канале", "Kanalda e’lon qilindi") : L("Пока нечего публиковать", "Hozircha e’lon qiladigan narsa yo‘q")); adminChannel = null; renderMain(); }
   catch (er) { t.disabled = false; toast(apiErr(er)); }
 });
 function adminMastersHTML() {
@@ -3392,11 +3399,11 @@ function adminMastersHTML() {
 }
 document.addEventListener("click", async e => {
   const v = e.target.closest("[data-admv]");
-  if (v) { const [id, on] = v.dataset.admv.split("|"); v.disabled = true; try { await adminApi("PATCH", "/api/admin/stores/" + encodeURIComponent(id), { verified: on === "1" }); toast(on === "1" ? L("Магазин отмечен проверенным", "Do‘kon tekshirilgan deb belgilandi") : L("Отметка снята", "Belgi olib tashlandi")); adminStores = null; renderSeller(); syncCatalog(); } catch (er) { v.disabled = false; toast(apiErr(er)); } return; }
+  if (v) { const [id, on] = v.dataset.admv.split("|"); v.disabled = true; try { await adminApi("PATCH", "/api/admin/stores/" + encodeURIComponent(id), { verified: on === "1" }); toast(on === "1" ? L("Магазин отмечен проверенным", "Do‘kon tekshirilgan deb belgilandi") : L("Отметка снята", "Belgi olib tashlandi")); adminStores = null; renderMain(); syncCatalog(); } catch (er) { v.disabled = false; toast(apiErr(er)); } return; }
   const t = e.target.closest("[data-admm],[data-mtabgo]"); if (!t) return;
   if (t.dataset.mtabgo) { mf.tab = t.dataset.mtabgo; mf.sel = null; return; }
   const [id, st] = t.dataset.admm.split("|"); t.disabled = true;
-  try { await adminApi("PATCH", "/api/admin/masters/" + encodeURIComponent(id), { status: st }); toast(st === "active" ? L("Мастер одобрен и виден покупателям", "Usta tasdiqlandi va xaridorlarga ko‘rinadi") : L("Статус мастера изменён", "Usta holati o‘zgardi")); adminStores = null; adminMasters = null; renderSeller(); }
+  try { await adminApi("PATCH", "/api/admin/masters/" + encodeURIComponent(id), { status: st }); toast(st === "active" ? L("Мастер одобрен и виден покупателям", "Usta tasdiqlandi va xaridorlarga ko‘rinadi") : L("Статус мастера изменён", "Usta holati o‘zgardi")); adminStores = null; adminMasters = null; renderMain(); }
   catch (er) { t.disabled = false; toast(apiErr(er)); }
 });
 function adminHTML() {
@@ -3508,7 +3515,7 @@ document.addEventListener("click", async e => {
   } else if (ds.sphoto) { photoTarget = "api:" + ds.sphoto; $("#photoIn").click(); }
   else if (ds.adm) {
     const [id, st] = ds.adm.split("|"); t.disabled = true;
-    try { await adminApi("PATCH", "/api/admin/stores/" + encodeURIComponent(id), { status: st }); toast(st === "active" ? L("Магазин одобрен и виден в каталоге", "Do‘kon tasdiqlandi va katalogda ko‘rinadi") : L("Статус магазина изменён", "Do‘kon holati o‘zgardi")); adminStores = null; sellerData = null; renderSeller(); syncCatalog(); }
+    try { await adminApi("PATCH", "/api/admin/stores/" + encodeURIComponent(id), { status: st }); toast(st === "active" ? L("Магазин одобрен и виден в каталоге", "Do‘kon tasdiqlandi va katalogda ko‘rinadi") : L("Статус магазина изменён", "Do‘kon holati o‘zgardi")); adminStores = null; sellerData = null; renderMain(); syncCatalog(); }
     catch (er) { t.disabled = false; toast(apiErr(er)); }
   }
 });
@@ -3687,11 +3694,11 @@ function adminFinanceHTML() {
       <td><form class="settle-f" data-settle="${esc(s.id)}"><label class="visually-hidden" for="st${esc(s.id)}">${L("Сумма", "Summa")}</label><input id="st${esc(s.id)}" type="number" min="1" inputmode="numeric" value="${s.balance > 0 ? s.balance : ""}" style="width:120px"><button class="btn btn-line" type="submit">${L("Записать", "Yozish")}</button></form></td></tr>`).join("")}
     </tbody></table></div>` : `<small style="color:var(--muted)">${L("Выполненных заказов в этом месяце пока нет.", "Bu oy bajarilgan buyurtmalar hali yo‘q.")}</small>`}</div>`;
 }
-async function loadAdminFin() { try { adminFin = await adminApi("GET", "/api/admin/finance" + (adminMonth ? "?month=" + adminMonth : "")); } catch (e) { adminFin = null; } if (route.view === "seller") renderSeller(); }
+async function loadAdminFin() { try { adminFin = await adminApi("GET", "/api/admin/finance" + (adminMonth ? "?month=" + adminMonth : "")); } catch (e) { adminFin = null; } if (route.view === "seller" || route.view === "admin") renderMain(); }
 document.addEventListener("submit", async e => {
   if (e.target.id === "mfaForm") {
     e.preventDefault();
-    try { const r = await api("POST", "/api/admin/mfa/verify", { code: $("#mfaCode").value }); adminToken = r.token; LS.set("imorat.adminToken", adminToken); adminState = { need: null }; adminStores = null; adminFin = null; toast(L("Код принят", "Kod qabul qilindi")); renderSeller(); }
+    try { const r = await api("POST", "/api/admin/mfa/verify", { code: $("#mfaCode").value }); adminToken = r.token; LS.set("imorat.adminToken", adminToken); adminState = { need: null }; adminStores = null; adminFin = null; toast(L("Код принят", "Kod qabul qilindi")); renderMain(); }
     catch (er) { toast(er.code === "mfa_wrong" ? L("Неверный код — проверьте время на телефоне", "Kod noto‘g‘ri — telefondagi vaqtni tekshiring") : apiErr(er)); }
     return;
   }
@@ -5525,12 +5532,74 @@ document.addEventListener("submit", async e => {
   try { const r = await api("POST", "/api/team-projects/join", { code }); teamProj = [r.project, ...(teamProj || []).filter(x => x.id !== r.project.id)]; toast(L(`Вы в проекте «${r.project.name}»`, `Siz «${r.project.name}» loyihasidasiz`)); renderDrawer(); } catch (er) { toast(er.code === "bad_code" ? L("Проекта с таким кодом нет", "Bunday kodli loyiha yo‘q") : apiErr(er)); }
 });
 
+/* ================= Owner dashboard (#admin) ================= */
+let dash = null, dashDays = 30, dashBusy = false;
+async function loadDash() {
+  if (dashBusy) return; dashBusy = true;
+  try { dash = await adminApi("GET", "/api/admin/dashboard?days=" + dashDays); } catch (e) { dash = adminState.need ? null : { error: apiErr(e) }; }
+  dashBusy = false; if (route.view === "admin") renderAdmin();
+}
+function demoDash() {
+  const n = dashDays, series = Array.from({ length: n }, (_, i) => { const g = .55 + i / n * .7, w = new Date(Date.now() - (n - 1 - i) * 86400000).getDay() % 6 === 0 ? 1.25 : 1, o = Math.round((9 + (i * 7) % 5) * g * w); return { day: new Date(Date.now() - (n - 1 - i) * 86400000).toISOString().slice(0, 10), orders: o, gmv: o * (1150000 + ((i * 37) % 9) * 60000), users: Math.round(o * .7) }; });
+  const sum = k => series.reduce((a, x) => a + x[k], 0), orders = sum("orders"), gmv = sum("gmv");
+  const tp = PRODUCTS.filter(p => p.hit).slice(0, 10).map((p, i) => ({ id: p.id, name: p.ru, q: 40 - i * 3, sum: minPrice(p) * (40 - i * 3) }));
+  const ts = STORES.slice(0, 9).map((s, i) => ({ id: s.id, name: s.name, orders: Math.round(orders * (.24 - i * .02)), gmv: Math.round(gmv * (.24 - i * .02)), fail: i % 4 === 3 ? 3 : i % 3 === 2 ? 1 : 0, done: 0, accept_min: 4 + (i * 5) % 13 })).map(s => ({ ...s, fail_pct: Math.round(s.fail * 100 / Math.max(1, s.orders)) }));
+  return { demo: true, days: n, series, totals: { orders, orders_prev: Math.round(orders * .78), gmv, gmv_prev: Math.round(gmv * .74), commission: Math.round(gmv * .068), avg_check: Math.round(gmv / orders), buyers: Math.round(orders * .72), repeat_pct: 27, new_users: sum("users"), cancel_pct: 4, views: orders * 46, carts: orders * 6 },
+    counts: { users: 2140, stores_active: STORES.length, stores_pending: 2, masters_active: 12, masters_pending: 3, problems_open: 2, questions_open: 5 }, series, top_products: tp, top_stores: ts.sort((a, b) => b.gmv - a.gmv), slow_stores: ts.filter(s => s.fail || s.accept_min > 10).sort((a, b) => b.fail_pct - a.fail_pct) };
+}
+function renderAdmin() {
+  const crumbs = `<nav class="crumbs"><button type="button" data-go="home">${L("Главная", "Asosiy")}</button>${ui("chev", 12)}<span>${L("Панель Imorat", "Imorat paneli")}</span></nav>`;
+  let D;
+  if (API) {
+    if (!user) { $("#app").innerHTML = `<div class="wrap">${crumbs}<div class="panel" style="margin:12px 0;display:grid;gap:10px;justify-items:start"><h1 class="h-l" style="margin:0">${L("Панель владельца", "Egasi paneli")}</h1><p class="mu" style="margin:0">${L("Войдите номером модератора.", "Moderator raqami bilan kiring.")}</p><button class="btn btn-primary" type="button" data-act="login">${L("Войти", "Kirish")}</button></div></div>`; return; }
+    if (!user.admin) { $("#app").innerHTML = `<div class="wrap">${crumbs}<div class="panel" style="margin:12px 0">${L("Эта страница только для модераторов Imorat.", "Bu sahifa faqat Imorat moderatorlari uchun.")}</div></div>`; return; }
+    if (adminState.need) { $("#app").innerHTML = `<div class="wrap">${crumbs}${adminGateHTML()}</div>`; return; }
+    if (!dash) { $("#app").innerHTML = `<div class="wrap">${crumbs}<div class="panel" style="margin:12px 0">${L("Загружаем…", "Yuklanmoqda…")}</div></div>`; loadDash(); return; }
+    if (dash.error !== undefined) { $("#app").innerHTML = `<div class="wrap">${crumbs}<div class="panel" style="margin:12px 0">${esc(dash.error || "")}</div></div>`; return; }
+    D = dash;
+  } else D = demoDash();
+  const big = v => v >= 1e6 ? `${(Math.round(v / 1e5) / 10).toString().replace(".", ",")} ${L("млн", "mln")}` : `${fmtN(v / 1000)} ${L("тыс", "ming")}`;
+  const t = D.totals, c = D.counts, ch = (a, b) => (b ? Math.round((a - b) * 100 / b) : null);
+  const delta = (a, b) => { const v = ch(a, b); return v == null ? "" : `<small style="color:${v >= 0 ? "var(--ok)" : "var(--signal)"}">${v >= 0 ? "▲" : "▼"} ${Math.abs(v)}% ${L("к прошлому периоду", "o‘tgan davrga")}</small>`; };
+  const W = 640, H = 150, mx = Math.max(1, ...D.series.map(x => x.gmv)), bw = W / D.series.length, mo = Math.max(1, ...D.series.map(x => x.orders));
+  const line = D.series.map((x, i) => `${(i * bw + bw / 2).toFixed(1)},${(H - x.orders / mo * (H - 10)).toFixed(1)}`).join(" ");
+  const chart = `<svg class="chart st-chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="${L("Оборот и заказы по дням", "Kunlik aylanma va buyurtmalar")}">${D.series.map((x, i) => `<rect class="bar" x="${(i * bw + bw * .15).toFixed(1)}" y="${(H - x.gmv / mx * H).toFixed(1)}" width="${(bw * .7).toFixed(1)}" height="${(x.gmv / mx * H).toFixed(1)}" rx="2"><title>${x.day}: ${fmt(x.gmv)} · ${x.orders}</title></rect>`).join("")}<polyline points="${line}" fill="none" stroke="var(--signal)" stroke-width="2" vector-effect="non-scaling-stroke"/></svg>`;
+  const att = [[c.stores_pending, L("магазинов ждут проверки", "do‘kon tekshiruvni kutmoqda"), "seller"], [c.masters_pending, L("анкет мастеров", "usta anketasi"), "seller"], [c.problems_open, L("жалоб открыто", "ochiq shikoyat"), "seller"], [c.questions_open, L("вопросов без ответа магазина", "do‘kon javob bermagan savol"), null]].filter(x => x[0]);
+  const tbl = (head, rows) => `<div class="tbl-wrap"><table><thead><tr>${head.map((h, i) => `<th class="${i ? "r" : ""}">${h}</th>`).join("")}</tr></thead><tbody>${rows.join("") || `<tr><td colspan="${head.length}" class="mu">${L("Пока нет данных", "Hozircha ma’lumot yo‘q")}</td></tr>`}</tbody></table></div>`;
+  $("#app").innerHTML = `<div class="wrap adm">${crumbs}
+    <div class="ds-head" style="display:flex;justify-content:space-between;gap:12px;align-items:end;flex-wrap:wrap"><div><h1 class="h-l">${L("Панель Imorat", "Imorat paneli")} ${D.demo ? `<span class="pill mute">${L("демо-данные", "demo ma’lumot")}</span>` : ""}</h1><p class="mu" style="margin:0">${L("Как идут дела у маркетплейса", "Marketpleys ishlari qanday ketmoqda")}</p></div>
+      <div class="seg" role="group" aria-label="${L("Период", "Davr")}">${[7, 30, 90].map(n => `<button type="button" data-dashdays="${n}" aria-pressed="${dashDays === n}">${n} ${L("дн", "kun")}</button>`).join("")}</div></div>
+    ${att.length ? `<div class="adm-att">${att.map(([n, tx, go]) => `<button type="button" class="chip" ${go ? `data-go="${go}"` : ""}><b>${n}</b> ${tx}</button>`).join("")}</div>` : ""}
+    <div class="kpis adm-k">
+      <div class="kpi"><span>${L("Оборот товаров", "Mahsulot aylanmasi")}</span><b>${big(t.gmv)}</b>${delta(t.gmv, t.gmv_prev)}</div>
+      <div class="kpi"><span>${L("Заказов", "Buyurtmalar")}</span><b>${fmtN(t.orders)}</b>${delta(t.orders, t.orders_prev)}</div>
+      <div class="kpi"><span>${L("Комиссия Imorat", "Imorat komissiyasi")}</span><b>${big(t.commission)}</b><small>${L("с выполненных заказов", "bajarilgan buyurtmalardan")}</small></div>
+      <div class="kpi"><span>${L("Средний чек", "O‘rtacha chek")}</span><b>${big(t.avg_check)}</b><small>${L("сум", "so‘m")}</small></div>
+      <div class="kpi"><span>${L("Покупателей", "Xaridorlar")}</span><b>${fmtN(t.buyers)}</b><small>${t.repeat_pct}% ${L("покупают повторно", "qayta xarid qiladi")}</small></div>
+      <div class="kpi"><span>${L("Новых пользователей", "Yangi foydalanuvchilar")}</span><b>${fmtN(t.new_users)}</b><small>${L("всего", "jami")} ${fmtN(c.users)}</small></div>
+      <div class="kpi"><span>${L("Отмены", "Bekor qilishlar")}</span><b>${t.cancel_pct}%</b><small style="color:${t.cancel_pct > 8 ? "var(--signal)" : "var(--muted)"}">${L("доля отменённых доставок", "bekor qilingan yetkazishlar ulushi")}</small></div>
+      <div class="kpi"><span>${L("Воронка", "Voronka")}</span><b>${t.views ? (Math.round(t.orders * 1000 / t.views) / 10).toString().replace(".", ",") : 0}%</b><small>${fmtN(t.views)} ${L("просм.", "ko‘r.")} → ${fmtN(t.carts)} ${L("корз.", "sav.")} → ${fmtN(t.orders)}</small></div>
+    </div>
+    <div class="panel" style="margin-top:12px"><div class="panel-h"><h2 class="h-m">${L("Оборот и заказы по дням", "Kunlik aylanma va buyurtmalar")}</h2><div class="st-leg"><span><i class="lg v"></i>${L("оборот", "aylanma")}</span><span><i class="lg o"></i>${L("заказы", "buyurtmalar")}</span></div></div>${chart}<div class="st-ax"><span>${D.series[0].day.slice(5).split("-").reverse().join(".")}</span><span>${L("сегодня", "bugun")}</span></div></div>
+    <div class="adm-grid">
+      <div class="panel"><div class="panel-h"><h2 class="h-m">${L("Топ товаров", "Top mahsulotlar")}</h2></div>${tbl([L("Товар", "Mahsulot"), L("Кол-во", "Soni"), L("Оборот", "Aylanma")], D.top_products.map(x => `<tr><td>${PROD[x.id] ? `<button type="button" class="slink" data-open="${x.id}">${esc(pName(PROD[x.id]))}</button>` : esc(x.name)}</td><td class="r num">${fmtN(x.q)}</td><td class="r num">${fmt(x.sum)}</td></tr>`))}</div>
+      <div class="panel"><div class="panel-h"><h2 class="h-m">${L("Топ магазинов", "Top do‘konlar")}</h2><span class="mu" style="font-size:13px">${c.stores_active} ${L("активных", "faol")}</span></div>${tbl([L("Магазин", "Do‘kon"), L("Заказы", "Buyurt."), L("Оборот", "Aylanma")], D.top_stores.map(x => `<tr><td><button type="button" class="slink" data-go="store-${esc(x.id)}">${esc(x.name)}</button></td><td class="r num">${x.orders}</td><td class="r num">${fmt(x.gmv)}</td></tr>`))}</div>
+    </div>
+    <div class="panel" style="margin-top:12px"><div class="panel-h"><h2 class="h-m">${ui("clock", 18)} ${L("Магазины, которые подводят", "Ishni sustlashtirayotgan do‘konlar")}</h2></div>
+      <p class="mu" style="margin:0 0 8px;font-size:13px">${L("Срывы (не принял, нет в наличии, не передал курьеру) и долгое подтверждение. Позвоните им — это прямо влияет на доверие покупателей.", "Uzilishlar (qabul qilmadi, mavjud emas, kuryerga bermadi) va uzoq tasdiqlash. Ularga qo‘ng‘iroq qiling — bu xaridorlar ishonchiga bevosita ta’sir qiladi.")}</p>
+      ${tbl([L("Магазин", "Do‘kon"), L("Срывы", "Uzilishlar"), L("Принимает за", "Qabul qiladi"), L("Заказы", "Buyurt.")], D.slow_stores.map(x => `<tr><td><button type="button" class="slink" data-go="store-${esc(x.id)}">${esc(x.name)}</button></td><td class="r num" style="color:${x.fail_pct > 5 ? "var(--signal)" : "inherit"}">${x.fail} · ${x.fail_pct}%</td><td class="r num">${x.accept_min != null ? x.accept_min + " " + L("мин", "daq") : "—"}</td><td class="r num">${x.orders}</td></tr>`))}</div>
+    ${API ? adminHTML() : `<p class="mu" style="font-size:13px">${L("В демо-версии показаны примерные цифры. На рабочем сайте здесь будут настоящие данные и модерация магазинов, мастеров и жалоб.", "Demo versiyada taxminiy raqamlar ko‘rsatilgan. Ishchi saytda bu yerda haqiqiy ma’lumotlar va do‘konlar, ustalar va shikoyatlar moderatsiyasi bo‘ladi.")}</p>`}
+  </div>`;
+}
+document.addEventListener("click", e => { const t = e.target.closest("[data-dashdays]"); if (!t || route.view !== "admin") return; dashDays = +t.dataset.dashdays; dash = null; renderAdmin(); });
+
 /* ================= Router & render ================= */
 function parseHash() {
   const h = location.hash.slice(1);
   if (h === "seller") return { view: "seller", cat: null };
   if (h === "design") return { view: "design", cat: null };
   if (h === "masters") return { view: "masters", cat: null };
+  if (h === "admin") return { view: "admin", cat: null };
   if (h === "flat") return { view: "flat", cat: null };
   if (h === "list") return { view: "shop", cat: null };
   if (h.startsWith("store-")) return { view: "store", cat: null, store: h.slice(6) };
@@ -5544,6 +5613,7 @@ function renderMain() {
   else if (route.view === "seller") renderSeller();
   else if (route.view === "design") renderDesign();
   else if (route.view === "masters") renderMasters();
+  else if (route.view === "admin") renderAdmin();
   else if (route.view === "flat") renderFlat();
   else if (route.view === "shop") renderShop();
   else if (route.view === "store") renderStore(route.store);
@@ -5624,14 +5694,14 @@ document.addEventListener("click", e => {
     case "store-reg": return openStoreReg();
     case "store-edit": return openAuth("seller-edit", "store");
     case "store-approve-demo": if (myStore) { myStore.status = "active"; LS.set("imorat.myStore", myStore); toast(L("Демо: магазин одобрен", "Demo: do‘kon tasdiqlandi")); } return renderSeller();
-    case "seller-reload": sellerData = null; adminStores = null; adminFin = null; return renderSeller();
+    case "seller-reload": sellerData = null; adminStores = null; adminFin = null; return renderMain();
     case "install": if (widOpen) closeWidgets(); return installApp();
     case "fx-toggle": { const on = !motionOK(); setLook(on ? "on" : "off"); toast(on ? L("✨ Яркий режим: подсветка и анимации", "✨ Yorqin rejim: yoritish va animatsiyalar") : L("Простой режим: без анимаций", "Oddiy rejim: animatsiyalarsiz")); return; }
     case "tg-link": return linkTelegram();
     case "tg-unlink": return unlinkTelegram();
     case "push-on": return enablePush();
     case "logout-all": return logoutAll();
-    case "mfa-setup": adminApi("POST", "/api/admin/mfa/setup").then(r => { adminState = { need: "setup", secret: r.secret, url: r.url }; renderSeller(); }).catch(e => toast(apiErr(e))); return;
+    case "mfa-setup": adminApi("POST", "/api/admin/mfa/setup").then(r => { adminState = { need: "setup", secret: r.secret, url: r.url }; renderMain(); }).catch(e => toast(apiErr(e))); return;
     case "order-cancel": { const num = drawerOrder; api("POST", `/api/orders/${encodeURIComponent(num)}/cancel`).then(r => { const o = orders.find(x => x.num === num); Object.assign(o, mapOrder(r.order)); LS.set("imorat.orders", orders.slice(0, 30)); toast(L("Заказ отменён", "Buyurtma bekor qilindi")); renderDrawer(); syncCatalog(); }).catch(e => toast(e.code === "too_late" ? L("Заказ уже в пути — отменить нельзя", "Buyurtma yo‘lda — bekor qilib bo‘lmaydi") : apiErr(e))); return; }
     case "close-auth": return closeAuth();
     case "logout": return logout();
