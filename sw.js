@@ -1,5 +1,5 @@
 /* Imorat service worker: works offline with the last opened catalog, caches photos, shows push notifications. */
-const VERSION = "20261027003828";
+const VERSION = "20261027095612";
 const SHELL = `imorat-shell-${VERSION}`, IMG = "imorat-img-v1";
 const SHELL_FILES = ["./", "index.html", "config.js", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png"];
 

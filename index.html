@@ -740,6 +740,20 @@ html.lock { overflow: hidden; }
 .acct .av { width: 52px; height: 52px; font-size: 20px; }
 .acct small { display: block; color: var(--muted); }
 .roles { display: grid; gap: 8px; }
+.ds-tools { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.ds-tools .ib { font-size: 18px; }
+.ds-tools .ds-edit { padding: 7px 12px; font-size: 13px; margin-left: auto; }
+.ds-svg [data-dsuid] { cursor: grab; }
+.ds-svg.edit { touch-action: none; outline: 2px dashed color-mix(in srgb, var(--accent) 45%, transparent); outline-offset: 4px; border-radius: 10px; }
+html.ds-dragging, html.ds-dragging * { cursor: grabbing !important; user-select: none; -webkit-user-select: none; }
+.ds-plan { color: var(--muted); }
+.ds-hint { text-align: center; font-size: 12px; }
+.ds-rooms { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.ds-room { position: relative; }
+.ds-room > button:first-child { display: grid; gap: 4px; width: 100%; padding: 8px; border: 1.5px solid var(--line); border-radius: 12px; background: var(--raised); text-align: left; }
+.ds-room svg { width: 100%; height: 110px; }
+.ds-room small { display: block; color: var(--muted); font-size: 12px; }
+.ds-room .ib { position: absolute; top: 6px; right: 6px; background: var(--surface); }
 .ds-head p { margin: 4px 0 0; max-width: 70ch; }
 .hero-q .hq-ds { background: linear-gradient(135deg, var(--hero-acc, #3fb8b0), var(--signal)); color: #fff; border-color: transparent; font-weight: 600; display: inline-flex; gap: 6px; align-items: center; }
 .ds-steps { list-style: none; display: flex; gap: 6px; padding: 0; margin: 14px 0; overflow-x: auto; scrollbar-width: none; }
@@ -772,7 +786,7 @@ html.lock { overflow: hidden; }
 .sw.tile { border-radius: 9px; background-color: var(--c); background-image: linear-gradient(90deg, transparent 14px, rgba(0,0,0,.2) 14px 16px, transparent 16px), linear-gradient(transparent 14px, rgba(0,0,0,.2) 14px 16px, transparent 16px); }
 .sw[aria-pressed="true"] { box-shadow: 0 0 0 2.5px var(--accent); }
 .ds-items { display: grid; gap: 6px; }
-.ds-item { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto auto; gap: 8px; align-items: center; padding: 6px; border: 1.5px solid var(--line); border-radius: 12px; cursor: pointer; }
+.ds-item { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto auto auto; gap: 6px; align-items: center; padding: 6px; border: 1.5px solid var(--line); border-radius: 12px; cursor: pointer; }
 .ds-item .mini { width: 44px; height: 44px; }
 .ds-item span small { display: block; color: var(--muted); font-size: 12px; }
 .ds-item b { font-weight: 600; font-size: 13.5px; }
@@ -3585,8 +3599,11 @@ function dsLayout() {
   const order = ["krow", "wall", "tv", "window", "center", "corner", "front", "desk", "rug", "curtain", "ceiling"];
   const sorted = [...items].sort((a, b) => order.indexOf(a.place) - order.indexOf(b.place) || b.w * b.d - a.w * a.d);
   let sofa = null, deskIt = null, table = null;
+  for (const it of sorted.filter(i => i.pin && i.x != null)) { const r = rectOf(it.x, it.z, it.w, it.d, it.rot || 0); if (it.flat || it.air || (inside(r) && !hit(r))) { Object.assign(it, { r, ok: true, coll: false, _pinned: 1 }); placed.push(it); } else it.pin = false; }
+  sofa = placed.find(o => /sofa/.test(o.model) && o.model !== "armchair") || null; deskIt = placed.find(o => /desk/.test(o.model)) || null; table = placed.find(o => o.model === "table_dining") || null;
   for (const it of sorted) {
-    let ok = false;
+    if (it._pinned) { delete it._pinned; continue; }
+    let ok = false; it.coll = false;
     const isSofa = /sofa/.test(it.model) && it.model !== "armchair";
     if (it.place === "krow") ok = along(W, it.w).some(x => tryAt(it, x, it.d / 2 + .02, 0)) || wallL(it);
     else if (it.model === "tvstand") ok = sofa ? (sofa.rot === 0 ? wallF2(it) : sofa.rot === 1 ? wallF1(it) : wallR(it)) || wallR(it) || wallL(it) : wallR(it) || wallL(it);
@@ -3608,53 +3625,188 @@ function dsLayout() {
   dsSave();
 }
 
-/* ---------- Isometric renderer (SVG) ---------- */
+/* ---------- Isometric renderer (SVG) with 4 view angles ---------- */
 function dsShade(hex, k) { const n = parseInt(hex.slice(1), 16); const f = c => Math.max(0, Math.min(255, Math.round(c * k))); return `rgb(${f(n >> 16 & 255)},${f(n >> 8 & 255)},${f(n & 255)})`; }
+/* world (x, z) → view (x', z'): the room turns by 90° steps, the two back walls are always x'=0 and z'=0 */
+function dsView(d) {
+  const W = d.W, Lr = d.L, v = ((d.view || 0) % 4 + 4) % 4;
+  const xf = [(x, z) => [x, z], (x, z) => [z, W - x], (x, z) => [W - x, Lr - z], (x, z) => [Lr - z, x]][v];
+  const back = [(dx, dz) => [dx, dz], (dx, dz) => [-dz, dx], (dx, dz) => [-dx, -dz], (dx, dz) => [dz, -dx]][v]; // view delta → world delta
+  return { v, xf, back, Wv: v % 2 ? Lr : W, Lv: v % 2 ? W : Lr };
+}
+function dsOpenings(d) {
+  const W = d.W, out = dsWindows(d).map(([a, b]) => ({ k: "win", p0: [0, a], p1: [0, b] }));
+  if (d.doors > 0) out.push({ k: "door", p0: [W - 1.15, 0], p1: [W - .35, 0] });
+  return out;
+}
+function dsPartsWorld(it, H) {
+  const inf = dInfo(PROD[it.pid]); if (!inf) return [];
+  const parts = it.krow ? XMODELS.krow(inf.col[0], it.n) : XMODELS[it.model](...(inf.col || []));
+  return parts.map(q => {
+    let [px, py, pz] = q.p, [hx, hy, hz] = q.h; if (q.s === 1) hz = hx;
+    let wx, wz, ex, ez;
+    if (it.rot === 0) { wx = it.x + px; wz = it.z + pz; ex = hx; ez = hz; } else if (it.rot === 1) { wx = it.x + pz; wz = it.z + px; ex = hz; ez = hx; }
+    else if (it.rot === 2) { wx = it.x - px; wz = it.z - pz; ex = hx; ez = hz; } else { wx = it.x - pz; wz = it.z - px; ex = hz; ez = hx; }
+    if (it.model === "chand" || it.model === "ledpanel") py = py - 2.6 + H;
+    return { q, wx, wz, py, ex, ez, hy };
+  });
+}
 function roomSVG(d, opt = {}) {
-  const W = d.W, Lr = d.L, H = d.H, C = .866, S = .5, wins = dsWindows(d);
+  const H = d.H, C = .866, S = .5, V = dsView(d), W = V.Wv, Lr = V.Lv;
   const P = (x, y, z) => [(x - z) * C, (x + z) * S - y];
   const pts = a => a.map(([x, y, z]) => P(x, y, z).map(v => v.toFixed(3)).join(",")).join(" ");
   const wallC = swatchPaint(PROD[d.wall]), fl = d.floor ? swatchFloor(PROD[d.floor]) : { c: "#cdbfa6", kind: "plank" };
   let g = "";
-  g += `<polygon points="${pts([[0, 0, 0], [W, 0, 0], [W, 0, Lr], [0, 0, Lr]])}" fill="${fl.c}"/>`;
+  g += `<polygon class="ds-floor" points="${pts([[0, 0, 0], [W, 0, 0], [W, 0, Lr], [0, 0, Lr]])}" fill="${fl.c}"/>`;
   if (fl.kind !== "plain") { const step = fl.kind === "plank" ? .2 : .6; let ln = ""; for (let z = step; z < Lr; z += step) ln += `M${P(0, 0, z).join(",")}L${P(W, 0, z).join(",")}`; if (fl.kind === "tile") for (let x = step; x < W; x += step) ln += `M${P(x, 0, 0).join(",")}L${P(x, 0, Lr).join(",")}`;
     if (fl.kind === "plank") for (let z = 0, k = 0; z < Lr; z += .2, k++) for (let x = (k % 3) * .4 + .3; x < W; x += 1.2) ln += `M${P(x, 0, z).join(",")}L${P(x, 0, Math.min(Lr, z + .2)).join(",")}`;
-    g += `<path d="${ln}" stroke="${dsShade(fl.c, .82)}" stroke-width=".012" fill="none"/>`; }
+    g += `<path d="${ln}" stroke="${dsShade(fl.c, .82)}" stroke-width=".012" fill="none" pointer-events="none"/>`; }
   g += `<polygon points="${pts([[0, 0, 0], [0, 0, Lr], [0, H, Lr], [0, H, 0]])}" fill="${dsShade(wallC, .9)}"/>`;
   g += `<polygon points="${pts([[0, 0, 0], [W, 0, 0], [W, H, 0], [0, H, 0]])}" fill="${dsShade(wallC, .99)}"/>`;
   g += `<polygon points="${pts([[0, 0, 0], [0, 0, Lr], [0, .08, Lr], [0, .08, 0]])}" fill="${dsShade("#f2f0ea", .88)}"/><polygon points="${pts([[0, 0, 0], [W, 0, 0], [W, .08, 0], [0, .08, 0]])}" fill="#f2f0ea"/>`;
-  for (const [a, b] of wins) g += `<polygon points="${pts([[0, .85, a], [0, .85, b], [0, 2.2, b], [0, 2.2, a]])}" fill="#f4f6f5"/><polygon points="${pts([[0, .9, a + .05], [0, .9, b - .05], [0, 2.15, b - .05], [0, 2.15, a + .05]])}" fill="url(#dsSky)"/><path d="M${P(0, .9, (a + b) / 2).join(",")}L${P(0, 2.15, (a + b) / 2).join(",")}" stroke="#f4f6f5" stroke-width=".04"/>`;
-  if (d.doors > 0) { const x0 = W - 1.15, x1 = W - .35; g += `<polygon points="${pts([[x0, 0, 0], [x1, 0, 0], [x1, 2.05, 0], [x0, 2.05, 0]])}" fill="#9a7353"/><polygon points="${pts([[x0 + .05, .05, 0], [x1 - .05, .05, 0], [x1 - .05, 2, 0], [x0 + .05, 2, 0]])}" fill="#b08a66"/><circle cx="${P(x1 - .12, 1, 0)[0]}" cy="${P(x1 - .12, 1, 0)[1]}" r=".03" fill="#d8d8d8"/>`; }
+  for (const o of dsOpenings(d)) {
+    const a = V.xf(...o.p0), b = V.xf(...o.p1);
+    let seg = null; // [wall, from, to] on a visible back wall
+    if (Math.abs(a[0]) < .01 && Math.abs(b[0]) < .01) seg = ["L", Math.min(a[1], b[1]), Math.max(a[1], b[1])];
+    else if (Math.abs(a[1]) < .01 && Math.abs(b[1]) < .01) seg = ["R", Math.min(a[0], b[0]), Math.max(a[0], b[0])];
+    if (!seg) continue;
+    const Q = (u, y) => seg[0] === "L" ? [0, y, u] : [u, y, 0], [_, u0, u1] = seg;
+    if (o.k === "win") g += `<polygon points="${pts([Q(u0, .85), Q(u1, .85), Q(u1, 2.2), Q(u0, 2.2)])}" fill="#f4f6f5"/><polygon points="${pts([Q(u0 + .05, .9), Q(u1 - .05, .9), Q(u1 - .05, 2.15), Q(u0 + .05, 2.15)])}" fill="url(#dsSky)"/><path d="M${P(...Q((u0 + u1) / 2, .9)).join(",")}L${P(...Q((u0 + u1) / 2, 2.15)).join(",")}" stroke="#f4f6f5" stroke-width=".04"/>`;
+    else { const kn = P(...Q(u1 - .12, 1)); g += `<polygon points="${pts([Q(u0, 0), Q(u1, 0), Q(u1, 2.05), Q(u0, 2.05)])}" fill="#9a7353"/><polygon points="${pts([Q(u0 + .05, .05), Q(u1 - .05, .05), Q(u1 - .05, 2), Q(u0 + .05, 2)])}" fill="#b08a66"/><circle cx="${kn[0]}" cy="${kn[1]}" r=".03" fill="#d8d8d8"/>`; }
+  }
   const faces = [];
   for (const it of d.items) {
     if (!it.ok || it.x == null) continue;
-    let parts = it.krow ? XMODELS.krow(dInfo(PROD[it.pid]).col[0], it.n) : XMODELS[it.model](...(dInfo(PROD[it.pid]).col || []));
-    for (const q of parts) {
-      let [px, py, pz] = q.p, [hx, hy, hz] = q.h;
-      if (q.s === 1) hz = hx;
-      let wx, wz, ex, ez;
-      if (it.rot === 0) { wx = it.x + px; wz = it.z + pz; ex = hx; ez = hz; } else if (it.rot === 1) { wx = it.x + pz; wz = it.z + px; ex = hz; ez = hx; }
-      else if (it.rot === 2) { wx = it.x - px; wz = it.z - pz; ex = hx; ez = hz; } else { wx = it.x - pz; wz = it.z - px; ex = hz; ez = hx; }
-      if (it.model === "chand" || it.model === "ledpanel") py = py - 2.6 + H;
-      faces.push({ ghost: it.tall && it.rot >= 2, uid: it.uid, flat: it.flat, k: it.flat ? -100 : (wx + ex) + (wz + ez) + py * .001, b: [wx - ex, py - hy, wz - ez, wx + ex, py + hy, wz + ez], c: q.c, em: q.m === 8, s: q.s, cx: wx, cz: wz, cy: py, rx: ex, ry: hy, rz: ez });
+    for (const f of dsPartsWorld(it, H)) {
+      const c1 = V.xf(f.wx - f.ex, f.wz - f.ez), c2 = V.xf(f.wx + f.ex, f.wz + f.ez), ctr = V.xf(f.wx, f.wz);
+      const x0 = Math.min(c1[0], c2[0]), x1 = Math.max(c1[0], c2[0]), z0 = Math.min(c1[1], c2[1]), z1 = Math.max(c1[1], c2[1]);
+      const front = (it.tall || it.place === "curtain") && (() => { const cc = V.xf(it.x, it.z); return cc[0] > W - (it.d || .6) - .05 || cc[1] > Lr - (it.d || .6) - .05; })();
+      faces.push({ ghost: front, bad: it.coll, uid: it.uid, k: it.flat ? -100 : (x0 + x1 + z0 + z1) / 2 + (f.py - f.hy) * 1.1 + (x1 - x0 + z1 - z0) * .25, b: [x0, f.py - f.hy, z0, x1, f.py + f.hy, z1], c: f.q.c, em: f.q.m === 8, s: f.q.s, cx: ctr[0], cz: ctr[1], cy: f.py, rx: (x1 - x0) / 2, ry: f.hy, rz: (z1 - z0) / 2 });
     }
   }
   faces.sort((a, b) => a.k - b.k);
+  const n = v => v.toFixed(3);
   for (const f of faces) {
-    const [x0, y0, z0, x1, y1, z1] = f.b, sel = (DS && f.uid === DS.sel ? ` stroke="#E8662A" stroke-width=".02"` : "") + (f.ghost ? ` opacity=".42"` : "");
-    const top = pts([[x0, y1, z0], [x1, y1, z0], [x1, y1, z1], [x0, y1, z1]]), fx = pts([[x1, y0, z0], [x1, y0, z1], [x1, y1, z1], [x1, y1, z0]]), fz = pts([[x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1]]);
+    const [x0, y0, z0, x1, y1, z1] = f.b, sel = (f.bad ? ` stroke="#d92d20" stroke-width=".03"` : DS && f.uid === DS.sel ? ` stroke="#E8662A" stroke-width=".02"` : "") + (f.ghost ? ` opacity=".42"` : "");
     const c = f.c, k = f.em ? 1.05 : 1;
-    if (f.s === 1) { // vertical cylinder: ellipses top/bottom + side
-      const r = Math.max(f.rx, f.rz), ex = r * 1.2247, ey = r * .7071, [tx, ty] = P(f.cx, y1, f.cz), [, by] = P(f.cx, y0, f.cz), n = v => v.toFixed(3);
+    if (f.s === 1) {
+      const r = Math.max(f.rx, f.rz), ex = r * 1.2247, ey = r * .7071, [tx, ty] = P(f.cx, y1, f.cz), [, by] = P(f.cx, y0, f.cz);
       g += `<g data-dsuid="${f.uid}"${sel}><ellipse cx="${n(tx)}" cy="${n(by)}" rx="${n(ex)}" ry="${n(ey)}" fill="${dsShade(c, .8 * k)}"/><rect x="${n(tx - ex)}" y="${n(ty)}" width="${n(ex * 2)}" height="${n(Math.max(0, by - ty))}" fill="${dsShade(c, .9 * k)}"/><ellipse cx="${n(tx)}" cy="${n(ty)}" rx="${n(ex)}" ry="${n(ey)}" fill="${dsShade(c, 1.05 * k)}"/></g>`;
       continue;
     }
-    if (f.s === 2) { const [tx, ty] = P(f.cx, f.cy, f.cz), n = v => v.toFixed(3); g += `<ellipse data-dsuid="${f.uid}" cx="${n(tx)}" cy="${n(ty)}" rx="${n((f.rx + f.rz) * .866 * .95)}" ry="${n(((f.rx + f.rz) * .5 + f.ry) * .72)}" fill="${dsShade(c, 1.02)}"${sel}/>`; continue; }
+    if (f.s === 2) { const [tx, ty] = P(f.cx, f.cy, f.cz); g += `<ellipse data-dsuid="${f.uid}" cx="${n(tx)}" cy="${n(ty)}" rx="${n((f.rx + f.rz) * .866 * .95)}" ry="${n(((f.rx + f.rz) * .5 + f.ry) * .72)}" fill="${dsShade(c, 1.02)}"${sel}/>`; continue; }
+    const top = pts([[x0, y1, z0], [x1, y1, z0], [x1, y1, z1], [x0, y1, z1]]), fx = pts([[x1, y0, z0], [x1, y0, z1], [x1, y1, z1], [x1, y1, z0]]), fz = pts([[x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1]]);
     g += `<g data-dsuid="${f.uid}"${sel}><polygon points="${fz}" fill="${dsShade(c, .8 * k)}"/><polygon points="${fx}" fill="${dsShade(c, .92 * k)}"/><polygon points="${top}" fill="${dsShade(c, 1.04 * k)}"/></g>`;
   }
   const xs = [P(0, 0, Lr)[0], P(W, 0, 0)[0]], ys = [P(0, H, 0)[1], P(W, 0, Lr)[1]];
   const pad = .35, vb = [xs[0] - pad, ys[0] - pad, xs[1] - xs[0] + pad * 2, ys[1] - ys[0] + pad * 2].map(v => v.toFixed(2)).join(" ");
-  return `<svg class="ds-svg" viewBox="${vb}" role="img" aria-label="${L("3D-план комнаты", "Xonaning 3D rejasi")} ${W}×${Lr} ${L("м", "m")}"><defs><linearGradient id="dsSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#bfe0f2"/><stop offset="1" stop-color="#eaf6fb"/></linearGradient></defs>${g}</svg>`;
+  return `<svg class="ds-svg${opt.edit ? " edit" : ""}" data-dsmode="3d" viewBox="${vb}" role="img" aria-label="${L("3D-вид комнаты", "Xonaning 3D ko‘rinishi")} ${d.W}×${d.L} ${L("м", "m")}"><defs><linearGradient id="dsSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#bfe0f2"/><stop offset="1" stop-color="#eaf6fb"/></linearGradient></defs>${g}</svg>`;
+}
+/* Top-down plan: precise moving, sizes in metres */
+function planSVG(d, opt = {}) {
+  const W = d.W, Lr = d.L, n = v => v.toFixed(3), wallC = swatchPaint(PROD[d.wall]), fl = d.floor ? swatchFloor(PROD[d.floor]) : { c: "#cdbfa6" };
+  let g = `<rect x="0" y="0" width="${W}" height="${Lr}" fill="${fl.c}" opacity=".55"/>`;
+  for (let x = 0; x <= W + 1e-6; x += .5) g += `<line x1="${n(x)}" y1="0" x2="${n(x)}" y2="${Lr}" stroke="#000" stroke-opacity=".06" stroke-width=".01"/>`;
+  for (let z = 0; z <= Lr + 1e-6; z += .5) g += `<line x1="0" y1="${n(z)}" x2="${W}" y2="${n(z)}" stroke="#000" stroke-opacity=".06" stroke-width=".01"/>`;
+  g += `<rect x="-.06" y="-.06" width="${W + .12}" height="${Lr + .12}" fill="none" stroke="${dsShade(wallC, .6)}" stroke-width=".12"/>`;
+  for (const o of dsOpenings(d)) {
+    if (o.k === "win") g += `<line x1="-.06" y1="${n(o.p0[1])}" x2="-.06" y2="${n(o.p1[1])}" stroke="#8fc7e6" stroke-width=".14"/>`;
+    else { const [a, b] = [o.p0[0], o.p1[0]], r = b - a; g += `<line x1="${n(a)}" y1="-.06" x2="${n(b)}" y2="-.06" stroke="#fff" stroke-width=".14"/><path d="M${n(b)},0 L${n(b)},${n(r)} A${n(r)},${n(r)} 0 0 1 ${n(a)},0" fill="none" stroke="#9a7353" stroke-width=".02" stroke-dasharray=".05 .04"/>`; }
+  }
+  const order = [...d.items].filter(i => i.ok && i.x != null && i.r).sort((a, b) => (b.flat ? 1 : 0) - (a.flat ? 1 : 0));
+  for (const it of order) {
+    const r = it.r, p = PROD[it.pid], inf = dInfo(p), col = (it.krow ? inf.col[0] : (XMODELS[it.model](...(inf.col || []))[0]?.c)) || "#999";
+    const sel = d.sel === it.uid, w = r.x1 - r.x0, h = r.z1 - r.z0;
+    if (it.place === "ceiling") { g += `<circle data-dsuid="${it.uid}" cx="${n(it.x)}" cy="${n(it.z)}" r=".25" fill="none" stroke="${sel ? "#E8662A" : "#888"}" stroke-width=".02" stroke-dasharray=".05 .04"/>`; continue; }
+    const fv = [[0, 1], [1, 0], [0, -1], [-1, 0]][it.rot || 0], fx = it.x + fv[0] * (it.rot % 2 ? w : h) / 2, fz = it.z + fv[1] * (it.rot % 2 ? w : h) / 2;
+    g += `<g data-dsuid="${it.uid}"><rect x="${n(r.x0)}" y="${n(r.z0)}" width="${n(w)}" height="${n(h)}" rx=".03" fill="${col}" fill-opacity="${it.flat ? .45 : .85}" stroke="${it.coll ? "#d92d20" : sel ? "#E8662A" : dsShade(col.startsWith("#") ? col : "#999999", .6)}" stroke-width="${sel || it.coll ? .04 : .015}"/>${it.flat ? "" : `<circle cx="${n(fx)}" cy="${n(fz)}" r=".035" fill="#fff" stroke="#333" stroke-width=".01"/>`}${!it.flat && Math.min(w, h) > .38 ? `<text x="${n(it.x)}" y="${n(it.z + .05)}" text-anchor="middle" font-size="${Math.min(.16, w / 6).toFixed(3)}" fill="#1b1b1b" pointer-events="none">${esc(pName(p).split(/[,«(]/)[0].slice(0, 16))}</text>` : ""}</g>`;
+  }
+  g += `<text x="${W / 2}" y="${Lr + .32}" text-anchor="middle" font-size=".2" fill="currentColor">${String(W).replace(".", ",")} ${L("м", "m")}</text><text x="${-.32}" y="${Lr / 2}" text-anchor="middle" font-size=".2" fill="currentColor" transform="rotate(-90 ${-.32} ${Lr / 2})">${String(Lr).replace(".", ",")} ${L("м", "m")}</text>`;
+  return `<svg class="ds-svg ds-plan${opt.edit ? " edit" : ""}" data-dsmode="plan" viewBox="-0.55 -0.35 ${W + .9} ${Lr + .8}" role="img" aria-label="${L("План комнаты сверху", "Xona rejasi tepadan")}">${g}</svg>`;
+}
+const dsSVG = (d, opt) => ((d.mode || "3d") === "plan" ? planSVG(d, opt) : roomSVG(d, opt));
+function dsRedraw() { const v = $(".ds-view svg"); if (v) v.outerHTML = dsSVG(DS, { edit: DS.edit }); }
+
+/* ---------- Moving furniture with mouse or finger ---------- */
+function dsRect(it, x, z, rot) { const [ww, dd] = rot % 2 ? [it.d, it.w] : [it.w, it.d]; return { x0: x - ww / 2, x1: x + ww / 2, z0: z - dd / 2, z1: z + dd / 2 }; }
+function dsFits(it, r) {
+  const d = DS; if (r.x0 < -.001 || r.z0 < -.001 || r.x1 > d.W + .001 || r.z1 > d.L + .001) return false;
+  if (it.flat || it.air) return true;
+  const door = d.doors > 0 ? [{ x0: Math.max(0, d.W - 1.25), x1: d.W, z0: 0, z1: 1.05 }] : [];
+  return ![...d.items.filter(o => o !== it && o.ok && o.r && !o.flat && !o.air).map(o => o.r), ...door].some(o => r.x0 < o.x1 - .005 && r.x1 > o.x0 + .005 && r.z0 < o.z1 - .005 && r.z1 > o.z0 + .005);
+}
+let dsDrag = null;
+document.addEventListener("pointerdown", e => {
+  if (route.view !== "design" || !DS || DS.step !== 4) return;
+  const svg = e.target.closest(".ds-view .ds-svg"); if (!svg) return;
+  const g = e.target.closest("[data-dsuid]"); if (!g) return;
+  const it = DS.items.find(i => i.uid === g.dataset.dsuid); if (!it || it.x == null) return;
+  if (e.pointerType !== "mouse" && !DS.edit) { DS.sel = it.uid; dsSave(); return renderDesign(); }
+  e.preventDefault();
+  const m = svg.getScreenCTM().inverse(), pt = svg.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY; const p0 = pt.matrixTransform(m);
+  dsDrag = { it, m, p0, x0: it.x, z0: it.z, lx: it.x, lz: it.z, moved: false, plan: svg.dataset.dsmode === "plan", raf: 0 };
+  DS.sel = it.uid; document.documentElement.classList.add("ds-dragging");
+});
+window.addEventListener("pointermove", e => {
+  if (!dsDrag) return;
+  const D = dsDrag, svg = $(".ds-view .ds-svg"); if (!svg) return;
+  const pt = svg.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY; const p = pt.matrixTransform(D.m);
+  let dx, dz;
+  if (D.plan) { dx = p.x - D.p0.x; dz = p.y - D.p0.y; }
+  else { const sx = p.x - D.p0.x, sy = p.y - D.p0.y, vx = (sx / .866 + sy / .5) / 2, vz = (sy / .5 - sx / .866) / 2; [dx, dz] = dsView(DS).back(vx, vz); }
+  if (Math.hypot(dx, dz) > .03) D.moved = true;
+  const it = D.it; let x = D.x0 + dx, z = D.z0 + dz;
+  const r0 = dsRect(it, x, z, it.rot), hw = (r0.x1 - r0.x0) / 2, hd = (r0.z1 - r0.z0) / 2;
+  x = Math.min(Math.max(x, hw), DS.W - hw); z = Math.min(Math.max(z, hd), DS.L - hd);
+  if (!it.flat && !it.air) { if (x - hw < .2) x = hw + .02; if (DS.W - x - hw < .2) x = DS.W - hw - .02; if (z - hd < .2) z = hd + .02; if (DS.L - z - hd < .2) z = DS.L - hd - .02; } // stick to walls
+  if (it.place === "curtain") { x = it.x; }
+  const r = dsRect(it, x, z, it.rot), ok = dsFits(it, r);
+  it.x = x; it.z = z; it.r = r; it.coll = !ok;
+  if (ok) { D.lx = x; D.lz = z; }
+  if (!D.raf) D.raf = requestAnimationFrame(() => { D.raf = 0; dsRedraw(); });
+});
+window.addEventListener("pointerup", () => {
+  if (!dsDrag) return;
+  const D = dsDrag, it = D.it; dsDrag = null; document.documentElement.classList.remove("ds-dragging");
+  if (it.coll) { it.x = D.lx; it.z = D.lz; it.r = dsRect(it, it.x, it.z, it.rot); it.coll = false; toast(L("Там занято — вернул на свободное место", "U yer band — bo‘sh joyga qaytardim")); }
+  if (D.moved) { it.pin = true; it.ok = true; }
+  dsSave(); renderDesign();
+});
+function dsTurn(uid) {
+  const it = DS.items.find(i => i.uid === uid); if (!it || it.x == null || it.flat && it.place === "rug" && false) return;
+  const rot = ((it.rot || 0) + 1) % 4; let r = dsRect(it, it.x, it.z, rot);
+  const sx = Math.min(0, DS.W - r.x1) - Math.min(0, r.x0), sz = Math.min(0, DS.L - r.z1) - Math.min(0, r.z0); // keep inside the room
+  const x = it.x + sx, z = it.z + sz; r = dsRect(it, x, z, rot);
+  if (!dsFits(it, r)) return toast(L("Повернуть не получается — мешает другая мебель", "Burib bo‘lmaydi — boshqa mebel xalaqit beradi"));
+  Object.assign(it, { rot, x, z, r, pin: true }); dsSave(); renderDesign();
+}
+/* Share the room as a picture (for family or the master) */
+async function dsShare() {
+  try {
+    const svg = roomSVG(DS).replace("<svg ", '<svg xmlns="http://www.w3.org/2000/svg" ');
+    const vb = svg.match(/viewBox="([^"]+)"/)[1].split(" ").map(Number), w = 1400, h = Math.round(w * vb[3] / vb[2]);
+    const img = new Image(); img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg.replace("<svg ", `<svg width="${w}" height="${h}" `));
+    await img.decode();
+    const c = document.createElement("canvas"); c.width = w; c.height = h + 90; const x = c.getContext("2d");
+    x.fillStyle = "#f6f7f5"; x.fillRect(0, 0, c.width, c.height); x.drawImage(img, 0, 0, w, h);
+    const e = dsEstimate(DS); x.fillStyle = "#131b1a"; x.font = "600 30px system-ui, sans-serif";
+    x.fillText(`imorat · ${ROOMS().find(r => r[0] === DS.type)?.[1] || ""} ${String(DS.W).replace(".", ",")}×${String(DS.L).replace(".", ",")} ${L("м", "m")}`, 30, h + 40);
+    x.font = "26px system-ui, sans-serif"; x.fillText(`${L("Смета", "Smeta")}: ${fmt(e.total)}`, 30, h + 76);
+    const blob = await new Promise(r => c.toBlob(r, "image/png")), file = new File([blob], "imorat-room.png", { type: "image/png" });
+    if (navigator.canShare?.({ files: [file] })) await navigator.share({ files: [file], title: "Imorat", text: L("Моя комната в AI-дизайнере Imorat", "Imorat AI dizaynerida xonam") });
+    else { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "imorat-room.png"; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); toast(L("Картинка комнаты сохранена", "Xona rasmi saqlandi")); }
+  } catch (er) { if (er?.name !== "AbortError") toast(L("Не удалось сохранить картинку", "Rasmni saqlab bo‘lmadi")); }
+}
+/* Saved rooms */
+const dsRooms = () => LS.get("imorat.rooms", []);
+function dsSaveRoom() {
+  const list = dsRooms().filter(r => r.id !== DS.id);
+  DS.id ||= "r" + Date.now().toString(36);
+  DS.name = DS.name || `${ROOMS().find(r => r[0] === DS.type)?.[1] || L("Комната", "Xona")} ${String(DS.W).replace(".", ",")}×${String(DS.L).replace(".", ",")}`;
+  const snap = JSON.parse(JSON.stringify({ ...DS, busy: false, chat: [], picker: null, photo: DS.photo && DS.photo.length < 140000 ? DS.photo : "" }));
+  list.unshift({ id: DS.id, name: DS.name, t: Date.now(), d: snap });
+  if (!LS.set("imorat.rooms", list.slice(0, 10))) LS.set("imorat.rooms", list.slice(0, 10).map(r => ({ ...r, d: { ...r.d, photo: "" } })));
+  dsSave(); toast(L(`Комната «${DS.name}» сохранена`, `«${DS.name}» xonasi saqlandi`)); renderDesign();
 }
 
 /* ---------- Estimate ---------- */
@@ -3753,7 +3905,8 @@ function renderDesign() {
     <p class="mu">${L("Встаньте в угол, чтобы в кадр попали две стены, окно и пол — как коробка. Usta AI посмотрит фото и подскажет, что сделать.", "Burchakda turing — kadrga ikki devor, deraza va pol tushsin. Usta AI rasmni ko‘rib maslahat beradi.")}</p>
     <label class="ds-photo">${d.photo ? `<img src="${d.photo}" alt="${L("Фото комнаты", "Xona rasmi")}">` : `${ui("photo", 30)}<b>${L("Сделать фото или выбрать", "Suratga olish yoki tanlash")}</b>`}<input type="file" accept="image/*" capture="environment" id="dsFile" hidden></label>
     ${d.busy ? `<p class="mu">${L("Usta AI смотрит фото…", "Usta AI rasmni ko‘rmoqda…")}</p>` : d.notes ? `<div class="note">${ui("spark", 14)} ${esc(d.notes)}</div>` : d.photo && !dsAIon() ? `<p class="mu" style="font-size:13px">${L("Фото сохранено в проекте. Разбор фото AI работает, когда подключён Usta AI.", "Rasm loyihada saqlandi. AI tahlili Usta AI ulanganda ishlaydi.")}</p>` : ""}
-    <div class="ds-nav"><button class="btn btn-line" type="button" data-ds="next">${d.photo ? L("Дальше", "Keyingisi") : L("Пропустить", "O‘tkazib yuborish")}</button>${d.photo ? `<button class="btn btn-primary" type="button" data-ds="next">${L("Дальше: размеры", "Keyingisi: o‘lchamlar")}</button>` : ""}</div>`;
+    <div class="ds-nav"><button class="btn btn-line" type="button" data-ds="next">${d.photo ? L("Дальше", "Keyingisi") : L("Пропустить", "O‘tkazib yuborish")}</button>${d.photo ? `<button class="btn btn-primary" type="button" data-ds="next">${L("Дальше: размеры", "Keyingisi: o‘lchamlar")}</button>` : ""}</div>
+    ${dsRooms().length ? `<b class="ds-q">${L("Мои комнаты", "Mening xonalarim")}</b><div class="ds-rooms">${dsRooms().map(r => `<div class="ds-room"><button type="button" data-dsroom="${r.id}">${roomSVG(r.d)}<span><b>${esc(r.name)}</b><small>${new Date(r.t).toLocaleDateString("ru-RU")}</small></span></button><button type="button" class="ib" data-dsroomdel="${r.id}" aria-label="${L("Удалить", "O‘chirish")}">${ui("trash", 15)}</button></div>`).join("")}</div>` : ""}`;
   else if (st === 2) panel = `<h2 class="h-m">${L("Размеры комнаты", "Xona o‘lchamlari")}</h2><p class="mu">${L("Измерьте рулеткой. 3D-коробка справа сразу меняется.", "Ruletka bilan o‘lchang. 3D quti darhol o‘zgaradi.")}</p>
     <div class="ds-grid">${[["W", L("Ширина, м", "Eni, m"), 1.5, 12, .1], ["L", L("Длина, м", "Bo‘yi, m"), 1.5, 15, .1], ["H", L("Высота, м", "Balandligi, m"), 2.2, 4.5, .05], ["win", L("Окон", "Derazalar"), 0, 3, 1], ["doors", L("Дверей", "Eshiklar"), 0, 2, 1]].map(([k, t, mn, mx, sp]) => `<div class="f"><label for="ds_${k}">${t}</label><input id="ds_${k}" type="number" inputmode="decimal" min="${mn}" max="${mx}" step="${sp}" value="${d[k]}" data-dsdim="${k}"></div>`).join("")}</div>
     <p class="mu" style="font-size:13px">${L("Площадь", "Maydon")}: <b>${(d.W * d.L).toFixed(1).replace(".", ",")} м²</b> · ${L("стены", "devorlar")}: <b>${fmtN(dsEstimate(d).wallA)} м²</b></p>
@@ -3782,20 +3935,26 @@ function renderDesign() {
       <b class="ds-q">${L("Цвет стен", "Devor rangi")}</b><div class="ds-sw">${paintsAll().map(p => `<button type="button" class="sw" data-dswall="${p.id}" style="--c:${swatchPaint(p)}" aria-pressed="${d.wall === p.id}" title="${esc(pName(p))}"><span class="visually-hidden">${esc(pName(p))}</span></button>`).join("")}</div>
       <b class="ds-q">${L("Пол", "Pol")}</b><div class="ds-sw">${floorsAll().map(p => { const f = swatchFloor(p); return `<button type="button" class="sw ${f.kind}" data-dsfloor="${p.id}" style="--c:${f.c}" aria-pressed="${d.floor === p.id}" title="${esc(pName(p))}"><span class="visually-hidden">${esc(pName(p))}</span></button>`; }).join("")}</div>
       <b class="ds-q">${L("Мебель в комнате", "Xonadagi mebel")}</b>
-      <div class="ds-items">${d.items.filter(i => PROD[i.pid]).map(i => { const p = PROD[i.pid]; return `<div class="ds-item ${d.sel === i.uid ? "on" : ""} ${i.ok === false ? "bad" : ""}" data-dssel="${i.uid}">${mini(p)}<span><b>${esc(pName(p))}${i.krow ? ` × ${i.n}` : ""}</b><small>${fmt(minPrice(p) * (i.krow ? i.n || 4 : 1))}${i.ok === false ? ` · ${L("не помещается", "sig‘maydi")}` : ""}</small></span><button type="button" class="ib" data-dsalt="${i.uid}" title="${L("Заменить", "Almashtirish")}" aria-label="${L("Заменить", "Almashtirish")}">${ui("repeat", 16)}</button><button type="button" class="ib" data-dsdel="${i.uid}" title="${L("Убрать", "Olib tashlash")}" aria-label="${L("Убрать", "Olib tashlash")}">${ui("trash", 16)}</button></div>`; }).join("") || `<p class="mu">${L("Комната пустая — нажмите «AI, добавь по вкусу».", "Xona bo‘sh — «AI, didimga qarab qo‘sh» ni bosing.")}</p>`}</div>
+      <div class="ds-items">${d.items.filter(i => PROD[i.pid]).map(i => { const p = PROD[i.pid]; return `<div class="ds-item ${d.sel === i.uid ? "on" : ""} ${i.ok === false ? "bad" : ""}" data-dssel="${i.uid}">${mini(p)}<span><b>${esc(pName(p))}${i.krow ? ` × ${i.n}` : ""}</b><small>${fmt(minPrice(p) * (i.krow ? i.n || 4 : 1))}${i.ok === false ? ` · ${L("не помещается", "sig‘maydi")}` : ""}</small></span><button type="button" class="ib" data-dsturn="${i.uid}" title="${L("Повернуть", "Burish")}" aria-label="${L("Повернуть", "Burish")}">↻</button><button type="button" class="ib" data-dsalt="${i.uid}" title="${L("Заменить", "Almashtirish")}" aria-label="${L("Заменить", "Almashtirish")}">${ui("repeat", 16)}</button><button type="button" class="ib" data-dsdel="${i.uid}" title="${L("Убрать", "Olib tashlash")}" aria-label="${L("Убрать", "Olib tashlash")}">${ui("trash", 16)}</button></div>`; }).join("") || `<p class="mu">${L("Комната пустая — нажмите «AI, добавь по вкусу».", "Xona bo‘sh — «AI, didimga qarab qo‘sh» ni bosing.")}</p>`}</div>
       ${bad.length ? `<p class="mu" style="color:var(--signal);font-size:13px">${L("Часть мебели не помещается — уберите что-то или увеличьте размеры.", "Ba’zi mebel sig‘maydi — nimanidir olib tashlang yoki o‘lchamni oshiring.")}</p>` : ""}
       <div class="ds-est"><b class="ds-q">${L("Смета", "Smeta")}</b>
         ${e.mats.map(l => `<div class="sumrow"><span>${esc(pName(l.p))} × ${l.q}${l.why ? `<small class="mu"> · ${esc(l.why)}</small>` : ""}</span><span class="num">${fmt(minPrice(l.p) * l.q)}</span></div>`).join("")}
         <div class="sumrow"><span class="mu">${L("Мебель", "Mebel")} · ${e.furn.reduce((a, l) => a + l.q, 0)} ${L("шт", "dona")}</span><span class="num">${fmt(e.furnSum)}</span></div>
         <div class="sumrow total"><span>${L("Итого", "Jami")}</span><span class="num">${fmt(e.total)}</span></div>
         <div class="ds-nav"><button class="btn btn-line" type="button" data-ds="proj">${ui("folder", 16)} ${L("В проект", "Loyihaga")}</button><button class="btn btn-primary" type="button" data-ds="cart">${ui("cart", 16)} ${L("Всё в корзину", "Hammasini savatga")}</button></div>
+        <div class="ds-nav" style="justify-content:flex-start"><button class="btn btn-line" type="button" data-ds="save-room">${ui("heart", 16)} ${L("Сохранить комнату", "Xonani saqlash")}</button><button class="btn btn-line" type="button" data-ds="share">${ui("photo", 16)} ${L("Поделиться", "Ulashish")}</button><button class="btn btn-line" type="button" data-ds="relayout">${ui("repeat", 16)} ${L("Расставить заново", "Qayta joylash")}</button></div>
         <button class="lnk" type="button" data-ds="restart" style="justify-self:start;color:var(--muted)">${L("Начать заново", "Qaytadan boshlash")}</button></div>`;
   }
   $("#app").innerHTML = `<div class="wrap">
     <nav class="crumbs"><button type="button" data-go="home">${L("Главная", "Asosiy")}</button>${ui("chev", 12)}<span>${L("AI-дизайнер комнаты", "AI xona dizayneri")}</span></nav>
     <div class="ds-head"><h1 class="h-l">${L("AI-дизайнер комнаты", "AI xona dizayneri")}</h1><p class="mu">${L("Фото и размеры → пара вопросов → готовая комната в 3D с мебелью и сметой. Всё можно поменять одним касанием.", "Rasm va o‘lchamlar → bir nechta savol → mebel va smetali tayyor 3D xona. Hammasini bir bosishda o‘zgartirish mumkin.")}</p></div>
     <ol class="ds-steps">${steps.map((s, i) => `<li class="${i + 1 === st ? "now" : i + 1 < st ? "done" : ""}"><button type="button" data-dsstep="${i + 1}" ${i + 1 <= Math.max(st, d.items.length ? 4 : st) ? "" : "disabled"}><span>${i + 1}</span>${s}</button></li>`).join("")}</ol>
-    <div class="ds-layout"><div class="ds-view panel">${roomSVG(d)}<div class="ds-dims mu">${String(d.W).replace(".", ",")} × ${String(d.L).replace(".", ",")} ${L("м", "m")} · ${L("высота", "balandlik")} ${String(d.H).replace(".", ",")} ${L("м", "m")}${d.type ? " · " + ROOMS().find(r => r[0] === d.type)[1] : ""}</div>${!dsAIon() ? `<small class="mu ds-ai-note">${L("Подбор по ответам работает всегда. Свободные пожелания и разбор фото понимает Usta AI, когда он подключён.", "Javoblar bo‘yicha tanlash doim ishlaydi. Erkin istaklar va rasm tahlilini Usta AI ulanganda tushunadi.")}</small>` : ""}</div>
+    <div class="ds-layout"><div class="ds-view panel">${st === 4 ? `<div class="ds-tools">
+        <div class="seg" role="group" aria-label="${L("Вид", "Ko‘rinish")}"><button type="button" data-ds="mode-3d" aria-pressed="${(d.mode || "3d") === "3d"}">3D</button><button type="button" data-ds="mode-plan" aria-pressed="${d.mode === "plan"}">${L("План", "Reja")}</button></div>
+        ${(d.mode || "3d") === "3d" ? `<button class="ib" type="button" data-ds="view-l" aria-label="${L("Повернуть комнату влево", "Xonani chapga burish")}" title="${L("Повернуть комнату", "Xonani burish")}">⟲</button><button class="ib" type="button" data-ds="view-r" aria-label="${L("Повернуть комнату вправо", "Xonani o‘ngga burish")}" title="${L("Повернуть комнату", "Xonani burish")}">⟳</button>` : ""}
+        <button class="btn ${d.edit ? "btn-primary" : "btn-line"} ds-edit" type="button" data-ds="edit" aria-pressed="${!!d.edit}">✋ ${d.edit ? L("Двигаю мебель", "Mebelni suryapman") : L("Двигать мебель", "Mebelni surish")}</button>
+        <button class="ib" type="button" data-ds="share" aria-label="${L("Поделиться картинкой", "Rasm bilan ulashish")}" title="${L("Поделиться", "Ulashish")}">${ui("photo", 17)}</button>
+      </div>` : ""}${st === 4 ? dsSVG(d, { edit: d.edit }) : roomSVG(d)}${st === 4 ? `<small class="mu ds-hint">${matchMedia("(pointer: fine)").matches ? L("Перетаскивайте мебель мышкой. Кнопка ↻ в списке поворачивает предмет.", "Mebelni sichqoncha bilan suring. Ro‘yxatdagi ↻ tugmasi buradi.") : d.edit ? L("Ведите пальцем по мебели, чтобы переставить. Нажмите «Двигаю мебель», чтобы снова листать страницу.", "Mebelni barmoq bilan suring. Sahifani aylantirish uchun «Mebelni suryapman» ni bosing.") : L("Нажмите «Двигать мебель», чтобы переставлять пальцем.", "Barmoq bilan surish uchun «Mebelni surish» ni bosing.")}</small>` : ""}<div class="ds-dims mu">${String(d.W).replace(".", ",")} × ${String(d.L).replace(".", ",")} ${L("м", "m")} · ${L("высота", "balandlik")} ${String(d.H).replace(".", ",")} ${L("м", "m")}${d.type ? " · " + ROOMS().find(r => r[0] === d.type)[1] : ""}</div>${!dsAIon() ? `<small class="mu ds-ai-note">${L("Подбор по ответам работает всегда. Свободные пожелания и разбор фото понимает Usta AI, когда он подключён.", "Javoblar bo‘yicha tanlash doim ishlaydi. Erkin istaklar va rasm tahlilini Usta AI ulanganda tushunadi.")}</small>` : ""}</div>
       <div class="ds-panel panel">${panel}</div></div></div>`;
   const fl = $("#dsFile");
   if (fl) fl.addEventListener("change", async e => { const f = e.target.files?.[0]; if (!f) return; try { DS.photo = await resizeImg(f); DS.notes = ""; dsSave(); renderDesign(); dsAnalyzePhoto(); } catch (er) { toast(L("Не удалось открыть фото", "Rasmni ochib bo‘lmadi")); } });
@@ -3803,8 +3962,11 @@ function renderDesign() {
   const wf = $("#dsWish"); if (wf) wf.addEventListener("submit", e => { e.preventDefault(); const v = $("#dsWishIn").value; $("#dsWishIn").value = ""; dsWish(v); });
 }
 document.addEventListener("click", e => {
-  const t = e.target.closest("[data-ds],[data-dsq],[data-dsstep],[data-dswall],[data-dsfloor],[data-dsdel],[data-dsalt],[data-dssel],[data-dsadd],[data-dsuid]"); if (!t || route.view !== "design") return;
+  const t = e.target.closest("[data-dsroom],[data-dsroomdel],.ds-teaser-v") || e.target.closest("[data-ds],[data-dsq],[data-dsstep],[data-dswall],[data-dsfloor],[data-dsdel],[data-dsalt],[data-dssel],[data-dsadd],[data-dsuid],[data-dsturn]"); if (!t || route.view !== "design") return;
   const s = t.dataset;
+  if (s.dsturn) return dsTurn(s.dsturn);
+  if (s.dsroomdel) { LS.set("imorat.rooms", dsRooms().filter(r => r.id !== s.dsroomdel)); return renderDesign(); }
+  if (s.dsroom) { const r = dsRooms().find(x => x.id === s.dsroom); if (r) { DS = { ...dsNew(), ...JSON.parse(JSON.stringify(r.d)), step: 4 }; dsLayout(); renderDesign(); window.scrollTo(0, 0); } return; }
   if (s.dsq) { const k = s.dsq, v = s.v; if (k === "type") DS.type = v; else if (["colors", "hobby"].includes(k)) { const a = DS.q[k] || []; DS.q[k] = a.includes(v) ? a.filter(x => x !== v) : [...a, v]; } else if (["tv", "dining", "desk"].includes(k)) DS.q[k] = v === "1"; else DS.q[k] = v; dsSave(); return renderDesign(); }
   if (s.dsstep) { DS.step = +s.dsstep; dsSave(); return renderDesign(); }
   if (s.dswall) { DS.wall = +s.dswall; DS.q.walls = "paint"; dsSave(); return renderDesign(); }
@@ -3822,6 +3984,14 @@ document.addEventListener("click", e => {
     case "cart": { const e2 = dsEstimate(DS); [...e2.mats, ...e2.furn].forEach(l => addToCart(l.p.id, null, l.q, true)); toast(L("Комната в корзине", "Xona savatda")); return openDrawer("cart"); }
     case "proj": { const e2 = dsEstimate(DS), pc = {}; [...e2.mats, ...e2.furn].forEach(l => { pc[l.p.id + "|" + bestOffer(l.p).store] = l.q; }); const nm = `${ROOMS().find(r => r[0] === DS.type)?.[1] || L("Комната", "Xona")} ${String(DS.W).replace(".", ",")}×${String(DS.L).replace(".", ",")}`; projects.unshift({ id: "pr" + Date.now().toString(36), name: nm, cart: pc, t: Date.now() }); LS.set("imorat.projects", projects); return toast(L(`Сохранено в «Проекты ремонта»: ${nm}`, `«Ta’mir loyihalari»ga saqlandi: ${nm}`)); }
     case "restart": DS = dsNew(); dsSave(); return renderDesign();
+    case "mode-3d": DS.mode = "3d"; dsSave(); return renderDesign();
+    case "mode-plan": DS.mode = "plan"; dsSave(); return renderDesign();
+    case "view-l": DS.view = ((DS.view || 0) + 3) % 4; dsSave(); return renderDesign();
+    case "view-r": DS.view = ((DS.view || 0) + 1) % 4; dsSave(); return renderDesign();
+    case "edit": DS.edit = !DS.edit; dsSave(); return renderDesign();
+    case "share": return dsShare();
+    case "save-room": return dsSaveRoom();
+    case "relayout": DS.items.forEach(i => { i.pin = false; }); dsLayout(); toast(L("Мебель расставлена заново", "Mebel qayta joylandi")); return renderDesign();
   }
 });
 function designTeaser() {
