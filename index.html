@@ -783,6 +783,7 @@ html.ds-dragging, html.ds-dragging * { cursor: grabbing !important; user-select:
 .ds-sw { display: flex; flex-wrap: wrap; gap: 6px; }
 .sw { width: 34px; height: 34px; border-radius: 50%; background: var(--c); border: 2px solid var(--surface); box-shadow: 0 0 0 1.5px var(--line-strong); }
 .sw.plank { border-radius: 9px; background: repeating-linear-gradient(90deg, var(--c) 0 9px, color-mix(in srgb, var(--c) 82%, #000) 9px 10px); }
+.sw.wt { border-radius: 7px; background-color: var(--c); background-image: linear-gradient(rgba(0,0,0,.2) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,.2) 1px, transparent 1px); background-size: 9px 13px; }
 .sw.tile { border-radius: 9px; background-color: var(--c); background-image: linear-gradient(90deg, transparent 14px, rgba(0,0,0,.2) 14px 16px, transparent 16px), linear-gradient(transparent 14px, rgba(0,0,0,.2) 14px 16px, transparent 16px); }
 .sw[aria-pressed="true"] { box-shadow: 0 0 0 2.5px var(--accent); }
 .ds-items { display: grid; gap: 6px; }
@@ -1202,7 +1203,7 @@ const CATS = [
   { id: "floor", ru: "Напольные покрытия", uz: "Pol qoplamalari", icon: "floor", h: 24, subs: [["lam", "Ламинат", "Laminat"], ["lino", "Линолеум", "Linoleum"], ["parq", "Паркетная доска", "Parket taxtasi"], ["carpet", "Ковролин", "Kovrolin"]] },
   { id: "doors", ru: "Двери и окна", uz: "Eshik va derazalar", icon: "door", h: 98, subs: [["inner", "Межкомнатные двери", "Xona eshiklari"], ["entry", "Входные двери", "Kirish eshiklari"], ["win", "Окна ПВХ", "PVX derazalar"], ["hw", "Фурнитура", "Furnitura"]] },
   { id: "kitchen", ru: "Кухни", uz: "Oshxonalar", icon: "kitchen", h: 140, subs: [["mod", "Кухонные модули", "Oshxona modullari"], ["top", "Столешницы", "Stoleshnitsalar"], ["ksink", "Мойки", "Moykalar"], ["hood", "Вытяжки", "Tortgichlar"]] },
-  { id: "furn", ru: "Мебель и хранение", uz: "Mebel va saqlash", icon: "wardrobe", h: 36, subs: [["ward", "Шкафы", "Shkaflar"], ["rack", "Стеллажи", "Stellajlar"], ["shelf", "Полки", "Tokchalar"], ["bathf", "Мебель для ванной", "Vannaxona mebeli"], ["bed", "Кровати", "Karavotlar"], ["sofa", "Диваны и кресла", "Divan va kreslolar"], ["table", "Столы и стулья", "Stol va stullar"], ["kids", "Детская мебель", "Bolalar mebeli"], ["decor", "Ковры и шторы", "Gilam va pardalar"]] },
+  { id: "furn", ru: "Мебель и хранение", uz: "Mebel va saqlash", icon: "wardrobe", h: 36, subs: [["ward", "Шкафы", "Shkaflar"], ["rack", "Стеллажи", "Stellajlar"], ["shelf", "Полки", "Tokchalar"], ["bathf", "Мебель для ванной", "Vannaxona mebeli"], ["bed", "Кровати", "Karavotlar"], ["sofa", "Диваны и кресла", "Divan va kreslolar"], ["table", "Столы и стулья", "Stol va stullar"], ["kids", "Детская мебель", "Bolalar mebeli"], ["decor", "Ковры и шторы", "Gilam va pardalar"], ["hall", "Прихожая", "Dahliz"]] },
   { id: "garden", ru: "Сад и двор", uz: "Bog‘ va hovli", icon: "shovel", h: 118, subs: [["gtool", "Садовый инструмент", "Bog‘ asboblari"], ["water", "Полив", "Sug‘orish"], ["gfurn", "Садовая мебель", "Bog‘ mebeli"], ["grill", "Мангалы и грили", "Mangal va grillar"]] },
   { id: "security", ru: "Безопасность", uz: "Xavfsizlik", icon: "lock", h: 228, subs: [["locks", "Замки", "Qulflar"], ["cctv", "Видеонаблюдение", "Videokuzatuv"], ["safes", "Сейфы", "Seyflar"]] },
   { id: "work", ru: "Спецодежда и СИЗ", uz: "Ish kiyimi va himoya", icon: "helmet", h: 60, subs: [["gloves", "Перчатки", "Qo‘lqoplar"], ["helmet", "Каски и очки", "Kaska va ko‘zoynaklar"], ["boots", "Рабочая обувь", "Ish poyabzali"]] },
@@ -1455,6 +1456,17 @@ const XMODELS = {
     const cols = ["#f2a7b8", "#9cc3e6", "#f6d36b", "#9fd3b5", "#c9b6e8", "#f6a96b"]; let k = 0; for (let r = 0; r < 3; r++) for (let c = -1; c <= 1; c += 2) P.push(XB(c * .21, .18 + r * .35, .02, .19, .13, .17, cols[k++ % 6], 1, .03)); return P; },
   lamp_floor: (a = "#efe6d4") => [XC(0, .015, 0, .16, .015, XW.metal, 3), XC(0, .8, 0, .014, .78, XW.metal, 3), XC(0, 1.6, 0, .22, .13, a, 8, .02)],
   bucket: () => [],
+  shoebench: (a = XW.lwood, b = "#7d8489") => [XB(0, .2, 0, .45, .2, .17, XW.white, 1, .012), XB(0, .2, .172, .43, .005, .004, "#e4e1da", 1, .002), XB(-.22, .12, .1, .09, .035, .05, "#3a3d40", 7, .03), XB(.2, .12, .1, .09, .035, .05, "#8a5a3c", 7, .03), XB(0, .43, 0, .45, .025, .17, a, 5, .008), XB(0, .48, 0, .43, .035, .155, b, 7, .03)],
+  coatrack: (a = XW.metal) => [XC(0, .012, 0, .2, .012, a, 3), XC(0, .9, 0, .016, .9, a, 3), XB(0, 1.72, 0, .2, .012, .012, a, 3, .006), XB(0, 1.72, 0, .012, .012, .2, a, 3, .006),
+    XE(.17, 1.33, 0, .11, .34, .07, "#3e5c76"), XE(-.03, 1.36, .16, .12, .3, .06, "#b5653f"), XE(0, 1.82, 0, .12, .07, .12, "#2f3236")],
+  mirror: (a = "#2b2e31") => [XB(0, 1.12, 0, .32, .82, .02, a, 3, .012), XB(0, 1.12, .021, .29, .79, .003, "#dbe8ee", 2, .002)],
+  mirror_led: () => [XB(0, 1.6, -.2, .33, .42, .012, "#fff3d6", 8, .03), XB(0, 1.6, -.188, .3, .39, .006, "#dce7ec", 2, .02)],
+  toilet: (a = "#f6f6f4") => [XB(0, .6, -.25, .19, .2, .09, a, 2, .04), XB(0, .17, -.03, .12, .17, .16, a, 2, .05), XE(0, .33, .02, .19, .1, .26, a, 2), XB(0, .43, .03, .19, .012, .23, a, 2, .05)],
+  basin_ped: (a = "#f6f6f4") => [XC(0, .38, 0, .09, .38, a, 2), XB(0, .8, 0, .29, .07, .22, a, 2, .06), XC(0, .93, -.15, .02, .06, "#c9ccce", 3)],
+  bath: (a = "#f6f6f4", L = 1.7, D = .72) => [XB(0, .29, 0, L / 2, .29, D / 2, a, 2, .05), XB(0, .565, 0, L / 2 - .07, .015, D / 2 - .06, "#bfdbe6", 2, .08), XC(L / 2 - .12, .66, -D / 2 + .08, .02, .08, "#c9ccce", 3)],
+  shower: () => [XB(0, .04, 0, .44, .04, .44, "#f2f2f0", 2, .02), XB(0, 1.04, .43, .44, .96, .008, "#d3e8ef", 2, .004), XB(.43, 1.04, 0, .008, .96, .44, "#d3e8ef", 2, .004), XC(-.32, 1.1, -.4, .015, 1.0, "#c9ccce", 3), XC(-.32, 2.02, -.28, .12, .012, "#c9ccce", 3)],
+  vanity: (a = XW.white, w = .6) => [XB(0, .42, 0, w / 2, .38, .23, a, 1, .02), XB(0, .42, .232, w / 2 - .02, .34, .004, a, 1, .004), XB(0, .83, 0, w / 2 + .01, .04, .24, "#f6f6f4", 2, .03), XC(0, .93, -.15, .02, .06, "#c9ccce", 3)],
+  wheater: (a = "#f3f4f3") => [XC(0, 1.62, 0, .21, .36, a, 2)],
   // models for existing catalog items (used only inside the 3D room)
   wardrobe: (a = XW.white, w = 1.5) => [XB(0, 1.1, 0, w / 2, 1.1, .3, a, 1, .02), XB(-w / 4, 1.1, .302, w / 4 - .01, 1.06, .004, a === XW.white ? "#e8e5de" : a, 2, .004), XB(w / 4, 1.1, .302, w / 4 - .01, 1.06, .004, "#cfd8dc", 2, .004)],
   shelf: (a = XW.white, w = .8) => [XB(0, 1.5, 0, w / 2, .02, .12, a, 1, .006)],
@@ -1492,16 +1504,20 @@ const XPRODUCTS = [
   [544, "curt_linen", "furn", "decor", "wardrobe", "Шторы лён, бежевые, пара", "Zig‘ir pardalar, bej, juft", "pair", 480000, 3, "uy", "curtains", ["#ddd0b8"], [1.7, .1], "curtain"],
   [545, "curt_pink", "furn", "decor", "wardrobe", "Шторы детские, розовые, пара", "Bolalar pardalari, pushti, juft", "pair", 450000, 3, "uy", "curtains", ["#f2b8c6"], [1.7, .1], "curtain"],
   [546, "rack_kid", "furn", "kids", "wardrobe", "Стеллаж детский с ящиками", "Bolalar stellaji qutichali", "pcs", 980000, 24, "uy", "rack_kid", [], [.92, .42], "wall"],
-  [547, "lamp_floor", "light", "lamps", "bulb", "Торшер напольный", "Torsher", "pcs", 650000, 6, "uy,elp", "lamp_floor", [], [.44, .44], "corner"]
+  [547, "lamp_floor", "light", "lamps", "bulb", "Торшер напольный", "Torsher", "pcs", 650000, 6, "uy,elp", "lamp_floor", [], [.44, .44], "corner"],
+  [550, "shoe_bench", "furn", "hall", "wardrobe", "Обувница с сиденьем, 90 см", "Poyabzal tokchasi o‘tirg‘ichli, 90 sm", "pcs", 890000, 18, "uy", "shoebench", [], [.9, .36], "wall"],
+  [551, "coat_rack", "furn", "hall", "wardrobe", "Вешалка напольная, металл", "Yerga qo‘yiladigan ilgich, metall", "pcs", 420000, 7, "uy,temir", "coatrack", [], [.42, .42], "corner"],
+  [552, "mirror_hall", "furn", "hall", "wardrobe", "Зеркало настенное 60×160, чёрная рама", "Devor oynasi 60×160, qora ramka", "pcs", 760000, 12, "uy", "mirror", [], [.64, .06], "wall"],
+  [553, "mirror_bath", "furn", "bathf", "tap", "Зеркало с LED-подсветкой 60 см", "LED yoritgichli oyna 60 sm", "pcs", 980000, 8, "santex,uy", "mirror_led", [], [.66, .05], "above"]
 ];
 const XDESC = {
   kids: ["Детская мебель с закруглёнными углами и безопасными красками. Подходит для комнат от 9 м².", "Burchaklari dumaloq, xavfsiz bo‘yoqli bolalar mebeli. 9 m² dan xonalar uchun."],
   bed: ["Кровати с ортопедическим основанием, матрас подбирается отдельно.", "Ortopedik asosli karavotlar, matras alohida tanlanadi."],
   sofa: ["Мягкая мебель с износостойкой тканью, чехлы можно чистить.", "Chidamli matoli yumshoq mebel, g‘iloflarini tozalash mumkin."],
   table: ["Столы и стулья для дома и офиса. Сборка мастером — по запросу.", "Uy va ofis uchun stol va stullar. Usta yig‘ishi — so‘rov bo‘yicha."],
-  decor: ["Ковры и шторы, которые завершают интерьер. Размеры указаны в названии.", "Interyerni yakunlaydigan gilam va pardalar. O‘lchamlar nomida ko‘rsatilgan."]
+  decor: ["Ковры и шторы, которые завершают интерьер. Размеры указаны в названии.", "Interyerni yakunlaydigan gilam va pardalar. O‘lchamlar nomida ko‘rsatilgan."],
+  hall: ["Мебель для прихожей: компактная, с местом для обуви и верхней одежды.", "Dahliz uchun ixcham mebel: poyabzal va ustki kiyim uchun joy bilan."]
 };
-
 Object.assign(DESC, XDESC);
 let PRODUCTS = [], PROD = {};
 function buildProducts() {
@@ -3483,8 +3499,8 @@ function installApp() {
 const DS_KEY = "imorat.design";
 let DS = LS.get(DS_KEY, null);
 const dsSave = () => LS.set(DS_KEY, DS);
-const dsNew = () => ({ step: 1, photo: "", notes: "", type: "", W: 3.5, L: 4.2, H: 2.7, win: 1, doors: 1, q: { who: "girl", age: "4-7", colors: [], hobby: [], style: "modern", seats: "4", tv: true, dining: false, bed: "double", desk: true, budget: "std", walls: "paint", floorKind: "lam" }, wall: 0, floor: 0, wp: 0, items: [], sel: null, say: "", chat: [], busy: false });
-const ROOMS = () => [["kids", L("Детская", "Bolalar xonasi"), "🧸"], ["bed", L("Спальня", "Yotoqxona"), "🛏️"], ["living", L("Гостиная / зал", "Mehmonxona / zal"), "🛋️"], ["study", L("Кабинет", "Ish xonasi"), "💻"], ["kitchen", L("Кухня", "Oshxona"), "🍳"]];
+const dsNew = () => ({ step: 1, photo: "", notes: "", type: "", W: 3.5, L: 4.2, H: 2.7, win: 1, doors: 1, q: { who: "girl", age: "4-7", colors: [], hobby: [], style: "modern", seats: "4", tv: true, dining: false, bed: "double", desk: true, budget: "std", walls: "paint", floorKind: "lam", bathKind: "bath", wc: true, ward: true }, wall: 0, floor: 0, wp: 0, wtile: 0, accent: null, items: [], sel: null, say: "", chat: [], busy: false });
+const ROOMS = () => [["kids", L("Детская", "Bolalar xonasi"), "🧸"], ["bed", L("Спальня", "Yotoqxona"), "🛏️"], ["living", L("Гостиная / зал", "Mehmonxona / zal"), "🛋️"], ["study", L("Кабинет", "Ish xonasi"), "💻"], ["kitchen", L("Кухня", "Oshxona"), "🍳"], ["bath", L("Ванная / санузел", "Vannaxona / sanuzel"), "🛁"], ["hall", L("Прихожая", "Dahliz"), "🚪"]];
 const XP = Object.fromEntries(XPRODUCTS.map(r => [r[0], { key: r[1], model: r[11], col: r[12], size: r[13], place: r[14] }]));
 /* Designer info for every product that can stand in the room */
 function dInfo(p) {
@@ -3494,6 +3510,10 @@ function dInfo(p) {
   if (p.sub === "ward") return { model: "wardrobe", col: [/венге/.test(n) ? XW.dwood : /белый/.test(n) ? XW.white : XW.wood, /200/.test(n) ? 2 : 1.5], size: [/200/.test(n) ? 2 : 1.5, .62], place: "wall", tall: 1 };
   if (p.sub === "chand") return { model: "chand", col: [/чёрн/.test(n) ? "#3a3d40" : "#f6efe0"], size: [.6, .6], place: "ceiling" };
   if (p.sub === "mod" && !/40 см/.test(n)) return { model: "krow", col: [/графит/.test(n) ? "#4b5054" : /дуб/.test(n) ? XW.wood : XW.white], size: [.6, .62], place: "krow" };
+  if (p.sub === "wc") return /Раковина/.test(p.ru) ? { model: "basin_ped", col: [], size: [/50 см/.test(n) ? .52 : .6, .48], place: "wall" } : { model: "toilet", col: [], size: [.4, .64], place: "wall" };
+  if (p.sub === "bath") { if (/душев/.test(n)) return { model: "shower", col: [], size: [.9, .9], place: "corner", tall: 1 }; const m = p.ru.match(/(\d{3})×(\d{2})/), l = m ? +m[1] / 100 : 1.7, w = m ? +m[2] / 100 : .7; return { model: "bath", col: ["#f6f6f4", l, w], size: [l, w], place: "wall" }; }
+  if (p.sub === "bathf") { const w = /80 см/.test(n) ? .8 : .6; return { model: "vanity", col: [/сер/.test(n) ? "#9aa0a4" : /дуб/.test(n) ? XW.wood : XW.white, w], size: [w + .02, .5], place: "wall" }; }
+  if (p.sub === "wheat") return { model: "wheater", col: [], size: [.44, .44], place: "hang" };
   if (p.sub === "rack") return { model: "rack", col: [/чёрн/.test(n) ? XW.metal : "#9aa0a4"], size: [.9, .4], place: "wall", tall: 1 };
   return null;
 }
@@ -3512,6 +3532,29 @@ function swatchFloor(p) {
   const kind = /ламинат|паркет/.test(n) ? "plank" : /плитка|керамогранит/.test(n) ? "tile" : "plain";
   const map = [["дуб серый", "#a8a39b"], ["орех", "#8c5f42"], ["белён", "#e4d9c6"], ["дуб натур", "#c9a57c"], ["ясень", "#d2b48a"], ["паркетная доска, дуб", "#bb8f61"], ["ламинат 33 класс, дуб", "#c49b6b"], ["линолеум бытовой, серый", "#9d9f9e"], ["линолеум", "#a59a8a"], ["ковролин, ширина 4 м, графит", "#585d61"], ["ковролин, ширина 4 м, зелён", "#5f8a6c"], ["ковролин", "#cbbd9f"], ["белый мрамор", "#ecebe6"], ["чёрный мрамор", "#303234"], ["бетон", "#a3a5a4"], ["бежев", "#d9c9ae"], ["серая", "#b9bbbb"], ["коричнев", "#9b7458"], ["под дерево", "#b58c62"], ["серый", "#b4b6b6"]];
   return { c: (map.find(([k]) => n.includes(k)) || [0, "#c9b79a"])[1], kind };
+}
+function swatchTile(p) {
+  const n = (p?.ru || "").toLowerCase(), m = n.match(/(\d{2})×(\d{2})/), mos = /мозаик/.test(n);
+  const map = [["голуб", "#bcd9e6"], ["бежев", "#e3d4bc"], ["чёрно-бел", "#9a9a9a"], ["чёрн", "#2d2f31"], ["мрамор", "#ebe8e2"], ["зелён", "#5f9e83"], ["золот", "#c9a253"], ["мозаик", "#7fb7c9"], ["бел", "#f4f4f1"]];
+  return { c: (map.find(([k]) => n.includes(k)) || [0, "#ecebe7"])[1], tw: mos ? .1 : m ? +m[1] / 100 : .25, th: mos ? .1 : m ? +m[2] / 100 : .4 };
+}
+const tilesAll = () => PRODUCTS.filter(p => p.cat === "tile" && ["wallt", "mosaic"].includes(p.sub));
+const isTile = p => p && p.cat === "tile";
+/* World walls: A x=0 (windows), B z=0 (door), C x=W, D z=L */
+const DS_WALLS = ["A", "B", "C", "D"];
+function dsWallArea(d, w) {
+  const len = w === "A" || w === "C" ? d.L : d.W;
+  let a = len * d.H;
+  if (w === "A") a -= Math.max(0, d.win | 0) * 1.35 * 1.5;
+  if (w === "B") a -= Math.max(0, d.doors | 0) ? .8 * 2.05 : 0;
+  return Math.max(0, a);
+}
+/* What a wall looks like: colour and optional tile grid */
+function dsWallLook(d, w) {
+  const acc = d.accent && d.accent.w === w && PROD[d.accent.pid] ? PROD[d.accent.pid] : null;
+  const p = acc || (d.q.walls === "tile" && PROD[d.wtile] ? PROD[d.wtile] : PROD[d.wall]);
+  if (isTile(p)) { const t = swatchTile(p); return { c: t.c, tile: t }; }
+  return { c: swatchPaint(p), tile: null };
 }
 const paintsAll = () => PRODUCTS.filter(p => p.cat === "paint" && p.sub === "inter" && /краска интерьерная|краска моющаяся/i.test(p.ru));
 const floorsAll = () => PRODUCTS.filter(p => p.cat === "floor" || (p.cat === "tile" && ["porcel", "floort"].includes(p.sub)));
@@ -3560,18 +3603,35 @@ function dsTemplate(d) {
   } else if (t === "study") {
     add(byXKey("desk")); add(byXKey("chair_grey")); add(findName(/Стеллаж металлический, чёрный/)); add(byXKey("armchair")); add(byXKey("lamp_floor")); add(byXKey("curt_grey")); add(byXKey("rug_graphite"));
     wall ||= findName(/«Оливка»/); floor = findName(/Ламинат 33 класс, орех/);
+  } else if (t === "bath") {
+    const long = Math.max(d.W, d.L), shower = q.bathKind === "shower" || long < 1.65;
+    if (shower) add(findName(q.style === "loft" || q.style === "modern" ? /Душевая стойка, чёрная/ : prem ? /Душевая стойка, золото/ : /Душевая стойка с тропическим/));
+    else add(findName(long >= 1.85 && prem ? /Ванна акриловая 180×80/ : long < 1.75 || eco ? /Ванна акриловая 160×70/ : q.style === "classic" && prem ? /Ванна чугунная/ : /Ванна акриловая 170×70/));
+    if (q.wc) add(findName(prem ? /Унитаз подвесной/ : eco ? /Унитаз-компакт с сиденьем/ : /Унитаз-компакт с микролифтом/));
+    add(Math.min(d.W, d.L) < 1.5 || eco ? findName(/Раковина 50 см с пьедесталом/) : findName(q.style === "modern" || q.style === "loft" ? /Тумба с раковиной 60 см, серая/ : q.style === "scandi" || q.style === "oriental" ? /Тумба с раковиной 60 см, дуб/ : prem ? /Тумба с раковиной 80 см/ : /Тумба с раковиной для ванной, 60 см/));
+    if (!eco) add(byXKey("mirror_bath"));
+    add(findName(eco ? /Водонагреватель накопительный 50 л/ : prem ? /Водонагреватель накопительный 100 л/ : /Водонагреватель накопительный 80 л/));
+    wall ||= findName(/белая матовая|моющаяся/); floor = findName(q.style === "loft" || q.style === "modern" ? /Керамогранит 60×60, серый|Керамогранит.*бетон/ : /Керамогранит 60×60, бежевый/);
+  } else if (t === "hall") {
+    if (q.ward) add(findName(d.W >= 2.6 || d.L >= 2.6 ? /Шкаф-купе 200 см, белый|Шкаф-купе 200 см/ : /Шкаф-купе 150 см, белый/));
+    add(byXKey("shoe_bench")); add(byXKey("mirror_hall"));
+    if (!q.ward || !eco) add(byXKey("coat_rack"));
+    if (!eco) add(byXKey(q.style === "loft" ? "rug_graphite" : "rug_beige"));
+    wall ||= findName(q.style === "loft" ? /«Графит»/ : q.style === "oriental" ? /«Терракота»/ : /«Песок»/); floor = findName(q.style === "loft" ? /Керамогранит.*бетон|Керамогранит 60×60, серый/ : /Керамогранит 60×60, бежевый/);
   } else if (t === "kitchen") {
     out.push("krow"); add(byXKey("table_dining")); add(byXKey("chair_grey"), Math.min(6, +q.seats || 4)); add(byXKey("curt_linen")); add(findName(/Люстра потолочная, 3 плафона/));
     wall ||= findName(/белая матовая/); floor = findName(prem ? /белый мрамор/ : /Керамогранит 60×60, бежевый/);
   }
   if (q.floorKind === "keep") floor = null;
+  else if (t === "bath" || t === "hall") { if (q.floorKind === "lam" && t === "hall") floor = findName(/Ламинат 33 класс, дуб серый/) || floor; else if (q.floorKind === "lino" && t === "hall") floor = findName(/Линолеум бытовой, серый/); }
   else if (q.floorKind === "tile" && t !== "kitchen") floor = findName(/Керамогранит 60×60, бежевый/);
   else if (q.floorKind === "lino") floor = findName(/Линолеум бытовой, серый/);
-  return { items: out, wall: wall?.id || findName(/белая матовая/)?.id || 0, floor: floor?.id || 0 };
+  const wtile = findName(q.style === "classic" || prem ? /под мрамор/ : q.style === "loft" ? /чёрная глянцевая/ : q.style === "oriental" ? /Плитка настенная 25×40, голубая/ : q.style === "scandi" ? /Плитка настенная 25×40, белая/ : /Плитка настенная 25×40, бежевая/);
+  return { items: out, wall: wall?.id || findName(/белая матовая/)?.id || 0, floor: floor?.id || 0, wtile: wtile?.id || 0 };
 }
 function dsApplyTemplate() {
   const t = dsTemplate(DS);
-  DS.wall = t.wall; DS.floor = t.floor;
+  DS.wall = t.wall; DS.floor = t.floor; if (!PROD[DS.wtile]) DS.wtile = t.wtile; if (DS.type === "bath" && DS.q.walls === "tile") DS.wtile = t.wtile;
   DS.items = t.items.map(id => id === "krow" ? { uid: dsUid(), pid: (findName(/Кухонный модуль 60 см, белый/) || findName(/Кухонный модуль напольный 60/))?.id, krow: true } : { uid: dsUid(), pid: id });
   dsLayout();
 }
@@ -3595,8 +3655,10 @@ function dsLayout() {
   const wallF1 = (it, force) => (force || !it.tall) && along(Lr, it.w).some(z => tryAt(it, W - it.d / 2 - .02, z, 3));
   const items = d.items.map(it => { const p = PROD[it.pid], inf = dInfo(p); if (!p || !inf) return null;
     let [w, dp] = inf.size; if (it.krow) { it.n = Math.max(3, Math.min(8, Math.floor((W - (door ? 1.3 : .1)) / .6))); w = it.n * .6; }
-    return Object.assign(it, { w, d: dp, tall: inf.tall || 0, place: it.krow ? "krow" : inf.place, model: inf.model, flat: inf.place === "rug", air: ["ceiling", "curtain"].includes(inf.place), ok: true }); }).filter(Boolean);
-  const order = ["krow", "wall", "tv", "window", "center", "corner", "front", "desk", "rug", "curtain", "ceiling"];
+    return Object.assign(it, { w, d: dp, tall: inf.tall || 0, place: it.krow ? "krow" : inf.place, model: inf.model, flat: inf.place === "rug", air: ["ceiling", "curtain", "hang", "above"].includes(inf.place), ok: true }); }).filter(Boolean);
+  const hitAir = r => placed.filter(o => o.place === "hang" || o.place === "above").some(o => r.x0 < o.r.x1 + .05 && r.x1 > o.r.x0 - .05 && r.z0 < o.r.z1 + .05 && r.z1 > o.r.z0 - .05);
+  const hangAt = (it, x, z, rot) => { const r = rectOf(x, z, it.w, it.d, rot); if (!inside(r) || hitAir(r)) return false; Object.assign(it, { x, z, rot, r }); placed.push(it); return true; };
+  const order = ["krow", "wall", "tv", "window", "center", "corner", "front", "desk", "rug", "curtain", "ceiling", "hang", "above"];
   const sorted = [...items].sort((a, b) => order.indexOf(a.place) - order.indexOf(b.place) || b.w * b.d - a.w * a.d);
   let sofa = null, deskIt = null, table = null;
   for (const it of sorted.filter(i => i.pin && i.x != null)) { const r = rectOf(it.x, it.z, it.w, it.d, it.rot || 0); if (it.flat || it.air || (inside(r) && !hit(r))) { Object.assign(it, { r, ok: true, coll: false, _pinned: 1 }); placed.push(it); } else it.pin = false; }
@@ -3619,6 +3681,8 @@ function dsLayout() {
     else if (it.place === "rug") { const s = sofa || placed.find(o => /bed/.test(o.model)); let cx = W / 2, cz = Lr / 2; if (s) { const v = [[0, 1], [1, 0], [0, -1], [-1, 0]][s.rot]; cx = s.x + v[0] * (s.d / 2 + .6); cz = s.z + v[1] * (s.d / 2 + .6); if (/bed/.test(s.model)) { cx = s.x; cz = s.z + .2; } }
       const r = rectOf(cx, cz, it.w, it.d, s ? s.rot : 0); Object.assign(it, { x: Math.min(Math.max(cx, (r.x1 - r.x0) / 2), W - (r.x1 - r.x0) / 2), z: Math.min(Math.max(cz, (r.z1 - r.z0) / 2), Lr - (r.z1 - r.z0) / 2), rot: s ? s.rot : 0 }); it.r = rectOf(it.x, it.z, it.w, it.d, it.rot); placed.push(it); ok = true; }
     else if (it.place === "curtain") { const k = placed.filter(o => o.place === "curtain").length; const w = wins[k] || wins[0]; if (w) { Object.assign(it, { x: .1, z: (w[0] + w[1]) / 2, rot: 1, r: rectOf(.1, (w[0] + w[1]) / 2, it.w, .1, 1) }); placed.push(it); ok = true; } }
+    else if (it.place === "hang") ok = along(W, it.w).some(x => hangAt(it, x, it.d / 2 + .02, 0)) || along(Lr, it.w).some(z => !underWin(z - it.w / 2, z + it.w / 2) && hangAt(it, it.d / 2 + .02, z, 1)) || along(W, it.w).some(x => hangAt(it, x, Lr - it.d / 2 - .02, 2));
+    else if (it.place === "above") { const b = placed.find(o => o.model === "vanity" || o.model === "basin_ped"); if (b) { Object.assign(it, { x: b.x, z: b.z, rot: b.rot, r: rectOf(b.x, b.z, it.w, .5, b.rot) }); placed.push(it); ok = true; } else ok = along(W, it.w).some(x => hangAt(it, x, .22, 0)); }
     else if (it.place === "ceiling") { const k = placed.filter(o => o.place === "ceiling").length; Object.assign(it, { x: W / 2, z: Lr / 2 + k * .8, rot: 0, r: rectOf(W / 2, Lr / 2, .6, .6, 0) }); placed.push(it); ok = true; }
     it.ok = ok; if (ok && isSofa) sofa = it; if (ok && /desk/.test(it.model)) deskIt = it; if (ok && it.model === "table_dining") table = it;
   }
@@ -3655,14 +3719,17 @@ function roomSVG(d, opt = {}) {
   const H = d.H, C = .866, S = .5, V = dsView(d), W = V.Wv, Lr = V.Lv;
   const P = (x, y, z) => [(x - z) * C, (x + z) * S - y];
   const pts = a => a.map(([x, y, z]) => P(x, y, z).map(v => v.toFixed(3)).join(",")).join(" ");
-  const wallC = swatchPaint(PROD[d.wall]), fl = d.floor ? swatchFloor(PROD[d.floor]) : { c: "#cdbfa6", kind: "plank" };
+  const fl = d.floor ? swatchFloor(PROD[d.floor]) : { c: "#cdbfa6", kind: "plank" };
+  const wOf = test => DS_WALLS.find(w => { const m = { A: [0, d.L / 2], B: [d.W / 2, 0], C: [d.W, d.L / 2], D: [d.W / 2, d.L] }[w], v = V.xf(...m); return test(v); });
+  const lookL = dsWallLook(d, wOf(v => Math.abs(v[0]) < .01)), lookR = dsWallLook(d, wOf(v => Math.abs(v[1]) < .01));
   let g = "";
   g += `<polygon class="ds-floor" points="${pts([[0, 0, 0], [W, 0, 0], [W, 0, Lr], [0, 0, Lr]])}" fill="${fl.c}"/>`;
   if (fl.kind !== "plain") { const step = fl.kind === "plank" ? .2 : .6; let ln = ""; for (let z = step; z < Lr; z += step) ln += `M${P(0, 0, z).join(",")}L${P(W, 0, z).join(",")}`; if (fl.kind === "tile") for (let x = step; x < W; x += step) ln += `M${P(x, 0, 0).join(",")}L${P(x, 0, Lr).join(",")}`;
     if (fl.kind === "plank") for (let z = 0, k = 0; z < Lr; z += .2, k++) for (let x = (k % 3) * .4 + .3; x < W; x += 1.2) ln += `M${P(x, 0, z).join(",")}L${P(x, 0, Math.min(Lr, z + .2)).join(",")}`;
     g += `<path d="${ln}" stroke="${dsShade(fl.c, .82)}" stroke-width=".012" fill="none" pointer-events="none"/>`; }
-  g += `<polygon points="${pts([[0, 0, 0], [0, 0, Lr], [0, H, Lr], [0, H, 0]])}" fill="${dsShade(wallC, .9)}"/>`;
-  g += `<polygon points="${pts([[0, 0, 0], [W, 0, 0], [W, H, 0], [0, H, 0]])}" fill="${dsShade(wallC, .99)}"/>`;
+  g += `<polygon points="${pts([[0, 0, 0], [0, 0, Lr], [0, H, Lr], [0, H, 0]])}" fill="${dsShade(lookL.c, .9)}"/>`;
+  g += `<polygon points="${pts([[0, 0, 0], [W, 0, 0], [W, H, 0], [0, H, 0]])}" fill="${dsShade(lookR.c, .99)}"/>`;
+  for (const [lk, Q, len] of [[lookL, (u, y) => [0, y, u], Lr], [lookR, (u, y) => [u, y, 0], W]]) if (lk.tile) { let ln = ""; const t = lk.tile; for (let y = t.th; y < H; y += t.th) ln += `M${P(...Q(0, y)).join(",")}L${P(...Q(len, y)).join(",")}`; for (let u = t.tw; u < len; u += t.tw) ln += `M${P(...Q(u, 0)).join(",")}L${P(...Q(u, H)).join(",")}`; g += `<path d="${ln}" stroke="${dsShade(lk.c, lk.c === "#2d2f31" ? 1.6 : .86)}" stroke-width="${t.tw < .15 ? .006 : .01}" fill="none" pointer-events="none"/>`; }
   g += `<polygon points="${pts([[0, 0, 0], [0, 0, Lr], [0, .08, Lr], [0, .08, 0]])}" fill="${dsShade("#f2f0ea", .88)}"/><polygon points="${pts([[0, 0, 0], [W, 0, 0], [W, .08, 0], [0, .08, 0]])}" fill="#f2f0ea"/>`;
   for (const o of dsOpenings(d)) {
     const a = V.xf(...o.p0), b = V.xf(...o.p1);
@@ -3680,7 +3747,7 @@ function roomSVG(d, opt = {}) {
     for (const f of dsPartsWorld(it, H)) {
       const c1 = V.xf(f.wx - f.ex, f.wz - f.ez), c2 = V.xf(f.wx + f.ex, f.wz + f.ez), ctr = V.xf(f.wx, f.wz);
       const x0 = Math.min(c1[0], c2[0]), x1 = Math.max(c1[0], c2[0]), z0 = Math.min(c1[1], c2[1]), z1 = Math.max(c1[1], c2[1]);
-      const front = (it.tall || it.place === "curtain") && (() => { const cc = V.xf(it.x, it.z); return cc[0] > W - (it.d || .6) - .05 || cc[1] > Lr - (it.d || .6) - .05; })();
+      const front = (it.tall || it.place === "curtain" || it.place === "hang" || it.place === "above") && (() => { const cc = V.xf(it.x, it.z); return cc[0] > W - (it.d || .6) - .05 || cc[1] > Lr - (it.d || .6) - .05; })();
       faces.push({ ghost: front, bad: it.coll, uid: it.uid, k: it.flat ? -100 : (x0 + x1 + z0 + z1) / 2 + (f.py - f.hy) * 1.1 + (x1 - x0 + z1 - z0) * .25, b: [x0, f.py - f.hy, z0, x1, f.py + f.hy, z1], c: f.q.c, em: f.q.m === 8, s: f.q.s, cx: ctr[0], cz: ctr[1], cy: f.py, rx: (x1 - x0) / 2, ry: f.hy, rz: (z1 - z0) / 2 });
     }
   }
@@ -3704,11 +3771,12 @@ function roomSVG(d, opt = {}) {
 }
 /* Top-down plan: precise moving, sizes in metres */
 function planSVG(d, opt = {}) {
-  const W = d.W, Lr = d.L, n = v => v.toFixed(3), wallC = swatchPaint(PROD[d.wall]), fl = d.floor ? swatchFloor(PROD[d.floor]) : { c: "#cdbfa6" };
+  const W = d.W, Lr = d.L, n = v => v.toFixed(3), wallC = dsWallLook(d, "B").c, fl = d.floor ? swatchFloor(PROD[d.floor]) : { c: "#cdbfa6" };
   let g = `<rect x="0" y="0" width="${W}" height="${Lr}" fill="${fl.c}" opacity=".55"/>`;
   for (let x = 0; x <= W + 1e-6; x += .5) g += `<line x1="${n(x)}" y1="0" x2="${n(x)}" y2="${Lr}" stroke="#000" stroke-opacity=".06" stroke-width=".01"/>`;
   for (let z = 0; z <= Lr + 1e-6; z += .5) g += `<line x1="0" y1="${n(z)}" x2="${W}" y2="${n(z)}" stroke="#000" stroke-opacity=".06" stroke-width=".01"/>`;
   g += `<rect x="-.06" y="-.06" width="${W + .12}" height="${Lr + .12}" fill="none" stroke="${dsShade(wallC, .6)}" stroke-width=".12"/>`;
+  if (d.accent && PROD[d.accent.pid]) { const c = dsWallLook(d, d.accent.w).c, seg = { A: [-.06, -.06, -.06, Lr + .06], B: [-.06, -.06, W + .06, -.06], C: [W + .06, -.06, W + .06, Lr + .06], D: [-.06, Lr + .06, W + .06, Lr + .06] }[d.accent.w]; g += `<line x1="${n(seg[0])}" y1="${n(seg[1])}" x2="${n(seg[2])}" y2="${n(seg[3])}" stroke="${c}" stroke-width=".12"/><line x1="${n(seg[0])}" y1="${n(seg[1])}" x2="${n(seg[2])}" y2="${n(seg[3])}" stroke="#000" stroke-opacity=".25" stroke-width=".012" stroke-dasharray=".08 .06"/>`; }
   for (const o of dsOpenings(d)) {
     if (o.k === "win") g += `<line x1="-.06" y1="${n(o.p0[1])}" x2="-.06" y2="${n(o.p1[1])}" stroke="#8fc7e6" stroke-width=".14"/>`;
     else { const [a, b] = [o.p0[0], o.p1[0]], r = b - a; g += `<line x1="${n(a)}" y1="-.06" x2="${n(b)}" y2="-.06" stroke="#fff" stroke-width=".14"/><path d="M${n(b)},0 L${n(b)},${n(r)} A${n(r)},${n(r)} 0 0 1 ${n(a)},0" fill="none" stroke="#9a7353" stroke-width=".02" stroke-dasharray=".05 .04"/>`; }
@@ -3815,11 +3883,18 @@ function dsSaveRoom() {
 function dsEstimate(d) {
   const W = d.W, Lr = d.L, H = d.H, area = W * Lr, per = 2 * (W + Lr), wins = Math.max(0, d.win | 0), doors = Math.max(0, d.doors | 0);
   const wallA = Math.max(0, per * H - wins * 1.35 * 1.5 - doors * .8 * 2.05), lines = [];
-  const add = (p, q, why) => { if (p && q > 0) lines.push({ p, q, why }); };
-  if (d.q.walls === "paint" && d.wall) { const p = PROD[d.wall], vol = /10 л/.test(p.ru) ? 10 : 2.5, lit = wallA * .12 * 2; add(p, Math.ceil(lit / vol), L(`${fmtN(wallA)} м² × 2 слоя = ${lit.toFixed(1).replace(".", ",")} л`, `${fmtN(wallA)} m² × 2 qavat = ${lit.toFixed(1).replace(".", ",")} l`)); add(findName(/Грунтовка глубокого проникновения, 5 л/) || byKey("primer"), Math.ceil(wallA * .1 / 5), L("грунт перед покраской", "bo‘yashdan oldin gruntovka")); add(byKey("roller"), 1, ""); }
+  const add = (p, q, why) => { if (!p || !(q > 0)) return; const l = lines.find(x => x.p === p); if (l) { l.q += q; l.why = [l.why, why].filter(Boolean).join(" + "); } else lines.push({ p, q, why }); };
+  const acc = d.accent && PROD[d.accent.pid] ? d.accent : null, accA = acc ? dsWallArea(d, acc.w) : 0, mainA = Math.max(0, wallA - accA);
+  const tileLine = (p, a, why) => { const sheet = p.unit === "sheet", q = sheet ? Math.ceil(a * 1.1 / .09) : Math.ceil(a * 1.1); add(p, q, `${fmtN(a)} ${L("м²", "m²")} + 10%${why || ""}`); return a; };
+  let glueA = 0;
+  if (d.q.walls === "tile" && PROD[d.wtile]) glueA += tileLine(PROD[d.wtile], mainA);
+  if (acc) { const p = PROD[acc.pid]; if (isTile(p)) glueA += tileLine(p, accA, L(" · стена-акцент", " · aksent devor")); else { const vol = /10 л/.test(p.ru) ? 10 : 2.5, lit = accA * .12 * 2; add(p, Math.ceil(lit / vol), L(`стена-акцент ${fmtN(accA)} м² × 2 слоя`, `aksent devor ${fmtN(accA)} m² × 2 qavat`)); } }
+  if (glueA) { add(findName(/Плиточный клей усиленный/) || byKey("glue"), Math.ceil(glueA * 5 / 25), L(`клей для стен 5 кг/м²`, `devor uchun yelim 5 kg/m²`)); add(findName(/Затирка для швов, белая/), Math.ceil(glueA / 12), L("затирка швов", "chok uchun zatirka")); }
+  if (d.q.walls === "paint" && d.wall && mainA > 0) { const p = PROD[d.wall], vol = /10 л/.test(p.ru) ? 10 : 2.5, lit = mainA * .12 * 2, wallA = mainA; add(p, Math.ceil(lit / vol), L(`${fmtN(wallA)} м² × 2 слоя = ${lit.toFixed(1).replace(".", ",")} л`, `${fmtN(wallA)} m² × 2 qavat = ${lit.toFixed(1).replace(".", ",")} l`)); add(findName(/Грунтовка глубокого проникновения, 5 л/) || byKey("primer"), Math.ceil(wallA * .1 / 5), L("грунт перед покраской", "bo‘yashdan oldin gruntovka")); add(byKey("roller"), 1, ""); }
   if (d.q.walls === "wp") { const p = PROD[d.wp] || findName(/Обои флизелиновые «Цветы»/) || byKey("wp"); const strips = Math.ceil(per / 1.06), per1 = Math.max(1, Math.floor(10.05 / (H + .1))); add(p, Math.ceil(strips / per1), `${strips} ${L("полос", "bo‘lak")}`); }
   if (d.floor) { const p = PROD[d.floor], tile = p.cat === "tile"; add(p, Math.ceil(area * (tile ? 1.1 : 1.07)), `${area.toFixed(1).replace(".", ",")} ${L("м²", "m²")} + ${tile ? 10 : 7}%`); if (tile) add(byKey("glue"), Math.ceil(area * 5 / 25), L("плиточный клей 5 кг/м²", "kafel yelimi 5 kg/m²")); }
   const furn = {}; for (const it of d.items) if (it.ok !== false && PROD[it.pid]) { const q = it.krow ? it.n || 4 : 1; furn[it.pid] = (furn[it.pid] || 0) + q; }
+  if (d.type === "bath") { const sinks = d.items.filter(i => i.ok !== false && ["vanity", "basin_ped"].includes(dInfo(PROD[i.pid])?.model)).length; if (sinks) add(findName(d.q.style === "loft" || d.q.style === "modern" ? /Смеситель для раковины, чёрный/ : d.q.style === "classic" ? /Смеситель для раковины, золото/ : /Смеситель для раковины, хром/), sinks, L("для раковины", "rakovina uchun")); add(findName(/Вентилятор вытяжной 100 мм/), 1, L("вытяжка в ванной обязательна", "vannada ventilyator shart")); }
   if (d.items.some(it => it.krow && it.ok !== false)) { add(findName(/Столешница 3 м, бетон/), Math.ceil(((d.items.find(i => i.krow).n || 4) * .6) / 3), ""); add(findName(/Мойка гранитная 60×50, чёрная/), 1, ""); add(findName(/Вытяжка наклонная 60 см, белая/), 1, ""); }
   const mats = [...lines];
   const furnL = Object.entries(furn).map(([id, q]) => ({ p: PROD[id], q }));
@@ -3840,12 +3915,12 @@ async function dsAI(prompt, imageUrl) {
 }
 const dsCtx = d => {
   const it = d.items.filter(i => PROD[i.pid]).map(i => `${i.pid} ${PROD[i.pid].ru}`).join("; ") || "нет";
-  return `Комната: ${ROOMS().find(r => r[0] === d.type)?.[1] || d.type}, ${d.W}×${d.L} м, высота ${d.H} м, окон ${d.win}, дверей ${d.doors}. Ответы клиента: ${JSON.stringify(d.q)}. Сейчас: стены — ${PROD[d.wall]?.ru || "—"}, пол — ${PROD[d.floor]?.ru || "—"}, мебель — ${it}.${d.notes ? " По фото: " + d.notes : ""}`;
+  return `Комната: ${ROOMS().find(r => r[0] === d.type)?.[1] || d.type}, ${d.W}×${d.L} м, высота ${d.H} м, окон ${d.win}, дверей ${d.doors}. Ответы клиента: ${JSON.stringify(d.q)}. Сейчас: стены — ${d.q.walls === "tile" ? PROD[d.wtile]?.ru || "плитка" : PROD[d.wall]?.ru || "—"}, стена-акцент — ${d.accent && PROD[d.accent.pid] ? `${d.accent.w}: ${PROD[d.accent.pid].ru}` : "нет"}, пол — ${PROD[d.floor]?.ru || "—"}, мебель — ${it}.${d.notes ? " По фото: " + d.notes : ""} Стены: A — с окнами, B — с дверью, C — напротив окон, D — напротив двери.`;
 };
 async function dsAnalyzePhoto() {
   if (!DS.photo || !dsAIon()) return;
   DS.busy = true; renderDesign();
-  const r = await dsAI(`Ты дизайнер интерьера маркетплейса Imorat (Ташкент). На фото — комната клиента. Ответь ТОЛЬКО JSON без пояснений: {"type":"kids|bed|living|study|kitchen|other","notes":"2–3 коротких предложения на ${lang === "uz" ? "узбекском (новая латиница)" : "русском"}: что видно (окна, двери, пол, стены, состояние) и что лучше сделать","windows":число окон,"doors":число дверей}`, DS.photo);
+  const r = await dsAI(`Ты дизайнер интерьера маркетплейса Imorat (Ташкент). На фото — комната клиента. Ответь ТОЛЬКО JSON без пояснений: {"type":"kids|bed|living|study|kitchen|bath|hall|other","notes":"2–3 коротких предложения на ${lang === "uz" ? "узбекском (новая латиница)" : "русском"}: что видно (окна, двери, пол, стены, состояние) и что лучше сделать","windows":число окон,"doors":число дверей}`, DS.photo);
   DS.busy = false;
   if (r) { DS.notes = String(r.notes || "").slice(0, 600); if (ROOMS().some(x => x[0] === r.type)) DS.type ||= r.type; if (r.windows >= 0 && r.windows <= 3) DS.win = r.windows | 0; if (r.doors >= 0 && r.doors <= 2) DS.doors = r.doors | 0; }
   else DS.notes = DS.notes || L("Не удалось разобрать фото — ничего страшного, продолжим по размерам и ответам.", "Rasmni tahlil qilib bo‘lmadi — o‘lcham va javoblar bo‘yicha davom etamiz.");
@@ -3861,12 +3936,14 @@ async function dsWish(text) {
     const r = await dsAI(`Ты AI-дизайнер интерьера маркетплейса Imorat. ${dsCtx(DS)}
 Пожелание клиента: «${text}».
 Подбери изменения ТОЛЬКО из списков ниже. Учитывай размер комнаты (не перегружай), бюджет и пожелание. Верни ТОЛЬКО JSON:
-{"wall": id краски или null (оставить), "floor": id пола или null, "items": [id мебели, ...] — ПОЛНЫЙ новый список мебели (стулья можно повторять), "say": "1–2 предложения, что изменил и почему, на языке клиента"}
-Краски:\n${paints}\nПолы:\n${floors}\nМебель (id|название|размер|цена):\n${furn}`);
+{"wall": id краски или null (оставить), "wtile": id настенной плитки или null (для ванной), "accent": {"wall": "A|B|C|D", "id": id краски или плитки} или "none" (убрать) или null (оставить), "floor": id пола или null, "items": [id мебели, ...] — ПОЛНЫЙ новый список мебели (стулья можно повторять), "say": "1–2 предложения, что изменил и почему, на языке клиента"}
+Краски:\n${paints}\nНастенная плитка и мозаика:\n${tilesAll().map(p => `${p.id}|${p.ru}`).join("\n")}\nПолы:\n${floors}\nМебель (id|название|размер|цена):\n${furn}`);
     if (r && Array.isArray(r.items)) {
       const okIds = new Set(furnAll().map(p => p.id));
       if (r.wall && paintsAll().some(p => p.id === +r.wall)) DS.wall = +r.wall;
       if (r.floor && floorsAll().some(p => p.id === +r.floor)) DS.floor = +r.floor;
+      if (r.wtile && tilesAll().some(p => p.id === +r.wtile)) { DS.wtile = +r.wtile; DS.q.walls = "tile"; }
+      if (r.accent === "none") DS.accent = null; else if (r.accent && DS_WALLS.includes(r.accent.wall) && [...paintsAll(), ...tilesAll()].some(p => p.id === +r.accent.id)) DS.accent = { w: r.accent.wall, pid: +r.accent.id };
       DS.items = r.items.map(Number).filter(id => okIds.has(id)).slice(0, 24).map(id => ({ uid: dsUid(), pid: id, krow: dInfo(PROD[id]).model === "krow" }));
       DS.say = String(r.say || "").slice(0, 400); done = true;
     }
@@ -3888,7 +3965,10 @@ function dsRules(text) {
   if (has("ковёр", "ковер", "gilam") && !has("без ковр")) put(DS.type === "kids" ? "rug_kid" : "rug_beige") && did.push(L("добавил ковёр", "gilam qo‘shdim"));
   if (has("тв", "телевиз", "televizor")) put("tvstand") && did.push(L("добавил тумбу под ТВ", "TV tumbasi qo‘shdim"));
   const paint = has("розов", "pushti") ? byXKey("paint_rose") : has("мят", "зелён", "зелен", "yalpiz", "yashil") ? byXKey("paint_mint") : has("лаванд", "фиолет", "lavanda") ? byXKey("paint_lav") : has("голуб", "син", "havorang", "ko‘k") ? findName(/«Небо»/) : has("бежев", "тёпл", "bej") ? findName(/«Песок»/) : has("тёмн", "темн", "сер", "графит", "kulrang") ? findName(/«Графит»/) : has("светл", "бел", "oq", "yorug") ? findName(/белая матовая/) : null;
-  if (paint) { DS.wall = paint.id; did.push(L(`стены — ${paint.ru.match(/«.+»|белая/)?.[0] || ""}`, "devor rangini o‘zgartirdim")); }
+  if (has("акцент", "одну стену", "одна стена", "aksent", "bitta devor")) { const p = paint || findName(/«Терракота»/); DS.accent = { w: DS.win > 0 ? "C" : "D", pid: p.id }; did.push(L(`стена-акцент — ${p.ru.match(/«.+»|белая/)?.[0] || ""}`, "aksent devor qo‘shdim")); }
+  else if (paint) { DS.wall = paint.id; did.push(L(`стены — ${paint.ru.match(/«.+»|белая/)?.[0] || ""}`, "devor rangini o‘zgartirdim")); }
+  if (has("душ", "dush") && !has("без душ")) { const p = findName(/Душевая стойка с тропическим/); if (drop(/^Ванна/) || !DS.items.some(i => /Душев/.test(PROD[i.pid]?.ru))) { put(p); did.push(L("поставил душ вместо ванны", "vanna o‘rniga dush qo‘ydim")); } }
+  else if (has("ванну", "ванна", "vanna") && DS.type === "bath") { if (drop(/Душевая/)) { put(findName(/Ванна акриловая 170×70/)); did.push(L("поставил ванну вместо душа", "dush o‘rniga vanna qo‘ydim")); } }
   if (has("дешевл", "эконом", "arzon")) { drop(/Торшер|Кресло/); DS.q.budget = "eco"; did.push(L("убрал необязательное, чтобы было дешевле", "arzonroq bo‘lishi uchun ortiqchasini olib tashladim")); }
   if (has("паркет", "parket")) { const p = findName(/Паркетная доска, дуб/); if (p) { DS.floor = p.id; did.push(L("пол — паркет", "pol — parket")); } }
   if (has("плитк", "kafel", "керамогран")) { const p = findName(/Керамогранит 60×60, бежевый/); if (p) { DS.floor = p.id; did.push(L("пол — керамогранит", "pol — keramogranit")); } }
@@ -3923,9 +4003,11 @@ function renderDesign() {
     if (t === "bed") panel += `<b class="ds-q">${L("Кровать", "Karavot")}</b>${chips("bed", [["double", L("Двуспальная", "Ikki kishilik")], ["single", L("Односпальная", "Bir kishilik")]], q.bed)}<b class="ds-q">${L("Рабочее место", "Ish joyi")}</b>${chips("desk", [["1", L("Нужно", "Kerak")], ["0", L("Не нужно", "Kerak emas")]], q.desk ? "1" : "0")}`;
     if (t === "living" || t === "kitchen") panel += `<b class="ds-q">${L("Сколько человек в семье", "Oilada necha kishi")}</b>${chips("seats", [["2", "1–2"], ["4", "3–4"], ["6", "5–6"]], q.seats)}`;
     if (t === "living") panel += `<b class="ds-q">${L("Телевизор", "Televizor")}</b>${chips("tv", [["1", L("Да", "Ha")], ["0", L("Нет", "Yo‘q")]], q.tv ? "1" : "0")}<b class="ds-q">${L("Обеденный стол в зале", "Zalda ovqat stoli")}</b>${chips("dining", [["1", L("Да", "Ha")], ["0", L("Нет", "Yo‘q")]], q.dining ? "1" : "0")}`;
+    if (t === "bath") panel += `<b class="ds-q">${L("Ванна или душ", "Vanna yoki dush")}</b>${chips("bathKind", [["bath", L("Ванна", "Vanna")], ["shower", L("Душ", "Dush")]], q.bathKind)}<b class="ds-q">${L("Унитаз в этой комнате", "Unitaz shu xonada")}</b>${chips("wc", [["1", L("Да, совмещённый", "Ha, birga")], ["0", L("Нет, отдельно", "Yo‘q, alohida")]], q.wc ? "1" : "0")}`;
+    if (t === "hall") panel += `<b class="ds-q">${L("Шкаф-купе", "Shkaf-kupe")}</b>${chips("ward", [["1", L("Нужен", "Kerak")], ["0", L("Без шкафа, вешалка", "Shkafsiz, ilgich")]], q.ward ? "1" : "0")}`;
     if (t && t !== "kids") panel += `<b class="ds-q">${L("Стиль", "Uslub")}</b>${chips("style", [["modern", L("Современный", "Zamonaviy")], ["scandi", L("Скандинавский", "Skandinav")], ["classic", L("Классика", "Klassika")], ["oriental", L("Восточный", "Sharqona")], ["loft", L("Лофт", "Loft")]], q.style)}`;
-    if (t) panel += `<b class="ds-q">${L("Стены", "Devorlar")}</b>${chips("walls", [["paint", L("Покрасить", "Bo‘yash")], ["wp", L("Обои", "Gulqog‘oz")], ["keep", L("Оставить", "Qoldirish")]], q.walls)}
-      <b class="ds-q">${L("Пол", "Pol")}</b>${chips("floorKind", [["lam", L("Ламинат / паркет", "Laminat / parket")], ["tile", L("Плитка", "Kafel")], ["lino", L("Линолеум", "Linoleum")], ["keep", L("Оставить", "Qoldirish")]], q.floorKind)}
+    if (t) panel += `<b class="ds-q">${L("Стены", "Devorlar")}</b>${chips("walls", [["paint", L("Покрасить", "Bo‘yash")], ...(t === "bath" ? [] : [["wp", L("Обои", "Gulqog‘oz")]]), ["tile", L("Плитка", "Kafel")], ["keep", L("Оставить", "Qoldirish")]], q.walls)}
+      <b class="ds-q">${L("Пол", "Pol")}</b>${chips("floorKind", t === "bath" ? [["tile", L("Плитка / керамогранит", "Kafel / keramogranit")], ["keep", L("Оставить", "Qoldirish")]] : [["lam", L("Ламинат / паркет", "Laminat / parket")], ["tile", L("Плитка", "Kafel")], ["lino", L("Линолеум", "Linoleum")], ["keep", L("Оставить", "Qoldirish")]], q.floorKind)}
       <b class="ds-q">${L("Бюджет", "Byudjet")}</b>${chips("budget", [["eco", L("Эконом", "Tejamkor")], ["std", L("Стандарт", "Standart")], ["prem", L("Премиум", "Premium")]], q.budget)}`;
     panel += `<div class="ds-nav"><button class="btn btn-line" type="button" data-ds="back">${L("Назад", "Orqaga")}</button><button class="btn btn-primary" type="button" data-ds="build" ${t ? "" : "disabled"}>${ui("spark", 16)} ${L("Собрать комнату", "Xonani yig‘ish")}</button></div>`;
   } else {
@@ -3934,7 +4016,10 @@ function renderDesign() {
       <form class="ds-wish" id="dsWish"><label class="visually-hidden" for="dsWishIn">${L("Ваши пожелания", "Istaklaringiz")}</label><input id="dsWishIn" placeholder="${L("Напишите, что изменить: «светлее, без шкафа, стол у окна»", "Nima o‘zgartirish kerak: «yorug‘roq, shkafsiz, deraza oldida stol»")}" ${d.busy ? "disabled" : ""}><button class="btn btn-primary" type="submit" ${d.busy ? "disabled" : ""}>${d.busy ? "…" : ui("send", 16)}</button></form>
       ${d.say ? `<div class="note">${ui("spark", 14)} ${esc(d.say)}</div>` : ""}
       ${d.picker ? `<div class="ds-picker">${furnAll().filter(p => !d.picker.sub || p.sub === d.picker.sub).map(p => `<button type="button" class="ds-pick" data-dsadd="${p.id}">${mini(p)}<span>${esc(pName(p))}<small>${fmt(minPrice(p))}</small></span></button>`).join("")}</div>` : ""}
-      <b class="ds-q">${L("Цвет стен", "Devor rangi")}</b><div class="ds-sw">${paintsAll().map(p => `<button type="button" class="sw" data-dswall="${p.id}" style="--c:${swatchPaint(p)}" aria-pressed="${d.wall === p.id}" title="${esc(pName(p))}"><span class="visually-hidden">${esc(pName(p))}</span></button>`).join("")}</div>
+      <b class="ds-q">${L("Цвет стен", "Devor rangi")}</b><div class="ds-sw">${paintsAll().map(p => `<button type="button" class="sw" data-dswall="${p.id}" style="--c:${swatchPaint(p)}" aria-pressed="${d.q.walls !== "tile" && d.wall === p.id}" title="${esc(pName(p))}"><span class="visually-hidden">${esc(pName(p))}</span></button>`).join("")}</div>
+      <b class="ds-q">${L("Плитка на стены", "Devorga kafel")}</b><div class="ds-sw">${tilesAll().map(p => `<button type="button" class="sw wt" data-dswtile="${p.id}" style="--c:${swatchTile(p).c}" aria-pressed="${d.q.walls === "tile" && d.wtile === p.id}" title="${esc(pName(p))}"><span class="visually-hidden">${esc(pName(p))}</span></button>`).join("")}</div>
+      <b class="ds-q">${L("Стена-акцент", "Aksent devor")}</b><div class="chips ds-chips">${[["", L("Нет", "Yo‘q")], ["A", d.win > 0 ? L("С окном", "Derazali") : L("Слева", "Chapdagi")], ["B", d.doors > 0 ? L("С дверью", "Eshikli") : L("Справа", "O‘ngdagi")], ["C", d.win > 0 ? L("Напротив окна", "Deraza qarshisida") : L("Дальняя", "Uzoqdagi")], ["D", d.doors > 0 ? L("Напротив двери", "Eshik qarshisida") : L("Задняя", "Orqadagi")]].map(([w, t]) => `<button type="button" class="chip" data-dsacc="${w || "none"}" aria-pressed="${(d.accent?.w || "") === w}">${t}</button>`).join("")}</div>
+      ${d.accent ? `<div class="ds-sw">${[...paintsAll(), ...tilesAll()].map(p => `<button type="button" class="sw${isTile(p) ? " wt" : ""}" data-dsaccp="${p.id}" style="--c:${isTile(p) ? swatchTile(p).c : swatchPaint(p)}" aria-pressed="${d.accent.pid === p.id}" title="${esc(pName(p))}"><span class="visually-hidden">${esc(pName(p))}</span></button>`).join("")}</div>` : ""}
       <b class="ds-q">${L("Пол", "Pol")}</b><div class="ds-sw">${floorsAll().map(p => { const f = swatchFloor(p); return `<button type="button" class="sw ${f.kind}" data-dsfloor="${p.id}" style="--c:${f.c}" aria-pressed="${d.floor === p.id}" title="${esc(pName(p))}"><span class="visually-hidden">${esc(pName(p))}</span></button>`; }).join("")}</div>
       <b class="ds-q">${L("Мебель в комнате", "Xonadagi mebel")}</b>
       <div class="ds-items">${d.items.filter(i => PROD[i.pid]).map(i => { const p = PROD[i.pid]; return `<div class="ds-item ${d.sel === i.uid ? "on" : ""} ${i.ok === false ? "bad" : ""}" data-dssel="${i.uid}">${mini(p)}<span><b>${esc(pName(p))}${i.krow ? ` × ${i.n}` : ""}</b><small>${fmt(minPrice(p) * (i.krow ? i.n || 4 : 1))}${i.ok === false ? ` · ${L("не помещается", "sig‘maydi")}` : ""}</small></span><button type="button" class="ib" data-dsturn="${i.uid}" title="${L("Повернуть", "Burish")}" aria-label="${L("Повернуть", "Burish")}">↻</button><button type="button" class="ib" data-dsalt="${i.uid}" title="${L("Заменить", "Almashtirish")}" aria-label="${L("Заменить", "Almashtirish")}">${ui("repeat", 16)}</button><button type="button" class="ib" data-dsdel="${i.uid}" title="${L("Убрать", "Olib tashlash")}" aria-label="${L("Убрать", "Olib tashlash")}">${ui("trash", 16)}</button></div>`; }).join("") || `<p class="mu">${L("Комната пустая — нажмите «AI, добавь по вкусу».", "Xona bo‘sh — «AI, didimga qarab qo‘sh» ni bosing.")}</p>`}</div>
@@ -3964,17 +4049,20 @@ function renderDesign() {
   const wf = $("#dsWish"); if (wf) wf.addEventListener("submit", e => { e.preventDefault(); const v = $("#dsWishIn").value; $("#dsWishIn").value = ""; dsWish(v); });
 }
 document.addEventListener("click", e => {
-  const t = e.target.closest("[data-dsroom],[data-dsroomdel],.ds-teaser-v") || e.target.closest("[data-ds],[data-dsq],[data-dsstep],[data-dswall],[data-dsfloor],[data-dsdel],[data-dsalt],[data-dssel],[data-dsadd],[data-dsuid],[data-dsturn]"); if (!t || route.view !== "design") return;
+  const t = e.target.closest("[data-dsroom],[data-dsroomdel],.ds-teaser-v") || e.target.closest("[data-ds],[data-dsq],[data-dsstep],[data-dswall],[data-dswtile],[data-dsacc],[data-dsaccp],[data-dsfloor],[data-dsdel],[data-dsalt],[data-dssel],[data-dsadd],[data-dsuid],[data-dsturn]"); if (!t || route.view !== "design") return;
   const s = t.dataset;
   if (s.dsturn) return dsTurn(s.dsturn);
   if (s.dsroomdel) { LS.set("imorat.rooms", dsRooms().filter(r => r.id !== s.dsroomdel)); return renderDesign(); }
   if (s.dsroom) { const r = dsRooms().find(x => x.id === s.dsroom); if (r) { DS = { ...dsNew(), ...JSON.parse(JSON.stringify(r.d)), step: 4 }; dsLayout(); renderDesign(); window.scrollTo(0, 0); } return; }
-  if (s.dsq) { const k = s.dsq, v = s.v; if (k === "type") DS.type = v; else if (["colors", "hobby"].includes(k)) { const a = DS.q[k] || []; DS.q[k] = a.includes(v) ? a.filter(x => x !== v) : [...a, v]; } else if (["tv", "dining", "desk"].includes(k)) DS.q[k] = v === "1"; else DS.q[k] = v; dsSave(); return renderDesign(); }
+  if (s.dsq) { const k = s.dsq, v = s.v; if (k === "type") { DS.type = v; if (v === "bath") { if (DS.q.walls !== "keep") DS.q.walls = "tile"; if (DS.q.floorKind !== "keep") DS.q.floorKind = "tile"; } else if (DS.q.walls === "tile" && v !== "hall") DS.q.walls = "paint"; if (v === "hall" && DS.q.floorKind === "lam") DS.q.floorKind = "tile"; } else if (["colors", "hobby"].includes(k)) { const a = DS.q[k] || []; DS.q[k] = a.includes(v) ? a.filter(x => x !== v) : [...a, v]; } else if (["tv", "dining", "desk", "wc", "ward"].includes(k)) DS.q[k] = v === "1"; else DS.q[k] = v; dsSave(); return renderDesign(); }
   if (s.dsstep) { DS.step = +s.dsstep; dsSave(); return renderDesign(); }
   if (s.dswall) { DS.wall = +s.dswall; DS.q.walls = "paint"; dsSave(); return renderDesign(); }
+  if (s.dswtile) { DS.wtile = +s.dswtile; DS.q.walls = "tile"; dsSave(); return renderDesign(); }
+  if (s.dsacc) { if (s.dsacc === "none") DS.accent = null; else { const keep = DS.accent?.pid, def = DS.type === "bath" ? findName(/Мозаика стеклянная 30×30, зелёная/) : findName(DS.type === "kids" ? /«Небо»/ : /«Терракота»/); DS.accent = { w: s.dsacc, pid: keep || def?.id }; const vis = [["A", "B"], ["B", "C"], ["C", "D"], ["D", "A"]]; if ((DS.mode || "3d") === "3d" && !vis[(DS.view || 0) % 4].includes(s.dsacc)) DS.view = vis.findIndex(v => v.includes(s.dsacc)); } dsSave(); return renderDesign(); }
+  if (s.dsaccp) { if (DS.accent) DS.accent.pid = +s.dsaccp; dsSave(); return renderDesign(); }
   if (s.dsfloor) { DS.floor = +s.dsfloor; dsSave(); return renderDesign(); }
   if (s.dsdel) { DS.items = DS.items.filter(i => i.uid !== s.dsdel); dsLayout(); return renderDesign(); }
-  if (s.dsalt) { const it = DS.items.find(i => i.uid === s.dsalt), p = PROD[it.pid], inf = dInfo(p); const alts = furnAll().filter(x => x.sub === p.sub && dInfo(x).place === inf.place); const i = alts.findIndex(x => x.id === p.id); it.pid = alts[(i + 1) % alts.length].id; DS.sel = it.uid; dsLayout(); return renderDesign(); }
+  if (s.dsalt) { const it = DS.items.find(i => i.uid === s.dsalt), p = PROD[it.pid], inf = dInfo(p); const fam = m => ({ toilet: 1, basin_ped: 2, shower: 3, bath: 4 })[m] || 0, alts = furnAll().filter(x => x.sub === p.sub && dInfo(x).place === inf.place && fam(dInfo(x).model) === fam(inf.model)); const i = alts.findIndex(x => x.id === p.id); it.pid = alts[(i + 1) % alts.length].id; DS.sel = it.uid; dsLayout(); return renderDesign(); }
   if (s.dssel || s.dsuid) { DS.sel = s.dssel || s.dsuid; dsSave(); return renderDesign(); }
   if (s.dsadd) { DS.items.push({ uid: dsUid(), pid: +s.dsadd, krow: dInfo(PROD[s.dsadd]).model === "krow" }); DS.picker = null; DS.sel = DS.items.at(-1).uid; dsLayout(); return renderDesign(); }
   switch (s.ds) {

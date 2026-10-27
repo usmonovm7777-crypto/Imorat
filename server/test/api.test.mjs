@@ -31,7 +31,7 @@ const fake = createServer(async (req, res) => {
   if (req.url === "/ai/v1/messages") {
     const b = JSON.parse(body);
     assert.equal(req.headers["x-api-key"], "sk-test");
-    if (b.system[0].text.includes("AI-дизайнер")) { res.writeHead(200, { "content-type": "text/event-stream" }); res.write(`data: ${JSON.stringify({ type: "content_block_delta", delta: { type: "text_delta", text: '{"items":[520],"say":"ok"}' } })}\n\n`); return res.end(); }
+    if (b.system[0].text.startsWith("Ты — AI-дизайнер")) { res.writeHead(200, { "content-type": "text/event-stream" }); res.write(`data: ${JSON.stringify({ type: "content_block_delta", delta: { type: "text_delta", text: '{"items":[520],"say":"ok"}' } })}\n\n`); return res.end(); }
     assert.ok(b.system[0].text.includes("Цемент М400"));
     res.writeHead(200, { "content-type": "text/event-stream" });
     for (const t of ["Для подвала ", "нужен цемент ", "[[1:115]]"]) res.write(`event: content_block_delta\ndata: ${JSON.stringify({ type: "content_block_delta", index: 0, delta: { type: "text_delta", text: t } })}\n\n`);
