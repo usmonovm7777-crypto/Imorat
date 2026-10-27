@@ -20,6 +20,7 @@ import { registerStats } from "./stats.js";
 import { createChannel } from "./channel.js";
 import { registerDisputes } from "./disputes.js";
 import { registerQuestions } from "./questions.js";
+import { registerCatalogExtras } from "./catalogx.js";
 
 export const STEPS = {
   yandex: ["new", "assembling", "searching", "to_store", "on_way", "delivered"],
@@ -692,6 +693,7 @@ export function createApp(cfg, log = console) {
   registerStats({ r, db, lim, needSeller });
   channel.routes(r, needAdmin);
   registerQuestions({ r, db, cfg, need, needSeller, lim, tg, push, log });
+  const cx = registerCatalogExtras({ r, db, cfg, need, lim, tg, push, saveImage, mediaUrl, log });
   registerDisputes({ r, db, cfg, need, needSeller, needAdmin, isAdmin, audit, lim, tg, push, saveImage, mediaUrl, log });
 
   /* ---------- HTTP server ---------- */
@@ -759,13 +761,14 @@ export function createApp(cfg, log = console) {
       readdirSync(cfg.backupDir).filter(f => /^imorat-\d{4}-\d{2}-\d{2}\.db$/.test(f)).sort().slice(0, -14).forEach(f => unlinkSync(join(cfg.backupDir, f)));
     } catch (e) { log.error("[backup] failed", e.message); notify.admins("⚠️ Резервная копия базы не сохранилась: " + String(e.message).slice(0, 150)); }
   }
-  const timers = [setInterval(() => { try { sweep(); } catch (e) { log.error("[sweep]", e); } if (channel.enabled()) channel.daily().catch(e => log.error("[channel]", e)); }, 30000), setInterval(backup, 3600000)];
+  const timers = [setInterval(() => { try { sweep(); } catch (e) { log.error("[sweep]", e); } if (channel.enabled()) channel.daily().catch(e => log.error("[channel]", e)); try { cx.stockSweep(); } catch (e) { log.error("[stock]", e); } }, 30000), setInterval(backup, 3600000)];
   server.on("listening", () => { tg.start(); backup(); });
   server.stopJobs = () => { timers.forEach(clearInterval); tg.stop(); };
   server.on("close", server.stopJobs);
   server.sweep = sweep;
   server.backup = backup;
   server.channel = channel;
+  server.stockSweep = () => cx.stockSweep();
   server.db = db;
   return server;
 }

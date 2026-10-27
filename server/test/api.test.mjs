@@ -521,3 +521,35 @@ test("Questions to a store, answers, public FAQ; verified badge", async () => {
   assert.equal(pub[0].answer, "Да, 40 листов на складе"); assert.equal(pub[0].phone, undefined);
   assert.equal((await call("GET", "/api/me/questions", null, buyer)).data.questions[0].answer, "Да, 40 листов на складе");
 });
+
+test("Back in stock alert and product reviews with a photo", async () => {
+  const seller = (await login("991110011")).data.token;
+  const st = await call("POST", "/api/seller/store", { name: "Nalichie Test", descr: "Магазин для проверки наличия и отзывов", cats: ["tools"], phone: "712001100", addr: "ул. Наличия, 1", hours: "00:00–00:00", district: "mirob" }, seller);
+  const sid = st.data.store.id;
+  await call("PATCH", `/api/admin/stores/${sid}`, { status: "active" }, globalThis.ADMIN);
+  const np = await call("POST", "/api/seller/products", { ru: "Уровень строительный 120 см", cat: "tools", sub: "measure", unit: "pcs", price: 150000, stock: 0, kg: 1 }, seller);
+  assert.equal(np.status, 200, JSON.stringify(np.data)); const pid = np.data.product.id;
+  const buyer = (await login("991110022")).data.token;
+  await call("POST", `/api/products/${pid}/stock-watch`, null, buyer);
+  assert.deepEqual((await call("GET", "/api/me/stock-watch", null, buyer)).data.ids, [pid]);
+  assert.equal(app.stockSweep(), 0, "still out of stock");
+  await call("PATCH", `/api/seller/offers/${pid}`, { stock: 5 }, seller);
+  assert.equal(app.stockSweep(), 1);
+  assert.deepEqual((await call("GET", "/api/me/stock-watch", null, buyer)).data.ids, [], "alert sent once");
+  // reviews: only after receiving the product
+  let rv = (await call("GET", `/api/products/${pid}/reviews`, null, buyer)).data;
+  assert.equal(rv.can_review, false);
+  assert.equal((await call("POST", `/api/products/${pid}/reviews`, { stars: 5 }, buyer)).status, 403);
+  const o = await call("POST", "/api/orders", { lines: [{ id: pid, store: sid, q: 1 }], form: { name: "Бобур", phone: "998991110022", mode: "pickup", pay: "store" } }, buyer);
+  const sh = o.data.order.ships[0].id;
+  for (const s of ["assembling", "ready", "picked"]) await call("PATCH", `/api/seller/shipments/${sh}`, { status: s }, seller);
+  rv = (await call("GET", `/api/products/${pid}/reviews`, null, buyer)).data;
+  assert.equal(rv.can_review, true);
+  const add = await call("POST", `/api/products/${pid}/reviews`, { stars: 4, text: "Точный, но тяжеловат" }, buyer);
+  assert.equal(add.status, 200);
+  const png = Buffer.from("89504e470d0a1a0a0000000d49484452", "hex");
+  assert.equal((await fetch(`${base}/api/product-reviews/${add.data.review.id}/photo`, { method: "POST", headers: { authorization: "Bearer " + buyer }, body: png })).status, 200);
+  assert.equal((await call("POST", `/api/products/${pid}/reviews`, { stars: 1 }, buyer)).status, 409);
+  rv = (await call("GET", `/api/products/${pid}/reviews`)).data;
+  assert.equal(rv.count, 1); assert.equal(rv.stars, 4); assert.ok(rv.reviews[0].photo.includes("/uploads/")); assert.equal(rv.can_review, false);
+});

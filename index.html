@@ -787,6 +787,13 @@ html.ds-dragging, html.ds-dragging * { cursor: grabbing !important; user-select:
 .ds-wish { display: flex; gap: 6px; }
 .ds-wish input { flex: 1; min-width: 0; border: 1.5px solid var(--line); border-radius: 12px; padding: 10px 12px; background: var(--raised); font: inherit; color: inherit; }
 .ds-sw { display: flex; flex-wrap: wrap; gap: 6px; }
+.infobox.lnkbox.on { border-color: var(--accent); background: var(--accent-soft); }
+.prv-box { display: grid; gap: 8px; }
+.prv { border-top: 1px solid var(--line); padding-top: 8px; } .prv p { margin: 4px 0; } .prv .s { color: #E3A008; }
+.prv img { width: 96px; height: 96px; object-fit: cover; border-radius: 10px; margin-top: 4px; }
+.prv-form { display: grid; gap: 8px; padding: 12px; border: 1px dashed var(--line-strong); border-radius: 14px; }
+.prv-form textarea { width: 100%; font: inherit; font-size: 14px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
+.prv-form .stars button.on { color: #E3A008; }
 .slink { text-align: left; color: inherit; } .slink:hover b { color: var(--accent); text-decoration: underline; }
 .vmini { color: var(--accent); vertical-align: -1px; }
 .vbadge { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; color: var(--accent); background: var(--accent-soft); padding: 3px 9px; border-radius: 999px; vertical-align: middle; }
@@ -2276,6 +2283,7 @@ function relatedOf(p) {
 }
 function openProduct(id) {
   const p = PROD[id]; if (!p) return;
+  if (revDraft.pid !== p.id) revDraft = { stars: 0, photo: "", pid: p.id };
   viewed = [p.id, ...viewed.filter(x => x !== p.id)].slice(0, 10); LS.set("imorat.viewed", viewed); trackEv({ t: "view", id: p.id });
   const c = CAT[p.cat], offers = [...p.offers].sort((a, b) => a.price - b.price), fav = favs.includes(p.id);
   const t = pickTariff(p.kg), near = offers[0], dist = km(STORE[near.store].d, district), mp = offers[0].price;
@@ -2294,6 +2302,7 @@ function openProduct(id) {
       <dl class="specs"><dt>${L("Единица", "O‘lchov")}</dt><dd>${unitName(p.unit)}</dd><dt>${L("Вес", "Vazn")}</dt><dd>${fmtKg(p.kg)}</dd><dt>${L("Страна", "Mamlakat")}</dt><dd>${L(...p.country)}</dd><dt>${L("Гарантия", "Kafolat")}</dt><dd>${p.warranty ? `${p.warranty} ${L("мес.", "oy")}` : L("по закону о защите прав потребителей", "iste’molchilar huquqlari qonuni bo‘yicha")}</dd><dt>${L("Цена", "Narx")}</dt><dd>${offers.length > 1 ? `${fmt(offers[0].price)} – ${fmt(offers[offers.length - 1].price)}` : fmt(mp)}</dd></dl>
       <div><h3 class="h-m" style="margin-bottom:10px">${L("Цены в магазинах", "Do‘konlardagi narxlar")}</h3>
       <div class="offers">${offers.map((o, i) => { const s = STORE[o.store], st = stockOf(p, o.store); return `<div class="offer ${i === 0 && offers.length > 1 ? "best" : ""}"><div><button type="button" class="slink" data-go="store-${s.id}"><b>${esc(s.name)}</b>${isVerified(s) ? ` <span class="vmini" title="${L("Проверенный магазин", "Tekshirilgan do‘kon")}">${ui("shield", 12)}</span>` : ""}</button><small>${dName(s.d)} · ${openState(s).text}</small><small>${ratingHTML(s)}</small>${i === 0 && offers.length > 1 ? `<small style="color:var(--accent);font-weight:600">${L("Лучшая цена", "Eng yaxshi narx")}</small>` : ""}</div><div style="display:grid;justify-items:end;gap:4px"><span class="pr">${fmt(o.price)}</span>${stockTxt(st)}</div><button class="btn btn-primary" type="button" data-addo="${p.id}|${o.store}">${L("В корзину", "Savatga")}</button></div>`; }).join("")}</div></div>
+      ${stockWatchHTML(p)}
       ${svc ? `<label class="infobox" for="svcChk">${ui("wrench", 20)}<span><b>${L("Установка мастером", "Usta o‘rnatishi")}</b><small>${fmt(svc)} ${L("за", "har")} ${unitName(p.unit)} · ${L("мастер приедет после доставки", "usta yetkazilgandan keyin keladi")}</small></span><span class="check"><input type="checkbox" id="svcChk" data-svc="${p.id}" ${svcOn ? "checked" : ""}></span></label>` : ""}
       ${SUB_SPEC[p.sub] ? `<button class="infobox lnkbox" type="button" data-mfind="${SUB_SPEC[p.sub]}">${ui("wrench", 20)}<span><b>${L("Найти мастера", "Usta topish")}: ${esc(mSpecName(SUB_SPEC[p.sub]).toLowerCase())}</b><small>${L("С отзывами покупателей, в вашем районе", "Xaridorlar sharhlari bilan, tumaningizda")}</small></span>${ui("chev", 16)}</button>` : ""}
       ${mp >= 500000 ? `<div class="infobox">${ui("wallet", 20)}<span><b>${L("Рассрочка на 12 месяцев", "12 oyga muddatli to‘lov")}</b><small>${L(`от ${fmt(monthly(mp))} в месяц`, `oyiga ${fmt(monthly(mp))}dan`)} · ${L("оформление при оплате, условия партнёра", "to‘lovda rasmiylashtiriladi, hamkor shartlari")}</small></span></div>` : ""}
@@ -2301,6 +2310,7 @@ function openProduct(id) {
       ${TIER_CATS.includes(p.cat) ? `<div class="infobox">${ui("store", 20)}<span style="flex:1"><b>${L("Оптом дешевле — для мастеров и прорабов", "Ulgurji arzonroq — ustalar va prorablar uchun")}</b><span class="tier"><span class="on">${L("1–9", "1–9")}<b>${fmt(mp)}</b></span><span>${L("от 10", "10 dan")}<b>${fmt(round(mp * .97))}</b></span><span>${L("от 50", "50 dan")}<b>${fmt(round(mp * .94))}</b></span></span></span></div>` : ""}
       <div class="m-actions"><button class="btn btn-ai" type="button" data-askp="${p.id}">${ui("spark", 18)} ${L("Спросить AI", "AI dan so‘rash")}</button><button class="btn btn-line" type="button" data-fav="${p.id}" aria-pressed="${fav}">${ui("heart", 18)} ${fav ? L("В избранном", "Saralanganda") : L("В избранное", "Saralanganlarga")}</button><button class="btn btn-line" type="button" data-cmp="${p.id}">${ui("filter", 18)} ${compare.includes(p.id) ? L("В сравнении", "Solishtirishda") : L("Сравнить", "Solishtirish")}</button><button class="btn btn-line" type="button" data-watch="${p.id}" aria-pressed="${watch.includes(p.id)}">${ui("bell", 18)} ${watch.includes(p.id) ? L("Слежу за ценой", "Narx kuzatilmoqda") : L("Следить за ценой", "Narxni kuzatish")}</button></div>
       ${rel.length ? `<div><h3 class="h-m" style="margin-bottom:10px">${L("С этим покупают", "Bu bilan birga olishadi")}</h3><div class="related">${rel.map(r => `<button class="rel" type="button" data-open="${r.id}">${mini(r)}<span>${esc(pName(r))}</span><b>${fmt(minPrice(r))}</b></button>`).join("")}</div></div>` : ""}
+      <div class="prv-box" id="pRev" data-pid="${p.id}">${prodReviewsHTML(p)}</div>
     </div>`;
   setPanel($("#modal"), true); syncLock();
   $("#mBox").scrollTop = 0;
@@ -2726,7 +2736,7 @@ function finishAuth(u, token) {
   if (u.district) { district = u.district; LS.set("imorat.district", district); }
   form.name = u.name; form.phone = u.phone; LS.set("imorat.form2", form);
   const then = auth.then; closeAuth(); renderHeader(); renderTabbar(); counts();
-  if (u.api) { bonusApi = null; loadBonus(); } else if (LS.get("imorat.refPending", "")) { const rc = LS.get("imorat.refPending", ""); LS.set("imorat.refPending", ""); setTimeout(() => applyRefCode(rc, true), 400); }
+  if (u.api) { bonusApi = null; loadBonus(); loadStockWatch(); } else if (LS.get("imorat.refPending", "")) { const rc = LS.get("imorat.refPending", ""); LS.set("imorat.refPending", ""); setTimeout(() => applyRefCode(rc, true), 400); }
   toast(then === "seller" ? L("Магазин отправлен на проверку", "Do‘kon tekshiruvga yuborildi") : L(`Добро пожаловать, ${u.name}!`, `Xush kelibsiz, ${u.name}!`));
   if (then === "checkout") openDrawer("checkout"); else if (then === "seller") { sellerData = null; go("seller"); } else if (typeof then === "function") setTimeout(then, 0); else if (drawerView === "profile") renderDrawer();
   if (route.view === "masters" && typeof then !== "function") { mApi.list = null; mApi.me = undefined; renderMasters(); }
@@ -5410,6 +5420,70 @@ function sellerQuestionsHTML(sid) {
     ${list.slice(0, 20).map(q => `<div class="sq"><b>${esc(q.text)}</b>${q.product ? `<small class="mu"> · ${esc(q.product)}</small>` : ""}${q.phone ? `<small class="mu"> · ${esc(q.name || "")} <a href="tel:+${esc(String(q.phone).replace(/\D/g, ""))}">+${esc(String(q.phone).replace(/\D/g, ""))}</a></small>` : ""}
       ${q.answer ? `<p>${ui("store", 14)} ${esc(q.answer)}</p>` : `<form class="pc-reply" data-sqans="${q.id}"><input placeholder="${L("Ваш ответ — его увидят все покупатели", "Javobingiz — uni barcha xaridorlar ko‘radi")}"><button class="btn btn-primary" type="submit">${L("Ответить", "Javob berish")}</button></form>`}</div>`).join("")}</div>`;
 }
+
+/* ================= Back-in-stock alerts and product reviews ================= */
+let stockWatch = LS.get("imorat.stockWatch", []), prodRev = {}, revDemo = LS.get("imorat.reviews", {}), revDraft = { stars: 0, photo: "" };
+const outOfStock = p => p.offers.every(o => stockOf(p, o.store) <= 0);
+async function loadStockWatch() { if (!API || !user) return; try { stockWatch = (await api("GET", "/api/me/stock-watch")).ids; LS.set("imorat.stockWatch", stockWatch); } catch (e) { /* keep local */ } }
+function stockWatchHTML(p) {
+  if (!outOfStock(p)) return "";
+  const on = stockWatch.includes(p.id);
+  return `<button class="infobox lnkbox ${on ? "on" : ""}" type="button" data-swatch="${p.id}">${ui("bell", 20)}<span><b>${on ? L("Сообщим, когда появится", "Paydo bo‘lganda xabar beramiz") : L("Сейчас нет в наличии — сообщить о поступлении?", "Hozir mavjud emas — kelganda xabar beraylikmi?")}</b><small>${on ? L("Нажмите, чтобы отменить", "Bekor qilish uchun bosing") : L("Пришлём в Telegram и уведомлением на телефон", "Telegram va telefonga bildirishnoma yuboramiz")}</small></span>${on ? ui("check", 18) : ""}</button>`;
+}
+async function toggleStockWatch(id) {
+  const on = stockWatch.includes(id);
+  if (API) {
+    if (!user) return openAuth(() => toggleStockWatch(id));
+    try { await api(on ? "DELETE" : "POST", `/api/products/${id}/stock-watch`); } catch (e) { return toast(apiErr(e)); }
+  }
+  stockWatch = on ? stockWatch.filter(x => x !== id) : [...stockWatch, id]; LS.set("imorat.stockWatch", stockWatch);
+  toast(on ? L("Уведомление отменено", "Bildirishnoma bekor qilindi") : API ? L("Сообщим, как только товар появится", "Mahsulot paydo bo‘lishi bilan xabar beramiz") : L("Сохранено. В демо-версии уведомление не придёт — на сайте оно придёт в Telegram и на телефон", "Saqlandi. Demo versiyada xabar kelmaydi — saytda Telegram va telefonga keladi"));
+  const b = document.querySelector(`[data-swatch="${id}"]`); if (b) b.outerHTML = stockWatchHTML(PROD[id]);
+}
+/* reviews */
+const boughtDemo = id => orders.some(o => !o.api && o.ships.some(s => s.lines.some(l => l.id === id)));
+function prodReviewsHTML(p) {
+  let d = prodRev[p.id];
+  if (API && !d) { prodRev[p.id] = { loading: true }; api("GET", `/api/products/${p.id}/reviews`).then(r => { prodRev[p.id] = r; const el = $("#pRev"); if (el && +el.dataset.pid === p.id) el.innerHTML = prodReviewsHTML(p); }).catch(() => { prodRev[p.id] = { reviews: [], count: 0 }; }); d = prodRev[p.id]; }
+  if (!API) { const list = revDemo[p.id] || []; d = { reviews: list, count: list.length, stars: list.length ? Math.round(list.reduce((a, x) => a + x.stars, 0) / list.length * 10) / 10 : null, can_review: boughtDemo(p.id) && !list.some(x => x.mine) }; }
+  if (d.loading) return `<p class="mu" style="margin:0">${L("Загружаем отзывы…", "Sharhlar yuklanmoqda…")}</p>`;
+  const form = d.can_review ? `<form class="prv-form" data-prvform="${p.id}"><b>${L("Вы покупали этот товар — оцените его", "Siz bu mahsulotni olgansiz — baholang")}</b>
+    <div class="stars" role="radiogroup" aria-label="${L("Оценка", "Baho")}">${[1, 2, 3, 4, 5].map(n => `<button type="button" role="radio" aria-checked="${revDraft.stars === n}" data-prvstar="${n}" aria-label="${n}" class="${n <= revDraft.stars ? "on" : ""}">★</button>`).join("")}</div>
+    <label class="visually-hidden" for="prvT">${L("Отзыв", "Sharh")}</label><textarea id="prvT" rows="2" maxlength="1500" placeholder="${L("Как товар в работе? Что понравилось, что нет", "Ishda qanday? Nima yoqdi, nima yoqmadi")}"></textarea>
+    <div class="pc-ph">${revDraft.photo ? `<span class="pf"><img src="${revDraft.photo}" alt=""><button type="button" class="ib" data-prvphdel aria-label="${L("Убрать фото", "Rasmni olib tashlash")}">${ui("close", 12)}</button></span>` : `<label class="pf add">${ui("camera", 20)}<input type="file" accept="image/*" hidden data-prvphoto></label>`}</div>
+    <button class="btn btn-primary" type="submit" ${revDraft.stars ? "" : "disabled"}>${L("Опубликовать отзыв", "Sharhni e’lon qilish")}</button></form>` : "";
+  return `<div class="h-m" style="margin-bottom:6px">${L("Отзывы покупателей", "Xaridorlar sharhlari")}${d.count ? ` · <span class="s">★ ${String(d.stars).replace(".", ",")}</span> <small class="mu">(${d.count})</small>` : ""}</div>
+    ${d.reviews.length ? d.reviews.slice(0, 10).map(r => `<div class="prv"><b>${esc(r.name || L("Покупатель", "Xaridor"))}</b> <span class="s">${"★".repeat(r.stars)}${"☆".repeat(5 - r.stars)}</span> <small class="mu">${new Date(r.t).toLocaleDateString("ru-RU")}</small>${r.text ? `<p>${esc(r.text)}</p>` : ""}${r.photo ? `<a href="${esc(mediaSrc(r.photo))}" target="_blank" rel="noopener"><img src="${esc(mediaSrc(r.photo))}" alt="${L("Фото покупателя", "Xaridor rasmi")}" loading="lazy"></a>` : ""}</div>`).join("") : `<p class="mu" style="margin:0;font-size:13px">${L("Пока нет отзывов от покупателей Imorat. Отзыв может оставить тот, кто получил товар.", "Hozircha Imorat xaridorlaridan sharh yo‘q. Sharhni mahsulotni olgan xaridor qoldira oladi.")}</p>`}
+    ${form}`;
+}
+const revRedraw = id => { const el = $("#pRev"); if (el && +el.dataset.pid === +id) el.innerHTML = prodReviewsHTML(PROD[id]); };
+document.addEventListener("click", e => {
+  const t = e.target.closest("[data-swatch],[data-prvstar],[data-prvphdel]"); if (!t) return;
+  if (t.dataset.swatch) return toggleStockWatch(+t.dataset.swatch);
+  const id = +$("#pRev")?.dataset.pid;
+  if (t.dataset.prvstar) { const txt = $("#prvT")?.value; revDraft.stars = +t.dataset.prvstar; revRedraw(id); if (txt && $("#prvT")) $("#prvT").value = txt; return; }
+  if (t.dataset.prvphdel != null) { revDraft.photo = ""; const txt = $("#prvT")?.value; revRedraw(id); if (txt) $("#prvT").value = txt; }
+});
+document.addEventListener("change", async e => {
+  if (e.target.dataset?.prvphoto == null) return;
+  const f = e.target.files?.[0]; if (!f) return; const id = +$("#pRev")?.dataset.pid, txt = $("#prvT")?.value;
+  try { revDraft.photo = await resizeImg(f); } catch (er) { return toast(L("Не удалось открыть фото", "Rasmni ochib bo‘lmadi")); }
+  revRedraw(id); if (txt) $("#prvT").value = txt;
+});
+document.addEventListener("submit", async e => {
+  const f = e.target.closest("[data-prvform]"); if (!f) return; e.preventDefault();
+  const id = +f.dataset.prvform, text = $("#prvT").value.trim(), stars = revDraft.stars; if (!stars) return;
+  if (API) {
+    try {
+      const r = await api("POST", `/api/products/${id}/reviews`, { stars, text });
+      if (revDraft.photo) { const blob = await (await fetch(revDraft.photo)).blob(); await api("POST", `/api/product-reviews/${r.review.id}/photo`, blob).catch(() => toast(L("Отзыв опубликован, но фото не загрузилось", "Sharh e’lon qilindi, lekin rasm yuklanmadi"))); }
+      revDraft = { stars: 0, photo: "" }; delete prodRev[id]; toast(L("Спасибо! Отзыв опубликован", "Rahmat! Sharh e’lon qilindi")); revRedraw(id);
+    } catch (er) { toast(apiErr(er)); }
+    return;
+  }
+  (revDemo[id] ||= []).unshift({ stars, text, photo: revDraft.photo, t: Date.now(), name: user?.name?.split(" ")[0] || "", mine: true });
+  LS.set("imorat.reviews", revDemo); revDraft = { stars: 0, photo: "" }; toast(L("Спасибо! Отзыв сохранён", "Rahmat! Sharh saqlandi")); revRedraw(id);
+});
 
 /* ================= Router & render ================= */
 function parseHash() {

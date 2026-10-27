@@ -53,6 +53,8 @@ CREATE TABLE IF NOT EXISTS channel_posts(id INTEGER PRIMARY KEY AUTOINCREMENT, k
 CREATE TABLE IF NOT EXISTS price_snap(product_id INTEGER PRIMARY KEY, min_price INTEGER NOT NULL, day TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS disputes(id INTEGER PRIMARY KEY AUTOINCREMENT, order_id INTEGER NOT NULL, ship_id INTEGER NOT NULL, store_id TEXT NOT NULL, user_id TEXT NOT NULL, reason TEXT NOT NULL, text TEXT NOT NULL, photos TEXT NOT NULL DEFAULT '[]', status TEXT NOT NULL DEFAULT 'open', seller_reply TEXT, resolution TEXT, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS store_questions(id INTEGER PRIMARY KEY AUTOINCREMENT, store_id TEXT NOT NULL, product_id INTEGER, user_id TEXT NOT NULL, text TEXT NOT NULL, answer TEXT, created_at INTEGER NOT NULL, answered_at INTEGER);
+CREATE TABLE IF NOT EXISTS stock_watch(user_id TEXT NOT NULL, product_id INTEGER NOT NULL, created_at INTEGER NOT NULL, PRIMARY KEY(user_id, product_id));
+CREATE TABLE IF NOT EXISTS product_reviews(id INTEGER PRIMARY KEY AUTOINCREMENT, product_id INTEGER NOT NULL, user_id TEXT NOT NULL, stars INTEGER NOT NULL, text TEXT NOT NULL DEFAULT '', photo TEXT, created_at INTEGER NOT NULL, UNIQUE(product_id, user_id));
 CREATE TABLE IF NOT EXISTS tg_links(token TEXT PRIMARY KEY, user_id TEXT NOT NULL, expires_at INTEGER NOT NULL);
 CREATE INDEX IF NOT EXISTS reviews_store ON reviews(store_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS orders_user ON orders(user_id, created_at DESC);
