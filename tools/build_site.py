@@ -25,3 +25,4 @@ import time
 sw = (ROOT / "tools" / "sw.template.js").read_text(encoding="utf-8").replace("__BUILD__", time.strftime("%Y%m%d%H%M%S"))
 (ROOT / "sw.js").write_text(sw, encoding="utf-8")
 print("built index.html", len(html), "bytes + sw.js")
+import sys; sys.path.insert(0, str(ROOT / "tools")); import build_seo; build_seo.build()

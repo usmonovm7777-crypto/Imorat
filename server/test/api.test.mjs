@@ -334,3 +334,24 @@ test("Logout everywhere invalidates old sessions; online payment is refused unti
   const { readdirSync } = await import("node:fs");
   assert.ok(readdirSync(join(dir, "bk")).some(f => /^imorat-\d{4}-\d{2}-\d{2}\.db$/.test(f)));
 });
+
+test("Price list import: update, add, create, skip bad rows", async () => {
+  const seller = (await login("993334455")).data.token;
+  const st = await call("POST", "/api/seller/store", { name: "Prays Test", descr: "Магазин для проверки загрузки прайса", cats: ["build"], phone: "712000000", addr: "ул. Тестовая, 1", hours: "09:00–18:00", district: "yunus" }, seller);
+  assert.equal(st.status, 200, JSON.stringify(st.data));
+  await call("POST", "/api/seller/offers", { product_id: 1, price: 60000, stock: 7 }, seller);
+  const r = await call("POST", "/api/seller/import", {
+    offers: [{ product_id: 1, price: 59500, stock: null }, { product_id: 5, price: 1250, stock: 5000 }, { product_id: 999999, price: 1000 }, { product_id: 6, price: 5 }],
+    create: [{ ru: "Клей для газоблока Baraka, 25 кг", cat: "build", sub: "dry", unit: "bag25", kg: 25, price: 41000, stock: 30 }, { ru: "x", cat: "nope", price: 1 }]
+  }, seller);
+  assert.equal(r.status, 200, JSON.stringify(r.data));
+  assert.deepEqual(r.data, { updated: 1, added: 1, created: 1, skipped: 3 });
+  const sum = (await call("GET", "/api/seller/summary", null, seller)).data;
+  const by = Object.fromEntries(sum.products.map(p => [p.ru, p]));
+  assert.equal(sum.products.find(p => p.id === 1).price, 59500);
+  assert.equal(sum.products.find(p => p.id === 1).stock, 7, "stock kept when the price list has none");
+  assert.equal(sum.products.find(p => p.id === 5).stock, 5000);
+  assert.ok(by["Клей для газоблока Baraka, 25 кг"]?.own);
+  const buyer = (await login("993334466")).data.token;
+  assert.equal((await call("POST", "/api/seller/import", { offers: [] }, buyer)).status, 403);
+});

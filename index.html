@@ -781,6 +781,15 @@ html.ds-dragging, html.ds-dragging * { cursor: grabbing !important; user-select:
 .ds-wish { display: flex; gap: 6px; }
 .ds-wish input { flex: 1; min-width: 0; border: 1.5px solid var(--line); border-radius: 12px; padding: 10px 12px; background: var(--raised); font: inherit; color: inherit; }
 .ds-sw { display: flex; flex-wrap: wrap; gap: 6px; }
+.imp { display: grid; gap: 12px; }
+.imp-in { display: grid; grid-template-columns: minmax(200px, 280px) 1fr; gap: 12px; align-items: start; }
+.imp-in > .btn { grid-column: 2; }
+.imp-file { cursor: pointer; display: flex; gap: 10px; align-items: center; text-align: left; min-height: 96px; }
+.imp textarea { width: 100%; font: inherit; font-size: 14px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); resize: vertical; }
+.imp-tbl tr.off td { opacity: .5; }
+.imp-tbl tr.chk td { background: color-mix(in srgb, var(--signal) 8%, transparent); }
+.imp-tbl select { max-width: 320px; width: 100%; display: block; margin-bottom: 2px; }
+@media (max-width: 640px) { .imp-in { grid-template-columns: 1fr; } .imp-in > .btn { grid-column: 1; } }
 .ds-walls { display: grid; grid-template-columns: 1fr 150px; gap: 12px; align-items: start; }
 .ds-mini { color: var(--muted); }
 .ds-mini .ds-svg { width: 100%; height: auto; max-height: 200px; }
@@ -981,6 +990,7 @@ const LS = {
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } }
 };
 let lang = LS.get("imorat.lang", "ru");
+{ const ql = (location.search.match(/[?&]lang=(ru|uz)\b/) || [])[1]; if (ql) { lang = ql; LS.set("imorat.lang", ql); } } // links from the search-engine pages
 /* Uzbek is shown in the new Latin alphabet (law of 21.10.2026): oʻ→ö, gʻ→ğ, sh→ş, ch→ç.
    Source texts keep the old spelling; conversion happens on output, HTML tags and brand names are left as is. */
 const UZ_SKIP = /(<[^>]*>|https?:\/\/\S+|Chevrolet)/;
@@ -1536,6 +1546,7 @@ function buildProducts() {
     const p = makeProduct(1000 + i, x.cat, x.sub, CAT[x.cat]?.icon || "box", x.ru, x.uz || x.ru, x.unit, x.price, x.kg, x.store, "new");
     p.offers[0].stock = x.stock; p.mine = true; p.descRu = x.desc || ""; PRODUCTS.push(p);
   });
+  if (!API) { const ov = LS.get("imorat.offerOv", {}); for (const [k, v] of Object.entries(ov)) { const [pid, st] = k.split("|"), p = PRODUCTS.find(x => x.id === +pid); if (!p || !v?.price) continue; const o = p.offers.find(x => x.store === st); if (o) o.price = v.price; else p.offers.push({ store: st, price: v.price, stock: 10 }); } }
   PROD = Object.fromEntries(PRODUCTS.map(p => [p.id, p]));
   GROUPS = {}; PRODUCTS.forEach(p => { if (p.group) (GROUPS[p.group] ||= []).push(p); });
   if (apiCat) applyApiCatalog();
@@ -1599,7 +1610,7 @@ const VIP_FEE = 49000, VIP_HOUR_FEE = 25000, LOADER = 15000, VIP_FREE_FROM = 500
 /* ================= State ================= */
 let cart = LS.get("imorat.cart2", null);
 /* the Claude preview starts with a sample cart to show checkout; the real site starts empty */
-if (!cart) { cart = {}; if (!window.IMORAT_SITE) { const c = byKey("cement"), b = byKey("bulb"), pt = byKey("paint"); cart[c.id + "|usta"] = 10; cart[b.id + "|elp"] = 6; cart[pt.id + "|boyoq"] = 2; } }
+if (!cart) { cart = {}; if (!window.IMORAT_SITE && !window.IMORAT_APP) { const c = byKey("cement"), b = byKey("bulb"), pt = byKey("paint"); cart[c.id + "|usta"] = 10; cart[b.id + "|elp"] = 6; cart[pt.id + "|boyoq"] = 2; } }
 let favs = LS.get("imorat.favs", []);
 let watch = LS.get("imorat.watch", []);
 let projects = LS.get("imorat.projects", []);
@@ -3224,6 +3235,7 @@ function renderSellerApi() {
       </tbody></table></div>` : `<p style="color:var(--muted);margin:0">${L("Заказов пока нет. Когда покупатель оформит заказ с вашими товарами, он появится здесь.", "Hozircha buyurtmalar yo‘q. Xaridor mahsulotlaringiz bilan buyurtma bersa, shu yerda chiqadi.")}</p>`}</div>
     ${sellerExtraHTML(sellerData)}
     <div style="margin-top:12px">${storeCardHTML(s)}</div>
+    ${importHTML(s.id)}
     <div class="panel" style="margin-top:12px"><div class="panel-h"><h2 class="h-m">${L("Товары, цены и остатки", "Mahsulotlar, narxlar va qoldiqlar")}</h2><span style="font-size:13px;color:var(--muted)">${L("Изменения сразу видны покупателям", "O‘zgarishlar darhol xaridorlarga ko‘rinadi")}</span></div>
       ${products.length ? `<div class="tbl-wrap"><table><thead><tr><th>${L("Товар", "Mahsulot")}</th><th class="r">${L("Цена, сум", "Narx, so‘m")}</th><th class="r">${L("Остаток", "Qoldiq")}</th></tr></thead><tbody>
       ${shown.map(p => { const lp = PROD[p.id]; return `<tr><td><div class="pcell">${lp ? mini(lp) : ""}<span>${esc(p.ru)}${p.own ? ` <span class="pill acc">${L("ваш", "sizniki")}</span><br><button class="ph-btn" type="button" data-sphoto="${p.id}">${ui("photo", 14)} ${p.img ? L("Заменить фото", "Rasmni almashtirish") : L("Загрузить фото", "Rasm yuklash")}</button>` : ""}</span></div></td>
@@ -4203,6 +4215,188 @@ $("#photoIn").addEventListener("change", async e => {
     toast(L("Фото товара обновлено на витрине", "Mahsulot rasmi vitrinada yangilandi")); renderSeller();
   } catch (err) { toast(L("Не удалось открыть это изображение", "Bu rasmni ochib bo‘lmadi")); }
 });
+/* ================= Price list import (Excel / CSV / text from Telegram) =================
+   The file is read in the browser: .xlsx is a zip of XML, unpacked with DecompressionStream.
+   Each row is matched to the Imorat catalog by words and numbers in the name; the seller checks the matches before applying. */
+async function impUnzip(buf) {
+  const dv = new DataView(buf), u8 = new Uint8Array(buf);
+  let e = buf.byteLength - 22; while (e >= 0 && dv.getUint32(e, true) !== 0x06054b50) e--;
+  if (e < 0) throw new Error("not_zip");
+  const n = dv.getUint16(e + 10, true), files = {}; let p = dv.getUint32(e + 16, true);
+  for (let i = 0; i < n; i++) {
+    const nl = dv.getUint16(p + 28, true), xl = dv.getUint16(p + 30, true), cl = dv.getUint16(p + 32, true);
+    files[new TextDecoder().decode(u8.subarray(p + 46, p + 46 + nl))] = { method: dv.getUint16(p + 10, true), csize: dv.getUint32(p + 20, true), off: dv.getUint32(p + 42, true) };
+    p += 46 + nl + xl + cl;
+  }
+  const read = async name => {
+    const f = files[name]; if (!f) return null;
+    const start = f.off + 30 + dv.getUint16(f.off + 26, true) + dv.getUint16(f.off + 28, true), data = u8.slice(start, start + f.csize);
+    if (f.method === 0) return new TextDecoder().decode(data);
+    return await new Response(new Blob([data]).stream().pipeThrough(new DecompressionStream("deflate-raw"))).text();
+  };
+  return { names: Object.keys(files), read };
+}
+async function impReadXlsx(buf) {
+  const z = await impUnzip(buf), P = new DOMParser(), tags = (el, t) => [...el.getElementsByTagName(t), ...el.getElementsByTagName("x:" + t)];
+  const ssx = await z.read("xl/sharedStrings.xml");
+  const ss = ssx ? tags(P.parseFromString(ssx, "application/xml"), "si").map(si => tags(si, "t").map(t => t.textContent).join("")) : [];
+  const sheet = z.names.includes("xl/worksheets/sheet1.xml") ? "xl/worksheets/sheet1.xml" : z.names.filter(n => /^xl\/worksheets\/sheet\d+\.xml$/.test(n)).sort()[0];
+  if (!sheet) throw new Error("no_sheet");
+  const x = P.parseFromString(await z.read(sheet), "application/xml"), rows = [];
+  for (const r of tags(x, "row")) {
+    const row = [];
+    for (const c of tags(r, "c")) {
+      const ref = (c.getAttribute("r") || "").replace(/\d+/g, ""), col = ref ? ref.split("").reduce((a, ch) => a * 26 + ch.charCodeAt(0) - 64, 0) - 1 : row.length;
+      const t = c.getAttribute("t"), v = tags(c, "v")[0]?.textContent ?? "";
+      row[col] = t === "s" ? ss[+v] ?? "" : t === "inlineStr" ? tags(c, "t").map(q => q.textContent).join("") : v;
+    }
+    rows.push(Array.from(row, v => v ?? ""));
+  }
+  return rows;
+}
+function impCsv(text) {
+  const first = text.split(/\r?\n/).find(l => l.trim()) || "", d = [";", "\t", ","].sort((a, b) => first.split(b).length - first.split(a).length)[0];
+  const rows = []; let row = [], cell = "", q = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (q) { if (ch === '"' && text[i + 1] === '"') { cell += '"'; i++; } else if (ch === '"') q = false; else cell += ch; }
+    else if (ch === '"') q = true; else if (ch === d) { row.push(cell); cell = ""; } else if (ch === "\n" || ch === "\r") { if (ch === "\r" && text[i + 1] === "\n") i++; row.push(cell); rows.push(row); row = []; cell = ""; } else cell += ch;
+  }
+  if (cell || row.length) { row.push(cell); rows.push(row); }
+  return rows;
+}
+/* "58 000", "58.000 сум", "58000", 58000.5 → 58000 */
+function impMoney(v) {
+  let s = String(v ?? "").replace(/ /g, " ").trim(); if (!s) return null;
+  s = s.replace(/(сум|so[‘'ʻ]?m|сўм|uzs|sum)\.?/gi, "").trim();
+  if (/^\d{1,3}([ .,]\d{3})+$/.test(s)) return +s.replace(/\D/g, "");
+  const n = parseFloat(s.replace(/\s/g, "").replace(",", "."));
+  return isFinite(n) ? Math.round(n) : null;
+}
+function impTable(rows) {
+  rows = rows.map(r => r.map(c => String(c ?? "").trim())).filter(r => r.some(Boolean));
+  if (!rows.length) return [];
+  const H = { name: /наимен|назван|товар|продукц|nomi|mahsulot|tovar|name|product/i, price: /цена|стоим|narx|price|сум|so.?m/i, stock: /остат|кол-?во|количеств|наличи|qoldiq|soni|miqdor|stock|qty/i };
+  let head = -1, cols = {};
+  for (let i = 0; i < Math.min(8, rows.length) && head < 0; i++) {
+    const r = rows[i], c = {};
+    r.forEach((t, j) => { for (const k of ["name", "price", "stock"]) if (c[k] == null && H[k].test(t) && !(k === "name" && H.price.test(t))) c[k] = j; });
+    if (c.name != null && c.price != null) { head = i; cols = c; }
+  }
+  const body = rows.slice(head + 1);
+  if (head < 0) {
+    const w = Math.max(...body.map(r => r.length)), stat = Array.from({ length: w }, (_, j) => {
+      const vals = body.map(r => r[j] || ""), nums = vals.map(impMoney).filter(v => v != null);
+      return { j, text: vals.filter(v => /[a-zа-яё]{3}/i.test(v)).length, len: vals.reduce((a, v) => a + v.length, 0), nums: nums.length, med: nums.sort((a, b) => a - b)[nums.length >> 1] || 0 };
+    });
+    cols.name = [...stat].sort((a, b) => b.text - a.text || b.len - a.len)[0]?.j;
+    const numCols = stat.filter(s => s.j !== cols.name && s.nums >= body.length * .6).sort((a, b) => b.med - a.med);
+    cols.price = numCols[0]?.j; cols.stock = numCols.find(s => s.med < 100000 && s.j !== cols.price)?.j;
+  }
+  if (cols.name == null || cols.price == null) return [];
+  return body.map(r => ({ name: r[cols.name] || "", price: impMoney(r[cols.price]), stock: cols.stock != null && r[cols.stock] !== "" ? Math.max(0, Math.round(+String(r[cols.stock]).replace(",", ".").replace(/[^\d.]/g, "")) || 0) : null }))
+    .filter(x => x.name.length > 2 && x.price >= 100);
+}
+/* Text pasted from Telegram: "Цемент М400 50кг — 58 000 сум (есть 40 шт)" per line */
+function impText(text) {
+  return text.split(/\r?\n/).map(l => l.trim()).filter(Boolean).map(l => {
+    const st = l.match(/(?:есть|остаток|наличии|qoldiq|bor)\D{0,6}(\d+)|(\d+)\s*(?:шт|dona|ta|мешк|qop)\b(?!.*\d{3})/i);
+    const money = [...l.replace(/ /g, " ").matchAll(/\d{1,3}(?:[ .]\d{3})+|\d{3,}/g)].map(m => ({ v: +m[0].replace(/\D/g, ""), i: m.index }));
+    const pr = money.filter(m => m.v >= 100).sort((a, b) => b.i - a.i)[0];
+    if (!pr) return null;
+    const name = l.slice(0, pr.i).replace(/[-–—:=|•*]+\s*$/, "").replace(/^[-–—•*\d.)\s]+(?=\D)/, "").trim();
+    return name.length > 2 ? { name, price: pr.v, stock: st ? +(st[1] || st[2]) : null } : null;
+  }).filter(Boolean);
+}
+/* Matching to the catalog */
+const IMP_LAT = { а: "a", в: "b", е: "e", к: "k", м: "m", н: "h", о: "o", р: "p", с: "c", т: "t", х: "x", д: "d" };
+function impTokens(s) {
+  return fold(s).replace(/ё/g, "е").replace(/([a-zа-я])-(\d)/g, "$1$2").replace(/(\d),(\d)/g, "$1.$2").replace(/(\d)\s*[×x*хХ]\s*(\d)/g, "$1x$2").replace(/(\d)\s+(кг|kg|л|l|мм|mm|см|sm|м|m|шт|вт|w)\b/g, "$1$2")
+    .split(/[^a-zа-я0-9.x]+/).map(t => t.replace(/^\.+|\.+$/g, "")).filter(t => t.length > 1 || /\d/.test(t))
+    .map(t => /\d/.test(t) ? t.replace(/[а-я]/g, ch => IMP_LAT[ch] || ch) : t);
+}
+let impIndex = null;
+function impMatch(name) {
+  impIndex ||= PRODUCTS.filter(p => !p.mine).map(p => ({ p, t: [...new Set([...impTokens(p.ru), ...impTokens(p.uz)])] }));
+  const rt = [...new Set(impTokens(name))]; if (!rt.length) return [];
+  const same = (a, b) => a === b || (!/\d/.test(a) && !/\d/.test(b) && a.length >= 4 && b.length >= 4 && (a.startsWith(b.slice(0, 5)) || b.startsWith(a.slice(0, 5))));
+  return impIndex.map(({ p, t }) => {
+    let w = 0, hit = 0, word = 0;
+    for (const a of rt) { const k = /\d/.test(a) ? 1.5 : 1; w += k; if (t.some(b => same(a, b))) { hit += k; if (k === 1) word++; } }
+    const cov = t.filter(b => rt.some(a => same(a, b))).length / Math.max(3, Math.min(t.length, 8));
+    return { id: p.id, s: word ? .6 * hit / w + .4 * Math.min(1, cov) : 0 };
+  }).filter(x => x.s > .25).sort((a, b) => b.s - a.s).slice(0, 4);
+}
+let imp = null; // { rows: [{ name, price, stock, cands, pick }], src }
+function impSells(sid) { return API ? new Set((sellerData?.products || []).map(p => p.id)) : new Set(PRODUCTS.filter(p => p.offers.some(o => o.store === sid)).map(p => p.id)); }
+function impLoad(rows, src) {
+  if (!rows.length) { imp = { rows: [], src, empty: true }; return; }
+  imp = { src, rows: rows.slice(0, 1000).map(r => { const cands = impMatch(r.name), best = cands[0]; return { ...r, cands, pick: best && best.s >= .55 && (!cands[1] || best.s - cands[1].s > .04 || best.s >= .8) ? best.id : best && best.s >= .4 ? best.id : "skip", sure: !!(best && best.s >= .55) }; }) };
+}
+function importHTML(sid) {
+  const sells = impSells(sid);
+  let body = "";
+  if (imp && imp.empty) body = `<p class="err" style="margin:0">${L("Не нашли в файле строк с названием и ценой. Нужны хотя бы две колонки: «Наименование» и «Цена».", "Faylda nomi va narxi bor qatorlar topilmadi. Kamida ikki ustun kerak: «Nomi» va «Narx».")}</p>`;
+  else if (imp) {
+    const r = imp.rows, sure = r.filter(x => x.pick !== "skip" && x.pick !== "new" && x.sure).length, check = r.filter(x => x.pick !== "skip" && x.pick !== "new" && !x.sure).length, none = r.filter(x => x.pick === "skip").length, nw = r.filter(x => x.pick === "new").length;
+    body = `<p style="margin:0">${L(`Строк в прайсе: <b>${r.length}</b> · нашли пару: <b>${sure}</b> · проверьте: <b style="color:var(--signal)">${check}</b> · без пары: <b>${none}</b>${nw ? ` · новых товаров: <b>${nw}</b>` : ""}`, `Prays qatorlari: <b>${r.length}</b> · juftligi topildi: <b>${sure}</b> · tekshiring: <b style="color:var(--signal)">${check}</b> · juftsiz: <b>${none}</b>${nw ? ` · yangi mahsulotlar: <b>${nw}</b>` : ""}`)}</p>
+      <div class="tbl-wrap imp-tbl"><table><thead><tr><th>${L("Строка из прайса", "Prays qatori")}</th><th>${L("Товар на Imorat", "Imoratdagi mahsulot")}</th><th class="r">${L("Цена", "Narx")}</th><th class="r">${L("Остаток", "Qoldiq")}</th></tr></thead><tbody>
+      ${r.slice(0, imp.all ? 1000 : 60).map((x, i) => { const p = PROD[x.pick], mn = p ? minPrice(p) : 0, odd = p && (x.price > mn * 3 || x.price < mn / 3);
+        return `<tr class="${x.pick === "skip" ? "off" : !x.sure && x.pick !== "new" ? "chk" : ""}"><td style="min-width:150px">${esc(x.name)}</td>
+        <td style="min-width:200px"><label class="visually-hidden" for="impP${i}">${L("Товар", "Mahsulot")}</label><select class="sel" id="impP${i}" data-imppick="${i}">${x.cands.map(c => `<option value="${c.id}" ${x.pick === c.id ? "selected" : ""}>${esc(pName(PROD[c.id]))} · ${Math.round(c.s * 100)}%</option>`).join("")}<option value="new" ${x.pick === "new" ? "selected" : ""}>＋ ${L("Новый товар", "Yangi mahsulot")}</option><option value="skip" ${x.pick === "skip" ? "selected" : ""}>${L("Пропустить", "O‘tkazib yuborish")}</option></select>
+        ${p ? `<small style="color:var(--muted)">${sells.has(p.id) ? L("уже продаёте — обновим цену", "allaqachon sotyapsiz — narx yangilanadi") : L("добавим в ваш магазин", "do‘koningizga qo‘shamiz")}</small>` : ""}${odd ? `<br><small style="color:var(--signal)">${L(`на рынке от ${fmt(mn)} — проверьте цену`, `bozorda ${fmt(mn)} dan — narxni tekshiring`)}</small>` : ""}</td>
+        <td class="r num">${fmt(x.price)}</td><td class="r num">${x.stock ?? "—"}</td></tr>`; }).join("")}
+      </tbody></table></div>
+      ${r.length > 60 && !imp.all ? `<button class="btn btn-line" type="button" data-imp="all" style="justify-self:start">${L("Показать все строки", "Barcha qatorlar")} · ${r.length}</button>` : ""}
+      <p style="margin:0;font-size:13px;color:var(--muted)">${L("Новые товары получат категорию и вес похожего товара — уточните их потом в списке товаров. Если остаток не указан, у новых позиций будет 10 шт., у старых — прежний.", "Yangi mahsulotlar o‘xshash mahsulot toifasi va vaznini oladi — keyin aniqlashtiring. Qoldiq ko‘rsatilmasa, yangilarida 10 dona, eskilarida avvalgisi qoladi.")}</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-primary" type="button" data-imp="apply">${ui("check", 16)} ${L("Применить", "Qo‘llash")} · ${r.length - none}</button><button class="btn btn-line" type="button" data-imp="cancel">${L("Отмена", "Bekor qilish")}</button></div>`;
+  }
+  return `<div class="panel imp" id="impPanel" style="margin-top:12px"><div class="panel-h"><h2 class="h-m">${ui("folder", 18)} ${L("Загрузить прайс", "Prays yuklash")}</h2><span style="font-size:13px;color:var(--muted)">${L("Excel, CSV или текст из Telegram — цены и остатки обновятся сразу по всем товарам", "Excel, CSV yoki Telegramdagi matn — narx va qoldiqlar barcha mahsulotlar bo‘yicha birdan yangilanadi")}</span></div>
+    ${imp && !imp.empty ? "" : `<div class="imp-in"><label class="drop imp-file">${ui("folder", 20)} <span><b>${L("Выбрать файл прайса", "Prays faylini tanlash")}</b><br><small>.xlsx, .csv, .txt</small></span><input type="file" id="impFile" accept=".xlsx,.csv,.txt,.tsv,text/csv,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden></label>
+      <div class="f"><label for="impText">${L("или вставьте прайс текстом", "yoki praysni matn bilan qo‘ying")}</label><textarea id="impText" rows="4" placeholder="${L("Цемент М400 50 кг — 58 000\nКирпич красный М150 — 1 450\n…", "Sement M400 50 kg — 58 000\nQizil g‘isht M150 — 1 450\n…")}"></textarea></div>
+      <button class="btn btn-line" type="button" data-imp="text" style="justify-self:start">${L("Разобрать текст", "Matnni tahlil qilish")}</button></div>`}
+    ${body}</div>`;
+}
+function impRedraw(sid) { const el = $("#impPanel"); if (el) el.outerHTML = importHTML(sid); }
+async function impApply(sid) {
+  const rows = imp.rows.filter(x => x.pick !== "skip");
+  const offers = rows.filter(x => PROD[x.pick]).map(x => ({ product_id: +x.pick, price: x.price, stock: x.stock }));
+  const create = rows.filter(x => x.pick === "new").map(x => { const like = PROD[x.cands[0]?.id], st = API ? sellerData?.store : STORE[sid], cat = like?.cat || st?.cats?.[0] || "build", sub = like?.sub || CAT[cat].subs[0][0];
+    return { ru: x.name.slice(0, 140), uz: x.name.slice(0, 140), cat, sub, unit: like?.unit || "pcs", kg: like?.kg || 1, price: x.price, stock: x.stock ?? 10 }; });
+  if (API) {
+    try { const r = await api("POST", "/api/seller/import", { offers, create }); toast(L(`Готово: обновлено ${r.updated}, добавлено ${r.added}, новых товаров ${r.created}`, `Tayyor: yangilandi ${r.updated}, qo‘shildi ${r.added}, yangi mahsulotlar ${r.created}`)); imp = null; sellerData = null; renderSeller(); syncCatalog(); }
+    catch (e) { toast(apiErr(e)); }
+    return;
+  }
+  const ov = LS.get("imorat.offerOv", {}); let upd = 0, add = 0;
+  for (const o of offers) { const p = PROD[o.product_id], has = p.offers.some(x => x.store === sid); ov[o.product_id + "|" + sid] = { price: o.price }; if (o.stock != null) stockOv[o.product_id + "|" + sid] = o.stock; else if (!has) stockOv[o.product_id + "|" + sid] = 10; has ? upd++ : add++; }
+  LS.set("imorat.offerOv", ov); LS.set("imorat.stock", stockOv);
+  if (create.length) { const extra = LS.get("imorat.extra", []); create.forEach(c => extra.push({ ...c, store: sid, desc: "" })); LS.set("imorat.extra", extra); }
+  buildProducts(); impIndex = null; imp = null; renderSeller();
+  toast(L(`Готово: обновлено ${upd}, добавлено ${add}, новых товаров ${create.length}`, `Tayyor: yangilandi ${upd}, qo‘shildi ${add}, yangi mahsulotlar ${create.length}`));
+}
+document.addEventListener("change", async e => {
+  if (e.target.id === "impFile") {
+    const f = e.target.files?.[0]; if (!f) return; const sid = API ? sellerData?.store?.id : sellerStore;
+    try {
+      let rows;
+      if (/\.xlsx$/i.test(f.name) || f.type.includes("spreadsheetml")) rows = impTable(await impReadXlsx(await f.arrayBuffer()));
+      else if (/\.xls$/i.test(f.name)) { toast(L("Старый формат .xls — сохраните файл как .xlsx или .csv", "Eski .xls formati — faylni .xlsx yoki .csv qilib saqlang")); return; }
+      else { const t = await f.text(), tab = impTable(impCsv(t)); rows = tab.length ? tab : impText(t); }
+      impLoad(rows, f.name); impRedraw(sid);
+    } catch (er) { toast(L("Не удалось прочитать файл — сохраните его как .xlsx или .csv", "Faylni o‘qib bo‘lmadi — .xlsx yoki .csv qilib saqlang")); }
+  }
+  if (e.target.dataset?.imppick != null && imp) { const x = imp.rows[+e.target.dataset.imppick], v = e.target.value; x.pick = v === "skip" || v === "new" ? v : +v; x.sure = true; impRedraw(API ? sellerData?.store?.id : sellerStore); }
+});
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-imp]"); if (!b) return;
+  const sid = API ? sellerData?.store?.id : sellerStore;
+  if (b.dataset.imp === "text") { const t = $("#impText").value; const tab = /[\t;]/.test(t) ? impTable(impCsv(t)) : []; impLoad(tab.length ? tab : impText(t), "text"); return impRedraw(sid); }
+  if (b.dataset.imp === "cancel") { imp = null; return impRedraw(sid); }
+  if (b.dataset.imp === "all") { imp.all = true; return impRedraw(sid); }
+  if (b.dataset.imp === "apply") return impApply(sid);
+});
+
 function renderSeller() {
   if (API) return renderSellerApi();
   if (!STORE[sellerStore]) sellerStore = myStore && STORE[myStore.id] ? myStore.id : STORES[0].id;
@@ -4240,6 +4434,7 @@ function renderSeller() {
         ${ords.map(o => `<tr><td><b class="mono">${o.num}</b><br><small style="color:var(--muted)">${esc(o.buyer)} · ${L(DIST[o.d].ru, DIST[o.d].uz)}</small></td><td style="min-width:180px;font-size:13px">${esc(o.items)}<br><small style="color:var(--muted)">${o.tariff ? tName(o.tariff) : L("Самовывоз", "Olib ketish")}</small></td><td class="r">${fmt(o.sum)}</td><td><span class="pill ${stLabel[o.st][1]}">${stLabel[o.st][0]}</span></td><td>${nextBtn[o.st] ? `<button class="btn ${o.st === "new" ? "btn-primary" : "btn-line"}" type="button" data-sst="${o.num}|${s.id}|${o.st}">${nextBtn[o.st]}</button>` : ""}</td></tr>`).join("")}
         </tbody></table></div></div>
     </div>
+    ${importHTML(s.id)}
     <div class="panel" style="margin-top:12px"><div class="panel-h"><h2 class="h-m">${L("Товары, фото и остатки", "Mahsulotlar, rasmlar va qoldiqlar")}</h2><span style="font-size:13px;color:var(--muted)">${L("Загрузите реальное фото — оно сразу заменит изображение на витрине", "Haqiqiy rasm yuklang — vitrinadagi tasvir darhol almashadi")}</span></div>
       <div class="tbl-wrap"><table><thead><tr><th>${L("Товар", "Mahsulot")}</th><th>${L("Категория", "Toifa")}</th><th class="r">${L("Ваша цена", "Narxingiz")}</th><th class="r">${L("Мин. на рынке", "Bozordagi min.")}</th><th class="r">${L("Остаток", "Qoldiq")}</th></tr></thead><tbody>
       ${mine.slice(0, sellerAll ? 9999 : 30).map(p => { const my = p.offers.find(o => o.store === s.id).price, mn = minPrice(p); return `<tr><td><div class="pcell">${mini(p)}<span>${esc(pName(p))}${p.mine ? ` <span class="pill acc">${L("ваш", "sizniki")}</span>` : ""}<br><button class="ph-btn" type="button" data-photo="${p.id}">${ui("photo", 14)} ${photos[p.id] ? L("Заменить фото", "Rasmni almashtirish") : L("Загрузить фото", "Rasm yuklash")}</button>${photos[p.id] ? ` <button class="ph-btn" type="button" data-photodel="${p.id}" style="color:var(--muted)">${L("Убрать", "Olib tashlash")}</button>` : ""}</span></div></td><td style="font-size:13px">${catName(p.cat)}</td><td class="r">${fmt(my)}</td><td class="r" style="color:${my > mn ? "var(--signal)" : "var(--ok)"}">${my > mn ? fmt(mn) : L("вы дешевле всех", "eng arzon siz")}</td><td class="r"><label class="visually-hidden" for="stk${p.id}">${L("Остаток", "Qoldiq")}</label><input class="stk num" id="stk${p.id}" type="number" min="0" value="${stockOf(p, s.id)}" data-stk="${p.id}|${s.id}"></td></tr>`; }).join("")}
@@ -4283,6 +4478,7 @@ function parseHash() {
   if (h === "design") return { view: "design", cat: null };
   if (h === "catalog") return { view: "catalog", cat: null };
   if (h.startsWith("cat-") && CAT[h.slice(4)]) return { view: "catalog", cat: h.slice(4) };
+  if (/^p-\d+$/.test(h) && PROD[+h.slice(2)]) return { view: "catalog", cat: PROD[+h.slice(2)].cat, prod: +h.slice(2) };
   return { view: "home", cat: null };
 }
 function renderMain() {
@@ -4291,6 +4487,7 @@ function renderMain() {
   else if (route.view === "design") renderDesign();
   else renderHome();
   renderTabbar(); counts(); settleMotion();
+  if (route.prod) { const id = route.prod; route.prod = 0; setTimeout(() => openProduct(id), 0); }
 }
 function renderAll() { renderHeader(); renderFooter(); renderMain(); if (drawerView) renderDrawer(); if (aiOpen) renderAI(); }
 function go(h, sub) {

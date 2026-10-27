@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /server/
+Disallow: /app/
+Sitemap: https://usmonovm7777-crypto.github.io/Imorat/sitemap.xml

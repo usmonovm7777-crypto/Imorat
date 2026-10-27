@@ -430,6 +430,37 @@ export function createApp(cfg, log = console) {
     bumpCatalog();
     return { offer: { product_id: pid, store: s.id, price, stock } };
   });
+  r.post("/api/seller/import", async req => {
+    // Price list import: many offers at once (matched in the browser) and new own products
+    const { s } = needSeller(req), b = await readJson(req, 1024 * 1024);
+    const rows = Array.isArray(b.offers) ? b.offers.slice(0, 2000) : [], create = Array.isArray(b.create) ? b.create.slice(0, 300) : [];
+    const bad1 = [];
+    const ok = rows.map((x, i) => ({ i, pid: int(x.product_id, 1, 1e9), price: int(x.price, 100, 1e10), stock: x.stock === undefined || x.stock === null || x.stock === "" ? null : int(x.stock, 0, 1e7) }))
+      .filter(x => { const good = x.pid && x.price && db.get("SELECT 1 FROM products WHERE id=? AND active=1", x.pid); if (!good) bad1.push(x.i); return good; });
+    const mk = create.map((x, i) => {
+      const ru = str(x.ru, 140), c = ref.cats.find(k => k.id === x.cat), price = int(x.price, 100, 1e10), kg = Number(x.kg) > 0 && Number(x.kg) <= 5000 ? Number(x.kg) : 1;
+      return ru.length >= 3 && c && c.subs.some(k => k[0] === x.sub) && price ? { ru, uz: str(x.uz, 140) || ru, c, sub: x.sub, unit: ref.units[x.unit] ? x.unit : "pcs", price, kg, stock: int(x.stock ?? 0, 0, 1e7) ?? 0 } : (bad1.push("n" + i), null);
+    }).filter(Boolean);
+    let updated = 0, added = 0, created = 0;
+    db.tx(() => {
+      const now = Date.now();
+      for (const x of ok) {
+        const had = db.get("SELECT stock FROM offers WHERE product_id=? AND store_id=?", x.pid, s.id);
+        if (had) { db.run("UPDATE offers SET price=?, stock=?, updated_at=? WHERE product_id=? AND store_id=?", x.price, x.stock ?? had.stock, now, x.pid, s.id); updated++; }
+        else { db.run("INSERT INTO offers(product_id,store_id,price,stock,updated_at) VALUES(?,?,?,?,?)", x.pid, s.id, x.price, x.stock ?? 10, now); added++; }
+      }
+      for (const x of mk) {
+        const nid = Math.max(10000, (db.get("SELECT MAX(id) m FROM products")?.m || 0) + 1);
+        db.run(`INSERT INTO products(id,cat,sub,icon,ru,uz,unit,kg,img,hit,is_new,rating,reviews,country,warranty,descr,store_id,active,created_at)
+          VALUES(?,?,?,?,?,?,?,?,'',0,1,0,0,?,0,'',?,1,?)`, nid, x.c.id, x.sub, x.c.icon, x.ru, x.uz, x.unit, x.kg, JSON.stringify(["Узбекистан", "O‘zbekiston"]), s.id, now);
+        db.run("INSERT INTO offers(product_id,store_id,price,stock,updated_at) VALUES(?,?,?,?,?)", nid, s.id, x.price, x.stock, now);
+        created++;
+      }
+    });
+    if (updated + added + created) bumpCatalog();
+    audit(req, "seller.import", s.id, { updated, added, created, skipped: bad1.length });
+    return { updated, added, created, skipped: bad1.length };
+  });
   r.post("/api/seller/products", async req => {
     const { s } = needSeller(req), b = await readJson(req);
     const ru = str(b.ru, 140), uz = str(b.uz, 140) || ru, cat = String(b.cat || ""), sub = String(b.sub || "");
