@@ -1598,7 +1598,8 @@ const VIP_FEE = 49000, VIP_HOUR_FEE = 25000, LOADER = 15000, VIP_FREE_FROM = 500
 
 /* ================= State ================= */
 let cart = LS.get("imorat.cart2", null);
-if (!cart) { cart = {}; const c = byKey("cement"), b = byKey("bulb"), pt = byKey("paint"); cart[c.id + "|usta"] = 10; cart[b.id + "|elp"] = 6; cart[pt.id + "|boyoq"] = 2; }
+/* the Claude preview starts with a sample cart to show checkout; the real site starts empty */
+if (!cart) { cart = {}; if (!window.IMORAT_SITE) { const c = byKey("cement"), b = byKey("bulb"), pt = byKey("paint"); cart[c.id + "|usta"] = 10; cart[b.id + "|elp"] = 6; cart[pt.id + "|boyoq"] = 2; } }
 let favs = LS.get("imorat.favs", []);
 let watch = LS.get("imorat.watch", []);
 let projects = LS.get("imorat.projects", []);
@@ -3737,7 +3738,7 @@ function dsLayout() {
         ok = spots.some(([x, z, r]) => tryAt(it, x, z, r)); } ok ||= wallF2(it) || wallR(it); }
     else if (it.place === "rug") { const s = sofa || placed.find(o => /bed/.test(o.model)); let cx = W / 2, cz = Lr / 2; if (s) { const v = [[0, 1], [1, 0], [0, -1], [-1, 0]][s.rot]; cx = s.x + v[0] * (s.d / 2 + .6); cz = s.z + v[1] * (s.d / 2 + .6); if (/bed/.test(s.model)) { cx = s.x; cz = s.z + .2; } }
       const r = rectOf(cx, cz, it.w, it.d, s ? s.rot : 0); Object.assign(it, { x: Math.min(Math.max(cx, (r.x1 - r.x0) / 2), W - (r.x1 - r.x0) / 2), z: Math.min(Math.max(cz, (r.z1 - r.z0) / 2), Lr - (r.z1 - r.z0) / 2), rot: s ? s.rot : 0 }); it.r = rectOf(it.x, it.z, it.w, it.d, it.rot); placed.push(it); ok = true; }
-    else if (it.place === "curtain") { const k = placed.filter(o => o.place === "curtain").length; const w = wins[k] || wins[0]; if (w) { const g = G[w.w], [x, z] = g.at((w.u0 + w.u1) / 2, .1); Object.assign(it, { x, z, rot: g.rot, r: rectOf(x, z, it.w, .1, g.rot) }); placed.push(it); ok = true; } }
+    else if (it.place === "curtain") { const k = placed.filter(o => o.place === "curtain").length; const w = wins[k] || wins[0]; if (w && G[w.w].len >= it.w - .05) { const g = G[w.w], u = Math.min(Math.max((w.u0 + w.u1) / 2, it.w / 2), g.len - it.w / 2), [x, z] = g.at(u, .1); Object.assign(it, { x, z, rot: g.rot, r: rectOf(x, z, it.w, .1, g.rot) }); placed.push(it); ok = true; } }
     else if (it.place === "hang") ok = ["B", "A", "D", "C"].some(w => along(G[w].len, it.w).some(u => hangAt(it, ...G[w].at(u, it.d / 2 + .02), G[w].rot)));
     else if (it.place === "above") { const b = placed.find(o => o.model === "vanity" || o.model === "basin_ped"); if (b) { Object.assign(it, { x: b.x, z: b.z, rot: b.rot, r: rectOf(b.x, b.z, it.w, .5, b.rot) }); placed.push(it); ok = true; } else ok = along(W, it.w).some(x => hangAt(it, x, .22, 0)); }
     else if (it.place === "ceiling") { const k = placed.filter(o => o.place === "ceiling").length; Object.assign(it, { x: W / 2, z: Lr / 2 + k * .8, rot: 0, r: rectOf(W / 2, Lr / 2, .6, .6, 0) }); placed.push(it); ok = true; }
