@@ -469,3 +469,33 @@ test("Telegram channel: new store post, product of the day with photo, new produ
   assert.equal((await call("POST", "/api/admin/channel/post", { kind: "day" }, globalThis.ADMIN)).data.posted, true);
   assert.equal((await call("GET", "/api/admin/channel", null, seller)).status, 403);
 });
+
+test("Order problems: buyer reports with a photo, store answers, moderator resolves", async () => {
+  const seller = (await login("993330011")).data.token;
+  const st = await call("POST", "/api/seller/store", { name: "Shikoyat Test", descr: "Магазин для проверки жалоб покупателей", cats: ["build"], phone: "712003300", addr: "ул. Жалоб, 2", hours: "00:00–00:00", district: "chil" }, seller);
+  const sid = st.data.store.id;
+  await call("PATCH", `/api/admin/stores/${sid}`, { status: "active" }, globalThis.ADMIN);
+  await call("POST", "/api/seller/offers", { product_id: 5, price: 1300, stock: 1000 }, seller);
+  const buyer = (await login("993330022")).data.token, other = (await login("993330033")).data.token;
+  const o = await call("POST", "/api/orders", { lines: [{ id: 5, store: sid, q: 100 }], form: { name: "Азиз", phone: "998993330022", mode: "pickup", pay: "store" } }, buyer);
+  const num = o.data.order.num, ship = o.data.order.ships[0].id;
+  assert.equal((await call("POST", `/api/orders/${num}/problems`, { ship_id: ship, reason: "damaged", text: "x" }, buyer)).status, 400);
+  assert.equal((await call("POST", `/api/orders/${num}/problems`, { ship_id: ship, reason: "damaged", text: "Половина кирпича битая" }, other)).status, 404);
+  const pr = await call("POST", `/api/orders/${num}/problems`, { ship_id: ship, reason: "damaged", text: "Половина кирпича битая" }, buyer);
+  assert.equal(pr.status, 200, JSON.stringify(pr.data));
+  assert.equal((await call("POST", `/api/orders/${num}/problems`, { ship_id: ship, reason: "other", text: "Ещё одна жалоба" }, buyer)).status, 409);
+  const id = pr.data.problem.id;
+  const png = Buffer.from("89504e470d0a1a0a0000000d49484452", "hex");
+  const up = await fetch(`${base}/api/problems/${id}/photo`, { method: "POST", headers: { authorization: "Bearer " + buyer, "content-type": "image/png" }, body: png });
+  assert.equal(up.status, 200); assert.equal((await up.json()).photos.length, 1);
+  const bad = await fetch(`${base}/api/problems/${id}/photo`, { method: "POST", headers: { authorization: "Bearer " + buyer }, body: "not an image" });
+  assert.equal(bad.status, 400);
+  const sp = (await call("GET", "/api/seller/problems", null, seller)).data.problems;
+  assert.equal(sp[0].reason, "damaged"); assert.equal(sp[0].phone, "998993330022");
+  assert.equal((await call("POST", `/api/seller/problems/${id}/reply`, { text: "Привезём замену завтра" }, seller)).data.problem.status, "answered");
+  const mine = (await call("GET", "/api/me/problems", null, buyer)).data.problems;
+  assert.equal(mine[0].seller_reply, "Привезём замену завтра"); assert.equal(mine[0].phone, undefined);
+  assert.equal((await call("PATCH", `/api/admin/problems/${id}`, { status: "resolved", resolution: "Магазин заменил кирпич" }, seller)).status, 403);
+  assert.equal((await call("PATCH", `/api/admin/problems/${id}`, { status: "resolved", resolution: "Магазин заменил кирпич" }, globalThis.ADMIN)).data.problem.status, "resolved");
+  assert.equal((await call("POST", `/api/seller/problems/${id}/reply`, { text: "ещё" }, seller)).status, 409);
+});

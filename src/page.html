@@ -770,6 +770,21 @@ html.ds-dragging, html.ds-dragging * { cursor: grabbing !important; user-select:
 .ds-wish { display: flex; gap: 6px; }
 .ds-wish input { flex: 1; min-width: 0; border: 1.5px solid var(--line); border-radius: 12px; padding: 10px 12px; background: var(--raised); font: inherit; color: inherit; }
 .ds-sw { display: flex; flex-wrap: wrap; gap: 6px; }
+.prob summary { cursor: pointer; font-size: 13px; color: var(--muted); display: inline-flex; gap: 6px; align-items: center; padding: 6px 0; }
+.prob[open] summary { color: var(--signal); }
+.prob-f { display: grid; gap: 10px; margin-top: 6px; }
+.prob-f .chip { position: relative; cursor: pointer; } .prob-f .chip input { position: absolute; opacity: 0; pointer-events: none; }
+.prob-f .chip:has(input:checked) { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.prob-f .ds-chips { flex-wrap: wrap; }
+.prob-f textarea, .pc-reply input { width: 100%; font: inherit; font-size: 14px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
+.pc-ph { display: flex; gap: 8px; flex-wrap: wrap; }
+.pc-ph img, .pf { width: 72px; height: 72px; border-radius: 10px; object-fit: cover; }
+.pf { position: relative; display: grid; place-items: center; border: 1.5px dashed var(--line-strong); color: var(--muted); cursor: pointer; overflow: hidden; }
+.pf img { width: 100%; height: 100%; } .pf .ib { position: absolute; top: 2px; right: 2px; width: 22px; height: 22px; background: var(--surface); }
+.prob-card { display: grid; gap: 6px; padding: 12px; border-radius: 14px; border: 1px solid color-mix(in srgb, var(--signal) 35%, var(--line)); background: color-mix(in srgb, var(--signal) 5%, var(--surface)); }
+.prob-card p { margin: 0; } .pc-h { display: flex; justify-content: space-between; gap: 8px; align-items: center; flex-wrap: wrap; }
+.pc-r { font-size: 14px; padding: 8px 10px; border-radius: 10px; background: var(--surface); } .pc-r.ok { border-left: 3px solid var(--ok, #1f8a5b); }
+.pc-reply { display: flex; gap: 6px; flex-wrap: wrap; } .pc-reply input { flex: 1; min-width: 180px; }
 .shop-grid { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: 12px; align-items: start; }
 .shop-in, .shop-out { display: grid; gap: 10px; }
 .shop-in textarea { width: 100%; font: inherit; font-size: 15px; padding: 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); resize: vertical; }
@@ -2452,6 +2467,7 @@ function dTrack() {
       return `<div class="track"><div class="track-h"><b>${esc(st.name)}</b><span class="pill ${s.status === "cancelled" ? "closed" : cur === steps.length - 1 ? "ok" : "acc"}">${s.status === "cancelled" ? L("Отменён", "Bekor qilindi") : t ? tName(t) : L("Самовывоз", "Olib ketish")}</span></div>
         <ol class="steps">${steps.map((n, k) => `<li class="${k < cur || (k === cur && k === steps.length - 1) ? "done" : k === cur ? "now" : ""}"><span class="d"></span><span>${n}</span><time class="mono">${k <= cur ? hm(o.api ? ((s.history || []).find(h => h.s === (s.tariff ? ["new", "assembling", "searching", "to_store", "on_way", "delivered"] : ["new", "assembling", "ready"])[k])?.t || s.status_at) : o.t + i * 1200 + k * STEP_MS) : ""}</time></li>`).join("")}</ol>
         ${o.api ? shipExtra(o, s) : ""}
+        ${problemHTML(o, s, i)}
         ${t && cur >= 3 && cur < steps.length - 1 && s.status !== "cancelled" ? routeMap(st.name, st.d, o.d.district || district, etaStr(t)) : ""}
         ${t && cur >= 3 && s.plate ? `<div class="courier"><span>${s.courier} · ${t.veh}<small>${L("Телефон курьера придёт в SMS", "Kuryer telefoni SMSda keladi")}</small></span><span class="plate"><i>${s.plate[0]}</i>${s.plate[1]} ${s.plate[2]} ${s.plate[3]}</span></div>` : ""}
         ${!t ? `<div class="courier"><span>${L(st.addr, st.addrUz)}<small>${st.hours} · ${L("назовите номер", "raqamni ayting")} ${o.num}</small></span></div>` : ""}</div>`;
@@ -3356,7 +3372,7 @@ function adminHTML() {
     <div class="tbl-wrap"><table><thead><tr><th>${L("Магазин", "Do‘kon")}</th><th>${L("Владелец", "Egasi")}</th><th>${L("Статус", "Holat")}</th><th></th></tr></thead><tbody>
     ${adminStores.slice(0, 40).map(s => { const [lb, c] = ST_STATUS()[s.status] || ["?", "mute"]; return `<tr><td><b>${esc(s.name)}</b><br><small style="color:var(--muted)">${dName(s.d)}, ${esc(s.addr)} · ${(s.cats || []).map(catName).join(", ")}</small><br><small>${esc(s.descr || "")}</small></td><td style="font-size:13px">${esc(s.owner_name || "—")}<br><span class="num">${esc(s.owner_phone ? "+" + s.owner_phone : "")}</span></td><td><span class="pill ${c}">${lb}</span></td>
       <td style="white-space:nowrap">${s.status !== "active" ? `<button class="btn btn-primary" type="button" data-adm="${esc(s.id)}|active">${L("Одобрить", "Tasdiqlash")}</button>` : ""} ${s.status === "pending" ? `<button class="btn btn-line" type="button" data-adm="${esc(s.id)}|rejected">${L("Отклонить", "Rad etish")}</button>` : s.status === "active" ? `<button class="btn btn-line" type="button" data-adm="${esc(s.id)}|blocked">${L("Скрыть", "Yashirish")}</button>` : ""}</td></tr>`; }).join("")}
-    </tbody></table></div></div>${adminMastersHTML()}${adminChannelHTML()}${adminFinanceHTML()}`;
+    </tbody></table></div></div>${adminProblemsHTML()}${adminMastersHTML()}${adminChannelHTML()}${adminFinanceHTML()}`;
 }
 function renderSellerApi() {
   const crumbs = `<nav class="crumbs"><button type="button" data-go="home">${L("Главная", "Asosiy")}</button>${ui("chev", 12)}<span>${L("Кабинет продавца", "Sotuvchi kabineti")}</span></nav>`;
@@ -3371,6 +3387,7 @@ function renderSellerApi() {
   $("#app").innerHTML = `<div class="wrap">${crumbs}
     <div class="s-head" style="padding-top:4px"><div><h1 class="h-l">${esc(s.name)}</h1><p>${dName(s.d)}, ${esc(s.addr)} · ${esc(s.hours)}</p></div></div>
     ${storeBanner(s)}
+    ${sellerProblemsHTML(s.id)}
     <div class="kpis">
       <div class="kpi"><span>${L("Открытых заказов", "Ochiq buyurtmalar")}</span><b>${kpi.open}</b><small style="color:${kpi.open ? "var(--signal)" : "var(--ok)"}">${kpi.open ? L("Ждут действий", "Harakat kutmoqda") : L("Всё обработано", "Hammasi bajarilgan")}</small></div>
       <div class="kpi"><span>${L("Выручка за 30 дней", "30 kunlik tushum")}</span><b>${fmtN(kpi.revenue30 / 1000)} ${L("тыс", "ming")}</b><small>${L("сум", "so‘m")}</small></div>
@@ -4573,6 +4590,7 @@ function renderSeller() {
     <div class="s-head" style="padding-top:4px"><div><h1 class="h-l">${esc(s.name)}</h1><p>${dName(s.d)}, ${L(s.addr, s.addrUz)} · ${s.hours} · <span class="pill mute">${L("демо-кабинет", "demo kabinet")}</span></p></div>
       <div class="f" style="min-width:200px"><label for="sStore">${L("Магазин", "Do‘kon")}</label><select class="sel" id="sStore">${[...(myStore ? [myStore] : []), ...STORES].map(x => `<option value="${x.id}" ${x.id === s.id ? "selected" : ""}>${esc(x.name)}</option>`).join("")}</select></div></div>
     ${s.mine ? storeBanner(s, true) + storeCardHTML(s) : ""}
+    ${sellerProblemsHTML(s.id)}
     <div class="kpis">
       <div class="kpi"><span>${L("Новых заказов", "Yangi buyurtmalar")}</span><b>${newCount}</b><small style="color:${newCount ? "var(--signal)" : "var(--ok)"}">${newCount ? L("Ждут сборки", "Yig‘ishni kutmoqda") : L("Все собраны", "Hammasi yig‘ilgan")}</small></div>
       <div class="kpi"><span>${L("Выручка за 7 дней", "7 kunlik tushum")}</span><b>${String(Math.round(week * 10) / 10).replace(".", ",")} ${L("млн", "mln")}</b><small>${s.mine ? L("новый магазин", "yangi do‘kon") : `+${8 + seed % 9}% ${L("к прошлой неделе", "o‘tgan haftaga")}`}</small></div>
@@ -5173,6 +5191,103 @@ document.addEventListener("click", e => {
   if (a === "example") { shop.text = L("Цемент М400 — 20 мешков\nКирпич красный М150 1500 шт\nПрофиль ПП 60×27 30 шт\nСаморезы по дереву 3,5×35 2 кг\nШпаклёвка финишная 5\nГрунтовка глубокого проникновения 2", "Sement M400 — 20 qop\nQizil g‘isht M150 1500 dona\nProfil PP 60×27 30 dona\nYog‘och shuruplari 3,5×35 2 kg\nFinish shpaklyovka 5\nChuqur singuvchi gruntovka 2"); LS.set("imorat.shopText", shop.text); shopBuild(shop.text); return renderShop(); }
   if (a === "parse") { shop.text = $("#shopText").value; LS.set("imorat.shopText", shop.text); shopBuild(shop.text); return renderShop(); }
   if (a === "cart") { const ch = shop.rows.filter(r => PROD[r.pick]); ch.forEach(r => addToCart(r.pick, null, r.qty, true)); toast(L(`В корзине: ${ch.length} товаров из списка`, `Savatda: ro‘yxatdan ${ch.length} ta mahsulot`)); return openDrawer("cart"); }
+});
+
+/* ================= Problem with the order =================
+   Buyer → store answer → moderator decision. The demo keeps everything in this browser. */
+const P_REASONS = () => [["not_delivered", L("Не привезли", "Olib kelishmadi")], ["missing", L("Привезли не всё", "Hammasi kelmadi")], ["damaged", L("Повреждено / брак", "Shikastlangan / brak")], ["wrong", L("Не тот товар", "Boshqa mahsulot")], ["quality", L("Плохое качество", "Sifati yomon")], ["other", L("Другое", "Boshqa")]];
+const P_STATUS = () => ({ open: [L("На рассмотрении", "Ko‘rib chiqilmoqda"), "warn"], answered: [L("Магазин ответил", "Do‘kon javob berdi"), "acc"], resolved: [L("Решена", "Hal qilindi"), "ok"], rejected: [L("Отклонена", "Rad etildi"), "mute"] });
+let myProblems = null, sellerProblems = null, adminProblems = null, probPhotos = {}, probDraft = {};
+const mediaSrc = u => (u && u.startsWith("/uploads/") && API ? API + u : u);
+let problemsDemo = LS.get("imorat.problems", []);
+const saveProblemsDemo = () => LS.set("imorat.problems", problemsDemo);
+async function loadMyProblems() { if (!API || !user) return; try { myProblems = (await api("GET", "/api/me/problems")).problems; } catch (e) { myProblems = myProblems || []; } if (drawerView === "track") renderDrawer(); }
+function problemCard(p, seller) {
+  const [st, c] = P_STATUS()[p.status] || [p.status, "mute"], R = Object.fromEntries(P_REASONS());
+  return `<div class="prob-card"><div class="pc-h"><b>${ui("shield", 15)} ${L("Жалоба", "Shikoyat")}: ${esc(R[p.reason] || p.reason)}</b><span class="pill ${c}">${st}</span></div>
+    <p>${esc(p.text)}</p>${(p.photos || []).length ? `<div class="pc-ph">${p.photos.map(u => `<a href="${esc(mediaSrc(u))}" target="_blank" rel="noopener"><img src="${esc(mediaSrc(u))}" alt="${L("Фото к жалобе", "Shikoyat rasmi")}" loading="lazy"></a>`).join("")}</div>` : ""}
+    ${seller && p.phone ? `<small class="mu">${esc(p.buyer || "")} · <a href="tel:+${esc(String(p.phone).replace(/\D/g, ""))}">+${esc(String(p.phone).replace(/\D/g, ""))}</a> · ${esc(p.order || "")}</small>` : ""}
+    ${p.seller_reply ? `<div class="pc-r"><b>${L("Ответ магазина", "Do‘kon javobi")}${p.store_name ? ` «${esc(p.store_name)}»` : ""}:</b> ${esc(p.seller_reply)}</div>` : ""}
+    ${p.resolution ? `<div class="pc-r ok"><b>${L("Решение Imorat", "Imorat qarori")}:</b> ${esc(p.resolution)}</div>` : ""}
+    ${seller && ["open", "answered"].includes(p.status) ? `<form class="pc-reply" data-probreply="${p.id}"><label class="visually-hidden" for="pr${p.id}">${L("Ответ покупателю", "Xaridorga javob")}</label><input id="pr${p.id}" placeholder="${L("Например: привезём замену завтра до 12:00", "Masalan: ertaga 12:00 gacha almashtirib beramiz")}" value="${esc(p.seller_reply || "")}"><button class="btn btn-primary" type="submit">${L("Ответить", "Javob berish")}</button></form>` : ""}
+  </div>`;
+}
+function problemHTML(o, s, i) {
+  if (o.api && !user) return "";
+  if (o.api && myProblems === null) { myProblems = []; loadMyProblems(); }
+  const key = o.api ? s.id : i, ex = o.api ? (myProblems || []).find(p => p.ship_id === s.id) : problemsDemo.find(p => p.order === o.num && p.ship_id === i);
+  if (ex) return problemCard(ex);
+  const ph = probPhotos[o.num + "|" + key] || [], dr = probDraft[o.num + "|" + key] || {};
+  return `<details class="prob"><summary>${ui("shield", 15)} ${L("Проблема с заказом?", "Buyurtmada muammo bormi?")}</summary>
+    <form class="prob-f" data-probform="${esc(o.num)}|${key}" novalidate>
+      <div class="chips ds-chips">${P_REASONS().map(([v, t], k) => `<label class="chip"><input type="radio" name="reason" value="${v}" ${(dr.reason ? dr.reason === v : k === 0) ? "checked" : ""}> ${t}</label>`).join("")}</div>
+      <label class="visually-hidden" for="pt${esc(o.num)}${key}">${L("Что случилось", "Nima bo‘ldi")}</label><textarea id="pt${esc(o.num)}${key}" name="text" rows="3" placeholder="${L("Что случилось? Например: из 100 кирпичей 30 битые", "Nima bo‘ldi? Masalan: 100 ta g‘ishtdan 30 tasi singan")}">${esc(dr.text || "")}</textarea>
+      <div class="pc-ph">${ph.map((u, k) => `<span class="pf"><img src="${u}" alt=""><button type="button" class="ib" data-probdel="${esc(o.num)}|${key}|${k}" aria-label="${L("Убрать фото", "Rasmni olib tashlash")}">${ui("close", 12)}</button></span>`).join("")}${ph.length < 3 ? `<label class="pf add">${ui("camera", 20)}<input type="file" accept="image/*" multiple hidden data-probfile="${esc(o.num)}|${key}"></label>` : ""}</div>
+      <span class="err" hidden></span>
+      <button class="btn btn-primary" type="submit">${L("Отправить жалобу", "Shikoyat yuborish")}</button>
+      <small class="mu">${o.api ? L("Жалобу увидят магазин и модератор Imorat. Ответ придёт сюда и в Telegram.", "Shikoyatni do‘kon va Imorat moderatori ko‘radi. Javob shu yerga va Telegramga keladi.") : L("В демо-версии жалоба сохраняется только у вас.", "Demo versiyada shikoyat faqat sizda saqlanadi.")}</small>
+    </form></details>`;
+}
+document.addEventListener("input", e => { const f = e.target.closest?.("[data-probform]"); if (!f) return; const fd = new FormData(f); probDraft[f.dataset.probform] = { reason: fd.get("reason"), text: fd.get("text") }; });
+document.addEventListener("change", async e => {
+  const pf = e.target.closest?.("[data-probform]"); if (pf && e.target.name === "reason") { const fd = new FormData(pf); probDraft[pf.dataset.probform] = { reason: fd.get("reason"), text: fd.get("text") }; }
+  const k = e.target.dataset?.probfile; if (!k) return;
+  const files = [...e.target.files || []]; e.target.value = "";
+  const arr = probPhotos[k] ||= [];
+  for (const f of files.slice(0, 3 - arr.length)) { try { arr.push(await resizeImg(f)); } catch (er) { toast(L("Не удалось открыть фото", "Rasmni ochib bo‘lmadi")); } }
+  renderDrawer(); const d = document.querySelector(`[data-probform="${k}"]`)?.closest("details"); if (d) d.open = true;
+});
+document.addEventListener("submit", async e => {
+  const f = e.target.closest("[data-probform],[data-probreply]"); if (!f) return; e.preventDefault();
+  if (f.dataset.probreply) {
+    const id = f.dataset.probreply, text = f.querySelector("input").value.trim(); if (text.length < 2) return;
+    if (API) { try { await api("POST", `/api/seller/problems/${id}/reply`, { text }); toast(L("Ответ отправлен покупателю", "Javob xaridorga yuborildi")); sellerProblems = null; renderSeller(); } catch (er) { toast(apiErr(er)); } return; }
+    const p = problemsDemo.find(x => String(x.id) === id); if (p) { p.seller_reply = text; p.status = "answered"; saveProblemsDemo(); } toast(L("Ответ сохранён", "Javob saqlandi")); return renderSeller();
+  }
+  const [num, key] = f.dataset.probform.split("|"), fd = new FormData(f), text = String(fd.get("text") || "").trim(), reason = fd.get("reason"), er = f.querySelector(".err");
+  if (text.length < 5) { er.textContent = L("Опишите проблему в паре слов", "Muammoni bir-ikki so‘z bilan yozing"); er.hidden = false; return; }
+  const photos = probPhotos[num + "|" + key] || [], o = orders.find(x => x.num === num);
+  if (API) {
+    const btn = f.querySelector("[type=submit]"); btn.disabled = true;
+    try {
+      const r = await api("POST", `/api/orders/${encodeURIComponent(num)}/problems`, { ship_id: +key, reason, text });
+      for (const u of photos) { const blob = await (await fetch(u)).blob(); await api("POST", `/api/problems/${r.problem.id}/photo`, blob).catch(() => toast(L("Одно фото не загрузилось", "Bitta rasm yuklanmadi"))); }
+      delete probPhotos[num + "|" + key]; delete probDraft[num + "|" + key]; toast(L("Жалоба отправлена магазину и модератору", "Shikoyat do‘kon va moderatorga yuborildi")); myProblems = null; renderDrawer();
+    } catch (er2) { btn.disabled = false; er.textContent = apiErr(er2); er.hidden = false; }
+    return;
+  }
+  const sh = o?.ships[+key];
+  problemsDemo.unshift({ id: Date.now(), order: num, ship_id: +key, store: sh?.store, store_name: STORE[sh?.store]?.name, reason, text, photos, status: "open", created: Date.now(), buyer: user?.name || L("Покупатель", "Xaridor"), phone: user?.phone || "" });
+  saveProblemsDemo(); delete probPhotos[num + "|" + key]; delete probDraft[num + "|" + key]; toast(L("Жалоба сохранена", "Shikoyat saqlandi")); renderDrawer();
+});
+document.addEventListener("click", e => {
+  const t = e.target.closest("[data-probdel]"); if (!t) return;
+  const [num, key, k] = t.dataset.probdel.split("|"); (probPhotos[num + "|" + key] || []).splice(+k, 1); renderDrawer();
+  const d = document.querySelector(`[data-probform="${num}|${key}"]`)?.closest("details"); if (d) d.open = true;
+});
+/* Seller cabinet: complaints about this store */
+function sellerProblemsHTML(sid) {
+  let list;
+  if (API) { if (sellerProblems === null) { sellerProblems = false; api("GET", "/api/seller/problems").then(r => { sellerProblems = r.problems; if (route.view === "seller") renderSeller(); }).catch(() => { sellerProblems = []; }); return ""; } list = sellerProblems || []; }
+  else list = problemsDemo.filter(p => p.store === sid);
+  if (!list.length) return "";
+  const open = list.filter(p => ["open", "answered"].includes(p.status)).length;
+  return `<div class="panel" style="margin-top:12px;display:grid;gap:10px"><div class="panel-h"><h2 class="h-m">${ui("shield", 18)} ${L("Жалобы покупателей", "Xaridorlar shikoyatlari")}</h2><span class="pill ${open ? "warn" : "ok"}">${open} ${L("открыто", "ochiq")}</span></div>
+    <p class="mu" style="margin:0;font-size:13px">${L("Ответьте покупателю и решите вопрос сами — модератор видит жалобы и учитывает их в рейтинге магазина.", "Xaridorga javob bering va masalani o‘zingiz hal qiling — moderator shikoyatlarni ko‘radi va do‘kon reytingida hisobga oladi.")}</p>
+    ${list.slice(0, 20).map(p => problemCard(p, true)).join("")}</div>`;
+}
+/* Moderator: all complaints */
+function adminProblemsHTML() {
+  if (adminProblems === null) { adminProblems = false; adminApi("GET", "/api/admin/problems").then(r => { adminProblems = r.problems; if (route.view === "seller" || route.view === "admin") renderMain(); }).catch(() => { adminProblems = []; }); return ""; }
+  if (!adminProblems?.length) return "";
+  const open = adminProblems.filter(p => ["open", "answered"].includes(p.status));
+  return `<div class="panel" style="margin-top:12px;display:grid;gap:10px"><div class="panel-h"><h2 class="h-m">${ui("shield", 18)} ${L("Жалобы по заказам", "Buyurtmalar bo‘yicha shikoyatlar")}</h2><span class="pill ${open.length ? "warn" : "ok"}">${open.length} ${L("открыто", "ochiq")}</span></div>
+    ${adminProblems.slice(0, 30).map(p => `${problemCard(p, true).replace('class="pc-reply"', 'class="pc-reply" hidden')}${["open", "answered"].includes(p.status) ? `<form class="pc-reply" data-probres="${p.id}"><input placeholder="${L("Решение: например, магазин вернул деньги", "Qaror: masalan, do‘kon pulni qaytardi")}"><button class="btn btn-primary" type="submit" name="st" value="resolved">${L("Решено", "Hal qilindi")}</button><button class="btn btn-line" type="submit" name="st" value="rejected">${L("Отклонить", "Rad etish")}</button></form>` : ""}`).join("")}</div>`;
+}
+document.addEventListener("submit", async e => {
+  const f = e.target.closest("[data-probres]"); if (!f) return; e.preventDefault();
+  const st = e.submitter?.value || "resolved", resolution = f.querySelector("input").value.trim();
+  try { await adminApi("PATCH", `/api/admin/problems/${f.dataset.probres}`, { status: st, resolution }); toast(L("Решение сохранено и отправлено сторонам", "Qaror saqlandi va tomonlarga yuborildi")); adminProblems = null; renderMain(); } catch (er) { toast(apiErr(er)); }
 });
 
 /* ================= Router & render ================= */

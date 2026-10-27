@@ -18,6 +18,7 @@ import { registerMasters } from "./masters.js";
 import { createBonus } from "./bonus.js";
 import { registerStats } from "./stats.js";
 import { createChannel } from "./channel.js";
+import { registerDisputes } from "./disputes.js";
 
 export const STEPS = {
   yandex: ["new", "assembling", "searching", "to_store", "on_way", "delivered"],
@@ -97,6 +98,14 @@ export function createApp(cfg, log = console) {
   };
   const session = (u, extra = {}) => ({ token: signJwt({ sub: u.id, typ: "session", v: u.token_ver || 0, ...extra }, cfg.jwtSecret, extra.mfa ? 12 * 3600 : SESSION_TTL), user: { ...publicUser(u, cfg.admins), telegram: !!u.tg_chat, mfa: !!u.totp_on } });
   const mediaUrl = p => (p && p.startsWith("/uploads/") ? cfg.publicUrl + p : p);
+  /* Saves an uploaded JPEG/PNG/WEBP (checked by its first bytes) and returns its /uploads path */
+  const saveImage = (buf, prefix) => {
+    const ext = buf[0] === 0xff && buf[1] === 0xd8 ? ".jpg" : buf.slice(0, 4).toString("hex") === "89504e47" ? ".png" : buf.slice(0, 4).toString() === "RIFF" && buf.slice(8, 12).toString() === "WEBP" ? ".webp" : null;
+    if (!ext) throw bad("bad_image", "Upload a JPEG, PNG or WEBP image up to 5 MB");
+    const name = `${prefix}-${randomBytes(5).toString("hex")}${ext}`;
+    writeFileSync(join(cfg.uploadsDir, name), buf);
+    return "/uploads/" + name;
+  };
   const publicStore = s => ({
     id: s.id, name: s.name, d: s.district, addr: s.addr, addrUz: s.addr_uz || s.addr, hours: s.hours, ru: s.ru || s.descr.slice(0, 80), uz: s.uz || s.ru || s.descr.slice(0, 80),
     descr: s.descr, cats: JSON.parse(s.cats || "[]"), phone: s.phone, telegram: s.telegram, landmark: s.landmark, la: s.la, lo: s.lo, status: s.status, loc_src: s.loc_src, note: s.review_note, created: s.created_at
@@ -681,6 +690,7 @@ export function createApp(cfg, log = console) {
   bonus.routes(r, need, lim);
   registerStats({ r, db, lim, needSeller });
   channel.routes(r, needAdmin);
+  registerDisputes({ r, db, cfg, need, needSeller, needAdmin, isAdmin, audit, lim, tg, push, saveImage, mediaUrl, log });
 
   /* ---------- HTTP server ---------- */
   const server = createServer(async (req, res) => {
