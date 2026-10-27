@@ -12,6 +12,7 @@ services:
       DB_PATH: /data/imorat.db
       UPLOADS_DIR: /data/uploads
       TRUST_PROXY: "1"
+      BACKUP_DIR: /data/backups
     volumes:
       - imorat-data:/data
   caddy:

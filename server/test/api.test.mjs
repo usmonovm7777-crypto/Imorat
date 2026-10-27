@@ -7,18 +7,27 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { loadConfig } from "../src/config.js";
 import { createApp } from "../src/app.js";
+import { totp } from "../src/totp.js";
+import { createECDH, createDecipheriv, hkdfSync } from "node:crypto";
 
 /* ---- fake external services: Eskiz, Yandex, Anthropic, Google JWKS ---- */
 const { privateKey, publicKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
 const jwk = { ...publicKey.export({ format: "jwk" }), kid: "k1", alg: "RS256", use: "sig" };
-const sms = [];
+const sms = [], tgSent = [], tgUpdates = [], pushes = [];
 const fake = createServer(async (req, res) => {
-  let body = ""; for await (const c of req) body += c;
+  const chunks = []; for await (const c of req) chunks.push(c); const raw = Buffer.concat(chunks), body = raw.toString("utf8");
   const json = (s, o) => { res.writeHead(s, { "content-type": "application/json" }); res.end(JSON.stringify(o)); };
   if (req.url === "/eskiz/auth/login") return json(200, { data: { token: "T" } });
   if (req.url === "/eskiz/message/sms/send") { sms.push(body); return json(200, { id: "1", status: "waiting" }); }
   if (req.url === "/ya/b2b/cargo/integration/v2/check-price") { const b = JSON.parse(body); return json(200, { price: b.requirements.taxi_class === "express" ? "21000.00" : "99000.00", eta: 30 }); }
   if (req.url === "/jwks") return json(200, { keys: [jwk] });
+  if (req.url.startsWith("/tg/botTGTOKEN/")) {
+    const m = req.url.split("/").pop(), b = body ? JSON.parse(body) : {};
+    if (m === "getMe") return json(200, { ok: true, result: { username: "imorat_test_bot" } });
+    if (m === "getUpdates") return json(200, { ok: true, result: tgUpdates.splice(0) });
+    if (m === "sendMessage" || m === "editMessageText" || m === "answerCallbackQuery") { tgSent.push({ m, ...b }); return json(200, { ok: true, result: { message_id: tgSent.length } }); }
+  }
+  if (req.url === "/push/ep1") { pushes.push({ body: raw, auth: req.headers.authorization, enc: req.headers["content-encoding"] }); res.writeHead(201); return res.end(); }
   if (req.url === "/ai/v1/messages") {
     const b = JSON.parse(body);
     assert.equal(req.headers["x-api-key"], "sk-test");
@@ -56,13 +65,14 @@ before(async () => {
   dir = mkdtempSync(join(tmpdir(), "imorat-"));
   const cfg = loadConfig({
     JWT_SECRET: "test-secret", DB_PATH: join(dir, "t.db"), UPLOADS_DIR: join(dir, "up"), ADMIN_PHONES: "998901111111",
-    GOOGLE_CLIENT_ID: "gid", GOOGLE_JWKS_URL: fakeBase + "/jwks", ANTHROPIC_API_KEY: "sk-test", ANTHROPIC_URL: fakeBase + "/ai", SMS_MODE: "dev"
+    GOOGLE_CLIENT_ID: "gid", GOOGLE_JWKS_URL: fakeBase + "/jwks", ANTHROPIC_API_KEY: "sk-test", ANTHROPIC_URL: fakeBase + "/ai", SMS_MODE: "dev",
+    TELEGRAM_BOT_TOKEN: "TGTOKEN", TELEGRAM_API_URL: fakeBase + "/tg", TELEGRAM_POLL_TIMEOUT: "0", BACKUP_DIR: join(dir, "bk")
   });
   app = createApp(cfg, { info() {}, warn() {}, error: console.error });
   await new Promise(r => app.listen(0, "127.0.0.1", r));
   base = `http://127.0.0.1:${app.address().port}`;
 });
-after(() => { app.close(); fake.close(); app.db.raw.close(); rmSync(dir, { recursive: true, force: true }); });
+after(() => { app.stopJobs(); app.close(); app.closeAllConnections(); fake.close(); fake.closeAllConnections(); app.db.raw.close(); rmSync(dir, { recursive: true, force: true }); });
 
 test("catalog is seeded from the website", async () => {
   const r = await call("GET", "/api/catalog");
@@ -121,7 +131,7 @@ test("order: server prices, tiers, promo, stock, cancel", async () => {
   const o = await call("POST", "/api/orders", { ...cart, expected_total: q.data.quote.total }, data.token);
   assert.equal(o.status, 200, JSON.stringify(o.data));
   assert.match(o.data.order.num, /^IM-1\d{5}$/);
-  assert.equal(o.data.order.pay_status, "on_delivery");
+  assert.equal(o.data.order.pay_status, "to_store");
   const afterStock = (await call("GET", "/api/catalog")).data.products.find(p => p.id === 1).offers.find(o => o.store === "usta").stock;
   assert.equal(afterStock, before - 10);
   const q2 = await call("POST", "/api/quote", cart, data.token);
@@ -160,7 +170,14 @@ test("store registration → admin approval → products → order to the store"
   assert.equal((await fetch(base + upj.img)).status, 200);
   const notAdmin = await call("PATCH", `/api/admin/stores/${sid}`, { status: "active" }, seller);
   assert.equal(notAdmin.status, 403);
-  const admin = (await login("901111111")).data.token;
+  const adminRaw = (await login("901111111")).data.token;
+  assert.equal((await call("PATCH", `/api/admin/stores/${sid}`, { status: "active" }, adminRaw)).data.error, "mfa_setup_required");
+  const setup = await call("POST", "/api/admin/mfa/setup", null, adminRaw);
+  assert.match(setup.data.url, /^otpauth:\/\/totp\//);
+  assert.equal((await call("POST", "/api/admin/mfa/verify", { code: "000000" }, adminRaw)).data.error, "mfa_wrong");
+  const admin = (await call("POST", "/api/admin/mfa/verify", { code: totp(setup.data.secret) }, adminRaw)).data.token;
+  globalThis.ADMIN = admin;
+  assert.equal((await call("PATCH", `/api/admin/stores/${sid}`, { status: "active" }, adminRaw)).data.error, "mfa_required");
   assert.equal((await call("PATCH", `/api/admin/stores/${sid}`, { status: "active" }, admin)).status, 200);
   const cat = (await call("GET", "/api/catalog")).data;
   assert.ok(cat.stores.some(s => s.id === sid));
@@ -200,5 +217,116 @@ test("Eskiz SMS and Yandex prices when keys are set", async () => {
   const usta = q.quote.ships.find(x => x.store === "usta"), elp = q.quote.ships.find(x => x.store === "elp");
   assert.equal(usta.source, "yandex"); assert.equal(usta.price, 99000);
   assert.equal(elp.price, 21000);
-  a2.close(); a2.db.raw.close(); rmSync(d2, { recursive: true, force: true });
+  a2.stopJobs(); a2.close(); a2.closeAllConnections(); a2.db.raw.close(); rmSync(d2, { recursive: true, force: true });
+});
+
+const wait = ms => new Promise(r => setTimeout(r, ms));
+async function until(fn, ms = 3000) { const t = Date.now(); while (Date.now() - t < ms) { const v = await fn(); if (v) return v; await wait(50); } throw new Error("timeout"); }
+
+test("Telegram: link seller, order arrives with buttons, accept from Telegram", async () => {
+  const seller = (await login("991234567")).data.token;
+  const st = await call("POST", "/api/seller/store", { name: "Tez Qurilish", descr: "Сухие смеси и инструмент рядом с метро", cats: ["build"], phone: "712223344", addr: "ул. Мукими, 7", hours: "00:00–00:00", district: "yunus" }, seller);
+  assert.equal(st.status, 200, JSON.stringify(st.data));
+  const sid = st.data.store.id;
+  await call("PATCH", `/api/admin/stores/${sid}`, { status: "active" }, globalThis.ADMIN);
+  await call("POST", "/api/seller/offers", { product_id: 2, price: 57000, stock: 50 }, seller);
+  const link = await call("POST", "/api/me/telegram", null, seller);
+  assert.match(link.data.url, /^https:\/\/t\.me\/imorat_test_bot\?start=[0-9a-f]+$/);
+  tgUpdates.push({ update_id: 1, message: { chat: { id: 555 }, text: "/start " + link.data.url.split("=")[1], from: { id: 555 } } });
+  await until(() => tgSent.some(x => x.chat_id === 555 && /подключён к магазину/.test(x.text)));
+  const sum0 = await call("GET", "/api/seller/summary", null, seller);
+  assert.equal(sum0.data.telegram, true);
+  const buyer = (await login("933334455")).data;
+  await call("PATCH", "/api/me", { name: "Бобур" }, buyer.token);
+  const o = await call("POST", "/api/orders", { lines: [{ id: 2, store: sid, q: 3 }], form: { name: "Бобур", phone: "998933334455", mode: "pickup", pay: "store" } }, buyer.token);
+  assert.equal(o.status, 200, JSON.stringify(o.data));
+  const ship = o.data.order.ships[0];
+  assert.ok(ship.accept_by > Date.now());
+  const msg = await until(() => tgSent.find(x => x.m === "sendMessage" && x.chat_id === "555" && /заказ IM-/.test(x.text)));
+  assert.equal(msg.reply_markup.inline_keyboard[0][0].callback_data, `acc:${ship.id}`);
+  tgUpdates.push({ update_id: 2, callback_query: { id: "cb1", data: `acc:${ship.id}`, message: { chat: { id: 999 } } } });
+  await until(() => tgSent.some(x => x.m === "answerCallbackQuery" && x.callback_query_id === "cb1"));
+  assert.equal((await call("GET", `/api/orders/${o.data.order.num}`, null, buyer.token)).data.order.ships[0].status, "new"); // stranger's chat can't accept
+  tgUpdates.push({ update_id: 3, callback_query: { id: "cb2", data: `acc:${ship.id}`, message: { chat: { id: 555 } } } });
+  await until(async () => (await call("GET", `/api/orders/${o.data.order.num}`, null, buyer.token)).data.order.ships[0].status === "assembling");
+  await until(() => tgSent.some(x => x.m === "editMessageText"));
+  tgUpdates.push({ update_id: 4, callback_query: { id: "cb3", data: `rdy:${ship.id}`, message: { chat: { id: 555 } } } });
+  await until(async () => (await call("GET", `/api/orders/${o.data.order.num}`, null, buyer.token)).data.order.ships[0].status === "ready");
+  await call("PATCH", `/api/seller/shipments/${ship.id}`, { status: "picked" }, seller);
+  // review → rating
+  const rv = await call("POST", `/api/orders/${o.data.order.num}/review`, { ship_id: ship.id, stars: 5, text: "Быстро собрали" }, buyer.token);
+  assert.equal(rv.status, 200, JSON.stringify(rv.data));
+  assert.equal((await call("POST", `/api/orders/${o.data.order.num}/review`, { ship_id: ship.id, stars: 1 }, buyer.token)).data.error, "already_rated");
+  const revs = await call("GET", `/api/stores/${sid}/reviews`);
+  assert.equal(revs.data.reviews[0].text, "Быстро собрали");
+  const cat = await call("GET", "/api/catalog");
+  const sr = cat.data.stores.find(s => s.id === sid).rating;
+  assert.equal(sr.stars, 5); assert.equal(sr.done, 1);
+  // finance: build category → 5% commission
+  const fin = (await call("GET", "/api/seller/summary", null, seller)).data.finance;
+  assert.equal(fin.goods, 57000 * 3); assert.equal(fin.commission, Math.round(57000 * 3 * 0.05)); assert.equal(fin.balance, fin.commission);
+  const af = await call("GET", "/api/admin/finance", null, globalThis.ADMIN);
+  assert.ok(af.data.stores.some(x => x.id === sid && x.commission === fin.commission));
+  await call("POST", "/api/admin/settlements", { store_id: sid, amount: fin.commission, note: "Наличными" }, globalThis.ADMIN);
+  assert.equal((await call("GET", "/api/seller/summary", null, seller)).data.finance.balance, 0);
+  assert.ok((await call("GET", "/api/admin/audit", null, globalThis.ADMIN)).data.log.some(x => x.action === "settlement"));
+});
+
+test("Seller deadlines: reminder, SMS, auto-cancel restores stock and lowers reliability", async () => {
+  const seller = (await login("990001111")).data.token;
+  const st = await call("POST", "/api/seller/store", { name: "Sekin Market", descr: "Магазин, который забывает про заказы", cats: ["build"], phone: "712220000", addr: "ул. Тест, 1", hours: "00:00–00:00", district: "yunus" }, seller);
+  assert.equal(st.status, 200, JSON.stringify(st.data));
+  const sid = st.data.store.id;
+  await call("PATCH", `/api/admin/stores/${sid}`, { status: "active" }, globalThis.ADMIN);
+  await call("POST", "/api/seller/offers", { product_id: 3, price: 60000, stock: 10 }, seller);
+  const buyer = (await login("990002222")).data.token;
+  const o = await call("POST", "/api/orders", { lines: [{ id: 3, store: sid, q: 4 }], form: { name: "Тест", phone: "998990002222", mode: "pickup", pay: "store" } }, buyer);
+  assert.equal(o.status, 200, JSON.stringify(o.data));
+  const stock = async () => (await call("GET", "/api/catalog")).data.products.find(p => p.id === 3).offers.find(x => x.store === sid)?.stock;
+  assert.equal(await stock(), 6);
+  const t0 = Date.now();
+  app.sweep(t0 + 6 * 60000);
+  assert.equal(app.db.get("SELECT reminded FROM shipments WHERE id=?", o.data.order.ships[0].id).reminded, 1);
+  app.sweep(t0 + 11 * 60000);
+  assert.equal(app.db.get("SELECT sms_sent FROM shipments WHERE id=?", o.data.order.ships[0].id).sms_sent, 1);
+  app.sweep(t0 + 21 * 60000);
+  const ord = (await call("GET", `/api/orders/${o.data.order.num}`, null, buyer)).data.order;
+  assert.equal(ord.status, "cancelled"); assert.equal(ord.ships[0].cancel_reason, "not_accepted");
+  assert.equal(await stock(), 10);
+  const r = (await call("GET", `/api/stores/${sid}/reviews`)).data.rating;
+  assert.equal(r.fail, 1);
+});
+
+test("Web push: subscription gets an encrypted, VAPID-signed message", async () => {
+  const u = (await login("994445566")).data.token;
+  const cfgR = await call("GET", "/api/config");
+  assert.ok(cfgR.data.push_key.length > 80);
+  const ua = createECDH("prime256v1"); ua.generateKeys();
+  const auth = Buffer.from("0123456789abcdef");
+  assert.equal((await call("POST", "/api/push/subscribe", { endpoint: fakeBase.replace("http:", "https:") + "/x", keys: {} }, u)).data.error, "bad_subscription");
+  app.db.run("INSERT INTO push_subs(endpoint,user_id,p256dh,auth,created_at) VALUES(?,?,?,?,?)", fakeBase + "/push/ep1", (await call("GET", "/api/me", null, u)).data.user.id, ua.getPublicKey().toString("base64url"), auth.toString("base64url"), Date.now());
+  const r = await call("POST", "/api/push/test", null, u);
+  assert.equal(r.data.sent, 1);
+  const p = await until(() => pushes[0]);
+  assert.equal(p.enc, "aes128gcm"); assert.match(p.auth, /^vapid t=.+, k=.+/);
+  // decrypt as the browser would (RFC 8291)
+  const b = p.body, salt = b.subarray(0, 16), idlen = b[20], asPub = b.subarray(21, 21 + idlen), ct = b.subarray(21 + idlen);
+  const shared = ua.computeSecret(asPub);
+  const ikm = Buffer.from(hkdfSync("sha256", shared, auth, Buffer.concat([Buffer.from("WebPush: info\0"), ua.getPublicKey(), asPub]), 32));
+  const cek = Buffer.from(hkdfSync("sha256", ikm, salt, Buffer.from("Content-Encoding: aes128gcm\0"), 16)), nonce = Buffer.from(hkdfSync("sha256", ikm, salt, Buffer.from("Content-Encoding: nonce\0"), 12));
+  const d = createDecipheriv("aes-128-gcm", cek, nonce); d.setAuthTag(ct.subarray(-16));
+  const plain = Buffer.concat([d.update(ct.subarray(0, -16)), d.final()]);
+  assert.equal(JSON.parse(plain.subarray(0, -1).toString()).body, "Уведомления работают ✅");
+});
+
+test("Logout everywhere invalidates old sessions; online payment is refused until connected; backups", async () => {
+  const t = (await login("995556677")).data.token;
+  assert.equal((await call("GET", "/api/me", null, t)).status, 200);
+  const bad = await call("POST", "/api/orders", { lines: [{ id: 1, store: "usta", q: 1 }], form: { name: "Тест", phone: "998995556677", mode: "pickup", pay: "click" } }, t);
+  assert.equal(bad.data.error, "payment_unavailable");
+  await call("POST", "/api/me/logout-all", null, t);
+  assert.equal((await call("GET", "/api/me", null, t)).status, 401);
+  app.backup();
+  const { readdirSync } = await import("node:fs");
+  assert.ok(readdirSync(join(dir, "bk")).some(f => /^imorat-\d{4}-\d{2}-\d{2}\.db$/.test(f)));
 });

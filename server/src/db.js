@@ -36,6 +36,14 @@ CREATE TABLE IF NOT EXISTS shipments(
   tariff TEXT, price INTEGER NOT NULL, kg REAL NOT NULL, dist REAL NOT NULL DEFAULT 0, lines TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'new', status_at INTEGER NOT NULL, history TEXT NOT NULL DEFAULT '[]', claim_id TEXT, courier TEXT);
 CREATE TABLE IF NOT EXISTS promo_uses(user_id TEXT NOT NULL, code TEXT NOT NULL, order_id INTEGER, PRIMARY KEY(user_id, code));
+CREATE TABLE IF NOT EXISTS reviews(
+  id INTEGER PRIMARY KEY AUTOINCREMENT, ship_id INTEGER UNIQUE NOT NULL, order_id INTEGER NOT NULL, store_id TEXT NOT NULL, user_id TEXT NOT NULL,
+  stars INTEGER NOT NULL, text TEXT NOT NULL DEFAULT '', reply TEXT NOT NULL DEFAULT '', created_at INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS settlements(id INTEGER PRIMARY KEY AUTOINCREMENT, store_id TEXT NOT NULL, amount INTEGER NOT NULL, note TEXT NOT NULL DEFAULT '', admin_id TEXT, created_at INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS audit(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT, action TEXT NOT NULL, target TEXT, details TEXT, ip TEXT, created_at INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS push_subs(endpoint TEXT PRIMARY KEY, user_id TEXT NOT NULL, p256dh TEXT NOT NULL, auth TEXT NOT NULL, created_at INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS tg_links(token TEXT PRIMARY KEY, user_id TEXT NOT NULL, expires_at INTEGER NOT NULL);
+CREATE INDEX IF NOT EXISTS reviews_store ON reviews(store_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS orders_user ON orders(user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS ship_store ON shipments(store_id, status_at DESC);
 CREATE INDEX IF NOT EXISTS ship_order ON shipments(order_id);
@@ -47,6 +55,13 @@ export function openDb(path, catalogPath) {
   const raw = new DatabaseSync(path);
   raw.exec("PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA busy_timeout=5000;");
   raw.exec(SCHEMA);
+  // Columns added after the first release (safe to run on an existing database)
+  const addCol = (t, c, def) => { if (!raw.prepare(`PRAGMA table_info(${t})`).all().some(x => x.name === c)) raw.exec(`ALTER TABLE ${t} ADD COLUMN ${c} ${def}`); };
+  addCol("users", "tg_chat", "TEXT"); addCol("users", "token_ver", "INTEGER NOT NULL DEFAULT 0");
+  addCol("users", "totp_secret", "TEXT"); addCol("users", "totp_on", "INTEGER NOT NULL DEFAULT 0");
+  addCol("shipments", "accepted_at", "INTEGER"); addCol("shipments", "start_at", "INTEGER"); addCol("shipments", "reminded", "INTEGER NOT NULL DEFAULT 0");
+  addCol("shipments", "sms_sent", "INTEGER NOT NULL DEFAULT 0"); addCol("shipments", "cancel_reason", "TEXT"); addCol("shipments", "tg_msg", "TEXT");
+  addCol("shipments", "goods", "INTEGER NOT NULL DEFAULT 0"); addCol("shipments", "commission", "INTEGER NOT NULL DEFAULT 0");
   const cache = new Map();
   const st = sql => { let s = cache.get(sql); if (!s) { s = raw.prepare(sql); cache.set(sql, s); } return s; };
   const clean = p => p.map(v => (v === undefined ? null : typeof v === "boolean" ? (v ? 1 : 0) : v));

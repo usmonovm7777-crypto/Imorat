@@ -1,0 +1,22 @@
+{
+  "name": "imorat-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Imorat mobile app (Android / iOS) built from the website with Capacitor",
+  "scripts": {
+    "www": "node scripts/prepare-www.mjs",
+    "android": "npm run www && npx cap sync android && npx cap open android",
+    "ios": "npm run www && npx cap sync ios && npx cap open ios"
+  },
+  "dependencies": {
+    "@capacitor/android": "^7.0.0",
+    "@capacitor/core": "^7.0.0",
+    "@capacitor/ios": "^7.0.0",
+    "@capacitor/splash-screen": "^7.0.0",
+    "@capacitor/status-bar": "^7.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^7.0.0"
+  }
+}

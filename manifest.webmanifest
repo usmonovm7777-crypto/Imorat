@@ -1,0 +1,24 @@
+{
+  "name": "Imorat — строительные магазины Ташкента",
+  "short_name": "Imorat",
+  "description": "Стройматериалы из магазинов Ташкента: сравнение цен, Usta AI, калькуляторы ремонта и доставка Яндекс.",
+  "id": "./",
+  "start_url": "./?source=app",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F3F5F2",
+  "theme_color": "#0B6E69",
+  "lang": "ru",
+  "categories": ["shopping", "business"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Каталог", "url": "./#catalog", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Мои заказы", "url": "./#orders", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Кабинет продавца", "url": "./#seller", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] }
+  ]
+}

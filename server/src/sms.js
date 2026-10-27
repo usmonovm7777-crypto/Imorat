@@ -16,8 +16,7 @@ export function createSms(cfg, log = console) {
   }
   return {
     mode: cfg.mode,
-    async sendCode(phone, code) {
-      const text = cfg.template.replace("{code}", code);
+    async sendText(phone, text) {
       if (cfg.mode !== "eskiz") { log.info(`[sms:dev] ${phone} → ${text}`); return { dev: true }; }
       if (!token || Date.now() - tokenAt > 25 * 86400_000) await login();
       let r = await sendOnce(phone, text);
@@ -25,6 +24,7 @@ export function createSms(cfg, log = console) {
       const j = await r.json().catch(() => ({}));
       if (!r.ok) { log.error("[sms] eskiz send failed", r.status, JSON.stringify(j).slice(0, 300)); throw new HttpError(502, "sms_failed", "Could not send SMS, try again later"); }
       return { id: j.id || null };
-    }
+    },
+    sendCode(phone, code) { return this.sendText(phone, cfg.template.replace("{code}", code)); }
   };
 }

@@ -6,6 +6,13 @@
 <meta name="description" content="Imorat — маркетплейс строительных магазинов Ташкента: сравнение цен, Usta AI, калькуляторы ремонта и доставка Яндекс.">
 <style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.5 system-ui,-apple-system,'Segoe UI',Roboto,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
 <script src="config.js"></script>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0B6E69">
+<link rel="icon" type="image/png" href="icons/favicon-64.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Imorat">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <title>Imorat Market</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -580,7 +587,7 @@ legend { font-family: var(--f-display); font-size: 15px; font-weight: 600; margi
 .s-grid { display: grid; grid-template-columns: 1fr 1.25fr; gap: 12px; margin-top: 12px; }
 .panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 18px; min-width: 0; display: grid; gap: 14px; align-content: start; }
 .panel-h { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
-.tbl-wrap { overflow-x: auto; }
+.tbl-wrap { overflow-x: auto; position: relative; }
 table { width: 100%; border-collapse: collapse; font-size: 14px; }
 th { text-align: left; font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); padding: 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
 td { padding: 10px; border-bottom: 1px solid var(--line); vertical-align: middle; }
@@ -732,6 +739,30 @@ html.lock { overflow: hidden; }
 .acct .av { width: 52px; height: 52px; font-size: 20px; }
 .acct small { display: block; color: var(--muted); }
 .roles { display: grid; gap: 8px; }
+.srate { font-size: 12.5px; color: var(--muted); }
+.srate b { color: var(--ink); font-weight: 600; } .srate b::first-letter { color: #e8a317; }
+.srate.new { color: var(--accent); font-weight: 600; }
+.store .srate { display: block; margin-top: 4px; }
+.pill.closed { background: color-mix(in srgb, var(--muted) 14%, transparent); color: var(--muted); }
+.note.warnn { background: var(--signal-soft); }
+.rv-form { display: grid; gap: 8px; padding: 12px; border: 1px dashed var(--line-strong); border-radius: 12px; margin-top: 8px; }
+.rv-form textarea { width: 100%; border: 1.5px solid var(--line); border-radius: 10px; padding: 8px 10px; background: var(--raised); font: inherit; color: inherit; }
+.stars { display: flex; gap: 4px; }
+.stars button { font-size: 28px; line-height: 1; color: var(--line-strong); padding: 2px; }
+.stars button.on { color: #e8a317; }
+.stars-ro { color: #e8a317; letter-spacing: 1px; }
+.notif-box { display: grid; gap: 8px; background: var(--raised); border: 1px solid var(--line); border-radius: var(--r); padding: 14px; }
+.nrow { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding: 6px 0; }
+.nrow > span:first-child { display: inline-flex; gap: 8px; align-items: flex-start; flex: 1; min-width: 160px; }
+.nrow svg { flex: none; margin-top: 2px; }
+.mini-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 4px 0 10px; }
+.mini-kpis > div { background: var(--raised); border-radius: 10px; padding: 10px; display: grid; gap: 2px; }
+.mini-kpis b { font-size: 16px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; } .mini-kpis small { color: var(--muted); font-size: 12px; }
+.rv-item { border-top: 1px solid var(--line); padding: 10px 0; display: grid; gap: 4px; } .rv-item p { margin: 0; }
+.reply-f, .settle-f { display: flex; gap: 6px; flex-wrap: wrap; }
+.reply-f input, .settle-f input { flex: 1; min-width: 120px; border: 1.5px solid var(--line); border-radius: 10px; padding: 7px 10px; background: var(--raised); font: inherit; color: inherit; }
+[data-until] { font-weight: 600; color: var(--accent); } [data-until].late { color: var(--signal); }
+@media (max-width: 760px) { .mini-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .auth-box.wide { width: min(580px, 100%); }
 .auth-in fieldset { border: 0; padding: 0; margin: 0; display: grid; gap: 8px; }
 .auth-in legend { font-weight: 600; font-size: 14px; padding: 0; margin-bottom: 8px; }
@@ -876,7 +907,18 @@ const LS = {
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } }
 };
 let lang = LS.get("imorat.lang", "ru");
-const L = (ru, uz) => (lang === "uz" ? uz : ru);
+/* Uzbek is shown in the new Latin alphabet (law of 21.10.2026): oʻ→ö, gʻ→ğ, sh→ş, ch→ç.
+   Source texts keep the old spelling; conversion happens on output, HTML tags and brand names are left as is. */
+const UZ_SKIP = /(<[^>]*>|https?:\/\/\S+|Chevrolet)/;
+function uzNew(t) {
+  if (typeof t !== "string" || !t) return t;
+  return t.split(UZ_SKIP).map((part, i) => i % 2 ? part : part
+    .replace(/O[‘ʻ'`]/g, "Ö").replace(/o[‘ʻ'`]/g, "ö").replace(/G[‘ʻ'`]/g, "Ğ").replace(/g[‘ʻ'`]/g, "ğ")
+    .replace(/SH/g, "Ş").replace(/Sh/g, "Ş").replace(/sh/g, "ş").replace(/CH/g, "Ç").replace(/Ch/g, "Ç").replace(/ch/g, "ç")).join("");
+}
+/* Search folds old and new spellings together: "shpaklyovka" finds "şpaklyovka" and back */
+const fold = t => String(t || "").toLowerCase().replace(/[‘ʻ'`’]/g, "").replace(/ö/g, "o").replace(/ğ/g, "g").replace(/ş/g, "sh").replace(/ç/g, "ch");
+const L = (ru, uz) => (lang === "uz" ? uzNew(uz) : ru);
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const plural = (n, f) => { const a = n % 10, b = n % 100; return f[a === 1 && b !== 11 ? 0 : a >= 2 && a <= 4 && (b < 10 || b >= 20) ? 1 : 2]; };
@@ -1046,7 +1088,7 @@ function apiErr(e) {
   if (String(e.code || "").startsWith("bad_")) return L("Проверьте данные: ", "Ma’lumotlarni tekshiring: ") + e.message;
   return L("Что-то пошло не так. Попробуйте ещё раз.", "Nimadir xato ketdi. Qayta urinib ko‘ring.");
 }
-const fromApiUser = u => ({ id: u.id, name: u.name, phone: u.phone, email: u.email, via: u.via, role: u.role, district: u.district, vip: u.vip, store_id: u.store_id, admin: u.admin, created: u.created, api: true });
+const fromApiUser = u => ({ id: u.id, name: u.name, phone: u.phone, email: u.email, via: u.via, role: u.role, district: u.district, vip: u.vip, store_id: u.store_id, admin: u.admin, created: u.created, telegram: !!u.telegram, mfa: !!u.mfa, api: true });
 const mapOrder = o => ({ ...o, api: true, ships: o.ships.map(s => ({ ...s, courier: s.courier || "", plate: null })) });
 
 /* ================= Geography & stores ================= */
@@ -1638,7 +1680,7 @@ function renderHome() {
 
     <section class="sec" id="stores">
       <div class="sec-head"><div><h2 class="h-l">${L("Магазины-партнёры", "Hamkor do‘konlar")}</h2><p>${L("Курьер забирает заказ прямо со склада магазина", "Kuryer buyurtmani do‘kon omboridan oladi")}</p></div></div>
-      <div class="stores rv">${STORES.map(s => { const n = PRODUCTS.filter(p => p.offers.some(o => o.store === s.id)).length; return `<div class="store"><span class="av">${esc(s.name.slice(0, 1))}</span><div><b>${esc(s.name)}</b><span class="m">${dName(s.d)}, ${L(s.addr, s.addrUz)}</span><br><span class="m">${L(s.ru, s.uz)}</span><div class="r"><span class="pill ok">${L("Открыто", "Ochiq")} · ${s.hours}</span><button class="link" type="button" data-store="${s.id}">${n} ${L(plural(n, ["товар", "товара", "товаров"]), "mahsulot")} ${ui("chev", 14)}</button></div></div></div>`; }).join("")}</div>
+      <div class="stores rv">${STORES.map(s => { const n = PRODUCTS.filter(p => p.offers.some(o => o.store === s.id)).length; return `<div class="store"><span class="av">${esc(s.name.slice(0, 1))}</span><div><b>${esc(s.name)}</b><span class="m">${dName(s.d)}, ${L(s.addr, s.addrUz)}</span><br><span class="m">${L(s.ru, s.uz)}</span>${ratingHTML(s, true)}<div class="r"><span class="pill ${openState(s).open ? "ok" : "closed"}">${openState(s).text}</span><button class="link" type="button" data-store="${s.id}">${n} ${L(plural(n, ["товар", "товара", "товаров"]), "mahsulot")} ${ui("chev", 14)}</button></div></div></div>`; }).join("")}</div>
     </section>
 
     <section class="sec">
@@ -1882,13 +1924,13 @@ function renderCatalog() {
   renderList();
 }
 function filtered() {
-  const q = f.q.trim().toLowerCase();
+  const q = fold(f.q.trim());
   const list = PRODUCTS.filter(p =>
     (!route.cat || p.cat === route.cat) && (!f.sub || p.sub === f.sub) &&
     (!f.stores.length || p.offers.some(o => f.stores.includes(o.store))) &&
     (!f.inStock || p.offers.some(o => stockOf(p, o.store) > 0)) &&
     (!f.max || minPrice(p) <= f.max) &&
-    (!q || `${p.ru} ${p.uz} ${CAT[p.cat].ru} ${CAT[p.cat].uz} ${subName(p.cat, p.sub)}`.toLowerCase().includes(q)));
+    (!q || fold(`${p.ru} ${p.uz} ${CAT[p.cat].ru} ${CAT[p.cat].uz} ${subName(p.cat, p.sub)}`).includes(q)));
   const score = p => (p.hit ? 1000 : 0) + p.rating * p.reviews;
   return list.sort((a, b) => f.sort === "asc" ? minPrice(a) - minPrice(b) : f.sort === "desc" ? minPrice(b) - minPrice(a) : f.sort === "rate" ? b.rating - a.rating : score(b) - score(a));
 }
@@ -1931,7 +1973,7 @@ function openProduct(id) {
       <p class="desc">${esc(pDesc(p))}</p>
       <dl class="specs"><dt>${L("Единица", "O‘lchov")}</dt><dd>${unitName(p.unit)}</dd><dt>${L("Вес", "Vazn")}</dt><dd>${fmtKg(p.kg)}</dd><dt>${L("Страна", "Mamlakat")}</dt><dd>${L(...p.country)}</dd><dt>${L("Гарантия", "Kafolat")}</dt><dd>${p.warranty ? `${p.warranty} ${L("мес.", "oy")}` : L("по закону о защите прав потребителей", "iste’molchilar huquqlari qonuni bo‘yicha")}</dd><dt>${L("Цена", "Narx")}</dt><dd>${offers.length > 1 ? `${fmt(offers[0].price)} – ${fmt(offers[offers.length - 1].price)}` : fmt(mp)}</dd></dl>
       <div><h3 class="h-m" style="margin-bottom:10px">${L("Цены в магазинах", "Do‘konlardagi narxlar")}</h3>
-      <div class="offers">${offers.map((o, i) => { const s = STORE[o.store], st = stockOf(p, o.store); return `<div class="offer ${i === 0 && offers.length > 1 ? "best" : ""}"><div><b>${esc(s.name)}</b><small>${dName(s.d)} · ${s.hours}</small>${i === 0 && offers.length > 1 ? `<small style="color:var(--accent);font-weight:600">${L("Лучшая цена", "Eng yaxshi narx")}</small>` : ""}</div><div style="display:grid;justify-items:end;gap:4px"><span class="pr">${fmt(o.price)}</span>${stockTxt(st)}</div><button class="btn btn-primary" type="button" data-addo="${p.id}|${o.store}">${L("В корзину", "Savatga")}</button></div>`; }).join("")}</div></div>
+      <div class="offers">${offers.map((o, i) => { const s = STORE[o.store], st = stockOf(p, o.store); return `<div class="offer ${i === 0 && offers.length > 1 ? "best" : ""}"><div><b>${esc(s.name)}</b><small>${dName(s.d)} · ${openState(s).text}</small><small>${ratingHTML(s)}</small>${i === 0 && offers.length > 1 ? `<small style="color:var(--accent);font-weight:600">${L("Лучшая цена", "Eng yaxshi narx")}</small>` : ""}</div><div style="display:grid;justify-items:end;gap:4px"><span class="pr">${fmt(o.price)}</span>${stockTxt(st)}</div><button class="btn btn-primary" type="button" data-addo="${p.id}|${o.store}">${L("В корзину", "Savatga")}</button></div>`; }).join("")}</div></div>
       ${svc ? `<label class="infobox" for="svcChk">${ui("wrench", 20)}<span><b>${L("Установка мастером", "Usta o‘rnatishi")}</b><small>${fmt(svc)} ${L("за", "har")} ${unitName(p.unit)} · ${L("мастер приедет после доставки", "usta yetkazilgandan keyin keladi")}</small></span><span class="check"><input type="checkbox" id="svcChk" data-svc="${p.id}" ${svcOn ? "checked" : ""}></span></label>` : ""}
       ${mp >= 500000 ? `<div class="infobox">${ui("wallet", 20)}<span><b>${L("Рассрочка на 12 месяцев", "12 oyga muddatli to‘lov")}</b><small>${L(`от ${fmt(monthly(mp))} в месяц`, `oyiga ${fmt(monthly(mp))}dan`)} · ${L("оформление при оплате, условия партнёра", "to‘lovda rasmiylashtiriladi, hamkor shartlari")}</small></span></div>` : ""}
       <div class="infobox">${ui(t.icon, 20)}<span><b>${L("Доставка Яндекс в", "Yandex yetkazish:")} ${dName(district)}</b><small>${tName(t)} · ${fromP(round(t.base + t.perKm * dist))} · ${etaStr(t)}${vip ? " · VIP" : ""}</small></span></div>
@@ -2034,7 +2076,8 @@ function quote(d) {
 }
 function dCheckout() {
   $("#dTitle").textContent = L("Оформление", "Rasmiylashtirish");
-  const d = Object.assign({ name: user?.name || "", phone: user?.phone || "+998 ", district, street: "", flat: "", floor: "1", mode: "yandex", when: "asap", hour: "09", pay: "click", lift: false, comment: "" }, form);
+  const d = Object.assign({ name: user?.name || "", phone: user?.phone || "+998 ", district, street: "", flat: "", floor: "1", mode: "yandex", when: "asap", hour: "09", pay: API ? "store" : "click", lift: false, comment: "" }, form);
+  if (API && !["store", ...(apiCfg?.payments || [])].includes(d.pay)) d.pay = "store";
   const hours = []; for (let h = 8; h <= 20; h++) hours.push(String(h).padStart(2, "0"));
   $("#dBody").innerHTML = `<form id="orderForm" novalidate style="display:grid;gap:22px">
     <fieldset><legend>${L("Получатель", "Qabul qiluvchi")}</legend>
@@ -2058,8 +2101,9 @@ function dCheckout() {
       </div>
     </fieldset>
     <fieldset><legend>${L("Оплата", "To‘lov")}</legend>
-      <div class="pay">${[["click", "Click"], ["payme", "Payme"], ["uzum", "Uzum"], ["nasiya", L("Рассрочка", "Muddatli")], ["cash", L("Наличными", "Naqd")]].map(([val, n]) => `<label><input type="radio" name="pay" value="${val}" ${d.pay === val ? "checked" : ""}>${n}</label>`).join("")}</div>
+      <div class="pay">${(API ? [["store", L("Магазину напрямую", "Do‘konga to‘g‘ridan-to‘g‘ri")], ...(apiCfg?.payments || []).map(x => [x, { click: "Click", payme: "Payme", uzum: "Uzum" }[x] || x])] : [["click", "Click"], ["payme", "Payme"], ["uzum", "Uzum"], ["nasiya", L("Рассрочка", "Muddatli")], ["cash", L("Наличными", "Naqd")]]).map(([val, n]) => `<label><input type="radio" name="pay" value="${val}" ${d.pay === val ? "checked" : ""}>${n}</label>`).join("")}</div>
       <div class="note" id="nasiyaNote" hidden></div>
+      <div class="note" id="storePayNote" hidden>${ui("store", 14)} ${L("Платить заранее не нужно. Магазин подтвердит заказ и способ оплаты: наличными или переводом при получении. Если магазин не подтвердит заказ вовремя, он отменится автоматически.", "Oldindan to‘lash shart emas. Do‘kon buyurtmani va to‘lov usulini tasdiqlaydi: olganda naqd yoki o‘tkazma. Do‘kon o‘z vaqtida tasdiqlamasa, buyurtma avtomatik bekor qilinadi.")}</div>
       <div class="f"><label for="fPromo">${L("Промокод", "Promokod")}</label><div class="promo-row"><input id="fPromo" value="${esc(promo)}" placeholder="IMORAT5" autocomplete="off" autocapitalize="characters"><button class="btn btn-line" type="button" data-act="promo">${L("Применить", "Qo‘llash")}</button></div><span class="promo-msg" id="promoMsg"></span></div>
       <div class="f"><label for="fComment">${L("Комментарий курьеру", "Kuryerga izoh")}</label><textarea id="fComment" name="comment" rows="2" placeholder="${L("Позвоните за 10 минут", "10 daqiqa oldin qo‘ng‘iroq qiling")}">${esc(d.comment)}</textarea></div>
     </fieldset>
@@ -2082,12 +2126,13 @@ function updateQuote() {
     <small>${s.t ? `${tName(s.t)} · ${s.t.veh} · ${fmtKg(s.g.kg)} · ~${s.dist.toFixed(1).replace(".", ",")} ${L("км", "km")} · ${d.when === "slot" ? L("завтра 10–14", "ertaga 10–14") : d.when === "vip" ? `${L("завтра", "ertaga")} ${d.hour}:00–${String(+d.hour + 1).padStart(2, "0")}:00` : etaStr(s.t)}` : `${L(s.g.store.addr, s.g.store.addrUz)} · ${s.g.store.hours}`}</small></div>`).join("") +
     (d.mode === "yandex" ? `<div class="note">${L("Цена доставки — оценка прототипа. В рабочей версии цену и время вернёт API Яндекс Доставки по точным координатам.", "Yetkazish narxi taxminiy. Ishchi versiyada narx va vaqtni Yandex API aniq koordinatalar bo‘yicha qaytaradi.")}</div>` : "");
   const nn = $("#nasiyaNote"); nn.hidden = d.pay !== "nasiya";
+  const spn = $("#storePayNote"); if (spn) spn.hidden = d.pay !== "store";
   nn.innerHTML = `${ui("wallet", 14)} ${L(`Рассрочка на 12 месяцев: от ${fmt(monthly(qt.total))} в месяц. Одобрение через партнёра при оплате; точные условия покажет партнёр.`, `12 oyga muddatli to‘lov: oyiga ${fmt(monthly(qt.total))}dan. To‘lovda hamkor orqali tasdiqlanadi; aniq shartlarni hamkor ko‘rsatadi.`)}`;
   $("#totals").innerHTML = totalsHTML(qt.goods, qt.svc, qt.disc, `<div class="sumrow"><span class="mu">${L("Доставка", "Yetkazish")}</span><span class="num">${fmt(qt.del)}</span></div>`) +
     (qt.pd ? `<div class="sumrow disc"><span>${L("Промокод", "Promokod")} ${esc(promo)}</span><span class="num">−${fmt(qt.pd)}</span></div>` : "") +
     (qt.cash ? `<div class="sumrow cash"><span>${L("Кешбэк VIP 3%", "VIP keshbek 3%")}</span><span class="num">+${fmt(qt.cash)}</span></div>` : "") +
     `<div class="sumrow total"><span>${L("Итого", "Jami")}</span><span class="num">${fmt(qt.total)}</span></div>`;
-  $("#payBtn").textContent = d.pay === "cash" ? L("Подтвердить заказ", "Buyurtmani tasdiqlash") : d.pay === "nasiya" ? L("Оформить рассрочку", "Muddatli to‘lovni rasmiylashtirish") : `${L("Оплатить", "To‘lash")} ${fmt(qt.total)}`;
+  $("#payBtn").textContent = d.pay === "cash" || d.pay === "store" ? L("Подтвердить заказ", "Buyurtmani tasdiqlash") : d.pay === "nasiya" ? L("Оформить рассрочку", "Muddatli to‘lovni rasmiylashtirish") : `${L("Оплатить", "To‘lash")} ${fmt(qt.total)}`;
 }
 const NAMES = ["Шерзод", "Бобур", "Жасур", "Отабек", "Дилшод", "Сардор"];
 const LET = "ABCDEFHKMOPTXYZ";
@@ -2126,16 +2171,19 @@ function dTrack() {
     ${sched ? `<div class="note vipn">${ui("clock", 14)} ${sched}. ${L("Поиск курьера начнётся за 90 минут до интервала.", "Kuryer qidiruvi oraliqdan 90 daqiqa oldin boshlanadi.")}</div>` : ""}
     ${o.ships.map((s, i) => {
       const st = STORE[s.store], t = TARIFFS.find(x => x.id === s.tariff), steps = t ? STEPS_Y(o) : STEPS_P(o), cur = stepOf(o, i, steps.length);
-      return `<div class="track"><div class="track-h"><b>${esc(st.name)}</b><span class="pill ${cur === steps.length - 1 ? "ok" : "acc"}">${t ? tName(t) : L("Самовывоз", "Olib ketish")}</span></div>
+      return `<div class="track"><div class="track-h"><b>${esc(st.name)}</b><span class="pill ${s.status === "cancelled" ? "closed" : cur === steps.length - 1 ? "ok" : "acc"}">${s.status === "cancelled" ? L("Отменён", "Bekor qilindi") : t ? tName(t) : L("Самовывоз", "Olib ketish")}</span></div>
         <ol class="steps">${steps.map((n, k) => `<li class="${k < cur || (k === cur && k === steps.length - 1) ? "done" : k === cur ? "now" : ""}"><span class="d"></span><span>${n}</span><time class="mono">${k <= cur ? hm(o.api ? ((s.history || []).find(h => h.s === (s.tariff ? ["new", "assembling", "searching", "to_store", "on_way", "delivered"] : ["new", "assembling", "ready"])[k])?.t || s.status_at) : o.t + i * 1200 + k * STEP_MS) : ""}</time></li>`).join("")}</ol>
-        ${t && cur >= 3 && cur < steps.length - 1 ? routeMap(st.name, st.d, o.d.district || district, etaStr(t)) : ""}
+        ${o.api ? shipExtra(o, s) : ""}
+        ${t && cur >= 3 && cur < steps.length - 1 && s.status !== "cancelled" ? routeMap(st.name, st.d, o.d.district || district, etaStr(t)) : ""}
         ${t && cur >= 3 && s.plate ? `<div class="courier"><span>${s.courier} · ${t.veh}<small>${L("Телефон курьера придёт в SMS", "Kuryer telefoni SMSda keladi")}</small></span><span class="plate"><i>${s.plate[0]}</i>${s.plate[1]} ${s.plate[2]} ${s.plate[3]}</span></div>` : ""}
         ${!t ? `<div class="courier"><span>${L(st.addr, st.addrUz)}<small>${st.hours} · ${L("назовите номер", "raqamni ayting")} ${o.num}</small></span></div>` : ""}</div>`;
     }).join("")}
-    <div style="display:grid;gap:6px">${totalsHTML(o.goods, o.svc || 0, o.disc || 0, `<div class="sumrow"><span class="mu">${L("Доставка", "Yetkazish")}</span><span class="num">${fmt(o.del)}</span></div>`)}${o.cash ? `<div class="sumrow cash"><span>${L("Кешбэк", "Keshbek")}</span><span>+${fmt(o.cash)}</span></div>` : ""}<div class="sumrow total"><span>${o.d.pay === "cash" ? L("К оплате курьеру", "Kuryerga to‘lov") : o.d.pay === "nasiya" ? L("В рассрочку", "Muddatli to‘lovga") : L("Оплачено", "To‘langan")}</span><span class="num">${fmt(o.total)}</span></div></div>`;
+    <div style="display:grid;gap:6px">${totalsHTML(o.goods, o.svc || 0, o.disc || 0, `<div class="sumrow"><span class="mu">${L("Доставка", "Yetkazish")}</span><span class="num">${fmt(o.del)}</span></div>`)}${o.cash ? `<div class="sumrow cash"><span>${L("Кешбэк", "Keshbek")}</span><span>+${fmt(o.cash)}</span></div>` : ""}<div class="sumrow total"><span>${o.d.pay === "store" ? L("К оплате магазину", "Do‘konga to‘lanadi") : o.d.pay === "cash" ? L("К оплате курьеру", "Kuryerga to‘lov") : o.d.pay === "nasiya" ? L("В рассрочку", "Muddatli to‘lovga") : L("Оплачено", "To‘langan")}</span><span class="num">${fmt(o.total)}</span></div></div>`;
+  if (o.api && o.status === "active" && o.ships.every(s => ["new", "assembling", "cancelled"].includes(s.status))) $("#dBody").insertAdjacentHTML("beforeend", `<button class="lnk" type="button" data-act="order-cancel" style="justify-self:start;color:var(--muted)">${L("Отменить заказ", "Buyurtmani bekor qilish")}</button>`);
   $("#dFoot").innerHTML = `<div style="display:grid;grid-template-columns:auto 1fr;gap:8px"><button class="btn btn-line" type="button" data-repeat="${o.num}">${ui("repeat", 18)} ${L("Повторить", "Takrorlash")}</button><button class="btn btn-dark" type="button" data-act="close-drawer">${L("Продолжить покупки", "Xaridni davom ettirish")}</button></div>`;
 }
 function orderStatus(o) {
+  if (o.api && o.status === "cancelled") return [L("Отменён", "Bekor qilindi"), true];
   const s = o.ships[0], t = TARIFFS.find(x => x.id === s.tariff), steps = t ? STEPS_Y(o) : STEPS_P(o), cur = stepOf(o, 0, steps.length);
   return [steps[cur], cur === steps.length - 1];
 }
@@ -2192,12 +2240,13 @@ function dProfile() {
   const last = orders[0];
   $("#dBody").innerHTML = (user ? `<div class="acct"><span class="av">${esc(initial(user.name))}</span><span><b>${esc(user.name)}</b><small class="num">${esc(user.phone)}</small><small>${user.email ? esc(user.email) + " · " : ""}${L("вход через", "kirish:")} ${viaName(user.via)}${user.role === "pro" ? ` · <span class="ws">${L("цены для мастеров", "ustalar narxi")}</span>` : ""}</small></span><button class="ib" type="button" data-act="logout" aria-label="${L("Выйти", "Chiqish")}" title="${L("Выйти", "Chiqish")}">${ui("logout", 16)}</button></div>`
     : `<div class="acct" style="grid-template-columns:1fr"><span><b>${L("Войдите, чтобы сохранять заказы", "Buyurtmalarni saqlash uchun kiring")}</b><small>${L("Google, Apple или номер телефона — займёт меньше минуты", "Google, Apple yoki telefon raqami — bir daqiqadan kam")}</small></span><button class="btn btn-primary" type="button" data-act="login">${L("Войти или зарегистрироваться", "Kirish yoki ro‘yxatdan o‘tish")}</button></div>`) + `
+    ${notifyRows()}
     <div class="vip-card"><span class="eyebrow" style="color:var(--signal)">${ui("crown", 14)} Imorat VIP</span>
       <b style="font-size:17px">${vip ? L("VIP подключён", "VIP ulangan") : L("Доставка в точный час и бесплатно", "Aniq soatda va bepul yetkazish")}</b>
       <small>${vip ? L("Точный час без доплаты, курьер в приоритете, кешбэк 3%.", "Aniq soat bepul, ustuvor kuryer, 3% keshbek.") : L(`${fmt(VIP_FEE)} в месяц, первый месяц бесплатно.`, `Oyiga ${fmt(VIP_FEE)}, birinchi oy bepul.`)}</small>
       <button class="btn ${vip ? "btn-line" : "btn-primary"}" type="button" data-act="${vip ? "vip-off" : "vip-on"}" style="${vip ? "border-color:color-mix(in srgb,var(--vip-fg) 35%,transparent)" : "background:var(--signal);color:#fff"}">${vip ? L("Отключить", "O‘chirish") : L("Подключить VIP", "VIP ulash")}</button></div>
     <div class="f"><label for="pDist">${L("Район доставки по умолчанию", "Standart yetkazish tumani")}</label><select id="pDist" class="sel">${DISTRICTS.map(x => `<option value="${x.id}" ${x.id === district ? "selected" : ""}>${L(x.ru, x.uz)}</option>`).join("")}</select></div>
-    <div class="f"><span>${L("Язык", "Til")}</span><div class="seg" role="group" style="justify-self:start"><button type="button" data-lang="ru" aria-pressed="${lang === "ru"}">Русский</button><button type="button" data-lang="uz" aria-pressed="${lang === "uz"}">O‘zbekcha</button></div></div>
+    <div class="f"><span>${L("Язык", "Til")}</span><div class="seg" role="group" style="justify-self:start"><button type="button" data-lang="ru" aria-pressed="${lang === "ru"}">Русский</button><button type="button" data-lang="uz" aria-pressed="${lang === "uz"}">Özbekça</button></div></div>
     <div style="display:grid;gap:8px">
       <button class="order-row" type="button" data-act="orders"><b>${L("Мои заказы", "Buyurtmalarim")}</b><b class="num">${orders.length}</b><small>${last ? `${L("Последний", "Oxirgi")}: ${last.num} · ${orderStatus(last)[0]}` : L("Пока пусто", "Hozircha bo‘sh")}</small></button>
       <button class="order-row" type="button" data-act="projects"><b>${L("Проекты ремонта", "Ta’mir loyihalari")}</b><b class="num">${projects.length}</b><small>${L("Сохранённые списки материалов", "Saqlangan material ro‘yxatlari")}</small></button>
@@ -2206,7 +2255,7 @@ function dProfile() {
       <button class="order-row" type="button" data-act="ai"><b>Usta AI</b>${ui("spark", 18)}<small>${L("Подбор материалов и советы", "Material tanlash va maslahatlar")}</small></button>
       ${user && user.store_id && myStore ? `<button class="order-row" type="button" data-go="seller"><b>${esc(myStore.name)}</b>${ui("store", 18)}<small>${L("Кабинет продавца", "Sotuvchi kabineti")} · ${(ST_STATUS()[myStore.status] || ST_STATUS().pending)[0]}</small></button>` : `<button class="order-row" type="button" data-act="store-reg"><b>${L("Добавить свой магазин", "Do‘konimni qo‘shish")}</b>${ui("store", 18)}<small>${L("Продавайте на Imorat: витрина, заказы, доставка Яндекс", "Imoratda soting: vitrina, buyurtmalar, Yandex yetkazish")}</small></button>`}${API ? "" : `<button class="order-row" type="button" data-go="seller"><b>${L("Кабинет продавца", "Sotuvchi kabineti")}</b>${ui("chev", 18)}<small>${L("Для магазинов-партнёров", "Hamkor do‘konlar uchun")}</small></button>`}
     </div>`;
-  $("#dFoot").innerHTML = `<span style="font-size:12px;color:var(--muted)">${(API ? L("Аккаунт, заказы и магазин хранятся на сервере Imorat.", "Akkaunt, buyurtmalar va do‘kon Imorat serverida saqlanadi.") : L("Данные этого прототипа хранятся только в вашем браузере.", "Prototip ma’lumotlari faqat brauzeringizda saqlanadi."))}</span>`;
+  $("#dFoot").innerHTML = `${API && user ? `<button class="lnk" type="button" data-act="logout-all" style="font-size:12px;color:var(--muted);justify-self:start">${L("Выйти на всех устройствах", "Barcha qurilmalardan chiqish")}</button>` : ""}<span style="font-size:12px;color:var(--muted)">${(API ? L("Аккаунт, заказы и магазин хранятся на сервере Imorat.", "Akkaunt, buyurtmalar va do‘kon Imorat serverida saqlanadi.") : L("Данные этого прототипа хранятся только в вашем браузере.", "Prototip ma’lumotlari faqat brauzeringizda saqlanadi."))}</span>`;
   $("#pDist").addEventListener("change", e => { setDistrict(e.target.value); renderHeader(); });
 }
 
@@ -2234,6 +2283,7 @@ function renderWidgets() {
       ${tile('data-scroll="vip"', "crown", "Imorat VIP", "Imorat VIP", vip ? "Подключён" : "Доставка в точный час", vip ? "Ulangan" : "Aniq soatda yetkazish")}
       ${tile('data-act="mega"', "grid", "Все категории", "Barcha toifalar", `${CATS.length} разделов, ${PRODUCTS.length} товаров`, `${CATS.length} bo‘lim, ${PRODUCTS.length} mahsulot`)}
       ${tile('data-go="seller"', "store", "Продавцам", "Sotuvchilarga", "Кабинет магазина", "Do‘kon kabineti")}
+      ${canInstall() ? tile('data-act="install"', "pkg", "Приложение Imorat", "Imorat ilovasi", "Установить на телефон — заказы и уведомления в одно касание", "Telefonga o‘rnatish — buyurtma va bildirishnomalar bir bosishda") : ""}
     </div>
     <span class="wsec">${L("Аккаунт", "Akkaunt")}</span>
     ${user ? `<div class="acct"><span class="av">${esc(initial(user.name))}</span><span><b>${esc(user.name)}</b><small class="num">${esc(user.phone)}</small></span><button class="ib" type="button" data-act="profile" aria-label="${L("Профиль", "Profil")}">${ui("chev", 16)}</button></div>`
@@ -2631,7 +2681,7 @@ function renderAuth() {
   if (st === "store") { bindStoreForm(); setTimeout(() => $("#sName")?.focus(), 60); }
 }
 function logout() {
-  user = null; apiToken = ""; LS.set("imorat.token", ""); sellerData = null;
+  user = null; apiToken = ""; LS.set("imorat.token", ""); sellerData = null; adminToken = ""; LS.set("imorat.adminToken", ""); adminState = { need: null }; adminStores = null; adminFin = null;
   if (API) { myStore = null; LS.set("imorat.myStore", null); }
   try { localStorage.removeItem("imorat.user"); } catch (e) {}
   renderHeader(); renderTabbar(); counts(); if (drawerView) renderDrawer(); if (route.view === "catalog") renderList(true); if (route.view === "seller") renderSeller();
@@ -2653,7 +2703,7 @@ function aiRules() {
   const cartTxt = cartLines().map(l => `${l.p.id} ${l.p.ru} × ${l.q}`).join("; ") || "пусто";
   return `Ты — Usta AI, консультант-мастер маркетплейса стройматериалов Imorat в Ташкенте (Узбекистан). Помогаешь покупателю понять, что купить для ремонта, сравнить варианты и посчитать количество.
 
-Язык: отвечай на том языке, на котором пишет пользователь (русский или узбекский латиницей). Интерфейс сейчас: ${lang === "uz" ? "узбекский" : "русский"}.
+Язык: отвечай на том языке, на котором пишет пользователь (русский или узбекский). Узбекский пиши новой латиницей (закон 2026 г.): ö, ğ, ş, ç вместо oʻ, gʻ, sh, ch — например «Özbekiston», «şpaklyovka», «çilonzor». Интерфейс сейчас: ${lang === "uz" ? "узбекский" : "русский"}.
 
 Правила:
 - Рекомендуй ТОЛЬКО товары из каталога ниже. Ссылайся на товар токеном [[ID]] или [[ID:количество]], например [[1:10]]. Страница превратит токен в карточку с ценой и кнопкой «В корзину». Не выдумывай товары, цены и магазины.
@@ -2719,7 +2769,7 @@ function picksHTML(refs) {
 function msgHTML(m, i) {
   if (m.role === "user") return `<div class="msg u">${m.img ? `<img src="${m.img}" alt="${L("Фото пользователя", "Foydalanuvchi rasmi")}">` : ""}<span>${mdLite(m.content).html.replace(/<\/?p>/g, "")}</span></div>`;
   if (m.pending && !m.content) return `<div class="msg a" id="aiMsg${i}"><div class="bubble"><span class="thinking"><i></i><i></i><i></i> ${L("Usta AI думает…", "Usta AI o‘ylayapti…")}</span></div></div>`;
-  const { html, refs } = mdLite(m.content);
+  const { html, refs } = mdLite(lang === "uz" ? uzNew(m.content) : m.content);
   return `<div class="msg a" id="aiMsg${i}"><div class="bubble">${html}${m.error ? `<p style="color:var(--signal);font-size:13px">${esc(m.error)}</p>` : ""}</div>${m.pending ? "" : picksHTML(refs)}</div>`;
 }
 function renderAILog() {
@@ -2735,8 +2785,8 @@ function renderAILog() {
   log.scrollTop = log.scrollHeight;
 }
 function offlineReply(q) {
-  const words = q.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, " ").split(/\s+/).filter(w => w.length > 2).map(w => w.slice(0, Math.max(4, w.length - 2)));
-  const score = p => { const hay = `${p.ru} ${p.uz} ${CAT[p.cat].ru} ${CAT[p.cat].uz} ${subName(p.cat, p.sub)} ${DESC[p.sub]?.[0] || ""}`.toLowerCase(); return words.reduce((a, w) => a + (hay.includes(w) ? 1 : 0), 0) + (p.hit ? .3 : 0); };
+  const words = fold(q).replace(/[^\p{L}\p{N}\s]/gu, " ").split(/\s+/).filter(w => w.length > 2).map(w => w.slice(0, Math.max(4, w.length - 2)));
+  const score = p => { const hay = fold(`${p.ru} ${p.uz} ${CAT[p.cat].ru} ${CAT[p.cat].uz} ${subName(p.cat, p.sub)} ${DESC[p.sub]?.[0] || ""}`); return words.reduce((a, w) => a + (hay.includes(w) ? 1 : 0), 0) + (p.hit ? .3 : 0); };
   const b = BUNDLES.find(x => words.some(w => (x.ru + " " + x.sru).toLowerCase().includes(w)));
   let picks = PRODUCTS.map(p => [p, score(p)]).filter(x => x[1] >= 1).sort((a, c) => c[1] - a[1]).slice(0, 5).map(x => x[0]);
   if (b) picks = bundleItems(b).map(([p, n]) => ({ p, n }));
@@ -2824,6 +2874,7 @@ async function syncCatalog() {
   } catch (e) { /* keep the built-in catalog */ }
 }
 async function apiBoot() {
+  if (window.IMORAT_SITE && "serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
   if (!API) return;
   try { apiCfg = await api("GET", "/api/config"); } catch (e) { apiCfg = null; toast(L("Сервер Imorat недоступен — показываем сохранённый каталог", "Imorat serveri mavjud emas — saqlangan katalog ko‘rsatilmoqda")); return; }
   stockOv = {};
@@ -2910,17 +2961,20 @@ async function serverAI(bot, idx, file) {
 
 /* ================= Seller cabinet on the server ================= */
 const SH_LABEL = () => ({ new: [L("Новый", "Yangi"), "sig"], assembling: [L("Собирается", "Yig‘ilmoqda"), "warn"], searching: [L("Ищем курьера", "Kuryer qidirilmoqda"), "acc"], to_store: [L("Курьер едет", "Kuryer kelmoqda"), "acc"], on_way: [L("В пути", "Yo‘lda"), "acc"], delivered: [L("Доставлен", "Yetkazildi"), "ok"], ready: [L("Готов к выдаче", "Topshirishga tayyor"), "acc"], picked: [L("Выдан", "Topshirildi"), "ok"], cancelled: [L("Отменён", "Bekor qilindi"), "mute"] });
-const SH_NEXT = () => ({ assembling: L("Начать сборку", "Yig‘ishni boshlash"), searching: L("Вызвать курьера", "Kuryer chaqirish"), ready: L("Готов к выдаче", "Topshirishga tayyor"), picked: L("Выдан покупателю", "Xaridorga berildi"), to_store: L("Курьер назначен", "Kuryer tayinlandi"), on_way: L("Курьер забрал", "Kuryer oldi"), delivered: L("Доставлен", "Yetkazildi"), cancelled: L("Отменить", "Bekor qilish") });
+const SH_NEXT = () => ({ assembling: L("Начать сборку", "Yig‘ishni boshlash"), searching: L("Вызвать курьера", "Kuryer chaqirish"), ready: L("Готов к выдаче", "Topshirishga tayyor"), picked: L("Выдан покупателю", "Xaridorga berildi"), to_store: L("Курьер назначен", "Kuryer tayinlandi"), on_way: L("Курьер забрал", "Kuryer oldi"), delivered: L("Доставлен", "Yetkazildi"), cancelled: L("Нет в наличии", "Mavjud emas") });
 const ST_STATUS = () => ({ pending: [L("На проверке", "Tekshiruvda"), "warn"], active: [L("Активен", "Faol"), "ok"], rejected: [L("Отклонён", "Rad etildi"), "sig"], blocked: [L("Заблокирован", "Bloklangan"), "sig"] });
 async function loadSeller() {
   try {
     sellerData = await api("GET", "/api/seller/summary");
     myStore = sellerData.store; LS.set("imorat.myStore", myStore);
-    if (user?.admin) adminStores = (await api("GET", "/api/admin/stores")).stores;
   } catch (e) { sellerData = { error: apiErr(e) }; }
   if (route.view === "seller") renderSeller();
 }
-async function loadAdmin() { try { adminStores = (await api("GET", "/api/admin/stores")).stores; } catch (e) { adminStores = []; } if (route.view === "seller") renderSeller(); }
+async function loadAdmin() {
+  if (adminState.loading) return; adminState.loading = true;
+  try { adminStores = (await adminApi("GET", "/api/admin/stores")).stores; } catch (e) { adminStores = adminState.need ? null : []; }
+  adminState.loading = false; if (route.view === "seller") renderSeller();
+}
 function storeBanner(s, demo) {
   const [lbl, cls] = ST_STATUS()[s.status] || ST_STATUS().pending;
   const msg = s.status === "pending" ? L("Модератор Imorat проверит данные магазина, обычно в течение дня. Добавляйте товары уже сейчас — они появятся в каталоге после одобрения.", "Imorat moderatori do‘kon ma’lumotlarini odatda bir kun ichida tekshiradi. Mahsulotlarni hozirdan qo‘shing — tasdiqlangach katalogda chiqadi.")
@@ -2936,13 +2990,15 @@ function storeCardHTML(s) {
 }
 function adminHTML() {
   if (!user?.admin) return "";
+  if (adminState.need) return adminGateHTML();
   if (!adminStores) { loadAdmin(); return ""; }
+  if (!adminFin && !adminState.finLoading) { adminState.finLoading = true; loadAdminFin().finally(() => { adminState.finLoading = false; }); }
   const pend = adminStores.filter(s => s.status === "pending");
   return `<div class="panel" style="margin-top:12px"><div class="panel-h"><h2 class="h-m">${L("Модерация магазинов", "Do‘konlar moderatsiyasi")}</h2><span class="pill ${pend.length ? "warn" : "ok"}">${pend.length} ${L("ждут", "kutmoqda")}</span></div>
     <div class="tbl-wrap"><table><thead><tr><th>${L("Магазин", "Do‘kon")}</th><th>${L("Владелец", "Egasi")}</th><th>${L("Статус", "Holat")}</th><th></th></tr></thead><tbody>
     ${adminStores.slice(0, 40).map(s => { const [lb, c] = ST_STATUS()[s.status] || ["?", "mute"]; return `<tr><td><b>${esc(s.name)}</b><br><small style="color:var(--muted)">${dName(s.d)}, ${esc(s.addr)} · ${(s.cats || []).map(catName).join(", ")}</small><br><small>${esc(s.descr || "")}</small></td><td style="font-size:13px">${esc(s.owner_name || "—")}<br><span class="num">${esc(s.owner_phone ? "+" + s.owner_phone : "")}</span></td><td><span class="pill ${c}">${lb}</span></td>
       <td style="white-space:nowrap">${s.status !== "active" ? `<button class="btn btn-primary" type="button" data-adm="${esc(s.id)}|active">${L("Одобрить", "Tasdiqlash")}</button>` : ""} ${s.status === "pending" ? `<button class="btn btn-line" type="button" data-adm="${esc(s.id)}|rejected">${L("Отклонить", "Rad etish")}</button>` : s.status === "active" ? `<button class="btn btn-line" type="button" data-adm="${esc(s.id)}|blocked">${L("Скрыть", "Yashirish")}</button>` : ""}</td></tr>`; }).join("")}
-    </tbody></table></div></div>`;
+    </tbody></table></div></div>${adminFinanceHTML()}`;
 }
 function renderSellerApi() {
   const crumbs = `<nav class="crumbs"><button type="button" data-go="home">${L("Главная", "Asosiy")}</button>${ui("chev", 12)}<span>${L("Кабинет продавца", "Sotuvchi kabineti")}</span></nav>`;
@@ -2963,14 +3019,15 @@ function renderSellerApi() {
       <div class="kpi"><span>${L("Заказов за 30 дней", "30 kunlik buyurtmalar")}</span><b>${kpi.orders30}</b><small>${L("доставка и самовывоз", "yetkazish va olib ketish")}</small></div>
       <div class="kpi"><span>${L("Товаров", "Mahsulotlar")}</span><b>${kpi.products}</b><small style="color:${kpi.out_of_stock ? "var(--signal)" : "var(--muted)"}">${kpi.out_of_stock} ${L("нет в наличии", "mavjud emas")}</small></div>
     </div>
-    ${storeCardHTML(s)}
     <div class="panel" style="margin-top:12px"><div class="panel-h"><h2 class="h-m">${L("Заказы", "Buyurtmalar")}</h2><button class="btn btn-line" type="button" data-act="seller-reload">${ui("repeat", 16)} ${L("Обновить", "Yangilash")}</button></div>
       ${ords.length ? `<div class="tbl-wrap"><table><thead><tr><th>${L("Заказ", "Buyurtma")}</th><th>${L("Состав", "Tarkibi")}</th><th class="r">${L("Сумма", "Summa")}</th><th>${L("Статус", "Holat")}</th><th></th></tr></thead><tbody>
       ${ords.map(o => { const [lb, c] = lab[o.status] || [o.status, "mute"]; return `<tr><td><b class="mono">${esc(o.num)}</b><br><small style="color:var(--muted)">${esc(o.buyer || "")} · ${esc(o.phone || "")}<br>${o.tariff ? `${L(DIST[o.district]?.ru || "", DIST[o.district]?.uz || "")}, ${esc(o.street)}` : L("Самовывоз", "Olib ketish")}${o.when === "vip" ? ` · ${L("завтра", "ertaga")} ${o.hour}:00` : o.when === "slot" ? ` · ${L("завтра 10–14", "ertaga 10–14")}` : ""}</small>${o.comment ? `<br><small>«${esc(o.comment)}»</small>` : ""}</td>
         <td style="min-width:180px;font-size:13px">${o.lines.map(l => `${esc(PROD[l.id] ? pName(PROD[l.id]) : l.name)} × ${l.q}`).join("<br>")}<br><small style="color:var(--muted)">${o.tariff ? `${tName(TARIFFS.find(t => t.id === o.tariff) || TARIFFS[0])} · ${fmtKg(o.kg)}` : ""}</small></td>
-        <td class="r">${fmt(o.lines.reduce((a, l) => a + l.price * l.q, 0))}<br><small style="color:var(--muted)">${o.pay === "cash" ? L("при получении", "olganda") : o.pay_status === "paid" ? L("оплачен", "to‘langan") : L("ждёт оплаты", "to‘lov kutilmoqda")}</small></td>
-        <td><span class="pill ${c}">${lb}</span></td><td style="white-space:nowrap">${o.next.map(n => `<button class="btn ${n === "cancelled" ? "btn-line" : "btn-primary"}" type="button" data-shipst="${o.ship_id}|${n}" style="margin:2px 0">${nx[n]}</button>`).join(" ")}</td></tr>`; }).join("")}
+        <td class="r">${fmt(o.lines.reduce((a, l) => a + l.price * l.q, 0))}<br><small style="color:var(--muted)">${["cash", "store"].includes(o.pay) ? L("оплата магазину", "do‘konga to‘lov") : o.pay_status === "paid" ? L("оплачен", "to‘langan") : L("ждёт оплаты", "to‘lov kutilmoqda")}</small></td>
+        <td><span class="pill ${c}">${lb}</span>${o.status === "new" && o.accept_by ? `<br><small data-until="${o.accept_by}"></small>` : ""}${o.status === "cancelled" && o.cancel_reason ? `<br><small style="color:var(--muted)">${CANCEL_TXT()[o.cancel_reason] || ""}</small>` : ""}</td><td style="white-space:nowrap">${o.next.map(n => `<button class="btn ${n === "cancelled" ? "btn-line" : "btn-primary"}" type="button" data-shipst="${o.ship_id}|${n}" style="margin:2px 0">${nx[n]}</button>`).join(" ")}</td></tr>`; }).join("")}
       </tbody></table></div>` : `<p style="color:var(--muted);margin:0">${L("Заказов пока нет. Когда покупатель оформит заказ с вашими товарами, он появится здесь.", "Hozircha buyurtmalar yo‘q. Xaridor mahsulotlaringiz bilan buyurtma bersa, shu yerda chiqadi.")}</p>`}</div>
+    ${sellerExtraHTML(sellerData)}
+    <div style="margin-top:12px">${storeCardHTML(s)}</div>
     <div class="panel" style="margin-top:12px"><div class="panel-h"><h2 class="h-m">${L("Товары, цены и остатки", "Mahsulotlar, narxlar va qoldiqlar")}</h2><span style="font-size:13px;color:var(--muted)">${L("Изменения сразу видны покупателям", "O‘zgarishlar darhol xaridorlarga ko‘rinadi")}</span></div>
       ${products.length ? `<div class="tbl-wrap"><table><thead><tr><th>${L("Товар", "Mahsulot")}</th><th class="r">${L("Цена, сум", "Narx, so‘m")}</th><th class="r">${L("Остаток", "Qoldiq")}</th></tr></thead><tbody>
       ${shown.map(p => { const lp = PROD[p.id]; return `<tr><td><div class="pcell">${lp ? mini(lp) : ""}<span>${esc(p.ru)}${p.own ? ` <span class="pill acc">${L("ваш", "sizniki")}</span><br><button class="ph-btn" type="button" data-sphoto="${p.id}">${ui("photo", 14)} ${p.img ? L("Заменить фото", "Rasmni almashtirish") : L("Загрузить фото", "Rasm yuklash")}</button>` : ""}</span></div></td>
@@ -3036,7 +3093,7 @@ document.addEventListener("click", async e => {
   } else if (ds.sphoto) { photoTarget = "api:" + ds.sphoto; $("#photoIn").click(); }
   else if (ds.adm) {
     const [id, st] = ds.adm.split("|"); t.disabled = true;
-    try { await api("PATCH", "/api/admin/stores/" + encodeURIComponent(id), { status: st }); toast(st === "active" ? L("Магазин одобрен и виден в каталоге", "Do‘kon tasdiqlandi va katalogda ko‘rinadi") : L("Статус магазина изменён", "Do‘kon holati o‘zgardi")); adminStores = null; sellerData = null; renderSeller(); syncCatalog(); }
+    try { await adminApi("PATCH", "/api/admin/stores/" + encodeURIComponent(id), { status: st }); toast(st === "active" ? L("Магазин одобрен и виден в каталоге", "Do‘kon tasdiqlandi va katalogda ko‘rinadi") : L("Статус магазина изменён", "Do‘kon holati o‘zgardi")); adminStores = null; sellerData = null; renderSeller(); syncCatalog(); }
     catch (er) { t.disabled = false; toast(apiErr(er)); }
   }
 });
@@ -3047,6 +3104,198 @@ async function setVipApi(on) {
     toast(on ? L("VIP подключён: первый месяц бесплатно", "VIP ulandi: birinchi oy bepul") : L("VIP отключён", "VIP o‘chirildi"));
     if (route.view === "home") $("#vip").innerHTML = vipBlock(); if (drawerView) renderDrawer();
   } catch (e) { toast(apiErr(e)); }
+}
+
+/* ================= Ratings, timers, reviews, notifications, finance (v2) ================= */
+const hhmm = ms => new Date(ms).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
+const CANCEL_TXT = () => ({ not_accepted: L("магазин не подтвердил заказ вовремя", "do‘kon buyurtmani o‘z vaqtida tasdiqlamadi"), out_of_stock: L("товара не оказалось в наличии", "mahsulot mavjud emas ekan"), not_shipped: L("магазин не передал заказ вовремя", "do‘kon buyurtmani o‘z vaqtida topshirmadi"), buyer: L("вы отменили заказ", "buyurtmani bekor qildingiz"), admin: L("отменено поддержкой Imorat", "Imorat yordam xizmati bekor qildi") });
+/* Store hours are Tashkent time (UTC+5) */
+function openState(s) {
+  const m = String(s.hours || "").match(/(\d{1,2}):(\d{2})\D+(\d{1,2}):(\d{2})/);
+  if (!m) return { open: true, text: s.hours || "" };
+  const o = +m[1] * 60 + +m[2], c = +m[3] * 60 + +m[4];
+  const t = new Date(Date.now() + 5 * 3600000), mins = t.getUTCHours() * 60 + t.getUTCMinutes();
+  if (c <= o || (mins >= o && mins < c)) return { open: true, text: c <= o ? L("Круглосуточно", "Kecha-kunduz") : L(`Открыто до ${m[3].padStart(2, "0")}:${m[4]}`, `${m[3].padStart(2, "0")}:${m[4]} gacha ochiq`) };
+  return { open: false, text: L(`Закрыто · откроется в ${m[1].padStart(2, "0")}:${m[2]}`, `Yopiq · ${m[1].padStart(2, "0")}:${m[2]} da ochiladi`) };
+}
+/* Reliability shown to buyers. In the demo (no server) stores get stable sample numbers. */
+function ratingOf(s) {
+  if (s.rating) return s.rating;
+  if (API || s.mine) return { stars: null, reviews: 0, reliability: null, accept_min: null };
+  const h = s.id.split("").reduce((a, ch) => a * 31 + ch.charCodeAt(0), 7) >>> 0;
+  return { stars: 4.3 + (h % 7) / 10, reviews: 18 + (h % 140), reliability: 91 + (h % 9), accept_min: 5 + (h % 14) };
+}
+function ratingHTML(s, long) {
+  const r = ratingOf(s);
+  if (!r.stars && r.reliability == null) return `<span class="srate new">${L("Новый магазин", "Yangi do‘kon")}</span>`;
+  return `<span class="srate">${r.stars ? `<b>★ ${r.stars.toFixed(1).replace(".", ",")}</b>${r.reviews ? ` <span>(${r.reviews})</span>` : ""}` : ""}${r.reliability != null ? ` · <span title="${L("Доля заказов, выполненных без отмены по вине магазина", "Do‘kon aybi bilan bekor qilinmagan buyurtmalar ulushi")}">${r.reliability}% ${L("выполнено", "bajarildi")}</span>` : ""}${long && r.accept_min ? ` · ${L(`принимает за ~${r.accept_min} мин`, `~${r.accept_min} daqiqada qabul qiladi`)}` : ""}</span>`;
+}
+function shipExtra(o, s) {
+  if (s.status === "cancelled") return `<div class="note warnn">${ui("close", 14)} ${L("Отменено", "Bekor qilindi")}: ${CANCEL_TXT()[s.cancel_reason] || ""}${s.cancel_reason && s.cancel_reason !== "buyer" ? ". " + L("Платить ничего не нужно — закажите у другого магазина.", "Hech narsa to‘lash shart emas — boshqa do‘kondan buyurtma bering.") : ""}</div>`;
+  if (s.status === "new" && s.accept_by) return `<div class="note">${ui("clock", 14)} ${L(`Магазин подтвердит заказ до ${hhmm(s.accept_by)}. Не успеет — заказ отменится автоматически, платить ничего не нужно.`, `Do‘kon buyurtmani ${hhmm(s.accept_by)} gacha tasdiqlaydi. Ulgurmasa — buyurtma avtomatik bekor qilinadi, to‘lash shart emas.`)}</div>`;
+  if (["delivered", "picked"].includes(s.status)) {
+    if (s.review) return `<div class="note"><span class="stars-ro">${"★".repeat(s.review.stars)}${"☆".repeat(5 - s.review.stars)}</span> ${L("Ваш отзыв", "Sharhingiz")}${s.review.text ? `: «${esc(s.review.text)}»` : ""}${s.review.reply ? `<br><small>${L("Ответ магазина", "Do‘kon javobi")}: ${esc(s.review.reply)}</small>` : ""}</div>`;
+    return `<form class="rv-form" data-rvform="${esc(o.num)}|${s.id}"><b>${L("Оцените магазин", "Do‘konni baholang")}</b>
+      <div class="stars" role="radiogroup" aria-label="${L("Оценка", "Baho")}">${[1, 2, 3, 4, 5].map(n => `<button type="button" role="radio" aria-checked="false" data-star="${n}" aria-label="${n}">★</button>`).join("")}</div>
+      <label class="visually-hidden" for="rvt${s.id}">${L("Отзыв", "Sharh")}</label><textarea id="rvt${s.id}" rows="2" maxlength="500" placeholder="${L("Что понравилось или нет? Помогите другим покупателям", "Nima yoqdi yoki yoqmadi? Boshqa xaridorlarga yordam bering")}"></textarea>
+      <button class="btn btn-primary" type="submit" disabled>${L("Отправить отзыв", "Sharh yuborish")}</button></form>`;
+  }
+  return "";
+}
+document.addEventListener("click", e => {
+  const st = e.target.closest("[data-star]"); if (!st) return;
+  const f = st.closest("form"), n = +st.dataset.star; f.dataset.stars = n;
+  f.querySelectorAll("[data-star]").forEach(b => { b.classList.toggle("on", +b.dataset.star <= n); b.setAttribute("aria-checked", +b.dataset.star === n); });
+  f.querySelector("[type=submit]").disabled = false;
+});
+document.addEventListener("submit", async e => {
+  const f = e.target.closest("[data-rvform]"); if (!f) return;
+  e.preventDefault();
+  const [num, sid] = f.dataset.rvform.split("|"), stars = +f.dataset.stars || 0; if (!stars) return;
+  const btn = f.querySelector("[type=submit]"); btn.disabled = true;
+  try {
+    await api("POST", `/api/orders/${encodeURIComponent(num)}/review`, { ship_id: +sid, stars, text: f.querySelector("textarea").value.trim() });
+    const o = orders.find(x => x.num === num), s = o?.ships.find(x => String(x.id) === sid);
+    if (s) s.review = { stars, text: f.querySelector("textarea").value.trim(), reply: "" };
+    LS.set("imorat.orders", orders.slice(0, 30)); toast(L("Спасибо за отзыв!", "Sharh uchun rahmat!")); renderDrawer(); syncCatalog();
+  } catch (er) { btn.disabled = false; toast(apiErr(er)); }
+});
+/* Live countdowns ("accept within 12:34") in the seller cabinet */
+setInterval(() => document.querySelectorAll("[data-until]").forEach(el => {
+  const left = +el.dataset.until - Date.now();
+  el.textContent = left > 0 ? L(`Примите за ${Math.floor(left / 60000)}:${String(Math.floor(left / 1000) % 60).padStart(2, "0")}`, `${Math.floor(left / 60000)}:${String(Math.floor(left / 1000) % 60).padStart(2, "0")} ichida qabul qiling`) : L("Время вышло", "Vaqt tugadi");
+  el.classList.toggle("late", left < 5 * 60000);
+}), 1000);
+
+/* ---- Notifications: Telegram link and Web Push ---- */
+const pushOK = () => !!(API && apiCfg?.push_key && "serviceWorker" in navigator && "PushManager" in window && window.IMORAT_SITE);
+const b64u8 = s => { const b = atob((s + "===".slice((s.length + 3) % 4)).replace(/-/g, "+").replace(/_/g, "/")); return Uint8Array.from(b, c => c.charCodeAt(0)); };
+async function enablePush() {
+  if (!pushOK()) return toast(/iPhone|iPad/.test(navigator.userAgent) ? L("На iPhone уведомления работают, когда сайт добавлен на экран «Домой»: «Поделиться» → «На экран Домой».", "iPhone’da bildirishnomalar sayt «Uy ekraniga» qo‘shilganda ishlaydi: «Ulashish» → «Uy ekraniga».") : L("Этот браузер не поддерживает уведомления", "Bu brauzer bildirishnomalarni qo‘llab-quvvatlamaydi"));
+  try {
+    const perm = await Notification.requestPermission();
+    if (perm !== "granted") return toast(L("Уведомления запрещены. Разрешите их в настройках браузера.", "Bildirishnomalar taqiqlangan. Brauzer sozlamalarida ruxsat bering."));
+    const reg = await navigator.serviceWorker.ready;
+    const sub = (await reg.pushManager.getSubscription()) || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64u8(apiCfg.push_key) });
+    await api("POST", "/api/push/subscribe", sub.toJSON());
+    await api("POST", "/api/push/test");
+    LS.set("imorat.push", true); toast(L("Уведомления включены", "Bildirishnomalar yoqildi"));
+    if (drawerView) renderDrawer(); if (route.view === "seller") renderSeller();
+  } catch (e) { toast(e.code ? apiErr(e) : L("Не удалось включить уведомления", "Bildirishnomalarni yoqib bo‘lmadi")); }
+}
+async function linkTelegram() {
+  const w = window.open("about:blank", "_blank");
+  try { const r = await api("POST", "/api/me/telegram"); if (w) w.location.href = r.url; else location.href = r.url; toast(L("В Telegram нажмите «Start» — и уведомления подключатся", "Telegram’da «Start» ni bosing — bildirishnomalar ulanadi")); tgWatch = Date.now(); }
+  catch (e) { w?.close(); toast(e.code === "telegram_not_configured" ? L("Telegram-бот ещё не подключён на сервере", "Telegram bot serverda hali ulanmagan") : apiErr(e)); }
+}
+let tgWatch = 0;
+window.addEventListener("focus", async () => {
+  if (!API || !apiToken || !tgWatch || Date.now() - tgWatch > 10 * 60000) return;
+  try { const r = await api("GET", "/api/me"); if (r.user.telegram) { tgWatch = 0; user = fromApiUser(r.user); LS.set("imorat.user", user); toast(L("Telegram подключён ✅", "Telegram ulandi ✅")); sellerData = null; if (route.view === "seller") renderSeller(); if (drawerView) renderDrawer(); } } catch (e) {}
+});
+async function unlinkTelegram() { try { await api("DELETE", "/api/me/telegram"); user.telegram = false; LS.set("imorat.user", user); sellerData = null; toast(L("Telegram отключён", "Telegram uzildi")); if (route.view === "seller") renderSeller(); if (drawerView) renderDrawer(); } catch (e) { toast(apiErr(e)); } }
+async function logoutAll() { try { await api("POST", "/api/me/logout-all"); } catch (e) {} logout(); toast(L("Вы вышли на всех устройствах", "Barcha qurilmalarda chiqdingiz")); }
+function notifyRows() {
+  if (!API || !user) return "";
+  return `<div class="notif-box"><b>${L("Уведомления", "Bildirishnomalar")}</b>
+    <div class="nrow"><span>${ui("send", 16)} Telegram${apiCfg?.telegram_bot ? ` · @${esc(apiCfg.telegram_bot)}` : ""}</span>${user.telegram ? `<span class="pill ok">${L("подключён", "ulangan")}</span><button class="lnk" type="button" data-act="tg-unlink">${L("Отключить", "Uzish")}</button>` : `<button class="btn btn-line" type="button" data-act="tg-link" ${apiCfg?.telegram_bot ? "" : "disabled"}>${L("Подключить", "Ulash")}</button>`}</div>
+    ${window.IMORAT_APP ? "" : `<div class="nrow"><span>${ui("bell", 16)} ${L("На этом устройстве", "Shu qurilmada")}</span>${LS.get("imorat.push", false) ? `<span class="pill ok">${L("включены", "yoqilgan")}</span>` : `<button class="btn btn-line" type="button" data-act="push-on">${L("Включить", "Yoqish")}</button>`}</div>`}
+  </div>`;
+}
+
+/* ---- Seller cabinet: live refresh with a sound for new orders ---- */
+let sellerPoll = 0, lastNewIds = null;
+function beep() { try { const a = new (window.AudioContext || window.webkitAudioContext)(), o = a.createOscillator(), g = a.createGain(); o.frequency.value = 880; o.connect(g); g.connect(a.destination); g.gain.setValueAtTime(.2, a.currentTime); g.gain.exponentialRampToValueAtTime(.001, a.currentTime + .6); o.start(); o.stop(a.currentTime + .6); } catch (e) {} }
+setInterval(async () => {
+  if (!API || !apiToken || route.view !== "seller" || !user?.store_id || document.hidden || !sellerData || sellerData.error) return;
+  try {
+    const d = await api("GET", "/api/seller/summary");
+    const ids = d.orders.filter(o => o.status === "new").map(o => o.ship_id);
+    const fresh = lastNewIds && ids.some(id => !lastNewIds.includes(id));
+    lastNewIds = ids;
+    const changed = JSON.stringify(d.orders.map(o => [o.ship_id, o.status])) !== JSON.stringify(sellerData.orders.map(o => [o.ship_id, o.status]));
+    if (fresh) { beep(); toast(L("🆕 Новый заказ!", "🆕 Yangi buyurtma!")); }
+    if (changed && !document.activeElement?.matches("input,textarea,select")) { const y = window.scrollY; sellerData = d; renderSeller(); window.scrollTo(0, y); }
+  } catch (e) {}
+}, 20000);
+function sellerExtraHTML(d) {
+  const f = d.finance, rates = d.rates || {}, rt = d.rating;
+  const rateTxt = Object.entries(rates).map(([k, v]) => `${k === "*" ? L("остальное", "boshqalar") : catName(k)} ${Math.round(v * 100)}%`).join(", ");
+  return `<div class="s-grid" style="margin-top:12px">
+    <div class="panel"><div class="panel-h"><h2 class="h-m">${L("Уведомления о заказах", "Buyurtma bildirishnomalari")}</h2></div>
+      <div class="nrow"><span>${ui("send", 16)} <b>Telegram</b><br><small style="color:var(--muted)">${L("Заказ приходит с кнопками «Принять» и «Нет в наличии»", "Buyurtma «Qabul qilish» va «Mavjud emas» tugmalari bilan keladi")}</small></span>${d.telegram ? `<span class="pill ok">${L("подключён", "ulangan")}</span>` : d.bot ? `<button class="btn btn-primary" type="button" data-act="tg-link">${L("Подключить", "Ulash")}</button>` : `<span class="pill mute">${L("скоро", "tez orada")}</span>`}</div>
+      ${window.IMORAT_APP ? "" : `<div class="nrow"><span>${ui("bell", 16)} <b>${L("Уведомления на телефоне", "Telefonda bildirishnoma")}</b><br><small style="color:var(--muted)">${L("Со звуком, даже когда сайт закрыт", "Ovoz bilan, sayt yopiq bo‘lsa ham")}</small></span>${LS.get("imorat.push", false) ? `<span class="pill ok">${L("включены", "yoqilgan")}</span>` : `<button class="btn btn-line" type="button" data-act="push-on">${L("Включить", "Yoqish")}</button>`}</div>`}
+      <small style="color:var(--muted)">${L(`Заказ нужно принять за ${apiCfg?.timers?.cancel || 20} минут, иначе он отменится и снизит рейтинг. Через ${apiCfg?.timers?.sms || 10} минут без ответа придёт SMS.`, `Buyurtmani ${apiCfg?.timers?.cancel || 20} daqiqada qabul qilish kerak, aks holda u bekor bo‘ladi va reytingni tushiradi.`)}</small></div>
+    <div class="panel"><div class="panel-h"><h2 class="h-m">${L("Рейтинг магазина", "Do‘kon reytingi")}</h2>${ratingHTML({ rating: rt || {} }, true)}</div>
+      <div class="mini-kpis"><div><b>${rt?.done || 0}</b><small>${L("выполнено", "bajarildi")}</small></div><div><b>${rt?.fail || 0}</b><small>${L("сорвано", "buzildi")}</small></div><div><b>${rt?.reliability != null ? rt.reliability + "%" : "—"}</b><small>${L("надёжность", "ishonchlilik")}</small></div><div><b>${rt?.accept_min ? "~" + rt.accept_min : "—"}</b><small>${L("мин на принятие", "daq. qabul")}</small></div></div>
+      ${d.reviews?.length ? d.reviews.slice(0, 6).map(r => `<div class="rv-item"><span class="stars-ro">${"★".repeat(r.stars)}${"☆".repeat(5 - r.stars)}</span> <b>${esc(r.name || L("Покупатель", "Xaridor"))}</b> <small style="color:var(--muted)">${new Date(r.created_at).toLocaleDateString("ru-RU")}</small>${r.text ? `<p>${esc(r.text)}</p>` : ""}${r.reply ? `<small>${L("Ваш ответ", "Javobingiz")}: ${esc(r.reply)}</small>` : `<form class="reply-f" data-reply="${r.ship_id}"><label class="visually-hidden" for="rp${r.ship_id}">${L("Ответ", "Javob")}</label><input id="rp${r.ship_id}" maxlength="500" placeholder="${L("Ответить покупателю", "Xaridorga javob berish")}"><button class="btn btn-line" type="submit">${L("Ответить", "Javob")}</button></form>`}</div>`).join("") : `<small style="color:var(--muted)">${L("Отзывов пока нет. Покупатели оценивают магазин после получения заказа.", "Hozircha sharhlar yo‘q. Xaridorlar buyurtmani olgach baholaydi.")}</small>`}</div>
+  </div>
+  <div class="panel" style="margin-top:12px"><div class="panel-h"><h2 class="h-m">${L("Финансы", "Moliya")} · ${esc(f.month)}</h2><span style="font-size:13px;color:var(--muted)">${L("Комиссия", "Komissiya")}: ${esc(rateTxt)}</span></div>
+    <div class="mini-kpis"><div><b>${fmt(f.goods)}</b><small>${L("продано за месяц", "oylik sotuv")}</small></div><div><b>${fmt(f.commission)}</b><small>${L("комиссия за месяц", "oylik komissiya")}</small></div><div><b>${fmt(f.settled)}</b><small>${L("оплачено Imorat", "Imoratga to‘langan")}</small></div><div><b style="color:${f.balance > 0 ? "var(--signal)" : "var(--ok)"}">${fmt(f.balance)}</b><small>${L("к оплате", "to‘lanishi kerak")}</small></div></div>
+    <small style="color:var(--muted)">${L("Сейчас покупатели платят магазину напрямую. Комиссия Imorat считается только с выполненных заказов и оплачивается раз в месяц.", "Hozir xaridorlar do‘konga to‘g‘ridan-to‘g‘ri to‘laydi. Imorat komissiyasi faqat bajarilgan buyurtmalardan hisoblanadi va oyiga bir marta to‘lanadi.")}</small></div>`;
+}
+document.addEventListener("submit", async e => {
+  const f = e.target.closest("[data-reply]"); if (!f) return;
+  e.preventDefault(); const v = f.querySelector("input").value.trim(); if (!v) return;
+  try { await api("POST", `/api/seller/reviews/${f.dataset.reply}/reply`, { reply: v }); toast(L("Ответ опубликован", "Javob joylandi")); sellerData = null; renderSeller(); } catch (er) { toast(apiErr(er)); }
+});
+
+/* ---- Admin: two-step verification and finance ---- */
+let adminToken = LS.get("imorat.adminToken", ""), adminState = { need: null }, adminFin = null, adminMonth = "";
+async function adminApi(method, path, body) {
+  const keep = apiToken; if (adminToken) apiToken = adminToken;
+  try { return await api(method, path, body); }
+  catch (e) { if (["mfa_required", "mfa_setup_required"].includes(e.code) || e.status === 401) { adminToken = ""; LS.set("imorat.adminToken", ""); adminState.need = e.code === "mfa_setup_required" ? "setup" : "verify"; } throw e; }
+  finally { apiToken = keep; }
+}
+function adminGateHTML() {
+  if (adminState.need === "setup") return `<div class="panel" style="margin-top:12px;display:grid;gap:10px"><div class="panel-h"><h2 class="h-m">${ui("shield", 18)} ${L("Защита входа модератора", "Moderator kirishini himoyalash")}</h2></div>
+    <p style="margin:0">${L("Перед модерацией включите второй шаг входа: код из приложения-аутентификатора (Google Authenticator, «Пароли» на iPhone). Так никто не войдёт как модератор, даже перехватив SMS.", "Moderatsiyadan oldin ikkinchi bosqichni yoqing: autentifikator ilovasidagi kod. Shunda SMS ushlansa ham hech kim moderator bo‘lib kira olmaydi.")}</p>
+    ${adminState.secret ? `<ol style="margin:0;padding-left:18px;display:grid;gap:6px"><li>${L("Откройте ссылку на телефоне — аутентификатор добавит Imorat сам:", "Havolani telefonda oching — autentifikator Imoratni o‘zi qo‘shadi:")} <a href="${esc(adminState.url)}">${L("добавить в аутентификатор", "autentifikatorga qo‘shish")}</a></li><li>${L("Или введите ключ вручную:", "Yoki kalitni qo‘lda kiriting:")} <code class="mono" style="word-break:break-all">${esc(adminState.secret.replace(/(.{4})/g, "$1 ").trim())}</code></li><li>${L("Введите 6 цифр из приложения:", "Ilovadagi 6 raqamni kiriting:")}</li></ol>
+      <form id="mfaForm" style="display:flex;gap:8px;flex-wrap:wrap"><label class="visually-hidden" for="mfaCode">${L("Код", "Kod")}</label><input id="mfaCode" class="code-in" style="max-width:200px" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="••••••"><button class="btn btn-primary" type="submit">${L("Подтвердить", "Tasdiqlash")}</button></form>`
+      : `<button class="btn btn-primary" type="button" data-act="mfa-setup" style="justify-self:start">${L("Включить защиту", "Himoyani yoqish")}</button>`}</div>`;
+  if (adminState.need === "verify") return `<div class="panel" style="margin-top:12px;display:grid;gap:10px"><div class="panel-h"><h2 class="h-m">${ui("shield", 18)} ${L("Код модератора", "Moderator kodi")}</h2></div><p style="margin:0">${L("Введите 6 цифр из приложения-аутентификатора. Код нужен раз в 12 часов.", "Autentifikator ilovasidagi 6 raqamni kiriting. Kod 12 soatda bir marta kerak.")}</p>
+    <form id="mfaForm" style="display:flex;gap:8px;flex-wrap:wrap"><label class="visually-hidden" for="mfaCode">${L("Код", "Kod")}</label><input id="mfaCode" class="code-in" style="max-width:200px" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="••••••"><button class="btn btn-primary" type="submit">${L("Войти", "Kirish")}</button></form></div>`;
+  return "";
+}
+function adminFinanceHTML() {
+  if (!adminFin) return "";
+  const F = adminFin;
+  return `<div class="panel" style="margin-top:12px"><div class="panel-h"><h2 class="h-m">${L("Финансы Imorat", "Imorat moliyasi")}</h2><label class="visually-hidden" for="finMonth">${L("Месяц", "Oy")}</label><input type="month" id="finMonth" class="sel" value="${esc(F.month)}" style="max-width:170px"></div>
+    <div class="mini-kpis"><div><b>${fmt(F.totals.goods)}</b><small>${L("оборот магазинов", "do‘konlar aylanmasi")}</small></div><div><b>${fmt(F.totals.commission)}</b><small>${L("ваша комиссия за месяц", "oylik komissiyangiz")}</small></div><div><b>${fmt(F.totals.balance)}</b><small>${L("магазины должны всего", "do‘konlar jami qarzi")}</small></div></div>
+    ${F.stores.length ? `<div class="tbl-wrap"><table><thead><tr><th>${L("Магазин", "Do‘kon")}</th><th class="r">${L("Оборот", "Aylanma")}</th><th class="r">${L("Комиссия", "Komissiya")}</th><th class="r">${L("Долг", "Qarz")}</th><th>${L("Получено от магазина", "Do‘kondan olindi")}</th></tr></thead><tbody>
+    ${F.stores.map(s => `<tr><td><b>${esc(s.name)}</b><br><small style="color:var(--muted)">${s.orders} ${L("заказов", "buyurtma")}</small></td><td class="r">${fmt(s.goods)}</td><td class="r">${fmt(s.commission)}</td><td class="r" style="color:${s.balance > 0 ? "var(--signal)" : "var(--ok)"}">${fmt(s.balance)}</td>
+      <td><form class="settle-f" data-settle="${esc(s.id)}"><label class="visually-hidden" for="st${esc(s.id)}">${L("Сумма", "Summa")}</label><input id="st${esc(s.id)}" type="number" min="1" inputmode="numeric" value="${s.balance > 0 ? s.balance : ""}" style="width:120px"><button class="btn btn-line" type="submit">${L("Записать", "Yozish")}</button></form></td></tr>`).join("")}
+    </tbody></table></div>` : `<small style="color:var(--muted)">${L("Выполненных заказов в этом месяце пока нет.", "Bu oy bajarilgan buyurtmalar hali yo‘q.")}</small>`}</div>`;
+}
+async function loadAdminFin() { try { adminFin = await adminApi("GET", "/api/admin/finance" + (adminMonth ? "?month=" + adminMonth : "")); } catch (e) { adminFin = null; } if (route.view === "seller") renderSeller(); }
+document.addEventListener("submit", async e => {
+  if (e.target.id === "mfaForm") {
+    e.preventDefault();
+    try { const r = await api("POST", "/api/admin/mfa/verify", { code: $("#mfaCode").value }); adminToken = r.token; LS.set("imorat.adminToken", adminToken); adminState = { need: null }; adminStores = null; adminFin = null; toast(L("Код принят", "Kod qabul qilindi")); renderSeller(); }
+    catch (er) { toast(er.code === "mfa_wrong" ? L("Неверный код — проверьте время на телефоне", "Kod noto‘g‘ri — telefondagi vaqtni tekshiring") : apiErr(er)); }
+    return;
+  }
+  const f = e.target.closest("[data-settle]"); if (!f) return;
+  e.preventDefault(); const amount = parseInt(f.querySelector("input").value, 10); if (!(amount > 0)) return;
+  try { await adminApi("POST", "/api/admin/settlements", { store_id: f.dataset.settle, amount, note: L("Оплата комиссии", "Komissiya to‘lovi") }); toast(L("Платёж записан", "To‘lov yozildi")); loadAdminFin(); } catch (er) { toast(apiErr(er)); }
+});
+document.addEventListener("change", e => { if (e.target.id === "finMonth") { adminMonth = e.target.value; loadAdminFin(); } });
+
+/* ================= Installable app (PWA) ================= */
+let installEvt = null;
+window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); installEvt = e; });
+window.addEventListener("appinstalled", () => { installEvt = null; toast(L("Приложение Imorat установлено", "Imorat ilovasi o‘rnatildi")); });
+const isStandalone = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+const canInstall = () => !!window.IMORAT_SITE && !isStandalone();
+function installApp() {
+  if (installEvt) { installEvt.prompt(); installEvt.userChoice.finally(() => { installEvt = null; }); return; }
+  const ios = /iPhone|iPad|iPod/.test(navigator.userAgent);
+  setPanel($("#authM"), true); $("#authBox").classList.remove("wide");
+  $("#authBox").innerHTML = `<button class="ib m-close" type="button" data-act="close-auth" aria-label="${L("Закрыть", "Yopish")}">${ui("close", 18)}</button><div class="auth-in"><h2>${L("Установите Imorat на телефон", "Imoratni telefonga o‘rnating")}</h2>
+    <ol style="margin:0;padding-left:20px;display:grid;gap:8px">${ios ? `<li>${L("Откройте сайт в Safari", "Saytni Safari’da oching")}</li><li>${L("Нажмите «Поделиться» внизу экрана", "Ekran pastidagi «Ulashish» tugmasini bosing")}</li><li>${L("Выберите «На экран „Домой“»", "«Uy ekraniga» ni tanlang")}</li>` : `<li>${L("Откройте меню браузера (⋮)", "Brauzer menyusini oching (⋮)")}</li><li>${L("Нажмите «Установить приложение» или «Добавить на главный экран»", "«Ilovani o‘rnatish» yoki «Bosh ekranga qo‘shish» ni bosing")}</li>`}</ol>
+    <p>${L("Imorat появится среди приложений: открывается без адресной строки, присылает уведомления о заказах.", "Imorat ilovalar orasida paydo bo‘ladi: manzil satrisiz ochiladi va buyurtmalar haqida xabar beradi.")}</p></div>`;
+  syncLock();
 }
 
 /* ================= Seller cabinet ================= */
@@ -3242,7 +3491,14 @@ document.addEventListener("click", e => {
     case "store-reg": return openStoreReg();
     case "store-edit": return openAuth("seller-edit", "store");
     case "store-approve-demo": if (myStore) { myStore.status = "active"; LS.set("imorat.myStore", myStore); toast(L("Демо: магазин одобрен", "Demo: do‘kon tasdiqlandi")); } return renderSeller();
-    case "seller-reload": sellerData = null; adminStores = null; return renderSeller();
+    case "seller-reload": sellerData = null; adminStores = null; adminFin = null; return renderSeller();
+    case "install": if (widOpen) closeWidgets(); return installApp();
+    case "tg-link": return linkTelegram();
+    case "tg-unlink": return unlinkTelegram();
+    case "push-on": return enablePush();
+    case "logout-all": return logoutAll();
+    case "mfa-setup": adminApi("POST", "/api/admin/mfa/setup").then(r => { adminState = { need: "setup", secret: r.secret, url: r.url }; renderSeller(); }).catch(e => toast(apiErr(e))); return;
+    case "order-cancel": { const num = drawerOrder; api("POST", `/api/orders/${encodeURIComponent(num)}/cancel`).then(r => { const o = orders.find(x => x.num === num); Object.assign(o, mapOrder(r.order)); LS.set("imorat.orders", orders.slice(0, 30)); toast(L("Заказ отменён", "Buyurtma bekor qilindi")); renderDrawer(); syncCatalog(); }).catch(e => toast(e.code === "too_late" ? L("Заказ уже в пути — отменить нельзя", "Buyurtma yo‘lda — bekor qilib bo‘lmaydi") : apiErr(e))); return; }
     case "close-auth": return closeAuth();
     case "logout": return logout();
     case "auth-resend": return sendCode();
@@ -3294,6 +3550,7 @@ route = parseHash();
 renderAll();
 renderCmpBar();
 apiBoot();
+if (location.hash === "#orders") setTimeout(() => openDrawer("orders"), 300);
 ["#drawer", "#ai", "#modal", "#mega", "#authM", "#wid"].forEach(s => $(s).setAttribute("inert", ""));
 mqFine.addEventListener?.("change", () => { if (route.view === "home") renderMain(); });
 })();

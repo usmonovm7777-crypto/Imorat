@@ -1,0 +1,10 @@
+{
+  "appId": "uz.imorat.app",
+  "appName": "Imorat",
+  "webDir": "www",
+  "server": { "androidScheme": "https" },
+  "plugins": {
+    "SplashScreen": { "launchShowDuration": 900, "backgroundColor": "#F3F5F2", "showSpinner": false },
+    "StatusBar": { "style": "LIGHT", "backgroundColor": "#F3F5F2" }
+  }
+}

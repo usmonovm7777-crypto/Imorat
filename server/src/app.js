@@ -1,5 +1,5 @@
 import { createServer } from "node:http";
-import { createReadStream, mkdirSync, writeFileSync, statSync } from "node:fs";
+import { createReadStream, mkdirSync, writeFileSync, statSync, readdirSync, unlinkSync, existsSync } from "node:fs";
 import { join, extname } from "node:path";
 import { randomBytes } from "node:crypto";
 import { gzipSync } from "node:zlib";
@@ -10,12 +10,17 @@ import { createSms } from "./sms.js";
 import { loadLines, quote, assertNoProblems } from "./pricing.js";
 import { yandexPrices } from "./delivery.js";
 import { buildRequest, streamChat } from "./ai.js";
+import { createTelegram } from "./telegram.js";
+import { createPush } from "./push.js";
+import { createNotify } from "./notify.js";
+import { newSecret, checkTotp, otpauthUrl } from "./totp.js";
 
 export const STEPS = {
   yandex: ["new", "assembling", "searching", "to_store", "on_way", "delivered"],
   pickup: ["new", "assembling", "ready", "picked"]
 };
 const SELLER_MOVES = { new: ["assembling", "cancelled"], assembling: ["searching", "ready", "cancelled"], ready: ["picked"], searching: ["to_store"], to_store: ["on_way"], on_way: ["delivered"] };
+const FAIL_REASONS = ["not_accepted", "out_of_stock", "not_shipped"];
 const SESSION_TTL = 60 * 86400;
 const MIME = { ".webp": "image/webp", ".jpg": "image/jpeg", ".png": "image/png" };
 
@@ -29,28 +34,66 @@ export function createApp(cfg, log = console) {
   const CATS = new Set(ref.cats.map(c => c.id));
   mkdirSync(cfg.uploadsDir, { recursive: true });
   const bumpCatalog = () => db.setMeta("catalog_rev", Date.now());
+  const tg = createTelegram(cfg.telegram, log);
+  const push = createPush(db, cfg.pushSubject, log);
+  const notify = createNotify({ db, cfg, tg, push, sms, ref, log });
+  const PCAT = new Map(db.all("SELECT id, cat FROM products").map(p => [p.id, p.cat]));
+  const rateOf = cat => cfg.commission[cat] ?? cfg.commission["*"] ?? 0;
+  const audit = (req, action, target, details) => db.run("INSERT INTO audit(user_id,action,target,details,ip,created_at) VALUES(?,?,?,?,?,?)", req?.user?.id || null, action, target == null ? null : String(target), details ? JSON.stringify(details) : null, req?.ip || null, Date.now());
+
+  /* Store hours are Tashkent time (UTC+5). Orders placed at night wait for the opening, so the accept timer starts then. */
+  function storeStartAt(store, ts) {
+    const m = String(store?.hours || "").match(/(\d{1,2}):(\d{2})\D+(\d{1,2}):(\d{2})/);
+    if (!m) return ts;
+    const o = +m[1] * 60 + +m[2], c = +m[3] * 60 + +m[4];
+    if (c <= o) return ts;
+    const local = new Date(ts + 5 * 3600000), mins = local.getUTCHours() * 60 + local.getUTCMinutes();
+    if (mins >= o && mins < c - 15) return ts;
+    const day = Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate()) - 5 * 3600000;
+    return mins < o ? day + o * 60000 : day + 86400000 + o * 60000;
+  }
+  /* Reliability and reviews of every store, shown to buyers */
+  function storeStats() {
+    const since = Date.now() - 90 * 86400000, out = {};
+    for (const r of db.all(`SELECT store_id, SUM(status IN ('delivered','picked')) done, SUM(status='cancelled' AND cancel_reason IN ('not_accepted','out_of_stock','not_shipped')) fail,
+        AVG(CASE WHEN accepted_at IS NOT NULL AND start_at IS NOT NULL AND accepted_at>=start_at THEN (accepted_at-start_at)/60000.0 END) acc
+        FROM shipments WHERE status_at>=? GROUP BY store_id`, since)) out[r.store_id] = { done: r.done || 0, fail: r.fail || 0, accept_min: r.acc == null ? null : Math.max(1, Math.round(r.acc)) };
+    for (const r of db.all("SELECT store_id, AVG(stars) a, COUNT(*) n FROM reviews GROUP BY store_id")) (out[r.store_id] ||= { done: 0, fail: 0, accept_min: null }).stars = Math.round(r.a * 10) / 10, out[r.store_id].reviews = r.n;
+    for (const k in out) { const x = out[k]; x.reliability = x.done + x.fail >= 3 ? Math.round(x.done * 100 / (x.done + x.fail)) : null; x.reviews ||= 0; x.stars ??= null; }
+    return out;
+  }
 
   /* ---------- helpers ---------- */
   const userFrom = req => {
     const m = String(req.headers.authorization || "").match(/^Bearer (.+)$/);
     const p = m && verifyJwt(m[1], cfg.jwtSecret);
     if (!p || p.typ !== "session") return null;
-    return db.get("SELECT * FROM users WHERE id=?", p.sub) || null;
+    const u = db.get("SELECT * FROM users WHERE id=?", p.sub);
+    if (!u || (p.v || 0) !== u.token_ver) return null;
+    req.mfa = p.mfa === true;
+    return u;
   };
   const need = req => { if (!req.user) throw new HttpError(401, "auth_required", "Sign in first"); return req.user; };
   const isAdmin = u => !!u?.phone && cfg.admins.includes(u.phone);
-  const needAdmin = req => { const u = need(req); if (!isAdmin(u)) throw new HttpError(403, "forbidden", "Admins only"); return u; };
+  const needAdmin = (req, { mfa = true } = {}) => {
+    const u = need(req); if (!isAdmin(u)) throw new HttpError(403, "forbidden", "Admins only");
+    if (mfa && cfg.adminMfa) {
+      if (!u.totp_on) throw new HttpError(403, "mfa_setup_required", "Turn on two-step verification for the admin account");
+      if (!req.mfa) throw new HttpError(403, "mfa_required", "Enter the code from your authenticator app");
+    }
+    return u;
+  };
   const needSeller = req => {
     const u = need(req);
     const s = u.store_id && db.get("SELECT * FROM stores WHERE id=?", u.store_id);
     if (!s) throw new HttpError(403, "no_store", "Register your store first");
     return { u, s };
   };
-  const session = u => ({ token: signJwt({ sub: u.id, typ: "session" }, cfg.jwtSecret, SESSION_TTL), user: publicUser(u, cfg.admins) });
+  const session = (u, extra = {}) => ({ token: signJwt({ sub: u.id, typ: "session", v: u.token_ver || 0, ...extra }, cfg.jwtSecret, extra.mfa ? 12 * 3600 : SESSION_TTL), user: { ...publicUser(u, cfg.admins), telegram: !!u.tg_chat, mfa: !!u.totp_on } });
   const mediaUrl = p => (p && p.startsWith("/uploads/") ? cfg.publicUrl + p : p);
   const publicStore = s => ({
     id: s.id, name: s.name, d: s.district, addr: s.addr, addrUz: s.addr_uz || s.addr, hours: s.hours, ru: s.ru || s.descr.slice(0, 80), uz: s.uz || s.ru || s.descr.slice(0, 80),
-    descr: s.descr, cats: JSON.parse(s.cats || "[]"), phone: s.phone, telegram: s.telegram, landmark: s.landmark, la: s.la, lo: s.lo, status: s.status
+    descr: s.descr, cats: JSON.parse(s.cats || "[]"), phone: s.phone, telegram: s.telegram, landmark: s.landmark, la: s.la, lo: s.lo, status: s.status, loc_src: s.loc_src, note: s.review_note, created: s.created_at
   });
 
   /* ---------- meta ---------- */
@@ -58,7 +101,8 @@ export function createApp(cfg, log = console) {
   r.get("/api/config", () => ({
     sms: sms.mode, google_client_id: cfg.google.clientId || null, apple_client_id: cfg.apple.clientId || null,
     apple_redirect_uri: cfg.apple.redirectUri || null, ai: !!cfg.ai.key, yandex: !!cfg.yandex.token, vip_free: cfg.vipFree,
-    payments: [] // Click / Payme / Uzum are the next step
+    payments: cfg.paymentsOnline, telegram_bot: tg.enabled ? tg.username || null : null, push_key: push.publicKey,
+    timers: cfg.timers, commission: cfg.commission
   }));
 
   /* ---------- auth ---------- */
@@ -116,7 +160,7 @@ export function createApp(cfg, log = console) {
   r.post("/api/auth/google", async req => { const b = await readJson(req); return social(req, "google", b.credential, b.name); });
   r.post("/api/auth/apple", async req => { const b = await readJson(req); return social(req, "apple", b.id_token, b.name); });
 
-  r.get("/api/me", req => ({ user: publicUser(need(req), cfg.admins), store: req.user.store_id ? publicStore(db.get("SELECT * FROM stores WHERE id=?", req.user.store_id)) : null }));
+  r.get("/api/me", req => ({ user: { ...publicUser(need(req), cfg.admins), telegram: !!req.user.tg_chat, mfa: !!req.user.totp_on }, store: req.user.store_id ? publicStore(db.get("SELECT * FROM stores WHERE id=?", req.user.store_id)) : null }));
   r.patch("/api/me", async req => {
     const u = need(req), b = await readJson(req);
     const name = b.name !== undefined ? str(b.name, 80) : u.name;
@@ -142,9 +186,10 @@ export function createApp(cfg, log = console) {
 
   /* ---------- catalog ---------- */
   r.get("/api/catalog", (req, res) => {
-    const rev = db.meta("catalog_rev"), etag = `"c${rev}"`;
+    const rev = db.meta("catalog_rev") + ":" + (db.get("SELECT COUNT(*) n, MAX(status_at) t FROM shipments")?.t || 0) + ":" + (db.get("SELECT COUNT(*) n FROM reviews")?.n || 0), etag = `"c${rev.replace(/\D/g, "")}"`;
     if (req.headers["if-none-match"] === etag) { res.writeHead(304, { ETag: etag }); res.end(); return; }
-    const stores = db.all("SELECT * FROM stores WHERE status='active' ORDER BY created_at, id").map(publicStore);
+    const stats = storeStats();
+    const stores = db.all("SELECT * FROM stores WHERE status='active' ORDER BY created_at, id").map(s => ({ ...publicStore(s), rating: stats[s.id] || { done: 0, fail: 0, reliability: null, stars: null, reviews: 0, accept_min: null } }));
     const offers = db.all("SELECT o.product_id, o.store_id, o.price, o.stock FROM offers o JOIN stores s ON s.id=o.store_id AND s.status='active' ORDER BY o.product_id, o.price");
     const by = new Map();
     for (const o of offers) { const a = by.get(o.product_id) || []; a.push({ store: o.store_id, price: o.price, stock: o.stock }); by.set(o.product_id, a); }
@@ -152,7 +197,7 @@ export function createApp(cfg, log = console) {
       id: p.id, cat: p.cat, sub: p.sub, icon: p.icon, ru: p.ru, uz: p.uz, unit: p.unit, kg: p.kg, img: mediaUrl(p.img), group: p.grp, hit: !!p.hit, isNew: !!p.is_new,
       key: p.key, rating: p.rating, reviews: p.reviews, country: JSON.parse(p.country), warranty: p.warranty, desc: p.descr, offers: by.get(p.id)
     }));
-    const body = Buffer.from(JSON.stringify({ rev: Number(rev), stores, products }));
+    const body = Buffer.from(JSON.stringify({ rev, stores, products }));
     const gz = /\bgzip\b/.test(req.headers["accept-encoding"] || "");
     const out = gz ? gzipSync(body) : body;
     res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", ETag: etag, "Cache-Control": "no-cache", "Content-Length": out.length, ...(gz ? { "Content-Encoding": "gzip", Vary: "Accept-Encoding, Origin" } : {}) });
@@ -164,7 +209,7 @@ export function createApp(cfg, log = console) {
     name: str(f?.name, 80), phone: str(f?.phone, 30), district: D[f?.district] ? f.district : "mirob", street: str(f?.street, 160), flat: str(f?.flat, 30),
     floor: String(int(f?.floor, 1, 60) || 1), lift: !!f?.lift, mode: f?.mode === "pickup" ? "pickup" : "yandex",
     when: ["asap", "slot", "vip"].includes(f?.when) ? f.when : "asap", hour: String(int(f?.hour, 8, 20) ?? 9).padStart(2, "0"),
-    pay: ["click", "payme", "uzum", "nasiya", "cash"].includes(f?.pay) ? f.pay : "cash", comment: str(f?.comment, 300),
+    pay: ["click", "payme", "uzum", "nasiya", "cash", "store"].includes(f?.pay) ? f.pay : "store", comment: str(f?.comment, 300),
     la: Number.isFinite(Number(f?.la)) && f?.la !== null && f?.la !== "" ? Number(f.la) : null, lo: Number.isFinite(Number(f?.lo)) && f?.lo !== null && f?.lo !== "" ? Number(f.lo) : null
   });
   async function computeQuote(req, b) {
@@ -185,6 +230,7 @@ export function createApp(cfg, log = console) {
     const phone = form.phone.replace(/\D/g, "");
     if (!/^998\d{9}$/.test(phone)) throw bad("bad_phone", "Recipient phone must be +998 XX XXX XX XX");
     if (form.mode !== "pickup" && form.street.length < 4) throw bad("bad_address", "Street and house are required for delivery");
+    if (!["store", "cash"].includes(form.pay) && !cfg.paymentsOnline.includes(form.pay)) throw bad("payment_unavailable", "Online payment is not connected yet; pay the store directly");
     if (b.expected_total != null && Number(b.expected_total) !== q.total) throw new HttpError(409, "total_changed", "Prices or delivery changed, check the new total", { quote: q });
     const now = Date.now();
     const order = db.tx(() => {
@@ -194,19 +240,23 @@ export function createApp(cfg, log = console) {
       }
       const ins = db.run(`INSERT INTO orders(num,user_id,created_at,status,pay,pay_status,form,goods,del,svc,disc,promo_disc,total,cash,promo,services)
         VALUES(?,?,?,'active',?,?,?,?,?,?,?,?,?,?,?,?)`,
-        "tmp-" + randomBytes(6).toString("hex"), u.id, now, form.pay, form.pay === "cash" ? "on_delivery" : "pending", JSON.stringify(form),
+        "tmp-" + randomBytes(6).toString("hex"), u.id, now, form.pay, ["cash", "store"].includes(form.pay) ? "to_store" : "pending", JSON.stringify(form),
         q.goods, q.del, q.svc, q.disc, q.pd, q.total, q.cash, q.promo, JSON.stringify(q.services));
       const id = Number(ins.lastInsertRowid), num = "IM-" + (100000 + id);
       db.run("UPDATE orders SET num=? WHERE id=?", num, id);
       for (const s of q.ships) {
-        db.run("INSERT INTO shipments(order_id,store_id,tariff,price,kg,dist,lines,status,status_at,history) VALUES(?,?,?,?,?,?,?,'new',?,?)",
-          id, s.store, s.tariff, s.price, s.kg, s.dist, JSON.stringify(s.lines), now, JSON.stringify([{ s: "new", t: now }]));
+        const goods = s.lines.reduce((a, l) => a + l.price * l.q, 0);
+        const commission = s.lines.reduce((a, l) => a + Math.round(l.price * l.q * rateOf(PCAT.get(l.id) || db.get("SELECT cat FROM products WHERE id=?", l.id)?.cat)), 0);
+        const start = storeStartAt(db.get("SELECT hours FROM stores WHERE id=?", s.store), now);
+        db.run("INSERT INTO shipments(order_id,store_id,tariff,price,kg,dist,lines,status,status_at,history,goods,commission,start_at) VALUES(?,?,?,?,?,?,?,'new',?,?,?,?,?)",
+          id, s.store, s.tariff, s.price, s.kg, s.dist, JSON.stringify(s.lines), now, JSON.stringify([{ s: "new", t: now }]), goods, commission, start);
       }
       if (q.promo) db.run("INSERT OR IGNORE INTO promo_uses(user_id,code,order_id) VALUES(?,?,?)", u.id, q.promo, id);
       return num;
     });
     bumpCatalog();
     log.info(`[order] ${order} by ${u.id}: ${q.total} so'm, ${q.ships.length} shipment(s)`);
+    for (const sh of db.all("SELECT id FROM shipments WHERE order_id=(SELECT id FROM orders WHERE num=?)", order)) notify.shipmentNew(sh.id);
     return { order: orderOut(db.get("SELECT * FROM orders WHERE num=?", order)) };
   });
 
@@ -216,7 +266,9 @@ export function createApp(cfg, log = console) {
       num: o.num, t: o.created_at, status: o.status, pay: o.pay, pay_status: o.pay_status, d: JSON.parse(o.form),
       goods: o.goods, del: o.del, svc: o.svc, disc: o.disc + o.promo_disc, total: o.total, cash: o.cash, promo: o.promo,
       ships: ships.map(s => ({ id: s.id, store: s.store_id, tariff: s.tariff, price: s.price, kg: s.kg, dist: s.dist, status: s.status, status_at: s.status_at,
-        step: (STEPS[s.tariff ? "yandex" : "pickup"].indexOf(s.status)), history: JSON.parse(s.history), lines: JSON.parse(s.lines), courier: s.courier }))
+        step: (STEPS[s.tariff ? "yandex" : "pickup"].indexOf(s.status)), history: JSON.parse(s.history), lines: JSON.parse(s.lines), courier: s.courier,
+        cancel_reason: s.cancel_reason, accept_by: s.status === "new" ? (s.start_at || s.status_at) + cfg.timers.cancel * 60000 : null,
+        review: db.get("SELECT stars, text, reply FROM reviews WHERE ship_id=?", s.id) || null }))
     };
   }
   r.get("/api/orders", req => {
@@ -234,11 +286,12 @@ export function createApp(cfg, log = console) {
     const o = db.get("SELECT * FROM orders WHERE num=? AND user_id=?", p.num, u.id);
     if (!o) throw new HttpError(404, "not_found", "Order not found");
     const ships = db.all("SELECT * FROM shipments WHERE order_id=?", o.id);
-    if (ships.some(s => !["new", "assembling"].includes(s.status))) throw new HttpError(409, "too_late", "The order is already on its way");
+    if (ships.some(s => !["new", "assembling", "cancelled"].includes(s.status))) throw new HttpError(409, "too_late", "The order is already on its way");
     db.tx(() => {
       for (const s of ships) {
+        if (s.status === "cancelled") continue;
         for (const l of JSON.parse(s.lines)) db.run("UPDATE offers SET stock=stock+? WHERE product_id=? AND store_id=?", l.q, l.id, s.store_id);
-        setShipStatus(s, "cancelled");
+        setShipStatus(s, "cancelled", "buyer");
       }
       db.run("UPDATE orders SET status='cancelled' WHERE id=?", o.id);
       if (o.promo) db.run("DELETE FROM promo_uses WHERE user_id=? AND code=?", u.id, o.promo);
@@ -247,9 +300,11 @@ export function createApp(cfg, log = console) {
     return { order: orderOut(db.get("SELECT * FROM orders WHERE id=?", o.id)) };
   });
 
-  function setShipStatus(s, status) {
-    const now = Date.now(), h = JSON.parse(s.history); h.push({ s: status, t: now });
-    db.run("UPDATE shipments SET status=?, status_at=?, history=? WHERE id=?", status, now, JSON.stringify(h), s.id);
+  function setShipStatus(s, status, reason = null) {
+    const now = Date.now(), h = JSON.parse(s.history); h.push({ s: status, t: now, ...(reason ? { r: reason } : {}) });
+    db.run("UPDATE shipments SET status=?, status_at=?, history=?, accepted_at=CASE WHEN ?='assembling' AND accepted_at IS NULL THEN ? ELSE accepted_at END, cancel_reason=COALESCE(?, cancel_reason) WHERE id=?",
+      status, now, JSON.stringify(h), status, now, reason, s.id);
+    setImmediate(() => notify.status(s.id));
     const all = db.all("SELECT status FROM shipments WHERE order_id=?", s.order_id).map(x => x.status);
     const st = all.every(x => x === "cancelled") ? "cancelled" : all.every(x => ["delivered", "picked", "cancelled"].includes(x)) ? "done" : "active";
     db.run("UPDATE orders SET status=? WHERE id=?", st, s.order_id);
@@ -315,6 +370,7 @@ export function createApp(cfg, log = console) {
     });
     if (status === "active") bumpCatalog();
     log.info(`[store] new ${status} store ${id} "${s.name}" by ${u.id}`);
+    notify.admins(`🏪 Новый магазин на проверке: <b>${s.name.replace(/[<>&]/g, "")}</b>\n${s.descr.slice(0, 200).replace(/[<>&]/g, "")}\nТел.: +${s.phone}\nОдобрить: ${cfg.siteUrl}#seller`);
     return { store: publicStore(db.get("SELECT * FROM stores WHERE id=?", id)), user: publicUser(db.get("SELECT * FROM users WHERE id=?", u.id), cfg.admins) };
   });
   r.patch("/api/seller/store", async req => {
@@ -339,10 +395,16 @@ export function createApp(cfg, log = console) {
     return {
       store: publicStore(s),
       kpi: { revenue30: revenue, orders30: ships.filter(x => x.oc >= since).length, open: ships.filter(x => !["delivered", "picked", "cancelled"].includes(x.status)).length, products: products.length, out_of_stock: products.filter(p => p.stock <= 0).length },
+      finance: storeFinance(s.id),
+      rates: cfg.commission,
+      telegram: !!req.user.tg_chat, bot: tg.enabled ? tg.username : null,
+      rating: storeStats()[s.id] || null,
+      reviews: db.all("SELECT r.ship_id, r.stars, r.text, r.reply, r.created_at, u.name FROM reviews r LEFT JOIN users u ON u.id=r.user_id WHERE r.store_id=? ORDER BY r.created_at DESC LIMIT 20", s.id).map(x => ({ ...x, name: (x.name || "").split(" ")[0] })),
       orders: ships.map(x => {
         const f = JSON.parse(x.form);
         return { ship_id: x.id, num: x.num, t: x.oc, status: x.status, tariff: x.tariff, price: x.price, kg: x.kg, pay: x.pay, pay_status: x.pay_status,
           buyer: f.name, phone: f.phone, district: f.district, street: f.mode === "pickup" ? "" : f.street, when: f.when, hour: f.hour, comment: f.comment, lines: JSON.parse(x.lines),
+          cancel_reason: x.cancel_reason, accept_by: x.status === "new" ? (x.start_at || x.status_at) + cfg.timers.cancel * 60000 : null, commission: x.commission,
           next: SELLER_MOVES[x.status]?.filter(n => (x.tariff ? n !== "ready" : !["searching"].includes(n))) || [] };
       }),
       products
@@ -407,20 +469,145 @@ export function createApp(cfg, log = console) {
     const sh = db.get("SELECT * FROM shipments WHERE id=?", Number(p.id));
     if (!sh || (sh.store_id !== s.id && !isAdmin(u))) throw new HttpError(404, "not_found", "Shipment not found");
     if (!(SELLER_MOVES[sh.status] || []).includes(b.status) || (b.status === "ready" && sh.tariff) || (b.status === "searching" && !sh.tariff)) throw bad("bad_status", `Cannot move from ${sh.status} to ${b.status}`);
-    db.tx(() => {
-      if (b.status === "cancelled") for (const l of JSON.parse(sh.lines)) db.run("UPDATE offers SET stock=stock+? WHERE product_id=? AND store_id=?", l.q, l.id, sh.store_id);
-      setShipStatus(sh, b.status);
-    });
+    moveShipment(sh, b.status, req);
     return { ok: true, status: b.status };
   });
 
+  /* One place for seller moves (cabinet, Telegram buttons): "cancelled" by the store means out of stock */
+  function moveShipment(sh, status, req) {
+    db.tx(() => {
+      if (status === "cancelled") {
+        for (const l of JSON.parse(sh.lines)) db.run("UPDATE offers SET stock=0, updated_at=? WHERE product_id=? AND store_id=?", Date.now(), l.id, sh.store_id);
+        setShipStatus(sh, "cancelled", "out_of_stock");
+      } else setShipStatus(sh, status);
+    });
+    if (status === "cancelled") bumpCatalog();
+    audit(req, "ship." + status, sh.id);
+  }
+
+  /* ---------- reviews ---------- */
+  r.post("/api/orders/:num/review", async (req, res, p) => {
+    const u = need(req), b = await readJson(req);
+    const o = db.get("SELECT * FROM orders WHERE num=? AND user_id=?", p.num, u.id);
+    if (!o) throw new HttpError(404, "not_found", "Order not found");
+    const sh = db.get("SELECT * FROM shipments WHERE id=? AND order_id=?", int(b.ship_id, 1, 1e12), o.id);
+    if (!sh) throw new HttpError(404, "not_found", "Shipment not found");
+    if (!["delivered", "picked"].includes(sh.status)) throw bad("too_early", "You can rate the store after you receive the order");
+    const stars = int(b.stars, 1, 5); if (!stars) throw bad("bad_stars", "Rate from 1 to 5 stars");
+    try { db.run("INSERT INTO reviews(ship_id,order_id,store_id,user_id,stars,text,created_at) VALUES(?,?,?,?,?,?,?)", sh.id, o.id, sh.store_id, u.id, stars, str(b.text, 500), Date.now()); }
+    catch { throw new HttpError(409, "already_rated", "You have already rated this order"); }
+    const st = db.get("SELECT owner_id FROM stores WHERE id=?", sh.store_id), ow = st?.owner_id && db.get("SELECT tg_chat FROM users WHERE id=?", st.owner_id);
+    if (ow?.tg_chat) tg.send(ow.tg_chat, `${"⭐".repeat(stars)} Новый отзыв к заказу ${o.num}${b.text ? `:\n«${str(b.text, 500).replace(/[<>&]/g, "")}»` : ""}`);
+    return { ok: true };
+  });
+  r.get("/api/stores/:id/reviews", (req, res, p) => {
+    const rows = db.all("SELECT r.stars, r.text, r.reply, r.created_at, u.name FROM reviews r LEFT JOIN users u ON u.id=r.user_id WHERE r.store_id=? ORDER BY r.created_at DESC LIMIT 30", p.id);
+    return { reviews: rows.map(x => ({ stars: x.stars, text: x.text, reply: x.reply, t: x.created_at, name: (x.name || "").split(" ")[0] || "Покупатель" })), rating: storeStats()[p.id] || null };
+  });
+  r.post("/api/seller/reviews/:ship/reply", async (req, res, p) => {
+    const { s } = needSeller(req), b = await readJson(req);
+    const rv = db.get("SELECT * FROM reviews WHERE ship_id=? AND store_id=?", int(p.ship, 1, 1e12), s.id);
+    if (!rv) throw new HttpError(404, "not_found", "Review not found");
+    db.run("UPDATE reviews SET reply=? WHERE id=?", str(b.reply, 500), rv.id);
+    return { ok: true };
+  });
+
+  /* ---------- Telegram & push ---------- */
+  r.post("/api/me/telegram", req => {
+    const u = need(req);
+    if (!tg.enabled || !tg.username) throw new HttpError(503, "telegram_not_configured", "Telegram bot is not connected on the server yet");
+    const token = randomBytes(12).toString("hex");
+    db.run("INSERT INTO tg_links(token,user_id,expires_at) VALUES(?,?,?)", token, u.id, Date.now() + 30 * 60000);
+    return { url: `https://t.me/${tg.username}?start=${token}` };
+  });
+  r.del("/api/me/telegram", req => { const u = need(req); db.run("UPDATE users SET tg_chat=NULL WHERE id=?", u.id); return { ok: true }; });
+  r.post("/api/push/subscribe", async req => {
+    const u = need(req), b = await readJson(req);
+    const ep = str(b.endpoint, 1000), p256 = str(b.keys?.p256dh, 200), au = str(b.keys?.auth, 100);
+    if (!/^https:\/\//.test(ep) || !p256 || !au) throw bad("bad_subscription", "Invalid push subscription");
+    db.run("INSERT INTO push_subs(endpoint,user_id,p256dh,auth,created_at) VALUES(?,?,?,?,?) ON CONFLICT(endpoint) DO UPDATE SET user_id=excluded.user_id, p256dh=excluded.p256dh, auth=excluded.auth", ep, u.id, p256, au, Date.now());
+    return { ok: true };
+  });
+  r.post("/api/push/unsubscribe", async req => { const u = need(req), b = await readJson(req); db.run("DELETE FROM push_subs WHERE endpoint=? AND user_id=?", str(b.endpoint, 1000), u.id); return { ok: true }; });
+  r.post("/api/push/test", async req => { const u = need(req); const n = await push.toUser(u.id, { title: "Imorat", body: "Уведомления работают ✅", url: cfg.siteUrl }); return { sent: n }; });
+  r.post("/api/me/logout-all", req => {
+    const u = need(req);
+    db.run("UPDATE users SET token_ver=token_ver+1 WHERE id=?", u.id); db.run("DELETE FROM push_subs WHERE user_id=?", u.id);
+    audit(req, "logout_all", u.id);
+    return { ok: true };
+  });
+
+  tg.on("start", async (chat, token, from) => {
+    const l = token && db.get("SELECT * FROM tg_links WHERE token=? AND expires_at>?", token, Date.now());
+    if (!l) return tg.send(chat, "Здравствуйте! Это бот Imorat. Чтобы получать заказы и статусы, нажмите «Подключить Telegram» в профиле или кабинете продавца на сайте.\n\nAssalomu alaykum! Buyurtmalarni olish uchun saytdagi profil yoki sotuvchi kabinetida «Telegramni ulash» tugmasini bosing.");
+    db.run("UPDATE users SET tg_chat=NULL WHERE tg_chat=?", String(chat));
+    db.run("UPDATE users SET tg_chat=? WHERE id=?", String(chat), l.user_id);
+    db.run("DELETE FROM tg_links WHERE token=?", token);
+    const u = db.get("SELECT * FROM users WHERE id=?", l.user_id);
+    const st = u.store_id && db.get("SELECT name FROM stores WHERE id=?", u.store_id);
+    tg.send(chat, st ? `✅ Telegram подключён к магазину <b>${st.name.replace(/[<>&]/g, "")}</b>. Новые заказы будут приходить сюда с кнопками «Принять» и «Нет в наличии».` : `✅ Telegram подключён, ${(u.name || "").replace(/[<>&]/g, "")}. Сюда будут приходить статусы ваших заказов.`);
+  });
+  tg.on("callback", async q => {
+    const [act, idS] = String(q.data || "").split(":");
+    const sh = db.get("SELECT * FROM shipments WHERE id=?", Number(idS));
+    const st = sh && db.get("SELECT * FROM stores WHERE id=?", sh.store_id);
+    const ow = st?.owner_id && db.get("SELECT * FROM users WHERE id=?", st.owner_id);
+    if (!sh || !ow || ow.tg_chat !== String(q.message?.chat?.id)) return tg.answer(q.id, "Нет доступа к этому заказу");
+    const target = { acc: "assembling", oos: "cancelled", rdy: sh.tariff ? "searching" : "ready", pick: "picked" }[act];
+    if (!target || !(SELLER_MOVES[sh.status] || []).includes(target)) { await tg.answer(q.id, "Статус уже изменён"); return notify.sellerRefresh(sh.id); }
+    moveShipment(sh, target, { user: ow, ip: "telegram" });
+    await tg.answer(q.id, { assembling: "Принято! Соберите заказ", cancelled: "Заказ отменён, товар скрыт из наличия", searching: "Вызываем курьера", ready: "Покупатель получит уведомление", picked: "Готово" }[target]);
+  });
+
+  /* ---------- finance: commission ledger and settlements ---------- */
+  const monthRange = m => { const [y, mo] = (/^\d{4}-\d{2}$/.test(m || "") ? m : new Date(Date.now() + 5 * 3600000).toISOString().slice(0, 7)).split("-").map(Number); return [Date.UTC(y, mo - 1, 1) - 5 * 3600000, Date.UTC(y, mo, 1) - 5 * 3600000, `${y}-${String(mo).padStart(2, "0")}`]; };
+  function storeFinance(storeId, m) {
+    const [a, b, month] = monthRange(m);
+    const mon = db.get("SELECT COALESCE(SUM(goods),0) goods, COALESCE(SUM(commission),0) commission, COUNT(*) n FROM shipments WHERE store_id=? AND status IN ('delivered','picked') AND status_at>=? AND status_at<?", storeId, a, b);
+    const all = db.get("SELECT COALESCE(SUM(commission),0) c FROM shipments WHERE store_id=? AND status IN ('delivered','picked')", storeId).c;
+    const paid = db.get("SELECT COALESCE(SUM(amount),0) s FROM settlements WHERE store_id=?", storeId).s;
+    return { month, goods: mon.goods, commission: mon.commission, orders: mon.n, commission_total: all, settled: paid, balance: all - paid };
+  }
+
   /* ---------- admin ---------- */
+  r.get("/api/admin/mfa", req => { const u = needAdmin(req, { mfa: false }); return { on: !!u.totp_on, verified: req.mfa, required: cfg.adminMfa }; });
+  r.post("/api/admin/mfa/setup", req => {
+    const u = needAdmin(req, { mfa: false });
+    if (u.totp_on) throw new HttpError(409, "mfa_already_on", "Two-step verification is already on");
+    const secret = newSecret(); db.run("UPDATE users SET totp_secret=? WHERE id=?", secret, u.id);
+    return { secret, url: otpauthUrl(secret, u.phone ? "+" + u.phone : u.id) };
+  });
+  r.post("/api/admin/mfa/verify", async req => {
+    const u = needAdmin(req, { mfa: false }), b = await readJson(req);
+    lim.hit("mfa:" + u.id, 10, 15 * 60000);
+    if (!u.totp_secret || !checkTotp(u.totp_secret, b.code)) { audit(req, "mfa.fail", u.id); throw bad("mfa_wrong", "Wrong code"); }
+    if (!u.totp_on) { db.run("UPDATE users SET totp_on=1 WHERE id=?", u.id); audit(req, "mfa.enabled", u.id); }
+    return session(db.get("SELECT * FROM users WHERE id=?", u.id), { mfa: true });
+  });
+  r.get("/api/admin/finance", (req, res, p, url) => {
+    needAdmin(req);
+    const m = url.searchParams.get("month");
+    const rows = db.all("SELECT id, name, status FROM stores ORDER BY name").map(s => ({ id: s.id, name: s.name, status: s.status, ...storeFinance(s.id, m) })).filter(x => x.orders || x.balance || x.commission_total);
+    const t = rows.reduce((a, x) => ({ goods: a.goods + x.goods, commission: a.commission + x.commission, balance: a.balance + x.balance }), { goods: 0, commission: 0, balance: 0 });
+    return { month: monthRange(m)[2], rates: cfg.commission, stores: rows, totals: t, settlements: db.all("SELECT st.*, s.name FROM settlements st LEFT JOIN stores s ON s.id=st.store_id ORDER BY st.created_at DESC LIMIT 30") };
+  });
+  r.post("/api/admin/settlements", async req => {
+    const u = needAdmin(req), b = await readJson(req);
+    const s = db.get("SELECT id FROM stores WHERE id=?", String(b.store_id || "")); if (!s) throw new HttpError(404, "not_found", "Store not found");
+    const amount = int(b.amount, -1e12, 1e12); if (!amount) throw bad("bad_amount", "Amount is required");
+    db.run("INSERT INTO settlements(store_id,amount,note,admin_id,created_at) VALUES(?,?,?,?,?)", s.id, amount, str(b.note, 200), u.id, Date.now());
+    audit(req, "settlement", s.id, { amount, note: str(b.note, 200) });
+    return { ok: true, finance: storeFinance(s.id) };
+  });
+  r.get("/api/admin/audit", req => { needAdmin(req); return { log: db.all("SELECT a.*, u.name, u.phone FROM audit a LEFT JOIN users u ON u.id=a.user_id ORDER BY a.id DESC LIMIT 100") }; });
   r.get("/api/admin/stores", req => { needAdmin(req); return { stores: db.all("SELECT s.*, u.name owner_name, u.phone owner_phone FROM stores s LEFT JOIN users u ON u.id=s.owner_id ORDER BY s.status='pending' DESC, s.created_at DESC").map(s => ({ ...publicStore(s), owner_name: s.owner_name, owner_phone: s.owner_phone, loc_src: s.loc_src, created: s.created_at, note: s.review_note })) }; });
   r.patch("/api/admin/stores/:id", async (req, res, p) => {
     needAdmin(req); const b = await readJson(req);
     const s = db.get("SELECT * FROM stores WHERE id=?", p.id); if (!s) throw new HttpError(404, "not_found", "Store not found");
     if (b.status && !["active", "pending", "rejected", "blocked"].includes(b.status)) throw bad("bad_status", "Unknown status");
     db.run("UPDATE stores SET status=COALESCE(?,status), review_note=COALESCE(?,review_note) WHERE id=?", b.status || null, b.note != null ? str(b.note, 300) : null, s.id);
+    audit(req, "store." + (b.status || "edit"), s.id, { note: b.note, owner_phone: b.owner_phone });
+    if (b.status && s.owner_id) { const ow = db.get("SELECT tg_chat FROM users WHERE id=?", s.owner_id); if (ow?.tg_chat) tg.send(ow.tg_chat, b.status === "active" ? `🎉 Магазин «${s.name.replace(/[<>&]/g, "")}» одобрен и виден покупателям на Imorat.` : `Статус магазина «${s.name.replace(/[<>&]/g, "")}»: ${b.status}.${b.note ? " " + str(b.note, 300).replace(/[<>&]/g, "") : ""}`); }
     if (b.owner_phone) {
       const ph = parsePhone(b.owner_phone), ou = db.get("SELECT * FROM users WHERE phone=?", ph);
       if (!ou) throw new HttpError(404, "user_not_found", "The owner must sign in once first");
@@ -435,7 +622,8 @@ export function createApp(cfg, log = console) {
     const steps = STEPS[sh.tariff ? "yandex" : "pickup"];
     if (!steps.includes(b.status) && b.status !== "cancelled") throw bad("bad_status", "Unknown status");
     if (b.courier) db.run("UPDATE shipments SET courier=? WHERE id=?", str(b.courier, 80), sh.id);
-    setShipStatus(sh, b.status);
+    setShipStatus(sh, b.status, b.status === "cancelled" ? "admin" : null);
+    audit(req, "admin.ship." + b.status, sh.id);
     return { ok: true };
   });
   r.patch("/api/admin/orders/:num/pay", async (req, res, p) => {
@@ -443,6 +631,7 @@ export function createApp(cfg, log = console) {
     if (!["paid", "pending", "refunded", "on_delivery"].includes(b.pay_status)) throw bad("bad_status", "Unknown payment status");
     const o = db.get("SELECT id FROM orders WHERE num=?", p.num); if (!o) throw new HttpError(404, "not_found", "Order not found");
     db.run("UPDATE orders SET pay_status=? WHERE id=?", b.pay_status, o.id);
+    audit(req, "order.pay." + b.pay_status, p.num);
     return { ok: true };
   });
 
@@ -466,7 +655,7 @@ export function createApp(cfg, log = console) {
       if (!res.headersSent && out !== undefined) send(res, 200, out);
     } catch (e) {
       const status = e instanceof HttpError ? e.status : 500;
-      if (status === 500) log.error("[error]", req.method, url.pathname, e);
+      if (status === 500) { log.error("[error]", req.method, url.pathname, e); if (Date.now() - (server.lastAlert || 0) > 600000) { server.lastAlert = Date.now(); notify.admins(`⚠️ Ошибка сервера: ${req.method} ${url.pathname}\n${String(e.message).slice(0, 200).replace(/[<>&]/g, "")}`); } }
       if (!res.headersSent) send(res, status, { error: e instanceof HttpError ? e.code : "server_error", message: e instanceof HttpError ? e.message : "Something went wrong", ...(e.extra || {}) });
       else res.end();
     } finally {
@@ -482,6 +671,41 @@ export function createApp(cfg, log = console) {
     createReadStream(path).pipe(res);
   }
 
+  /* ---------- background jobs: seller deadlines and daily backups ---------- */
+  function sweep(now = Date.now()) {
+    const T = cfg.timers;
+    for (const s of db.all("SELECT * FROM shipments WHERE status='new'")) {
+      const age = (now - (s.start_at || s.status_at)) / 60000;
+      if (age >= T.cancel) {
+        db.tx(() => { for (const l of JSON.parse(s.lines)) db.run("UPDATE offers SET stock=stock+? WHERE product_id=? AND store_id=?", l.q, l.id, s.store_id); setShipStatus(s, "cancelled", "not_accepted"); });
+        bumpCatalog(); log.info(`[timer] shipment ${s.id} cancelled: not accepted in ${T.cancel} min`);
+      } else if (age >= T.sms && !s.sms_sent) { db.run("UPDATE shipments SET sms_sent=1, reminded=1 WHERE id=?", s.id); notify.smsSeller(s.id); notify.remind(s.id); }
+      else if (age >= T.remind && !s.reminded) { db.run("UPDATE shipments SET reminded=1 WHERE id=?", s.id); notify.remind(s.id); }
+    }
+    for (const s of db.all("SELECT sh.*, o.form FROM shipments sh JOIN orders o ON o.id=sh.order_id WHERE sh.status='assembling'")) {
+      const limit = (JSON.parse(s.form).when === "asap" ? T.handover : 30) * 3600000;
+      if (now - (s.accepted_at || s.status_at) > limit) {
+        db.tx(() => { for (const l of JSON.parse(s.lines)) db.run("UPDATE offers SET stock=stock+? WHERE product_id=? AND store_id=?", l.q, l.id, s.store_id); setShipStatus(s, "cancelled", "not_shipped"); });
+        bumpCatalog(); log.info(`[timer] shipment ${s.id} cancelled: not handed over`);
+      }
+    }
+    db.run("DELETE FROM tg_links WHERE expires_at<?", now);
+  }
+  function backup() {
+    if (!cfg.backupDir || cfg.dbPath === ":memory:") return;
+    try {
+      mkdirSync(cfg.backupDir, { recursive: true });
+      const day = new Date(Date.now() + 5 * 3600000).toISOString().slice(0, 10), file = join(cfg.backupDir, `imorat-${day}.db`);
+      if (!existsSync(file)) { db.raw.exec(`VACUUM INTO '${file.replace(/'/g, "''")}'`); log.info("[backup] saved", file); }
+      readdirSync(cfg.backupDir).filter(f => /^imorat-\d{4}-\d{2}-\d{2}\.db$/.test(f)).sort().slice(0, -14).forEach(f => unlinkSync(join(cfg.backupDir, f)));
+    } catch (e) { log.error("[backup] failed", e.message); notify.admins("⚠️ Резервная копия базы не сохранилась: " + String(e.message).slice(0, 150)); }
+  }
+  const timers = [setInterval(() => { try { sweep(); } catch (e) { log.error("[sweep]", e); } }, 30000), setInterval(backup, 3600000)];
+  server.on("listening", () => { tg.start(); backup(); });
+  server.stopJobs = () => { timers.forEach(clearInterval); tg.stop(); };
+  server.on("close", server.stopJobs);
+  server.sweep = sweep;
+  server.backup = backup;
   server.db = db;
   return server;
 }

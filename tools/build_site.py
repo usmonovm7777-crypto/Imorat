@@ -19,6 +19,9 @@ meta = ('<meta name="description" content="Imorat — маркетплейс с�
         'сравнение цен, Usta AI, калькуляторы ремонта и доставка Яндекс.">')
 html = ("<!doctype html>\n<html lang=\"ru\">\n<head>\n<meta charset=\"utf-8\">\n"
         "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1,viewport-fit=cover\">\n"
-        f"{meta}\n<style>{RESET}</style>\n<script src=\"config.js\"></script>\n{head_tags.strip()}\n</head>\n<body>\n{body.strip()}\n</body>\n</html>\n")
+        f"{meta}\n<style>{RESET}</style>\n<script src=\"config.js\"></script>\n<link rel=\"manifest\" href=\"manifest.webmanifest\">\n<meta name=\"theme-color\" content=\"#0B6E69\">\n<link rel=\"icon\" type=\"image/png\" href=\"icons/favicon-64.png\">\n<link rel=\"apple-touch-icon\" href=\"icons/apple-touch-icon.png\">\n<meta name=\"apple-mobile-web-app-capable\" content=\"yes\">\n<meta name=\"apple-mobile-web-app-title\" content=\"Imorat\">\n<meta name=\"apple-mobile-web-app-status-bar-style\" content=\"default\">\n{head_tags.strip()}\n</head>\n<body>\n{body.strip()}\n</body>\n</html>\n")
 (ROOT / "index.html").write_text(html, encoding="utf-8")
-print("built index.html", len(html), "bytes")
+import time
+sw = (ROOT / "tools" / "sw.template.js").read_text(encoding="utf-8").replace("__BUILD__", time.strftime("%Y%m%d%H%M%S"))
+(ROOT / "sw.js").write_text(sw, encoding="utf-8")
+print("built index.html", len(html), "bytes + sw.js")
