@@ -726,6 +726,11 @@ html.ds-dragging, html.ds-dragging * { cursor: grabbing !important; user-select:
 .ds-steps .done button span { background: color-mix(in srgb, var(--ok) 25%, transparent); color: var(--ink); }
 .ds-steps button:disabled { opacity: .5; }
 .ds-layout { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 12px; align-items: start; margin-bottom: 32px; }
+.ds-ph { position: relative; border-radius: 14px; overflow: hidden; background: #d9d6cf; aspect-ratio: 1 / .68; }
+.ds-ph canvas { display: block; width: 100%; height: 100%; }
+.ds-ph-st { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); padding: 7px 14px; border-radius: 999px; background: rgb(20 24 23 / .72); color: #fff; font-size: 13px; text-align: center; max-width: calc(100% - 24px); backdrop-filter: blur(6px); }
+.ds-ph-bar { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.ds-ph-bar small { flex: 1 1 220px; }
 .ds-view { position: sticky; top: 130px; display: grid; gap: 8px; background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 6%, var(--surface)), var(--surface)); }
 .ds-svg { width: 100%; height: auto; max-height: 62vh; display: block; }
 .ds-svg [data-dsuid] { cursor: pointer; }
@@ -1551,7 +1556,7 @@ const XMODELS = {
     const folds = []; for (const side of [-1, 1]) for (let k = 0; k < 6; k++) folds.push(XC(side * (w / 2 - .05 - k * .085), h / 2 - .02, (k % 2 ? .035 : -.005), .047, h / 2 - .03, a, 7, .02));
     return [rod, ...folds]; },
   rack_kid: () => { const P = [XB(-.44, .55, 0, .02, .55, .2, XW.white, 1, .006), XB(.44, .55, 0, .02, .55, .2, XW.white, 1, .006)]; for (let i = 0; i < 4; i++) P.push(XB(0, .03 + i * .35, 0, .44, .015, .2, XW.white, 1, .006));
-    const cols = ["#f2a7b8", "#9cc3e6", "#f6d36b", "#9fd3b5", "#c9b6e8", "#f6a96b"]; let k = 0; for (let r = 0; r < 3; r++) for (let c = -1; c <= 1; c += 2) P.push(XB(c * .21, .18 + r * .35, .02, .19, .13, .17, cols[k++ % 6], 1, .03)); return P; },
+    const cols = ["#d8cab3", "#a7b1ab", "#c4a983", "#e7e2d9", "#8e9993", "#cbb79e"]; let k = 0; for (let r = 0; r < 3; r++) for (let c = -1; c <= 1; c += 2) P.push(XB(c * .21, .18 + r * .35, .02, .19, .13, .17, cols[k++ % 6], 1, .03)); return P; },
   lamp_floor: (a = "#efe6d4") => [XC(0, .015, 0, .16, .015, XW.metal, 3), XC(0, .8, 0, .014, .78, XW.metal, 3), XC(0, 1.6, 0, .22, .13, a, 8, .02)],
   bucket: () => [],
   shoebench: (a = XW.lwood, b = "#7d8489") => [XB(0, .2, 0, .45, .2, .17, XW.white, 1, .012), XB(0, .2, .172, .43, .005, .004, "#e4e1da", 1, .002), XB(-.22, .12, .1, .09, .035, .05, "#3a3d40", 7, .03), XB(.2, .12, .1, .09, .035, .05, "#8a5a3c", 7, .03), XB(0, .43, 0, .45, .025, .17, a, 5, .008), XB(0, .48, 0, .43, .035, .155, b, 7, .03)],
@@ -4052,7 +4057,7 @@ function planSVG(d, opt = {}) {
   return `<svg class="ds-svg ds-plan${opt.edit ? " edit" : ""}" data-dsmode="plan" viewBox="-0.55 -0.35 ${W + .9} ${Lr + .8}" role="img" aria-label="${L("План комнаты сверху", "Xona rejasi tepadan")}">${g}</svg>`;
 }
 const dsSVG = (d, opt) => ((d.mode || "3d") === "plan" ? planSVG(d, opt) : roomSVG(d, opt));
-function dsRedraw() { const v = $(".ds-view svg"); if (v) v.outerHTML = dsSVG(DS, { edit: DS.edit }); }
+function dsRedraw() { if (DS.mode === "photo") return dsPhotoStart(); const v = $(".ds-view .ds-svg"); if (v) v.outerHTML = dsSVG(DS, { edit: DS.edit }); }
 
 /* ---------- Moving furniture with mouse or finger ---------- */
 function dsRect(it, x, z, rot) { const [ww, dd] = rot % 2 ? [it.d, it.w] : [it.w, it.d]; return { x0: x - ww / 2, x1: x + ww / 2, z0: z - dd / 2, z1: z + dd / 2 }; }
@@ -4308,16 +4313,17 @@ function renderDesign() {
     <div class="ds-head"><h1 class="h-l">${L("AI-дизайнер комнаты", "AI xona dizayneri")}</h1><p class="mu">${L("Фото и размеры → пара вопросов → готовая комната в 3D с мебелью и сметой. Всё можно поменять одним касанием.", "Rasm va o‘lchamlar → bir nechta savol → mebel va smetali tayyor 3D xona. Hammasini bir bosishda o‘zgartirish mumkin.")}</p></div>
     <ol class="ds-steps">${steps.map((s, i) => `<li class="${i + 1 === st ? "now" : i + 1 < st ? "done" : ""}"><button type="button" data-dsstep="${i + 1}" ${i + 1 <= Math.max(st, d.items.length ? 4 : st) ? "" : "disabled"}><span>${i + 1}</span>${s}</button></li>`).join("")}</ol>
     <div class="ds-layout"><div class="ds-view panel">${st === 4 ? `<div class="ds-tools">
-        <div class="seg" role="group" aria-label="${L("Вид", "Ko‘rinish")}"><button type="button" data-ds="mode-3d" aria-pressed="${(d.mode || "3d") === "3d"}">3D</button><button type="button" data-ds="mode-plan" aria-pressed="${d.mode === "plan"}">${L("План", "Reja")}</button></div>
-        ${(d.mode || "3d") === "3d" ? `<button class="ib" type="button" data-ds="view-l" aria-label="${L("Повернуть комнату влево", "Xonani chapga burish")}" title="${L("Повернуть комнату", "Xonani burish")}">⟲</button><button class="ib" type="button" data-ds="view-r" aria-label="${L("Повернуть комнату вправо", "Xonani o‘ngga burish")}" title="${L("Повернуть комнату", "Xonani burish")}">⟳</button>` : ""}
-        <button class="btn ${d.edit ? "btn-primary" : "btn-line"} ds-edit" type="button" data-ds="edit" aria-pressed="${!!d.edit}">✋ ${d.edit ? L("Двигаю мебель", "Mebelni suryapman") : L("Двигать мебель", "Mebelni surish")}</button>
+        <div class="seg" role="group" aria-label="${L("Вид", "Ko‘rinish")}"><button type="button" data-ds="mode-photo" aria-pressed="${d.mode === "photo"}">${L("Фото", "Foto")}</button><button type="button" data-ds="mode-3d" aria-pressed="${(d.mode || "3d") === "3d"}">3D</button><button type="button" data-ds="mode-plan" aria-pressed="${d.mode === "plan"}">${L("План", "Reja")}</button></div>
+        ${(d.mode || "3d") !== "plan" ? `<button class="ib" type="button" data-ds="view-l" aria-label="${L("Повернуть комнату влево", "Xonani chapga burish")}" title="${L("Повернуть комнату", "Xonani burish")}">⟲</button><button class="ib" type="button" data-ds="view-r" aria-label="${L("Повернуть комнату вправо", "Xonani o‘ngga burish")}" title="${L("Повернуть комнату", "Xonani burish")}">⟳</button>` : ""}
+        ${d.mode === "photo" ? "" : `<button class="btn ${d.edit ? "btn-primary" : "btn-line"} ds-edit" type="button" data-ds="edit" aria-pressed="${!!d.edit}">✋ ${d.edit ? L("Двигаю мебель", "Mebelni suryapman") : L("Двигать мебель", "Mebelni surish")}</button>`}
         <button class="ib" type="button" data-ds="share" aria-label="${L("Поделиться картинкой", "Rasm bilan ulashish")}" title="${L("Поделиться", "Ulashish")}">${ui("photo", 17)}</button>
-      </div>` : ""}${st === 4 ? dsSVG(d, { edit: d.edit }) : roomSVG(d, { nums: st === 2 })}${st === 4 ? `<small class="mu ds-hint">${matchMedia("(pointer: fine)").matches ? L("Перетаскивайте мебель мышкой. Кнопка ↻ в списке поворачивает предмет.", "Mebelni sichqoncha bilan suring. Ro‘yxatdagi ↻ tugmasi buradi.") : d.edit ? L("Ведите пальцем по мебели, чтобы переставить. Нажмите «Двигаю мебель», чтобы снова листать страницу.", "Mebelni barmoq bilan suring. Sahifani aylantirish uchun «Mebelni suryapman» ni bosing.") : L("Нажмите «Двигать мебель», чтобы переставлять пальцем.", "Barmoq bilan surish uchun «Mebelni surish» ni bosing.")}</small>` : ""}<div class="ds-dims mu">${String(d.W).replace(".", ",")} × ${String(d.L).replace(".", ",")} ${L("м", "m")} · ${L("высота", "balandlik")} ${String(d.H).replace(".", ",")} ${L("м", "m")}${d.type ? " · " + ROOMS().find(r => r[0] === d.type)[1] : ""}</div>${!dsAIon() ? `<small class="mu ds-ai-note">${L("Подбор по ответам работает всегда. Свободные пожелания и разбор фото понимает Usta AI, когда он подключён.", "Javoblar bo‘yicha tanlash doim ishlaydi. Erkin istaklar va rasm tahlilini Usta AI ulanganda tushunadi.")}</small>` : ""}</div>
+      </div>` : ""}${st === 4 ? (d.mode === "photo" ? dsPhotoHTML() : dsSVG(d, { edit: d.edit })) : roomSVG(d, { nums: st === 2 })}${st === 4 && d.mode !== "photo" ? `<small class="mu ds-hint">${matchMedia("(pointer: fine)").matches ? L("Перетаскивайте мебель мышкой. Кнопка ↻ в списке поворачивает предмет.", "Mebelni sichqoncha bilan suring. Ro‘yxatdagi ↻ tugmasi buradi.") : d.edit ? L("Ведите пальцем по мебели, чтобы переставить. Нажмите «Двигаю мебель», чтобы снова листать страницу.", "Mebelni barmoq bilan suring. Sahifani aylantirish uchun «Mebelni suryapman» ni bosing.") : L("Нажмите «Двигать мебель», чтобы переставлять пальцем.", "Barmoq bilan surish uchun «Mebelni surish» ni bosing.")}</small>` : ""}<div class="ds-dims mu">${String(d.W).replace(".", ",")} × ${String(d.L).replace(".", ",")} ${L("м", "m")} · ${L("высота", "balandlik")} ${String(d.H).replace(".", ",")} ${L("м", "m")}${d.type ? " · " + ROOMS().find(r => r[0] === d.type)[1] : ""}</div>${!dsAIon() ? `<small class="mu ds-ai-note">${L("Подбор по ответам работает всегда. Свободные пожелания и разбор фото понимает Usta AI, когда он подключён.", "Javoblar bo‘yicha tanlash doim ishlaydi. Erkin istaklar va rasm tahlilini Usta AI ulanganda tushunadi.")}</small>` : ""}</div>
       <div class="ds-panel panel">${panel}</div></div></div>`;
+  if ($("#dsPh")) dsPhotoStart(); else dsPh.job++;
   for (const fl of ["#dsFile", "#dsCam", "#dsGal"].map(x => $(x)).filter(Boolean)) fl.addEventListener("change", async e => { const f = e.target.files?.[0]; if (!f) return; try { DS.photo = await resizeImg(f); DS.notes = ""; dsSave(); renderDesign(); dsAnalyzePhoto(); } catch (er) { toast(L("Не удалось открыть фото", "Rasmni ochib bo‘lmadi")); } });
   document.querySelectorAll("[data-dsdim]").forEach(i => i.addEventListener("input", e => { const k = e.target.dataset.dsdim, v = parseFloat(String(e.target.value).replace(",", ".")); const lim = { W: [1.5, 12], L: [1.5, 15], H: [2.2, 4.5], win: [0, 3], doors: [0, 2] }[k]; if (!(v >= lim[0] && v <= lim[1])) return; const old = DS[k]; DS[k] = k === "win" || k === "doors" ? Math.round(v) : Math.round(v * 100) / 100; dsLayout();
     if ((k === "win" || k === "doors") && (!old) !== (!DS[k])) { dsAutoView(); renderDesign(); const el = $("#ds_" + k); if (el) { el.focus(); } return; }
-    $(".ds-view svg").outerHTML = roomSVG(DS, { nums: true }); const mini = $(".ds-mini"); if (mini) mini.innerHTML = planSVG(DS, { nums: 1 }); }));
+    $(".ds-view .ds-svg").outerHTML = roomSVG(DS, { nums: true }); const mini = $(".ds-mini"); if (mini) mini.innerHTML = planSVG(DS, { nums: 1 }); }));
   const wf = $("#dsWish"); if (wf) wf.addEventListener("submit", e => { e.preventDefault(); const v = $("#dsWishIn").value; $("#dsWishIn").value = ""; dsWish(v); });
 }
 document.addEventListener("click", e => {
@@ -4341,12 +4347,14 @@ document.addEventListener("click", e => {
   switch (s.ds) {
     case "next": DS.step = Math.min(4, DS.step + 1); if (DS.step === 4 && !DS.items.length) dsApplyTemplate(); dsSave(); renderDesign(); return window.scrollTo(0, 0);
     case "back": DS.step = Math.max(1, DS.step - 1); dsSave(); return renderDesign();
-    case "build": dsApplyTemplate(); DS.step = 4; DS.say = L("Собрал комнату по вашим ответам. Меняйте мебель, цвет стен и пол — смета пересчитается.", "Javoblaringiz bo‘yicha xonani yig‘dim. Mebel, devor rangi va polni o‘zgartiring — smeta qayta hisoblanadi."); dsSave(); renderDesign(); return window.scrollTo(0, 0);
+    case "build": dsApplyTemplate(); DS.step = 4; if (dsPhotoOK()) { DS.mode = "photo"; DS.edit = false; } DS.say = L("Собрал комнату по вашим ответам. Меняйте мебель, цвет стен и пол — смета пересчитается.", "Javoblaringiz bo‘yicha xonani yig‘dim. Mebel, devor rangi va polni o‘zgartiring — smeta qayta hisoblanadi."); dsSave(); renderDesign(); return window.scrollTo(0, 0);
     case "ai-taste": return dsAIon() ? dsWish(L("Сделай комнату красивой по моему вкусу и ответам: подбери мебель, цвет стен и пол.", "Javoblarimga qarab xonani chiroyli qil: mebel, devor rangi va polni tanla.")) : (dsApplyTemplate(), DS.say = L("Подобрал комплект по вашим ответам.", "Javoblaringiz bo‘yicha to‘plam tanladim."), renderDesign());
     case "add": DS.picker = DS.picker ? null : {}; return renderDesign();
     case "cart": { const e2 = dsEstimate(DS); [...e2.mats, ...e2.furn].forEach(l => addToCart(l.p.id, null, l.q, true)); toast(L("Комната в корзине", "Xona savatda")); return openDrawer("cart"); }
     case "proj": { const e2 = dsEstimate(DS), pc = {}; [...e2.mats, ...e2.furn].forEach(l => { pc[l.p.id + "|" + bestOffer(l.p).store] = l.q; }); const nm = `${ROOMS().find(r => r[0] === DS.type)?.[1] || L("Комната", "Xona")} ${String(DS.W).replace(".", ",")}×${String(DS.L).replace(".", ",")}`; projects.unshift({ id: "pr" + Date.now().toString(36), name: nm, cart: pc, t: Date.now() }); LS.set("imorat.projects", projects); return toast(L(`Сохранено в «Проекты ремонта»: ${nm}`, `«Ta’mir loyihalari»ga saqlandi: ${nm}`)); }
     case "restart": DS = dsNew(); dsSave(); return renderDesign();
+    case "mode-photo": DS.mode = "photo"; DS.edit = false; dsSave(); return renderDesign();
+    case "photo-save": return dsPhotoSave();
     case "mode-3d": DS.mode = "3d"; dsSave(); return renderDesign();
     case "mode-plan": DS.mode = "plan"; dsSave(); return renderDesign();
     case "view-l": DS.view = ((DS.view || 0) + 3) % 4; dsSave(); return renderDesign();
@@ -5562,6 +5570,245 @@ function renderAdmin() {
   </div>`;
 }
 document.addEventListener("click", e => { const t = e.target.closest("[data-dashdays]"); if (!t || route.view !== "admin") return; dashDays = +t.dataset.dashdays; dash = null; renderAdmin(); });
+
+/* ================= Realistic room photo (WebGL2 ray marching) =================
+   The same furniture parts as the 3D view, rendered from inside the room at eye height:
+   sunlight and sky through the windows with shadows, a warm ceiling lamp, soft ambient occlusion,
+   wood / fabric / ceramic / metal materials, floor planks or tiles, painted or tiled walls.
+   Frames are accumulated with sub-pixel jitter for a smooth, noise-free picture. */
+const DS_PHOTO_FS = `#version 300 es
+precision highp float; precision highp int; precision highp sampler2D;
+out vec4 oc;
+uniform vec2 uRes, uJit; uniform vec3 uRoom, uCamP, uCamT; uniform float uFov;
+uniform sampler2D uParts, uItems; uniform int uNI, uNF;
+uniform vec3 uWallC[4]; uniform vec2 uWallT[4]; uniform vec3 uFloorC; uniform int uFloorK; uniform float uFloorT;
+uniform vec4 uWin[4]; uniform int uNW; uniform vec3 uSun; uniform vec3 uLamp; uniform float uLampOn;
+#define PI 3.14159265
+float hash(vec3 p){p=fract(p*.3183099+.1);p*=17.;return fract(p.x*p.y*p.z*(p.x+p.y+p.z));}
+float noise(vec3 x){vec3 i=floor(x),f=fract(x);f=f*f*(3.-2.*f);return mix(mix(mix(hash(i),hash(i+vec3(1,0,0)),f.x),mix(hash(i+vec3(0,1,0)),hash(i+vec3(1,1,0)),f.x),f.y),mix(mix(hash(i+vec3(0,0,1)),hash(i+vec3(1,0,1)),f.x),mix(hash(i+vec3(0,1,1)),hash(i+vec3(1,1,1)),f.x),f.y),f.z);}
+float fbm(vec3 p){float a=.5,s=0.;for(int i=0;i<4;i++){s+=a*noise(p);p*=2.03;a*=.5;}return s;}
+float sdBox(vec3 p,vec3 b,float r){vec3 q=abs(p)-b+r;return length(max(q,0.))+min(max(q.x,max(q.y,q.z)),0.)-r;}
+float sdCyl(vec3 p,float ra,float h,float r){vec2 d=vec2(length(p.xz)-ra+r,abs(p.y)-h+r);return min(max(d.x,d.y),0.)+length(max(d,0.))-r;}
+float sdEll(vec3 p,vec3 r){float k0=length(p/r),k1=length(p/(r*r));return k0*(k0-1.)/k1;}
+vec4 P(int i,int k){return texelFetch(uParts,ivec2(i*3+k,0),0);}
+float part(int i,vec3 p){vec4 a=P(i,0),b=P(i,1);vec3 q=p-a.xyz;int s=int(b.w+.5);
+ if(s==1)return sdCyl(q,b.x,b.y,min(a.w,min(b.x,b.y)*.9));
+ if(s==2)return sdEll(q,b.xyz)*.85;
+ return sdBox(q,b.xyz,min(a.w,min(b.x,min(b.y,b.z))*.95));}
+float bbox(vec3 p,vec3 mn,vec3 mx){vec3 c=(mn+mx)*.5,e=(mx-mn)*.5;vec3 q=abs(p-c)-e;return length(max(q,0.))+min(max(q.x,max(q.y,q.z)),0.);}
+/* furniture only (used for shadows) */
+vec2 furn(vec3 p,int nI){vec2 r=vec2(1e5,-1.);
+ for(int i=0;i<64;i++){if(i>=nI)break;vec4 a=texelFetch(uItems,ivec2(i*2,0),0),b=texelFetch(uItems,ivec2(i*2+1,0),0);
+  float db=bbox(p,a.xyz,b.xyz);if(db>r.x)continue;int s=int(a.w+.5),n=int(b.w+.5);
+  for(int j=0;j<48;j++){if(j>=n)break;float d=part(s+j,p);if(d<r.x)r=vec2(d,float(s+j)+10.);}}
+ return r;}
+vec2 room(vec3 p){vec3 R=uRoom;vec2 r=vec2(p.y,1.);
+ if(R.y-p.y<r.x)r=vec2(R.y-p.y,2.);if(p.x<r.x)r=vec2(p.x,3.);if(p.z<r.x)r=vec2(p.z,4.);if(R.x-p.x<r.x)r=vec2(R.x-p.x,5.);if(R.z-p.z<r.x)r=vec2(R.z-p.z,6.);
+ return r;}
+vec2 map(vec3 p){vec2 a=room(p),b=furn(p,uNI);return a.x<b.x?a:b;}
+vec3 nrm(vec3 p){vec2 e=vec2(.0008,-.0008);return normalize(e.xyy*map(p+e.xyy).x+e.yyx*map(p+e.yyx).x+e.yxy*map(p+e.yxy).x+e.xxx*map(p+e.xxx).x);}
+float shadowF(vec3 ro,vec3 rd,float tmax){float res=1.,t=.015,ph=1e10;for(int i=0;i<56;i++){float h=furn(ro+rd*t,uNF).x;float y=h*h/(2.*ph),d=sqrt(max(h*h-y*y,0.));res=min(res,6.*d/max(1e-4,t-y));ph=h;t+=clamp(h,.008,.18);if(res<.002||t>tmax)break;}res=clamp(res,0.,1.);return res*res*(3.-2.*res);}
+float ao(vec3 p,vec3 n){float o=0.,s=1.;for(int i=0;i<5;i++){float h=.02+.09*float(i);o+=(h-map(p+n*h).x)*s;s*=.75;}return clamp(1.-1.4*o,0.,1.);}
+/* where does a ray leave the room, and is that point inside a window? */
+float through(vec3 p,vec3 d){vec3 R=uRoom;float best=1e9;int w=-1;float u=0.,y=0.;
+ if(d.x<-1e-4){float t=-p.x/d.x;if(t<best){best=t;w=0;}} if(d.z<-1e-4){float t=-p.z/d.z;if(t<best){best=t;w=1;}}
+ if(d.x>1e-4){float t=(R.x-p.x)/d.x;if(t<best){best=t;w=2;}} if(d.z>1e-4){float t=(R.z-p.z)/d.z;if(t<best){best=t;w=3;}}
+ vec3 q=p+d*best;if(q.y<.85||q.y>2.2)return 0.;u=(w==0||w==2)?q.z:q.x;
+ for(int i=0;i<4;i++){if(i>=uNW)break;vec4 o=uWin[i];if(int(o.x+.5)==w&&u>o.y+.06&&u<o.z-.06)return 1.;}return 0.;}
+struct M{vec3 a;float r;float m;vec3 e;int k;};
+M mat(vec3 c,int t,vec3 p){M m;m.a=c;m.r=.55;m.m=0.;m.e=vec3(0.);m.k=0;
+ if(t==1){m.r=.45;m.a*=.96+.06*noise(p*40.);}
+ else if(t==2){m.r=.1;if(c.b>c.r&&c.r>.55){m.m=1.;m.a=vec3(.92,.94,.95);m.r=.02;}}
+ else if(t==3){m.r=.22;m.m=1.;}
+ else if(t==5){float g=fbm(vec3(p.x*1.2,p.y*38.,p.z*38.)+fbm(p*3.)*1.5);float g2=noise(vec3(p.x*.6,p.y*90.,p.z*90.));m.a=c*(.8+.28*g+.08*g2);m.r=.48;}
+ else if(t==6){m.a=c*(.85+.3*fbm(p*14.));m.r=.9;}
+ else if(t==7){m.r=.95;m.a*=.82+.3*noise(p*140.);m.k=2;}
+ else if(t==8){m.e=c*3.;m.a=c;}
+ else if(t==9){m.k=3;}
+ return m;}
+M surf(vec3 p,vec3 n,float id){
+ vec3 col=vec3(.8);M m;
+ if(id<1.5){ // floor
+  if(uFloorK==0){vec2 q=p.xz;float row=floor(q.x/.19);float off=hash(vec3(row,1.,7.))*1.4;float pl=floor((q.y+off)/1.2);float h=hash(vec3(row,pl,3.));
+   float g=fbm(vec3(q.x*2.,q.y*.35,row)*vec3(6.,1.,6.)*3.);m=mat(uFloorC*(.82+.3*h)*(.9+.2*g),0,p);m.r=.38;
+   float seam=min(smoothstep(.0,.006,abs(fract(q.x/.19)-.5)*.19-.0935+.006),smoothstep(0.,.006,abs(fract((q.y+off)/1.2)-.5)*1.2-.594+.006));m.a*=.55+.45*seam;}
+  else if(uFloorK==1){vec2 g=fract(p.xz/uFloorT)*uFloorT;float gr=step(.004,g.x)*step(.004,g.y)*step(g.x,uFloorT-.004)*step(g.y,uFloorT-.004);float h=hash(vec3(floor(p.xz/uFloorT),2.));
+   m=mat(uFloorC*(.95+.08*h)*(.94+.1*fbm(p*3.)),0,p);m.r=.22;m.a=mix(uFloorC*.6,m.a,gr);}
+  else {m=mat(uFloorC*(.93+.12*fbm(p*5.)),0,p);m.r=.6;}
+  return m;}
+ if(id<2.5){m=mat(vec3(.92,.92,.9),0,p);m.r=.9;return m;}
+ if(id<6.5){int w=int(id-3.+.5);vec3 c=uWallC[w];vec2 t=uWallT[w];float u=(w==0||w==2)?p.z:p.x;
+  if(p.y<.08){m=mat(vec3(.93,.92,.9),0,p);m.r=.4;return m;}
+  if(t.x>0.){vec2 g=fract(vec2(u,p.y)/t)*t;float gr=step(.003,g.x)*step(.003,g.y);float h=hash(vec3(floor(vec2(u,p.y)/t),5.));m=mat(c*(.96+.06*h),0,p);m.r=.15;m.a=mix(c*.7+.15,m.a,gr);return m;}
+  m=mat(c*(.98+.03*fbm(p*4.)),0,p);m.r=.85;return m;}
+ int i=int(id-10.+.5);vec4 cc=P(i,2),bb=P(i,1);vec3 q=p;if(bb.z>bb.x&&bb.z>=bb.y)q=p.zyx;else if(bb.y>bb.x&&bb.y>bb.z)q=p.yxz;return mat(cc.rgb,int(cc.w+.5),q);}
+vec3 sky(vec3 d){return mix(vec3(1.25,1.3,1.35),vec3(.75,.95,1.4),clamp(d.y,0.,1.))*2.2;}
+vec3 aces(vec3 x){return clamp((x*(2.51*x+.03))/(x*(2.43*x+.59)+.14),0.,1.);}
+void main(){
+ vec2 uv=(gl_FragCoord.xy+uJit-.5*uRes)/uRes.y;
+ vec3 ro=uCamP,ww=normalize(uCamT-ro),uu=normalize(cross(ww,vec3(0,1,0))),vv=cross(uu,ww);
+ vec3 rd=normalize(uv.x*uu+uv.y*vv+uFov*ww);
+ float t=0.;vec2 h=vec2(1.,0.);
+ for(int i=0;i<150;i++){h=map(ro+rd*t);if(h.x<.0005*(1.+t))break;t+=h.x*.9;if(t>40.)break;}
+ vec3 p=ro+rd*t,n=nrm(p);M m=surf(p,n,h.y);
+ vec3 col;
+ if(m.k==3){col=sky(rd)*1.1;}
+ else{
+  vec3 v=-rd;float ndv=max(dot(n,v),.001);vec3 F0=mix(vec3(.04),m.a,m.m);
+  float o=ao(p,n);vec3 diff=vec3(0.),spec=vec3(0.);
+  // sun through the window
+  vec3 L=-uSun;float ndl=max(dot(n,L),0.);
+  if(ndl>0.&&uNW>0){float vis=through(p+n*.01,L);if(vis>0.)vis*=shadowF(p+n*.01,L,8.);
+   vec3 hv=normalize(L+v);float a=max(m.r*m.r,.003),a2=a*a,nh=max(dot(n,hv),0.);float D=a2/(PI*pow(nh*nh*(a2-1.)+1.,2.));vec3 F=F0+(1.-F0)*pow(1.-max(dot(hv,v),0.),5.);
+   vec3 sc=vec3(1.,.93,.82)*5.5;diff+=sc*vis*ndl;spec+=sc*vis*ndl*D*F*.25;}
+  // soft sky light from each window (area light)
+  for(int i=0;i<4;i++){if(i>=uNW)break;vec4 o2=uWin[i];int w=int(o2.x+.5);float um=(o2.y+o2.z)*.5,wl=o2.z-o2.y;
+   vec3 c=w==0?vec3(0.,1.5,um):w==1?vec3(um,1.5,0.):w==2?vec3(uRoom.x,1.5,um):vec3(um,1.5,uRoom.z);
+   vec3 wn=w==0?vec3(1,0,0):w==1?vec3(0,0,1):w==2?vec3(-1,0,0):vec3(0,0,-1);
+   vec3 dl=c+wn*.25-p;float dist=length(dl);dl/=dist;float cw=max(dot(-dl,wn),0.),cn=max(dot(n,dl),0.);
+   float vis=shadowF(p+n*.01,dl,dist-.05);diff+=vec3(.85,.92,1.05)*1.6*wl*1.35*cw*cn*vis/(1.+dist*dist*.55);}
+  // ceiling lamp
+  if(uLampOn>0.){vec3 dl=uLamp-p;float dist=length(dl);dl/=dist;float nl=max(dot(n,dl),0.);float vis=shadowF(p+n*.01,dl,dist-.15);
+   vec3 lc=vec3(1.,.82,.6)*uLampOn*2.2/(.4+dist*dist);diff+=lc*nl*vis;vec3 hv=normalize(dl+v);float a=max(m.r*m.r,.003),a2=a*a,nh=max(dot(n,hv),0.);spec+=lc*nl*vis*a2/(PI*pow(nh*nh*(a2-1.)+1.,2.))*.25*F0;}
+  // bounce light from the room
+  vec3 amb=mix(vec3(.5,.47,.42),vec3(.62,.64,.68),n.y*.5+.5)*.55*o;
+  vec3 Fr=F0+(max(vec3(1.-m.r),F0)-F0)*pow(1.-ndv,5.);
+  vec3 envr=mix(vec3(.55,.55,.55),vec3(.8),reflect(rd,n).y*.5+.5);
+  if(m.r<.25){ // glossy and mirror surfaces reflect the room once
+   vec3 rr=reflect(rd,n),q0=p+n*.004;float t2=.01;vec2 h2=vec2(1.,0.);
+   for(int i=0;i<90;i++){h2=map(q0+rr*t2);if(h2.x<.001*(1.+t2))break;t2+=h2.x*.9;if(t2>30.)break;}
+   vec3 p2=q0+rr*t2,n2=nrm(p2);M m2=surf(p2,n2,h2.y);
+   envr=m2.k==3?sky(rr)*.8:m2.a*(1.-m2.m*.5)*(vec3(.62,.6,.56)+vec3(.3,.28,.24)*max(n2.y,0.)+uLampOn*vec3(.25,.2,.14))+m2.e;
+   col=m.a*(1.-m.m)*(diff+amb)+spec+envr*Fr*(m.m>.5?1.:.6);
+  } else col=m.a*(1.-m.m)*(diff+amb)+spec+envr*Fr*o*(m.m>.5?1.:.35)*(1.-m.r*.6);
+  if(m.k==2)col+=m.a*pow(1.-ndv,3.)*.2;
+  col+=m.e;
+ }
+ col=aces(col*.62);
+ vec2 q=gl_FragCoord.xy/uRes;col*=1.-.18*pow(length(q-.5)*1.25,2.);
+ oc=vec4(pow(col,vec3(1./2.2)),1.);
+}`;
+let dsPh = { cv: null, ctx: null, sig: "", url: "", job: 0, bad: false };
+function dsPhotoScene(d) {
+  const V = dsView(d), W = V.Wv, Lr = V.Lv, H = d.H;
+  const parts = [], items = [];
+  const cam = [Math.max(W * .62, W - .45), Math.min(1.5, H - .5), Math.max(Lr * .62, Lr - .45)];
+  const push = (list, item) => { if (!list.length) return; const s = parts.length; let mn = [1e9, 1e9, 1e9], mx = [-1e9, -1e9, -1e9];
+    for (const q of list) { parts.push(q); for (let k = 0; k < 3; k++) { mn[k] = Math.min(mn[k], q.c[k] - q.h[k] - .02); mx[k] = Math.max(mx[k], q.c[k] + q.h[k] + .02); } }
+    items.push({ s, n: list.length, mn, mx }); };
+  const hexLin = h => { const v = parseInt(String(h).replace("#", "").slice(0, 6), 16); return [(v >> 16) & 255, (v >> 8) & 255, v & 255].map(x => Math.pow(x / 255, 2.2)); };
+  const late = [];
+  for (const it of d.items) {
+    if (!it.ok || it.x == null) continue;
+    const list = [];
+    for (const f of dsPartsWorld(it, H)) { const c = V.xf(f.wx, f.wz), sw = V.v % 2 === 1; list.push({ c: [c[0], f.py, c[1]], h: [sw ? f.ez : f.ex, f.hy, sw ? f.ex : f.ez], s: f.q.s || 0, r: f.q.r || .01, col: hexLin(f.q.c), m: f.q.m || 1 }); }
+    // furniture right at the camera would block the view: leave it out of the photo
+    const mn = list.reduce((a, q) => [Math.min(a[0], q.c[0] - q.h[0]), Math.min(a[1], q.c[2] - q.h[2])], [1e9, 1e9]), mx = list.reduce((a, q) => [Math.max(a[0], q.c[0] + q.h[0]), Math.max(a[1], q.c[2] + q.h[2])], [-1e9, -1e9]);
+    const gap = Math.hypot(Math.max(mn[0] - cam[0], 0, cam[0] - mx[0]), Math.max(mn[1] - cam[2], 0, cam[2] - mx[1]));
+    const tall = list.some(q => q.c[1] + q.h[1] > 1.3);
+    if (gap < (tall ? 1.1 : .75) && it.place !== "ceiling" && it.place !== "rug") continue;
+    if (it.place === "ceiling") late.push(list); else push(list, it);
+  }
+  const nf = items.length; late.forEach(l => push(l, null)); // ceiling lights do not shadow their own light // furniture casts shadows; window and door frames do not (their light is handled separately)
+  // windows and the door as real frames on the walls
+  const wins = [];
+  for (const o of dsOpenings(d)) {
+    const a = V.xf(...o.p0), b = V.xf(...o.p1);
+    let w = -1; if (Math.abs(a[0]) < .01 && Math.abs(b[0]) < .01) w = 0; else if (Math.abs(a[1]) < .01 && Math.abs(b[1]) < .01) w = 1; else if (Math.abs(a[0] - W) < .01 && Math.abs(b[0] - W) < .01) w = 2; else if (Math.abs(a[1] - Lr) < .01 && Math.abs(b[1] - Lr) < .01) w = 3;
+    if (w < 0) continue;
+    const u0 = Math.min(w % 2 ? a[0] : a[1], w % 2 ? b[0] : b[1]), u1 = Math.max(w % 2 ? a[0] : a[1], w % 2 ? b[0] : b[1]), um = (u0 + u1) / 2, hw = (u1 - u0) / 2;
+    const at = (u, y, dp, hu, hy, hd, col, m) => { const pos = w === 0 ? [dp, y, u] : w === 1 ? [u, y, dp] : w === 2 ? [W - dp, y, u] : [u, y, Lr - dp]; const h = w % 2 ? [hu, hy, hd] : [hd, hy, hu]; return { c: pos, h, s: 0, r: .004, col: hexLin(col), m }; };
+    const list = [];
+    if (o.k === "win") {
+      wins.push([w, u0, u1, 0]);
+      list.push(at(um, 1.525, .0, hw - .02, .655, .006, "#ffffff", 9)); // glass shows the sky
+      for (const [uu, yy, hu, hy] of [[u0 + .03, 1.525, .03, .7], [u1 - .03, 1.525, .03, .7], [um, 2.18, hw, .03], [um, .88, hw, .03], [um, 1.525, .022, .66]]) list.push(at(uu, yy, .03, hu, hy, .035, "#f2f2ef", 2));
+      list.push(at(um, .84, .1, hw + .05, .02, .1, "#efeeea", 2));
+    } else {
+      list.push(at(um, 1.02, .02, hw - .03, 1.02, .02, "#b49274", 5), at(u0 + .02, 1.03, .03, .03, 1.03, .035, "#e9e5dd", 1), at(u1 - .02, 1.03, .03, .03, 1.03, .035, "#e9e5dd", 1), at(um, 2.07, .03, hw, .03, .035, "#e9e5dd", 1), at(u1 - .14, 1.0, .06, .06, .012, .012, "#c9ccce", 3));
+    }
+    push(list, null);
+  }
+  const wl = w => { const id = ["A", "B", "C", "D"].find(x => { const m = { A: [0, d.L / 2], B: [d.W / 2, 0], C: [d.W, d.L / 2], D: [d.W / 2, d.L] }[x], v = V.xf(...m); return w === 0 ? Math.abs(v[0]) < .01 : w === 1 ? Math.abs(v[1]) < .01 : w === 2 ? Math.abs(v[0] - W) < .01 : Math.abs(v[1] - Lr) < .01; }); return dsWallLook(d, id); };
+  const walls = [0, 1, 2, 3].map(wl);
+  const fl = d.floor ? swatchFloor(PROD[d.floor]) : { c: "#cdbfa6", kind: "plank" }, flp = PROD[d.floor], tsz = flp && /120×60|60×60/.test(flp.ru) ? .6 : .45;
+  // sun comes in through the first window, from above and a little from the side
+  let sun = [-.45, -.62, -.64];
+  if (wins.length) { const w = wins[0][0], inn = w === 0 ? [1, 0, 0] : w === 1 ? [0, 0, 1] : w === 2 ? [-1, 0, 0] : [0, 0, -1], side = w % 2 ? [1, 0, 0] : [0, 0, 1]; const v = [inn[0] * .72 + side[0] * .32, -.62, inn[2] * .72 + side[2] * .32], l = Math.hypot(...v); sun = v.map(x => x / l); }
+  const fix = items.filter(x => x.mn[1] > H - 1.2 && x.mx[1] > H - .15), lampY = fix.length ? Math.min(...fix.map(x => x.mn[1])) - .06 : H - .12;
+  const lamp = fix.length ? 1 : wins.length ? .35 : .9;
+  return { W, H, Lr, nf, parts, items, wins, walls: walls.map(x => ({ c: hexLin(x.c), t: x.tile ? [x.tile.tw, x.tile.th] : [0, 0] })), floor: { c: hexLin(fl.c), k: fl.kind === "plank" ? 0 : fl.kind === "tile" ? 1 : 2, t: tsz }, sun, lamp, lampPos: fix.length ? [(fix[0].mn[0] + fix[0].mx[0]) / 2, lampY, (fix[0].mn[2] + fix[0].mx[2]) / 2] : [W / 2, lampY, Lr / 2], cam, target: [W * .22, Math.min(1.05, H * .4), Lr * .22] };
+}
+function dsPhotoGL(cv) {
+  const gl = cv.getContext("webgl2", { preserveDrawingBuffer: true, antialias: false, premultipliedAlpha: false });
+  if (!gl) return null;
+  const sh = (t, src) => { const s = gl.createShader(t); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; };
+  const pr = gl.createProgram(); gl.attachShader(pr, sh(gl.VERTEX_SHADER, "#version 300 es\nin vec2 a;void main(){gl_Position=vec4(a,0.,1.);}")); gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, DS_PHOTO_FS)); gl.linkProgram(pr);
+  if (!gl.getProgramParameter(pr, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(pr));
+  gl.useProgram(pr);
+  const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+  const al = gl.getAttribLocation(pr, "a"); gl.enableVertexAttribArray(al); gl.vertexAttribPointer(al, 2, gl.FLOAT, false, 0, 0);
+  return { gl, pr, U: n => gl.getUniformLocation(pr, n) };
+}
+let dsGL2 = null;
+const dsPhotoOK = () => dsGL2 ??= (() => { try { const c = document.createElement("canvas"), g = c.getContext("webgl2"); g?.getExtension("WEBGL_lose_context")?.loseContext(); return !!g; } catch (e) { return false; } })();
+function dsPhotoSig(d) { return JSON.stringify([d.W, d.L, d.H, d.view || 0, d.win, d.doors, d.winWall, d.doorWall, d.doorPos, d.wall, d.floor, d.wtile, d.q?.walls, d.accent, d.items.map(i => [i.pid, i.x, i.z, i.rot, i.ok, i.n, i.noTop, i.k2])]); }
+function dsPhotoHTML() {
+  return `<div class="ds-ph" id="dsPh"><div class="ds-ph-st" id="dsPhSt" role="status">${L("Рендерим фото комнаты…", "Xona fotosi chizilmoqda…")}</div></div>
+    <div class="ds-ph-bar"><small class="mu">${L("Фото-вид: свет из окна, тени и материалы. Поверните комнату ⟲ ⟳, чтобы посмотреть из другого угла.", "Foto ko‘rinish: derazadan yorug‘lik, soyalar va materiallar. Boshqa burchakdan ko‘rish uchun ⟲ ⟳ bilan buring.")}</small><button class="btn btn-line" type="button" data-ds="photo-save">${ui("photo", 16)} ${L("Сохранить фото", "Fotoni saqlash")}</button></div>`;
+}
+async function dsPhotoStart() {
+  const box = $("#dsPh"), st = $("#dsPhSt"); if (!box) return;
+  const job = ++dsPh.job, sig = dsPhotoSig(DS);
+  if (!dsPh.cv) { dsPh.cv = document.createElement("canvas"); dsPh.cv.setAttribute("role", "img"); dsPh.cv.addEventListener("webglcontextlost", e => { e.preventDefault(); dsPh.cv = null; dsPh.ctx = null; dsPh.tex = null; dsPh.sig = ""; dsPh.url = ""; }); }
+  const cv = dsPh.cv; cv.setAttribute("aria-label", L(`Фото комнаты ${DS.W}×${DS.L} м`, `Xona fotosi ${DS.W}×${DS.L} m`)); box.prepend(cv);
+  if (dsPh.sig === sig && dsPh.url) { st.hidden = true; return; }
+  if (!dsPh.ctx && !dsPh.bad) { try { dsPh.ctx = dsPhotoGL(cv); } catch (e) { console.warn(e); } if (!dsPh.ctx) dsPh.bad = true; }
+  if (!dsPh.ctx) { st.textContent = L("Этот браузер не умеет рисовать фото-вид. Откройте сайт в свежем Chrome или Safari.", "Bu brauzer foto ko‘rinishni chiza olmaydi. Saytni yangi Chrome yoki Safari’da oching."); cv.remove(); return; }
+  const { gl, U } = dsPh.ctx, S = dsPhotoScene(DS), mob = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+  const bw = box.getBoundingClientRect().width || 800, w = Math.max(320, Math.min(mob ? 900 : 1280, Math.round(bw * Math.min(2, devicePixelRatio || 1)))), h = Math.round(w * .68);
+  cv.width = w; cv.height = h; gl.viewport(0, 0, w, h); dsPh.url = ""; dsPh.sig = "";
+  const tex = (unit, data, width) => { gl.activeTexture(gl.TEXTURE0 + unit); const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, Math.max(1, width), 1, 0, gl.RGBA, gl.FLOAT, data); return t; };
+  (dsPh.tex || []).forEach(t => gl.deleteTexture(t));
+  const pd = new Float32Array(Math.max(1, S.parts.length) * 12); S.parts.forEach((q, i) => pd.set([...q.c, q.r, ...q.h, q.s, ...q.col, q.m], i * 12));
+  const id = new Float32Array(Math.max(1, S.items.length) * 8); S.items.forEach((q, i) => id.set([...q.mn, q.s, ...q.mx, q.n], i * 8));
+  dsPh.tex = [tex(0, pd, S.parts.length * 3), tex(1, id, S.items.length * 2)];
+  gl.uniform1i(U("uParts"), 0); gl.uniform1i(U("uItems"), 1); gl.uniform1i(U("uNI"), Math.min(64, S.items.length)); gl.uniform1i(U("uNF"), Math.min(64, S.nf));
+  gl.uniform2f(U("uRes"), w, h); gl.uniform3f(U("uRoom"), S.W, S.H, S.Lr); gl.uniform3fv(U("uCamP"), S.cam); gl.uniform3fv(U("uCamT"), S.target); gl.uniform1f(U("uFov"), .95);
+  gl.uniform3fv(U("uWallC"), S.walls.flatMap(x => x.c)); gl.uniform2fv(U("uWallT"), S.walls.flatMap(x => x.t));
+  gl.uniform3fv(U("uFloorC"), S.floor.c); gl.uniform1i(U("uFloorK"), S.floor.k); gl.uniform1f(U("uFloorT"), S.floor.t);
+  const wn = S.wins.slice(0, 4); gl.uniform4fv(U("uWin"), [...wn.flat(), ...Array(16 - wn.length * 4).fill(0)]); gl.uniform1i(U("uNW"), wn.length);
+  gl.uniform3fv(U("uSun"), S.sun); gl.uniform3fv(U("uLamp"), S.lampPos); gl.uniform1f(U("uLampOn"), S.lamp);
+  // progressive: each pass adds a jittered frame (anti-aliasing); the picture is drawn in strips so the phone never freezes
+  const N = mob ? 3 : 6, jit = [[0, 0], [.33, -.33], [-.33, .33], [.33, .33], [-.33, -.33], [0, .45]];
+  gl.enable(gl.BLEND); gl.blendFunc(gl.CONSTANT_ALPHA, gl.ONE_MINUS_CONSTANT_ALPHA); gl.enable(gl.SCISSOR_TEST);
+  st.hidden = false;
+  let strip = mob ? 24 : 48, done = 0; const total = N * h;
+  for (let k = 0; k < N; k++) {
+    gl.blendColor(0, 0, 0, 1 / (k + 1)); gl.uniform2f(U("uJit"), jit[k][0], jit[k][1]);
+    for (let y = 0; y < h;) {
+      if (job !== dsPh.job) return;
+      const t0 = performance.now(), n = Math.min(strip, h - y);
+      gl.scissor(0, h - y - n, w, n); gl.drawArrays(gl.TRIANGLES, 0, 3);
+      const sync = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0); gl.flush(); // wait for the GPU without blocking the page
+      while (gl.getSyncParameter(sync, gl.SYNC_STATUS) !== gl.SIGNALED && !gl.isContextLost()) await new Promise(r => setTimeout(r, 4));
+      gl.deleteSync(sync);
+      const dt = performance.now() - t0; strip = Math.max(8, Math.min(256, Math.round(n * (dt > 0 ? 40 / dt : 2))));
+      y += n; done += n;
+      st.textContent = L(`Рендерим фото комнаты… ${Math.round(done * 100 / total)}%`, `Xona fotosi chizilmoqda… ${Math.round(done * 100 / total)}%`);
+      await new Promise(r => setTimeout(r, 0));
+    }
+    if (k === 0 && gl.isContextLost()) { st.textContent = L("Видеокарта не справилась. Попробуйте ещё раз или на компьютере.", "Videokarta uddalay olmadi. Qayta urinib ko‘ring yoki kompyuterda oching."); return; }
+  }
+  gl.disable(gl.SCISSOR_TEST);
+  if (job !== dsPh.job) return;
+  st.hidden = true; dsPh.sig = sig; dsPh.url = cv.toDataURL("image/jpeg", .92);
+}
+async function dsPhotoSave() {
+  if (!dsPh.url) return toast(L("Фото ещё рендерится", "Foto hali chizilmoqda"));
+  const blob = await (await fetch(dsPh.url)).blob();
+  await saveBlobFile(blob, "imorat-room-photo.jpg", L("Моя комната в AI-дизайнере Imorat", "Imorat AI dizaynerida xonam"));
+}
 
 /* ================= Router & render ================= */
 function parseHash() {
