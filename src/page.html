@@ -781,6 +781,14 @@ html.lock { overflow: hidden; }
 .proj .btn { padding: 8px 12px; font-size: 13px; }
 .save-proj { display: grid; grid-template-columns: 1fr auto; gap: 8px; background: var(--raised); border: 1px solid var(--line); border-radius: 12px; padding: 10px; }
 .save-proj input { border: 1.5px solid var(--line); border-radius: 9px; padding: 9px 10px; background: var(--surface); min-width: 0; }
+
+.cgroups { display: grid; gap: 10px; }
+.cgroup { display: grid; gap: 6px; }
+.cwrap { display: flex; flex-wrap: wrap; gap: 6px; }
+.calc-res > div > span:first-child { color: var(--muted); }
+.calc-res > div > span:last-child { text-align: right; }
+.calc-res > div > span:first-child { flex: 0 1 auto; }
+.calc .row3 .f label, .calc .row2 .f label { min-height: 2.6em; display: flex; align-items: end; line-height: 1.25; }
 </style>
 
 <header class="hdr" id="hdr"></header>
@@ -1532,7 +1540,7 @@ function renderHome() {
 
     <section class="sec" id="calc">
       <div class="sec-head"><div><h2 class="h-l">${L("Калькуляторы ремонта", "Ta’mir kalkulyatorlari")}</h2><p>${L("Посчитайте материалы и сразу добавьте в корзину", "Materiallarni hisoblang va darhol savatga qo‘shing")}</p></div></div>
-      <div class="calcs rv">${CALCS.slice(0, 3).map(c => calcCard(c, "h")).join("")}</div>
+      <div class="calcs rv">${["basement", "tile", "paint"].map(id => calcCard(CALCS.find(c => c.id === id), "h")).join("")}</div>
       <div class="calc-more"><button class="btn btn-line" type="button" data-act="w-calc">${ui("calc", 18)} ${L(`Все ${CALCS.length} калькуляторов в виджете`, `Vidjetda barcha ${CALCS.length} ta kalkulyator`)}</button></div>
     </section>
 
@@ -1641,7 +1649,79 @@ const CALCS = [
         return { rows: [[L("Площадь кладки", "Terish maydoni"), f1(a) + " м²"], [L("Газоблоков с запасом 5%", "5% zaxira bilan gazoblok"), n + L(" шт", " dona")], [L("Клей для газоблока", "Gazoblok yelimi"), gl + L(" меш.", " qop")]], items: [[PROD[6], n], [g, gl]] }; }
       const per = v.M === "brick05" ? 51 : 102, n = Math.ceil(a * per * 1.05), cem = Math.ceil(a * (v.M === "brick05" ? .2 : .45));
       return { rows: [[L("Площадь кладки", "Terish maydoni"), f1(a) + " м²"], [L("Кирпича с запасом 5%", "5% zaxira bilan g‘isht"), fmtN(n) + L(" шт", " dona")], [L("Цемент на раствор", "Qorishma uchun sement"), cem + L(" меш.", " qop")]], items: [[PROD[5], n], [byKey("cement"), cem]] }; } }
+  ,
+  { id: "basement", icon: "box", h: 32, ru: "Подвал (бетон и цемент)", uz: "Yerto‘la (beton va sement)", sru: "Пол, стены и перекрытие: бетон, цемент, песок, щебень, арматура", suz: "Pol, devor va yopma: beton, sement, qum, shag‘al, armatura",
+    f: [["L", "Длина внутри, м", "Ichki uzunlik, m", 6], ["W", "Ширина внутри, м", "Ichki eni, m", 4], ["H", "Глубина (высота стен), м", "Chuqurligi (devor balandligi), m", 2.5],
+        ["TW", "Толщина стен, см", "Devor qalinligi, sm", 20], ["TF", "Толщина пола, см", "Pol qalinligi, sm", 15],
+        ["R", "Перекрытие сверху", "Ustki yopma", "yes", [["yes", "Да, монолитное 15 см", "Ha, monolit 15 sm"], ["no", "Нет", "Yo‘q"]]],
+        ["G", "Марка бетона", "Beton markasi", "250", [["200", "М200 — стяжки, подготовка", "M200 — styajka, tayyorlov"], ["250", "М250 — подвал, фундамент", "M250 — yerto‘la, poydevor"], ["300", "М300 — нагруженные плиты", "M300 — yuklangan plitalar"]]],
+        ["MODE", "Бетон", "Beton", "self", [["self", "Мешаю сам (покупаю цемент)", "O‘zim qoraman (sement olaman)"], ["ready", "Заказываю готовый с завода", "Zavoddan tayyor buyurtma"]]]],
+    run: v => {
+      const tw = v.TW / 100, tf = v.TF / 100, Lo = v.L + 2 * tw, Wo = v.W + 2 * tw;
+      const vf = Lo * Wo * tf, vw = (Lo * Wo - v.L * v.W) * v.H, vr = v.R === "yes" ? Lo * Wo * .15 : 0, vol = (vf + vw + vr) * 1.05;
+      const mix = MIX[v.G] || MIX["250"], ready = v.MODE === "ready";
+      const cemKg = vol * mix[0], bags = Math.ceil(cemKg / 50), rebarKg = (vf + vr) * 90 + vw * 60, bars = Math.ceil(rebarKg / 10.4);
+      const dig = (Lo + 1.2) * (Wo + 1.2) * (v.H + tf + .3), wp = Lo * Wo + 2 * (Lo + Wo) * v.H;
+      const rows = [[L("Бетон всего (+5% запас)", "Jami beton (+5% zaxira)"), f1(vol) + " м³"],
+        [L("— пол / стены / перекрытие", "— pol / devor / yopma"), `${f1(vf)} / ${f1(vw)} / ${f1(vr)} м³`]];
+      if (ready) rows.push([L(`Готовый бетон М${v.G}`, `Tayyor beton M${v.G}`), f1(vol) + " м³"], [L("Миксеров по 7 м³", "7 m³ li mikserlar"), Math.ceil(vol / 7) + L(" рейс.", " reys")]);
+      else rows.push([L("Цемент М400", "Sement M400"), fmtN(cemKg) + L(" кг → ", " kg → ") + bags + L(" меш. 50 кг", " qop 50 kg")],
+        [L("Песок", "Qum"), f1(vol * mix[1]) + L(" т", " t")], [L("Щебень 5–20 мм", "Shag‘al 5–20 mm"), f1(vol * mix[2]) + L(" т", " t")], [L("Вода", "Suv"), fmtN(vol * mix[3]) + L(" л", " l")]);
+      rows.push([L("Арматура Ø12", "Armatura Ø12"), fmtN(rebarKg) + L(" кг → ", " kg → ") + bars + L(" прут. 11,7 м", " dona 11,7 m")],
+        [L("Выкопать грунта", "Qaziladigan tuproq"), f1(dig) + " м³"], [L("Гидроизоляция пола и стен", "Pol va devor gidroizolyatsiyasi"), f1(wp) + " м²"]);
+      return { rows, items: [[byKey("cement"), ready ? 0 : bags], [PROD[15], bars]],
+        note: L("Ориентировочный расчёт. Подвал — несущая конструкция: толщину стен, марку бетона и армирование должен подтвердить инженер-конструктор. Песок и щебень заказываются у поставщика нерудных материалов.", "Taxminiy hisob. Yerto‘la — yuk ko‘taruvchi qurilma: devor qalinligi, beton markasi va armaturani muhandis tasdiqlashi kerak. Qum va shag‘al yetkazuvchidan buyurtma qilinadi.") };
+    } },
+  { id: "found", icon: "brick", h: 24, ru: "Ленточный фундамент", uz: "Lentali poydevor", sru: "Бетон, цемент и продольная арматура по длине ленты", suz: "Lenta uzunligi bo‘yicha beton, sement va armatura",
+    f: [["P", "Длина всех лент, м", "Barcha lentalar uzunligi, m", 40], ["B", "Ширина ленты, см", "Lenta eni, sm", 40], ["D", "Высота ленты, см", "Lenta balandligi, sm", 80],
+        ["G", "Марка бетона", "Beton markasi", "250", [["200", "М200", "M200"], ["250", "М250", "M250"], ["300", "М300", "M300"]]]],
+    run: v => {
+      const vol = v.P * v.B / 100 * v.D / 100 * 1.05, mix = MIX[v.G] || MIX["250"], cem = Math.ceil(vol * mix[0] / 50);
+      const bars = Math.ceil(4 * v.P * 1.1 / 11.7), stir = Math.ceil(v.P / .4);
+      return { rows: [[L("Бетон (+5%)", "Beton (+5%)"), f1(vol) + " м³"], [L("Цемент М400", "Sement M400"), cem + L(" меш. 50 кг", " qop 50 kg")], [L("Песок / щебень", "Qum / shag‘al"), `${f1(vol * mix[1])} / ${f1(vol * mix[2])} т`],
+        [L("Арматура Ø12, 4 нитки", "Armatura Ø12, 4 ip"), bars + L(" прут.", " dona")], [L("Хомуты через 40 см", "Har 40 sm da xomut"), stir + L(" шт", " dona")], [L("Миксеров по 7 м³", "7 m³ li mikserlar"), Math.ceil(vol / 7)]],
+        items: [[byKey("cement"), cem], [PROD[15], bars]], note: L("Для фундамента дома нужен проект: глубина зависит от грунта и промерзания.", "Uy poydevori uchun loyiha kerak: chuqurlik grunt va muzlashga bog‘liq.") };
+    } },
+  { id: "concrete", icon: "bag", h: 210, ru: "Бетон и раствор", uz: "Beton va qorishma", sru: "Сколько цемента, песка и щебня на нужный объём", suz: "Kerakli hajmga qancha sement, qum va shag‘al",
+    f: [["V", "Объём, м³", "Hajm, m³", 1], ["T", "Что мешаем", "Nima qoramiz", "250", [["200", "Бетон М200", "Beton M200"], ["250", "Бетон М250", "Beton M250"], ["300", "Бетон М300", "Beton M300"], ["mortar", "Кладочный раствор 1:4", "Terish qorishmasi 1:4"], ["screed", "Стяжка 1:3", "Styajka 1:3"]]]],
+    run: v => { const m = MIX[v.T] || MIX["250"], kg = v.V * m[0], bags = Math.ceil(kg / 50);
+      return { rows: [[L("Цемент М400", "Sement M400"), fmtN(kg) + L(" кг → ", " kg → ") + bags + L(" меш.", " qop")], [L("Песок", "Qum"), f1(v.V * m[1]) + L(" т", " t")], ...(m[2] ? [[L("Щебень", "Shag‘al"), f1(v.V * m[2]) + L(" т", " t")]] : []), [L("Вода", "Suv"), fmtN(v.V * m[3]) + L(" л", " l")], [L("Пропорция по массе", "Massa bo‘yicha nisbat"), m[4]]],
+        items: [[byKey("cement"), bags]] }; } },
+  { id: "roof", icon: "roof", h: 6, ru: "Кровля из профнастила", uz: "Profnastil tom", sru: "Листы 2 м и кровельные саморезы", suz: "2 m listlar va tom shuruplari",
+    f: [["Ln", "Длина ската по коньку, м", "Qiyalik uzunligi, m", 10], ["S", "Длина ската (от конька до края), м", "Qiyalik eni, m", 5], ["N", "Скатов", "Qiyaliklar", "2", [["1", "1 — односкатная", "1 — bir qiyalikli"], ["2", "2 — двускатная", "2 — ikki qiyalikli"], ["4", "4 — вальмовая", "4 — to‘rt qiyalikli"]]]],
+    run: v => { const a = v.Ln * v.S * num(v.N), sh = Math.ceil(a / 2.0 * 1.07), scr = Math.ceil(a * 8 / 250);
+      return { rows: [[L("Площадь кровли", "Tom maydoni"), f1(a) + " м²"], [L("Листов 2 м (с нахлёстом)", "2 m list (ustma-ust)"), sh + L(" шт", " dona")], [L("Саморезы, 8 шт/м²", "Shuruplar, 8 dona/m²"), scr + L(" уп. по 250", " qadoq 250")]],
+        items: [[PROD[11], sh], [findRu("Саморезы кровельные"), scr]] }; } },
+  { id: "insul", icon: "insul", h: 46, ru: "Утепление", uz: "Issiqlik izolyatsiyasi", sru: "Минвата или пенопласт под нужную толщину", suz: "Kerakli qalinlikdagi mineral paxta yoki penoplast",
+    f: [["A", "Площадь, м²", "Maydon, m²", 50], ["T", "Толщина, мм", "Qalinlik, mm", "100", [["50", "50 мм", "50 mm"], ["100", "100 мм", "100 mm"], ["150", "150 мм", "150 mm"]]], ["M", "Материал", "Material", "wool", [["wool", "Минвата (стены, кровля)", "Mineral paxta (devor, tom)"], ["foam", "Пенопласт (фасад, пол)", "Penoplast (fasad, pol)"]]]],
+    run: v => { const layers = num(v.T) / 50;
+      if (v.M === "foam") { const n = Math.ceil(v.A * layers * 1.05), dw = Math.ceil(v.A * 5 * layers / 100); return { rows: [[L("Площадь × слоёв по 50 мм", "Maydon × 50 mm qatlam"), `${f1(v.A)} м² × ${layers}`], [L("Листов 1×1 м, 50 мм", "1×1 m list, 50 mm"), n + L(" шт", " dona")], [L("Дюбели-зонтики, 5 шт/м²", "Soyabon dyubellar, 5 dona/m²"), dw * 100 + L(" шт", " dona")]], items: [[PROD[10], n], [PROD[28], dw]] }; }
+      const packs = Math.ceil(v.A * layers / 6 * 1.05); return { rows: [[L("Площадь × слоёв по 50 мм", "Maydon × 50 mm qatlam"), `${f1(v.A)} м² × ${layers}`], [L("Упаковок по 6 м²", "6 m² li qadoqlar"), packs + L(" шт", " dona")], [L("Объём", "Hajm"), f1(v.A * num(v.T) / 1000) + " м³"]], items: [[byKey("wool"), packs]] }; } },
+  { id: "gkl", icon: "drywall", h: 120, ru: "Перегородка из гипсокартона", uz: "Gipsokarton to‘siq", sru: "Листы, профиль, саморезы и звукоизоляция", suz: "List, profil, shurup va tovush izolyatsiyasi",
+    f: [["Ln", "Длина, м", "Uzunligi, m", 4], ["H", "Высота, м", "Balandligi, m", 2.7], ["K", "Слоёв ГКЛ с каждой стороны", "Har tomonda GKL qatlami", "1", [["1", "1 слой", "1 qatlam"], ["2", "2 слоя (прочнее, тише)", "2 qatlam (mustahkam, jim)"]]], ["S", "Звукоизоляция", "Tovush izolyatsiyasi", "yes", [["yes", "Да, минвата 50 мм", "Ha, mineral paxta 50 mm"], ["no", "Нет", "Yo‘q"]]]],
+    run: v => { const a = v.Ln * v.H, k = num(v.K), sheets = Math.ceil(a * 2 * k / 3 * 1.1), cw = (Math.ceil(v.Ln / .6) + 1) * Math.ceil(v.H / 3), uw = Math.ceil(2 * v.Ln / 3), scr = Math.ceil(a * 2 * k * 30 / 400), wool = v.S === "yes" ? Math.ceil(a / 6) : 0;
+      return { rows: [[L("Площадь стены", "Devor maydoni"), f1(a) + " м²"], [L("Листов ГКЛ 1,2×2,5 м", "GKL listlar 1,2×2,5 m"), sheets + L(" шт", " dona")], [L("Стойки CW 75 (шаг 60 см)", "CW 75 tirgaklar (60 sm)"), cw + L(" шт", " dona")], [L("Направляющие ПН", "PN yo‘naltiruvchilar"), uw + L(" шт", " dona")], [L("Саморезы 3,5×25", "Shuruplar 3,5×25"), scr + L(" кг", " kg")], ...(wool ? [[L("Минвата", "Mineral paxta"), wool + L(" уп.", " qadoq")]] : [])],
+        items: [[PROD[7], sheets], [findRu("Профиль CW 75"), cw], [findRu("Профиль ПН 27×28"), uw], [findRu("Саморезы для гипсокартона"), scr], [byKey("wool"), wool]] }; } },
+  { id: "self", icon: "bag", h: 140, ru: "Наливной пол", uz: "Quyma pol", sru: "Около 1,6 кг смеси на м² на каждый мм", suz: "Har mm ga m² uchun ~1,6 kg qorishma",
+    f: [["A", "Площадь, м²", "Maydon, m²", 20], ["T", "Толщина, мм", "Qalinlik, mm", 10]],
+    run: v => { const kg = v.A * v.T * 1.6, bags = Math.ceil(kg / 25), pr = Math.ceil(v.A * .15 / 10);
+      return { rows: [[L("Смесь", "Qorishma"), fmtN(kg) + L(" кг", " kg")], [L("Мешков по 25 кг", "25 kg qoplar"), bags + L(" шт", " dona")], [L("Грунтовка", "Gruntovka"), pr + L(" кан.", " kan.")]], items: [[findRu("Наливной пол"), bags], [byKey("primer"), pr]] }; } },
+  { id: "heat", icon: "radiator", h: 6, ru: "Радиаторы и котёл", uz: "Radiatorlar va qozon", sru: "Мощность отопления по площади дома", suz: "Uy maydoni bo‘yicha isitish quvvati",
+    f: [["A", "Отапливаемая площадь, м²", "Isitiladigan maydon, m²", 100], ["Q", "Утепление дома", "Uy izolyatsiyasi", "100", [["80", "Хорошее, окна ПВХ", "Yaxshi, PVX derazalar"], ["100", "Среднее", "O‘rtacha"], ["130", "Слабое, старый дом", "Zaif, eski uy"]]]],
+    run: v => { const kw = v.A * num(v.Q) / 1000, sec = Math.ceil(kw * 1000 / 180), rads = Math.ceil(sec / 10), bkw = kw * 1.2;
+      const boiler = bkw <= 18 ? findRu("Газовый котёл двухконтурный 18") : bkw <= 24 ? byKey("boiler") : findRu("Газовый котёл двухконтурный 32");
+      return { rows: [[L("Теплопотери", "Issiqlik yo‘qotilishi"), f1(kw) + L(" кВт", " kVt")], [L("Секций по 180 Вт", "180 Vt seksiyalar"), sec + L(" шт", " dona")], [L("Радиаторов по 10 секций", "10 seksiyali radiatorlar"), rads + L(" шт", " dona")], [L("Котёл с запасом 20%", "20% zaxirali qozon"), f1(bkw) + L(" кВт", " kVt")]],
+        items: [[byKey("rad"), rads], [boiler, 1]], note: L("Подключение газового котла выполняет только газовая служба.", "Gaz qozonini faqat gaz xizmati ulaydi.") }; } },
+  { id: "ac", icon: "ac", h: 196, ru: "Кондиционер", uz: "Konditsioner", sru: "Мощность по площади комнаты и солнцу", suz: "Xona maydoni va quyoshga qarab quvvat",
+    f: [["A", "Площадь комнаты, м²", "Xona maydoni, m²", 25], ["S", "Сторона", "Tomon", "100", [["100", "Тень / север", "Soya / shimol"], ["120", "Солнечная / юг", "Quyoshli / janub"], ["140", "Верхний этаж, много солнца", "Yuqori qavat, ko‘p quyosh"]]]],
+    run: v => { const w = v.A * num(v.S), btu = w * 3.412;
+      const opts = [[9000, findRu("Кондиционер инверторный 9 000")], [12000, PROD[42]], [18000, findRu("Кондиционер инверторный 18 000")], [24000, findRu("Кондиционер инверторный 24 000")]];
+      const pick = opts.find(([b]) => b >= btu) || opts[3];
+      return { rows: [[L("Нужная мощность охлаждения", "Kerakli sovutish quvvati"), fmtN(w) + L(" Вт", " Vt") + " ≈ " + fmtN(btu) + " BTU"], [L("Подходит модель", "Mos model"), fmtN(pick[0]) + " BTU"]], items: [[pick[1], 1]], note: L("Установка мастером доступна в карточке кондиционера.", "Usta o‘rnatishi konditsioner kartochkasida mavjud.") }; } }
 ];
+/* Concrete and mortar mixes per 1 m³ on M400 cement: cement kg, sand t, gravel t, water L, ratio */
+const MIX = { "200": [245, .69, 1.17, 190, "1 : 2,8 : 4,8"], "250": [290, .65, 1.15, 185, "1 : 2,1 : 3,9"], "300": [330, .61, 1.12, 185, "1 : 1,9 : 3,7"], mortar: [330, 1.45, 0, 250, "1 : 4"], screed: [420, 1.4, 0, 220, "1 : 3"] };
+const CGROUPS = [["Фундамент и стены", "Poydevor va devorlar", ["basement", "found", "concrete", "wall"]], ["Отделка", "Pardozlash", ["plaster", "paint", "wp", "gkl", "tile"]], ["Полы", "Pollar", ["screed", "self", "lam"]], ["Кровля и утепление", "Tom va izolyatsiya", ["roof", "insul"]], ["Отопление и климат", "Isitish va iqlim", ["heat", "ac"]]];
 let calcOut = {};
 function calcCard(c, pre, withItems) {
   const fid = k => `${pre}-${c.id}-${k}`;
@@ -1651,7 +1731,8 @@ function calcCard(c, pre, withItems) {
   return `<div class="calc" style="--h:${c.h}" data-calcbox="${pre}:${c.id}"><div class="calc-h"><span class="ico ic">${ic(c.icon)}</span><div><b>${L(c.ru, c.uz)}</b><small>${L(c.sru, c.suz)}</small></div></div>
     <div class="${c.f.length === 3 ? "row3" : "row2"}">${fields}</div>
     <div class="calc-res" id="${pre}-${c.id}-res"></div>${withItems ? `<div class="calc-items" id="${pre}-${c.id}-items"></div>` : ""}
-    <button class="btn btn-primary" type="button" data-calc="${pre}:${c.id}">${ui("cart", 18)} ${L("Добавить всё в корзину", "Hammasini savatga")}</button></div>`;
+    <button class="btn btn-primary" type="button" data-calc="${pre}:${c.id}">${ui("cart", 18)} ${L("Добавить всё в корзину", "Hammasini savatga")}</button>
+    ${withItems ? `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><button class="btn btn-line" type="button" data-calcproj="${pre}:${c.id}">${ui("folder", 16)} ${L("В проект", "Loyihaga")}</button><button class="btn btn-line" type="button" data-calccopy="${pre}:${c.id}">${ui("check", 16)} ${L("Скопировать", "Nusxalash")}</button></div>` : ""}</div>`;
 }
 function runCalc(key) {
   const [pre, id] = key.split(":"), c = CALCS.find(x => x.id === id), box = document.querySelector(`[data-calcbox="${key}"]`);
@@ -2036,7 +2117,7 @@ function dProfile() {
 }
 
 /* ================= Widgets panel (left, opened by the ☰ button) ================= */
-let widOpen = false, wView = "menu", wCalc = "tile";
+let widOpen = false, wView = "menu", wCalc = "basement", wScrollCalc = false;
 function openWidgets(view = "menu", calc) { if (drawerView) closeDrawer(); if (aiOpen) closeAI(); closeModal(); closeMega(); wView = view; if (calc) wCalc = calc; widOpen = true; setPanel($("#wid"), true); renderWidgets(); showScrim(); syncLock(); }
 function closeWidgets() { widOpen = false; setPanel($("#wid"), false); showScrim(); syncLock(); }
 function renderWidgets() {
@@ -2048,7 +2129,7 @@ function renderWidgets() {
     const tile = (act, icon, ru, uz, sru, suz, cnt, extra = "") => `<button class="wtile ${extra}" type="button" ${act}><span class="wi">${ui(icon, extra ? 26 : 22)}</span><span style="display:grid;gap:3px"><b>${L(ru, uz)}</b><small>${L(sru, suz)}</small></span>${cnt ? `<span class="cnt">${cnt}</span>` : ""}${extra ? ui("chev", 18) : ""}</button>`;
     body.innerHTML = `<div class="wgrid">
       ${tile('data-act="ai"', "spark", "Usta AI", "Usta AI", "Подберёт материалы, сравнит и посчитает", "Materiallarni tanlaydi va hisoblaydi", 0, "feat alt")}
-      ${tile('data-wview="calc"', "calc", "Калькуляторы ремонта", "Ta’mir kalkulyatorlari", `${CALCS.length} калькуляторов: плитка, краска, обои, стяжка, кладка…`, `${CALCS.length} ta kalkulyator: kafel, bo‘yoq, gulqog‘oz, styajka…`, 0, "feat")}
+      ${tile('data-wview="calc"', "calc", "Калькуляторы ремонта", "Ta’mir kalkulyatorlari", `${CALCS.length} калькуляторов: подвал, фундамент, бетон, плитка, кровля, отопление…`, `${CALCS.length} ta kalkulyator: yerto‘la, poydevor, beton, kafel, tom, isitish…`, 0, "feat")}
       ${tile('data-wview="deliv"', "truck", "Доставка", "Yetkazish", "Какая машина приедет и сколько стоит", "Qaysi mashina va narxi")}
       ${tile('data-act="compare"', "filter", "Сравнение", "Solishtirish", "До 3 товаров рядом", "3 tagacha mahsulot", compare.length)}
       ${tile('data-act="favs"', "heart", "Избранное", "Saralanganlar", "Сохранённые товары", "Saqlangan mahsulotlar", favs.length)}
@@ -2065,12 +2146,12 @@ function renderWidgets() {
       : `<button class="btn btn-primary" type="button" data-act="login">${ui("user", 18)} ${L("Войти или зарегистрироваться", "Kirish yoki ro‘yxatdan o‘tish")}</button>`}`;
   } else if (wView === "calc") {
     const c = CALCS.find(x => x.id === wCalc) || CALCS[0];
-    body.innerHTML = `<div class="ctabs" role="group" aria-label="${L("Калькуляторы", "Kalkulyatorlar")}">${CALCS.map(x => `<button class="ctab" type="button" data-wcalc="${x.id}" aria-pressed="${x.id === c.id}" style="--h:${x.h}"><span class="ico ic">${ic(x.icon)}</span>${L(x.ru, x.uz)}</button>`).join("")}</div>
+    body.innerHTML = `<div class="cgroups">${CGROUPS.map(([gr, gu, ids]) => `<div class="cgroup"><span class="wsec">${L(gr, gu)}</span><div class="cwrap" role="group" aria-label="${L(gr, gu)}">${ids.map(id => CALCS.find(x => x.id === id)).filter(Boolean).map(x => `<button class="ctab" type="button" data-wcalc="${x.id}" aria-pressed="${x.id === c.id}" style="--h:${x.h}"><span class="ico ic">${ic(x.icon)}</span>${L(x.ru, x.uz)}</button>`).join("")}</div></div>`).join("")}</div>
       ${calcCard(c, "w", true)}
       <p class="calc-note">${L("Расчёт ориентировочный, с запасом на подрезку и бой. Перед покупкой сверьтесь с мастером.", "Hisob taxminiy, kesish va sinish uchun zaxira bilan. Xariddan oldin usta bilan maslahatlashing.")}</p>
       <button class="btn btn-line" type="button" data-act="ai-calc">${ui("spark", 18)} ${L("Проверить расчёт с Usta AI", "Hisobni Usta AI bilan tekshirish")}</button>`;
     bindCalcs("w");
-    setTimeout(() => body.querySelector(`.ctab[aria-pressed="true"]`)?.scrollIntoView({ inline: "center", block: "nearest" }), 30);
+    if (wScrollCalc) { wScrollCalc = false; setTimeout(() => body.querySelector(".calc")?.scrollIntoView({ block: "start", behavior: motionOK() ? "smooth" : "auto" }), 40); }
   } else if (wView === "deliv") {
     body.innerHTML = `<div class="est">
         <span class="eyebrow">${L("Калькулятор доставки", "Yetkazish kalkulyatori")}</span>
@@ -2249,6 +2330,7 @@ function aiRules() {
 - Пиши коротко: 2–6 предложений или короткий список через «- ». Без таблиц и заголовков. Жирным (**…**) выделяй максимум 1–2 ключевые вещи.
 - Газ, электрощит, несущие стены: советуй специалиста; у товаров с пометкой «установка» можно заказать мастера в карточке товара.
 - Доставка: Яндекс, тариф по общему весу из магазина: до 15 кг — курьер (40–60 мин), до 500 кг — грузовой малый кузов (Chevrolet Labo, 1–2 ч), тяжелее — большой кузов (Isuzu NQR). Из разных магазинов — отдельные доставки.
+- В меню «Виджеты» (кнопка ☰ слева) есть калькуляторы: подвал, ленточный фундамент, бетон и раствор, кладка, штукатурка, покраска, обои, гипсокартон, плитка, стяжка, наливной пол, ламинат, кровля, утепление, радиаторы и котёл, кондиционер. Для бетона на 1 м³ (цемент М400): М200 — 245 кг, М250 — 290 кг, М300 — 330 кг цемента; кладочный раствор 1:4 — 330 кг; стяжка 1:3 — 420 кг. Для несущих конструкций (подвал, фундамент) советуй проверить расчёт у инженера.
 - Есть комплекты со скидкой 5%: «Ванная под ключ», «Покраска комнаты», «Электрика квартиры», «Тёплый дом к зиме». Есть рассрочка на 12 месяцев от 500 000 сум и VIP-доставка к точному часу.
 
 Контекст покупателя: ${user ? `имя — ${user.name}; роль — ${user.role === "pro" ? "мастер/прораб (оптовые цены −3%)" : user.role === "seller" ? "представитель магазина" : "покупатель"}; ` : ""}район доставки — ${DIST[district].ru}; VIP — ${vip ? "да" : "нет"}; в корзине: ${cartTxt}.
@@ -2520,7 +2602,7 @@ document.addEventListener("change", e => {
   if (t.dataset && t.dataset.svc) { const id = +t.dataset.svc; if (t.checked) { services[id] = true; if (!qtyOf(id)) addToCart(id, null, 1, true); toast(L("Установка мастером добавлена в корзину", "Usta o‘rnatishi savatga qo‘shildi")); } else delete services[id]; LS.set("imorat.svc", services); }
 });
 document.addEventListener("click", e => {
-  const t = e.target.closest("[data-go],[data-act],[data-open],[data-add],[data-addo],[data-fav],[data-inc],[data-dec],[data-lang],[data-sub],[data-store],[data-q],[data-scroll],[data-calc],[data-clear],[data-order],[data-sst],[data-bundle],[data-ask],[data-askp],[data-aiadd],[data-aiall],[data-svcoff],[data-photo],[data-photodel],[data-cmp],[data-oauth],[data-authstep],[data-wview],[data-wcalc],[data-watch],[data-repeat],[data-projload],[data-projdel]");
+  const t = e.target.closest("[data-go],[data-act],[data-open],[data-add],[data-addo],[data-fav],[data-inc],[data-dec],[data-lang],[data-sub],[data-store],[data-q],[data-scroll],[data-calc],[data-clear],[data-order],[data-sst],[data-bundle],[data-ask],[data-askp],[data-aiadd],[data-aiall],[data-svcoff],[data-photo],[data-photodel],[data-cmp],[data-oauth],[data-authstep],[data-wview],[data-wcalc],[data-watch],[data-repeat],[data-projload],[data-projdel],[data-calccopy],[data-calcproj]");
   if (!t) return;
   const ds = t.dataset;
   if (ds.go !== undefined) return go(ds.go, ds.sub);
@@ -2532,7 +2614,10 @@ document.addEventListener("click", e => {
   if (ds.projload) { const pr = projects.find(x => x.id === ds.projload); if (pr) { Object.entries(pr.cart).forEach(([k, q]) => { if (PROD[k.split("|")[0]]) cart[k] = Math.max(cart[k] || 0, q); }); saveCart(); refreshCards(); toast(L(`Проект «${pr.name}» в корзине`, `«${pr.name}» loyihasi savatda`)); openDrawer("cart"); } return; }
   if (ds.projdel) { projects = projects.filter(x => x.id !== ds.projdel); LS.set("imorat.projects", projects); return renderDrawer(); }
   if (ds.wview) { wView = ds.wview; return renderWidgets(); }
-  if (ds.wcalc) { wCalc = ds.wcalc; return renderWidgets(); }
+  if (ds.wcalc) { wCalc = ds.wcalc; wScrollCalc = true; return renderWidgets(); }
+  if (ds.calccopy) { const key = ds.calccopy, c = CALCS.find(x => x.id === key.split(":")[1]); const res = [...document.querySelectorAll(`#${key.replace(":", "-")}-res > div`)].map(d => d.innerText.replace(/\s*\n\s*/g, ": ")).join("\n"); const txt = `${L(c.ru, c.uz)}\n${res}\n${(calcOut[key] || []).map(([p, q]) => `• ${pName(p)} × ${q}`).join("\n")}\nimorat`;
+    navigator.clipboard?.writeText(txt).then(() => toast(L("Расчёт скопирован — можно отправить мастеру", "Hisob nusxalandi — ustaga yuborish mumkin")), () => toast(L("Не удалось скопировать, выделите текст вручную", "Nusxalab bo‘lmadi, matnni qo‘lda belgilang"))) ?? toast(L("Копирование недоступно в этом окне", "Bu oynada nusxalash mavjud emas")); return; }
+  if (ds.calcproj) { const key = ds.calcproj, c = CALCS.find(x => x.id === key.split(":")[1]), items = calcOut[key] || []; if (!items.length) return toast(L("Нечего сохранять", "Saqlash uchun hech narsa yo‘q")); const pc = {}; items.forEach(([p, q]) => { pc[p.id + "|" + bestOffer(p).store] = q; }); const nm = L(c.ru, c.uz) + " · " + new Date().toLocaleDateString("ru-RU"); projects.unshift({ id: "pr" + Date.now().toString(36), name: nm, cart: pc, t: Date.now() }); LS.set("imorat.projects", projects); return toast(L(`Сохранено в «Проекты ремонта»`, `«Ta’mir loyihalari»ga saqlandi`)); }
   if (ds.oauth) { auth.via = ds.oauth; auth.step = "oauth"; return renderAuth(); }
   if (ds.authstep) { auth.step = ds.authstep; auth.err = ""; return renderAuth(); }
   if (ds.cmp) { toggleCompare(+ds.cmp); return openProduct(+ds.cmp); }
