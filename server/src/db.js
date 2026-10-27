@@ -48,6 +48,7 @@ CREATE INDEX IF NOT EXISTS master_requests_m ON master_requests(master_id);
 CREATE INDEX IF NOT EXISTS master_requests_u ON master_requests(user_id);
 CREATE TABLE IF NOT EXISTS points_log(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT NOT NULL, delta INTEGER NOT NULL, reason TEXT NOT NULL, ref TEXT, created_at INTEGER NOT NULL);
 CREATE INDEX IF NOT EXISTS points_log_u ON points_log(user_id, ref);
+CREATE TABLE IF NOT EXISTS events_daily(day TEXT NOT NULL, product_id INTEGER NOT NULL, store_id TEXT NOT NULL DEFAULT '', kind TEXT NOT NULL, n INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(day, product_id, store_id, kind));
 CREATE TABLE IF NOT EXISTS tg_links(token TEXT PRIMARY KEY, user_id TEXT NOT NULL, expires_at INTEGER NOT NULL);
 CREATE INDEX IF NOT EXISTS reviews_store ON reviews(store_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS orders_user ON orders(user_id, created_at DESC);

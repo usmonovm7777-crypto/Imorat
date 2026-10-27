@@ -787,6 +787,13 @@ html.ds-dragging, html.ds-dragging * { cursor: grabbing !important; user-select:
 .ds-wish { display: flex; gap: 6px; }
 .ds-wish input { flex: 1; min-width: 0; border: 1.5px solid var(--line); border-radius: 12px; padding: 10px 12px; background: var(--raised); font: inherit; color: inherit; }
 .ds-sw { display: flex; flex-wrap: wrap; gap: 6px; }
+.st { display: grid; gap: 12px; }
+.st-chart-w { display: grid; gap: 4px; }
+.st-chart { width: 100%; height: 140px; display: block; }
+.st-ax { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); }
+.st-leg { display: flex; gap: 14px; font-size: 12px; color: var(--muted); }
+.st-leg .lg { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; background: color-mix(in srgb, var(--accent) 35%, var(--surface)); }
+.st-leg .lg.c { background: var(--accent); }
 .bonus-card { display: grid; gap: 8px; padding: 14px; border-radius: 16px; border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--line)); background: color-mix(in srgb, var(--accent) 7%, var(--surface)); }
 .bonus-card .bc-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
 .bonus-card .bc-top b { font-size: 26px; color: var(--accent); }
@@ -2222,7 +2229,7 @@ function relatedOf(p) {
 }
 function openProduct(id) {
   const p = PROD[id]; if (!p) return;
-  viewed = [p.id, ...viewed.filter(x => x !== p.id)].slice(0, 10); LS.set("imorat.viewed", viewed);
+  viewed = [p.id, ...viewed.filter(x => x !== p.id)].slice(0, 10); LS.set("imorat.viewed", viewed); trackEv({ t: "view", id: p.id });
   const c = CAT[p.cat], offers = [...p.offers].sort((a, b) => a.price - b.price), fav = favs.includes(p.id);
   const t = pickTariff(p.kg), near = offers[0], dist = km(STORE[near.store].d, district), mp = offers[0].price;
   const stockTxt = n => n > 20 ? `<span class="pill ok">${L("Много", "Ko‘p")}</span>` : n > 0 ? `<span class="pill warn">${n} ${unitName("pcs")}</span>` : `<span class="pill mute">${L("Под заказ", "Buyurtmaga")}</span>`;
@@ -2258,7 +2265,7 @@ function closeModal() { setPanel($("#modal"), false); syncLock(); }
 function addToCart(id, store, q = 1, silent) {
   const p = PROD[id]; if (!p) return;
   const s = store || bestOffer(p).store, k = p.id + "|" + s;
-  cart[k] = (cart[k] || 0) + q; saveCart();
+  cart[k] = (cart[k] || 0) + q; saveCart(); trackEv({ t: "cart", id: p.id, store: s });
   if (!silent) toast(`${pName(p)} — ${L("в корзине", "savatda")}`);
   refreshCards();
 }
@@ -3361,6 +3368,7 @@ function renderSellerApi() {
         <td><span class="pill ${c}">${lb}</span>${o.status === "new" && o.accept_by ? `<br><small data-until="${o.accept_by}"></small>` : ""}${o.status === "cancelled" && o.cancel_reason ? `<br><small style="color:var(--muted)">${CANCEL_TXT()[o.cancel_reason] || ""}</small>` : ""}</td><td style="white-space:nowrap">${o.next.map(n => `<button class="btn ${n === "cancelled" ? "btn-line" : "btn-primary"}" type="button" data-shipst="${o.ship_id}|${n}" style="margin:2px 0">${nx[n]}</button>`).join(" ")}</td></tr>`; }).join("")}
       </tbody></table></div>` : `<p style="color:var(--muted);margin:0">${L("Заказов пока нет. Когда покупатель оформит заказ с вашими товарами, он появится здесь.", "Hozircha buyurtmalar yo‘q. Xaridor mahsulotlaringiz bilan buyurtma bersa, shu yerda chiqadi.")}</p>`}</div>
     ${sellerExtraHTML(sellerData)}
+    ${sellerStatsHTML(s.id)}
     <div style="margin-top:12px">${storeCardHTML(s)}</div>
     ${importHTML(s.id)}
     <div class="panel" style="margin-top:12px"><div class="panel-h"><h2 class="h-m">${L("Товары, цены и остатки", "Mahsulotlar, narxlar va qoldiqlar")}</h2><span style="font-size:13px;color:var(--muted)">${L("Изменения сразу видны покупателям", "O‘zgarishlar darhol xaridorlarga ko‘rinadi")}</span></div>
@@ -4561,6 +4569,7 @@ function renderSeller() {
         ${ords.map(o => `<tr><td><b class="mono">${o.num}</b><br><small style="color:var(--muted)">${esc(o.buyer)} · ${L(DIST[o.d].ru, DIST[o.d].uz)}</small></td><td style="min-width:180px;font-size:13px">${esc(o.items)}<br><small style="color:var(--muted)">${o.tariff ? tName(o.tariff) : L("Самовывоз", "Olib ketish")}</small></td><td class="r">${fmt(o.sum)}</td><td><span class="pill ${stLabel[o.st][1]}">${stLabel[o.st][0]}</span></td><td>${nextBtn[o.st] ? `<button class="btn ${o.st === "new" ? "btn-primary" : "btn-line"}" type="button" data-sst="${o.num}|${s.id}|${o.st}">${nextBtn[o.st]}</button>` : ""}</td></tr>`).join("")}
         </tbody></table></div></div>
     </div>
+    ${sellerStatsHTML(s.id)}
     ${importHTML(s.id)}
     <div class="panel" style="margin-top:12px"><div class="panel-h"><h2 class="h-m">${L("Товары, фото и остатки", "Mahsulotlar, rasmlar va qoldiqlar")}</h2><span style="font-size:13px;color:var(--muted)">${L("Загрузите реальное фото — оно сразу заменит изображение на витрине", "Haqiqiy rasm yuklang — vitrinadagi tasvir darhol almashadi")}</span></div>
       <div class="tbl-wrap"><table><thead><tr><th>${L("Товар", "Mahsulot")}</th><th>${L("Категория", "Toifa")}</th><th class="r">${L("Ваша цена", "Narxingiz")}</th><th class="r">${L("Мин. на рынке", "Bozordagi min.")}</th><th class="r">${L("Остаток", "Qoldiq")}</th></tr></thead><tbody>
@@ -4953,6 +4962,69 @@ document.addEventListener("click", async e => {
   const text = L(`Стройматериалы из магазинов Ташкента с доставкой — Imorat. По моему коду ${code} получите ${fmt(c.welcome)} бонусов на первый заказ: ${url}`, `Toshkent do‘konlaridan qurilish materiallari yetkazib berish bilan — Imorat. Mening ${code} kodim bilan birinchi buyurtmaga ${fmt(c.welcome)} bonus oling: ${url}`);
   try { if (navigator.share) { await navigator.share({ title: "Imorat", text }); return; } } catch (er) { if (er?.name === "AbortError") return; }
   try { await navigator.clipboard.writeText(text); toast(L("Приглашение скопировано — отправьте другу", "Taklif nusxalandi — do‘stingizga yuboring")); } catch (er) { toast(code); }
+});
+
+/* ================= Shop analytics for sellers =================
+   Anonymous counters: product views and add-to-cart per store (no personal data). */
+let evQ = [], evT = 0, sellerStats = null, sellerStatsBusy = false, statsSort = "views";
+function trackEv(e) {
+  if (!API) { const st = LS.get("imorat.evDemo", {}), k = e.t + "|" + e.id + (e.store ? "|" + e.store : ""); st[k] = (st[k] || 0) + 1; LS.set("imorat.evDemo", st); return; }
+  evQ.push(e); if (evQ.length >= 20) evFlush(); else if (!evT) evT = setTimeout(evFlush, 8000);
+}
+function evFlush() {
+  clearTimeout(evT); evT = 0; if (!evQ.length || !API) return;
+  const body = JSON.stringify({ events: evQ.splice(0, 50) });
+  try { fetch(API + "/api/events", { method: "POST", body, keepalive: true, headers: { "content-type": "text/plain" } }).catch(() => {}); } catch (e) { /* analytics never breaks the page */ }
+}
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") evFlush(); });
+async function loadSellerStats() {
+  if (sellerStatsBusy) return; sellerStatsBusy = true;
+  try { sellerStats = await api("GET", "/api/seller/stats?days=30"); } catch (e) { sellerStats = { error: apiErr(e) }; }
+  sellerStatsBusy = false; if (route.view === "seller") renderSeller();
+}
+/* Demo numbers: steady sample traffic plus what was really clicked in this browser */
+function demoSellerStats(sid) {
+  const ev = LS.get("imorat.evDemo", {}), mine = PRODUCTS.filter(p => p.offers.some(o => o.store === sid)), ords = sellerOrders(sid);
+  const products = mine.map(p => {
+    const my = p.offers.find(o => o.store === sid).price, rivals = p.offers.filter(o => o.store !== sid), mn = rivals.length ? Math.min(...rivals.map(o => o.price)) : null;
+    const base = STORE[sid]?.mine ? 0 : (p.id * 37) % 90 + (p.hit ? 120 : 10);
+    const views = base + (ev["view|" + p.id] || 0), carts = Math.round(base * .12) + (ev["cart|" + p.id + "|" + sid] || 0);
+    const o = ords.filter(x => x.items.includes(pName(p))).length;
+    return { id: p.id, ru: p.ru, uz: p.uz, price: my, stock: stockOf(p, sid), views, carts, orders: o, revenue: o * my, market_min: mn, rivals: rivals.length, diff: mn ? Math.round((my - mn) * 1000 / mn) / 10 : null };
+  });
+  const tv = products.reduce((a, x) => a + x.views, 0), seed = sid.length;
+  const series = Array.from({ length: 30 }, (_, i) => { const v = Math.round(tv / 30 * (0.6 + ((i * 7 + seed) % 9) / 10) * (i % 7 >= 5 ? 1.3 : 1)); return { day: new Date(Date.now() - (29 - i) * 86400000).toISOString().slice(0, 10), views: v, carts: Math.round(v * .11) }; });
+  const sum = k => products.reduce((a, x) => a + x[k], 0), wr = products.filter(x => x.market_min != null);
+  return { demo: true, days: 30, series, products, totals: { views: sum("views"), carts: sum("carts"), orders: sum("orders"), revenue: sum("revenue") }, prices: { compared: wr.length, cheapest: wr.filter(x => x.price <= x.market_min).length, pricier: wr.filter(x => x.diff > 5).length } };
+}
+function sellerStatsHTML(sid) {
+  const S = API ? sellerStats : demoSellerStats(sid);
+  if (API && !S) { loadSellerStats(); return `<div class="panel" style="margin-top:12px"><p class="mu" style="margin:0">${L("Загружаем статистику…", "Statistika yuklanmoqda…")}</p></div>`; }
+  if (S.error) return `<div class="panel" style="margin-top:12px"><p class="mu" style="margin:0">${esc(S.error)}</p></div>`;
+  const t = S.totals, conv = t.views ? Math.round(t.carts * 1000 / t.views) / 10 : 0, mx = Math.max(1, ...S.series.map(x => x.views));
+  const W = 600, H = 120, bw = W / S.series.length;
+  const chart = `<svg class="chart st-chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="${L("Просмотры по дням", "Kunlik ko‘rishlar")}">${S.series.map((x, i) => { const h = Math.round(x.views / mx * H), hc = Math.round(x.carts / mx * H); return `<rect class="bar" x="${(i * bw + bw * .15).toFixed(1)}" y="${H - h}" width="${(bw * .7).toFixed(1)}" height="${h}" rx="2"><title>${x.day}: ${x.views} / ${x.carts}</title></rect><rect class="bar today" x="${(i * bw + bw * .15).toFixed(1)}" y="${H - hc}" width="${(bw * .7).toFixed(1)}" height="${hc}" rx="2"/>`; }).join("")}</svg><div class="st-ax"><span>${S.series[0].day.slice(5).split("-").reverse().join(".")}</span><span>${L("сегодня", "bugun")}</span></div>`;
+  const sorted = [...S.products].sort((a, b) => statsSort === "price" ? (b.diff ?? -999) - (a.diff ?? -999) : statsSort === "carts" ? b.carts - a.carts : b.views - a.views).slice(0, 12);
+  const hint = x => x.market_min == null ? `<span class="mu">${L("только у вас", "faqat sizda")}</span>` : x.price <= x.market_min ? `<span style="color:var(--ok)">${L("дешевле всех", "eng arzon")}</span>` : `<span style="color:${x.diff > 5 ? "var(--signal)" : "var(--muted)"}">+${String(x.diff).replace(".", ",")}%</span><br><small class="mu">${L(`рынок от ${fmt(x.market_min)}`, `bozorda ${fmt(x.market_min)}dan`)}</small>`;
+  const pricier = S.products.filter(x => x.diff > 5 && x.views > 0).sort((a, b) => b.views - a.views)[0];
+  return `<div class="panel st" style="margin-top:12px"><div class="panel-h"><h2 class="h-m">${ui("calc", 18)} ${L("Статистика за 30 дней", "30 kunlik statistika")}</h2>${S.demo ? `<span class="pill mute">${L("демо-данные", "demo ma’lumot")}</span>` : `<button class="btn btn-line" type="button" data-act="stats-reload">${ui("repeat", 15)}</button>`}</div>
+    <div class="kpis st-k">
+      <div class="kpi"><span>${L("Просмотры товаров", "Mahsulot ko‘rishlari")}</span><b>${fmtN(t.views)}</b><small>${L("сколько раз открыли карточки", "kartochkalar necha marta ochildi")}</small></div>
+      <div class="kpi"><span>${L("Добавили в корзину", "Savatga qo‘shildi")}</span><b>${fmtN(t.carts)}</b><small>${conv.toString().replace(".", ",")}% ${L("от просмотров", "ko‘rishlardan")}</small></div>
+      <div class="kpi"><span>${L("Заказов с товарами", "Mahsulotli buyurtmalar")}</span><b>${fmtN(t.orders)}</b><small>${t.carts ? Math.round(t.orders * 100 / t.carts) : 0}% ${L("от корзин", "savatlardan")}</small></div>
+      <div class="kpi"><span>${L("Цены против рынка", "Narxlar bozorga nisbatan")}</span><b>${S.prices.cheapest}/${S.prices.compared}</b><small style="color:${S.prices.pricier ? "var(--signal)" : "var(--ok)"}">${S.prices.pricier ? L(`дороже рынка на 5%+: ${S.prices.pricier}`, `bozordan 5%+ qimmat: ${S.prices.pricier}`) : L("вы дешевле или как все", "siz arzonroq yoki teng")}</small></div>
+    </div>
+    <div class="st-chart-w">${chart}<div class="st-leg"><span><i class="lg v"></i>${L("просмотры", "ko‘rishlar")}</span><span><i class="lg c"></i>${L("в корзину", "savatga")}</span></div></div>
+    ${pricier ? `<div class="note">${ui("spark", 14)} ${L(`«${esc(pricier.ru)}» смотрят чаще всего, но у вас дороже рынка на ${String(pricier.diff).replace(".", ",")}%. Если снизить цену до ${fmt(pricier.market_min)}, покупатели увидят вас первым в списке магазинов.`, `«${esc(uzNew(pricier.uz))}» eng ko‘p ko‘riladi, lekin sizda bozordan ${String(pricier.diff).replace(".", ",")}% qimmat. Narxni ${fmt(pricier.market_min)} gacha tushirsangiz, xaridorlar sizni do‘konlar ro‘yxatida birinchi ko‘radi.`)}</div>` : ""}
+    <div class="seg" role="group" aria-label="${L("Сортировка", "Saralash")}" style="justify-self:start">${[["views", L("Просмотры", "Ko‘rishlar")], ["carts", L("Корзины", "Savatlar")], ["price", L("Цена vs рынок", "Narx vs bozor")]].map(([k, tx]) => `<button type="button" data-statsort="${k}" aria-pressed="${statsSort === k}">${tx}</button>`).join("")}</div>
+    <div class="tbl-wrap"><table><thead><tr><th>${L("Товар", "Mahsulot")}</th><th class="r">${L("Просм.", "Ko‘r.")}</th><th class="r">${L("Корз.", "Sav.")}</th><th class="r">${L("Заказы", "Buyurt.")}</th><th class="r">${L("Ваша цена", "Narxingiz")}</th><th class="r">${L("Рынок", "Bozor")}</th></tr></thead><tbody>
+    ${sorted.map(x => `<tr><td>${esc(L(x.ru, x.uz))}</td><td class="r num">${x.views}</td><td class="r num">${x.carts}</td><td class="r num">${x.orders}</td><td class="r num">${fmt(x.price)}</td><td class="r">${hint(x)}</td></tr>`).join("")}
+    </tbody></table></div></div>`;
+}
+document.addEventListener("click", e => {
+  const t = e.target.closest("[data-statsort],[data-act='stats-reload']"); if (!t) return;
+  if (t.dataset.statsort) { statsSort = t.dataset.statsort; return renderSeller(); }
+  sellerStats = null; loadSellerStats();
 });
 
 /* ================= Router & render ================= */

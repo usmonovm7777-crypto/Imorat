@@ -16,6 +16,7 @@ import { createNotify } from "./notify.js";
 import { newSecret, checkTotp, otpauthUrl } from "./totp.js";
 import { registerMasters } from "./masters.js";
 import { createBonus } from "./bonus.js";
+import { registerStats } from "./stats.js";
 
 export const STEPS = {
   yandex: ["new", "assembling", "searching", "to_store", "on_way", "delivered"],
@@ -112,7 +113,7 @@ export function createApp(cfg, log = console) {
   r.post("/api/auth/otp/send", async req => {
     const b = await readJson(req);
     const phone = parsePhone(b.phone);
-    lim.hit("otp-ip:" + req.ip, 20, 3600_000);
+    lim.hit("otp-ip:" + req.ip, cfg.otpPerIpHour, 3600_000);
     const code = issueOtp(db, cfg.jwtSecret, phone);
     const out = await sms.sendCode(phone, code);
     return { sent: true, retry_in: 60, ...(out.dev ? { dev_code: code } : {}) };
@@ -675,6 +676,7 @@ export function createApp(cfg, log = console) {
 
   registerMasters({ r, db, cfg, ref, need, needAdmin, audit, lim, tg, push, sms, log });
   bonus.routes(r, need, lim);
+  registerStats({ r, db, lim, needSeller });
 
   /* ---------- HTTP server ---------- */
   const server = createServer(async (req, res) => {

@@ -67,7 +67,7 @@ before(async () => {
   const cfg = loadConfig({
     JWT_SECRET: "test-secret", DB_PATH: join(dir, "t.db"), UPLOADS_DIR: join(dir, "up"), ADMIN_PHONES: "998901111111",
     GOOGLE_CLIENT_ID: "gid", GOOGLE_JWKS_URL: fakeBase + "/jwks", ANTHROPIC_API_KEY: "sk-test", ANTHROPIC_URL: fakeBase + "/ai", SMS_MODE: "dev",
-    TELEGRAM_BOT_TOKEN: "TGTOKEN", TELEGRAM_API_URL: fakeBase + "/tg", TELEGRAM_POLL_TIMEOUT: "0", BACKUP_DIR: join(dir, "bk")
+    TELEGRAM_BOT_TOKEN: "TGTOKEN", TELEGRAM_API_URL: fakeBase + "/tg", TELEGRAM_POLL_TIMEOUT: "0", BACKUP_DIR: join(dir, "bk"), OTP_PER_IP_HOUR: "200"
   });
   app = createApp(cfg, { info() {}, warn() {}, error: console.error });
   await new Promise(r => app.listen(0, "127.0.0.1", r));
@@ -426,4 +426,22 @@ test("Bonus points: referral welcome, spend at checkout, cashback on delivery, r
   assert.equal((await call("GET", "/api/me/bonus", null, b)).data.points, 950);
   assert.equal((await call("POST", `/api/orders/${o2.data.order.num}/cancel`, null, b)).status, 200);
   assert.equal((await call("GET", "/api/me/bonus", null, b)).data.points, 2950);
+});
+
+test("Seller statistics: anonymous views and cart adds, orders, price position", async () => {
+  const seller = (await login("997770011")).data.token;
+  const st = await call("POST", "/api/seller/store", { name: "Stat Market", descr: "Магазин для проверки статистики продавца", cats: ["build"], phone: "712009988", addr: "ул. Статистики, 9", hours: "00:00–00:00", district: "chil" }, seller);
+  const sid = st.data.store.id;
+  await call("PATCH", `/api/admin/stores/${sid}`, { status: "active" }, globalThis.ADMIN);
+  await call("POST", "/api/seller/offers", { product_id: 2, price: 70000, stock: 50 }, seller); // pricier than the market
+  await call("POST", "/api/seller/offers", { product_id: 4, price: 30000, stock: 50 }, seller); // cheapest
+  const ev = await call("POST", "/api/events", { events: [{ t: "view", id: 2 }, { t: "view", id: 2 }, { t: "view", id: 4 }, { t: "cart", id: 2, store: sid }, { t: "cart", id: 2, store: "usta" }, { t: "nope", id: 2 }, { t: "view", id: 99999999 }] });
+  assert.equal(ev.status, 200); assert.equal(ev.data.n, 5);
+  const s = (await call("GET", "/api/seller/stats?days=30", null, seller)).data;
+  const p2 = s.products.find(p => p.id === 2), p4 = s.products.find(p => p.id === 4);
+  assert.ok(p2.views >= 2); assert.equal(p2.carts, 1, "only adds to this store count");
+  assert.ok(p2.diff > 5); assert.ok(p4.price <= p4.market_min);
+  assert.equal(s.series.length, 30); assert.ok(s.series.at(-1).views >= 3);
+  assert.equal(s.prices.pricier, 1); assert.equal(s.prices.cheapest, 1);
+  assert.equal((await call("GET", "/api/seller/stats", null, (await login("997770022")).data.token)).status, 403);
 });
