@@ -553,3 +553,21 @@ test("Back in stock alert and product reviews with a photo", async () => {
   rv = (await call("GET", `/api/products/${pid}/reviews`)).data;
   assert.equal(rv.count, 1); assert.equal(rv.stars, 4); assert.ok(rv.reviews[0].photo.includes("/uploads/")); assert.equal(rv.can_review, false);
 });
+
+test("Team projects: create, join by code, add items, notify, leave and delete", async () => {
+  const boss = (await login("990001100")).data.token, worker = (await login("990001122")).data.token, stranger = (await login("990001133")).data.token;
+  const cr = await call("POST", "/api/team-projects", { name: "Квартира на Чиланзаре", items: { "1|usta": 10, "999999|usta": 3, "2|nope": 1 } }, boss);
+  assert.equal(cr.status, 200, JSON.stringify(cr.data));
+  const pr = cr.data.project; assert.match(pr.code, /^[A-Z2-9]{6}$/); assert.deepEqual(Object.keys(pr.items), ["1|usta"]);
+  assert.equal((await call("PATCH", `/api/team-projects/${pr.id}`, { add: { "5|usta": 100 } }, stranger)).status, 404);
+  assert.equal((await call("POST", "/api/team-projects/join", { code: "NOPE00" }, worker)).status, 400);
+  assert.equal((await call("POST", "/api/team-projects/join", { code: pr.code.toLowerCase() }, worker)).data.project.members.length, 2);
+  const up = await call("PATCH", `/api/team-projects/${pr.id}`, { add: { "5|usta": 100, "1|usta": 5 } }, worker);
+  assert.equal(up.data.project.items["1|usta"].q, 15); assert.equal(up.data.project.items["5|usta"].q, 100);
+  const set = await call("PATCH", `/api/team-projects/${pr.id}`, { set: { "5|usta": 0 }, name: "Квартира, этап 1" }, boss);
+  assert.deepEqual(Object.keys(set.data.project.items), ["1|usta"]); assert.equal(set.data.project.name, "Квартира, этап 1");
+  assert.equal((await call("GET", "/api/team-projects", null, worker)).data.projects.length, 1);
+  assert.equal((await call("DELETE", `/api/team-projects/${pr.id}`, null, worker)).data.deleted, false, "a member leaves");
+  assert.equal((await call("GET", "/api/team-projects", null, worker)).data.projects.length, 0);
+  assert.equal((await call("DELETE", `/api/team-projects/${pr.id}`, null, boss)).data.deleted, true);
+});

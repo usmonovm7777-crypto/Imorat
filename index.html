@@ -787,6 +787,12 @@ html.ds-dragging, html.ds-dragging * { cursor: grabbing !important; user-select:
 .ds-wish { display: flex; gap: 6px; }
 .ds-wish input { flex: 1; min-width: 0; border: 1.5px solid var(--line); border-radius: 12px; padding: 10px 12px; background: var(--raised); font: inherit; color: inherit; }
 .ds-sw { display: flex; flex-wrap: wrap; gap: 6px; }
+.ds-photo-btns { display: flex; gap: 8px; flex-wrap: wrap; } .ds-photo-btns .btn { cursor: pointer; }
+.ds-photo small { display: block; font-weight: 400; }
+.team { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--line); border-radius: 14px; margin-top: 8px; }
+.proj.tp { display: grid; grid-template-columns: 1fr; gap: 8px; } .proj.tp > span { display: grid; gap: 2px; }
+.tp-a { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.tp-new { display: grid; gap: 8px; } .tp-join { display: flex; gap: 6px; } .tp-join input { flex: 1; min-width: 0; text-transform: uppercase; }
 .infobox.lnkbox.on { border-color: var(--accent); background: var(--accent-soft); }
 .prv-box { display: grid; gap: 8px; }
 .prv { border-top: 1px solid var(--line); padding-top: 8px; } .prv p { margin: 4px 0; } .prv .s { color: #E3A008; }
@@ -1839,7 +1845,7 @@ function renderHeader() {
     <button class="menu-btn" type="button" data-act="widgets" aria-label="${L("Виджеты и инструменты", "Vidjetlar va asboblar")}" title="${L("Виджеты", "Vidjetlar")}">${ui("menu", 22)}<span class="dot" aria-hidden="true"></span></button>
     <button class="logo" type="button" data-go="home" aria-label="Imorat"><span class="logo-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span><b>imorat</b></button>
     <button class="cat-btn" type="button" data-act="mega">${ui("grid", 18)}${L("Каталог", "Katalog")}</button>
-    <div class="search" role="search">${ui("search", 18)}<input id="q" type="search" value="${esc(f.q)}" placeholder="${L("Цемент, смеситель, ламинат…", "Sement, aralashtirgich, laminat…")}" aria-label="${L("Поиск по каталогу", "Katalog bo‘yicha qidiruv")}" autocomplete="off"><span class="s-tools"><button class="s-ic" type="button" data-act="voice" ${SRec ? "" : "hidden"} aria-label="${L("Поиск голосом", "Ovozli qidiruv")}" title="${L("Поиск голосом", "Ovozli qidiruv")}">${ui("mic", 18)}</button><button class="s-ic" type="button" data-act="photo-search" ${photoAIon() ? "" : "hidden"} aria-label="${L("Поиск по фото", "Rasm bo‘yicha qidiruv")}" title="${L("Поиск по фото", "Rasm bo‘yicha qidiruv")}">${ui("camera", 18)}</button><button class="ask" type="button" data-act="ask-search">${ui("spark", 14)}<span class="t">${L("Спросить AI", "AI dan so‘rash")}</span></button></span><input type="file" id="psFile" accept="image/*" capture="environment" hidden></div>
+    <div class="search" role="search">${ui("search", 18)}<input id="q" type="search" value="${esc(f.q)}" placeholder="${L("Цемент, смеситель, ламинат…", "Sement, aralashtirgich, laminat…")}" aria-label="${L("Поиск по каталогу", "Katalog bo‘yicha qidiruv")}" autocomplete="off"><span class="s-tools"><button class="s-ic" type="button" data-act="voice" ${SRec ? "" : "hidden"} aria-label="${L("Поиск голосом", "Ovozli qidiruv")}" title="${L("Поиск голосом", "Ovozli qidiruv")}">${ui("mic", 18)}</button><button class="s-ic" type="button" data-act="photo-search" ${photoAIon() ? "" : "hidden"} aria-label="${L("Поиск по фото", "Rasm bo‘yicha qidiruv")}" title="${L("Поиск по фото", "Rasm bo‘yicha qidiruv")}">${ui("camera", 18)}</button><button class="ask" type="button" data-act="ask-search">${ui("spark", 14)}<span class="t">${L("Спросить AI", "AI dan so‘rash")}</span></button></span><input type="file" id="psFile" accept="image/*" hidden></div>
     <label class="where" title="${L("Район доставки", "Yetkazish tumani")}">${ui("pin", 16)}<span class="visually-hidden">${L("Район доставки", "Yetkazish tumani")}</span><select id="distSel">${DISTRICTS.map(d => `<option value="${d.id}" ${d.id === district ? "selected" : ""}>${L(d.ru, d.uz)}</option>`).join("")}</select></label>
     <button class="fx-btn" type="button" data-act="fx-toggle" aria-pressed="${motionOK()}" aria-label="${motionOK() ? L("Яркий режим включён — переключить на простой", "Yorqin rejim yoqilgan — oddiyga o‘tish") : L("Простой режим — включить яркий", "Oddiy rejim — yorqinni yoqish")}" title="${motionOK() ? L("Яркий режим", "Yorqin rejim") : L("Простой режим", "Oddiy rejim")}">${ui("spark", 18)}</button>
     <div class="seg" role="group" aria-label="Язык / Til"><button type="button" data-lang="ru" aria-pressed="${lang === "ru"}">RU</button><button type="button" data-lang="uz" aria-pressed="${lang === "uz"}">UZ</button></div>
@@ -2549,8 +2555,9 @@ const fmtP = p => p.offers.length > 1 ? fromP(minPrice(p)) : fmt(minPrice(p));
 function dProjects() {
   $("#dTitle").textContent = L("Проекты ремонта", "Ta’mir loyihalari");
   $("#dBody").innerHTML = projects.length ? `<div class="note">${L("Сохраняйте списки материалов под каждую комнату и возвращайте их в корзину одним нажатием.", "Har bir xona uchun material ro‘yxatini saqlang va bir bosishda savatga qaytaring.")}</div>` + projects.map(pr => { const items = Object.entries(pr.cart).filter(([k]) => PROD[k.split("|")[0]]); const sum = items.reduce((a, [k, q]) => { const [id, st] = k.split("|"), p = PROD[id], o = p.offers.find(x => x.store === st) || p.offers[0]; return a + o.price * q; }, 0);
-    return `<div class="proj"><span><b>${esc(pr.name)}</b><small>${items.length} ${L(plural(items.length, ["позиция", "позиции", "позиций"]), "pozitsiya")} · ${fmt(sum)} · ${new Date(pr.t).toLocaleDateString("ru-RU")}</small></span><button class="btn btn-primary" type="button" data-projload="${pr.id}">${L("В корзину", "Savatga")}</button><button class="ib" type="button" data-projdel="${pr.id}" aria-label="${L("Удалить проект", "Loyihani o‘chirish")}">${ui("trash", 15)}</button></div>`; }).join("")
+    return `<div class="proj"><span><b>${esc(pr.name)}</b><small>${items.length} ${L(plural(items.length, ["позиция", "позиции", "позиций"]), "pozitsiya")} · ${fmt(sum)} · ${new Date(pr.t).toLocaleDateString("ru-RU")}</small></span><button class="btn btn-primary" type="button" data-projload="${pr.id}">${L("В корзину", "Savatga")}</button><button class="ib" type="button" data-projshare="${pr.id}" aria-label="${L("Отправить список", "Ro‘yxatni yuborish")}" title="${L("Отправить", "Yuborish")}">${ui("send", 15)}</button><button class="ib" type="button" data-projdel="${pr.id}" aria-label="${L("Удалить проект", "Loyihani o‘chirish")}">${ui("trash", 15)}</button></div>`; }).join("")
     : `<div class="empty"><b>${L("Проектов пока нет", "Hali loyiha yo‘q")}</b><span>${L("Соберите корзину — вручную, калькулятором или с Usta AI — и сохраните её как проект.", "Savatni qo‘lda, kalkulyator yoki Usta AI bilan yig‘ing va loyiha sifatida saqlang.")}</span></div>`;
+  $("#dBody").insertAdjacentHTML("beforeend", teamHTML());
   $("#dFoot").innerHTML = `<button class="btn btn-line" type="button" data-act="w-calc" style="width:100%">${ui("calc", 18)} ${L("Открыть калькуляторы", "Kalkulyatorlarni ochish")}</button>`;
 }
 function dCompare() {
@@ -2736,7 +2743,7 @@ function finishAuth(u, token) {
   if (u.district) { district = u.district; LS.set("imorat.district", district); }
   form.name = u.name; form.phone = u.phone; LS.set("imorat.form2", form);
   const then = auth.then; closeAuth(); renderHeader(); renderTabbar(); counts();
-  if (u.api) { bonusApi = null; loadBonus(); loadStockWatch(); } else if (LS.get("imorat.refPending", "")) { const rc = LS.get("imorat.refPending", ""); LS.set("imorat.refPending", ""); setTimeout(() => applyRefCode(rc, true), 400); }
+  if (u.api) { bonusApi = null; loadBonus(); loadStockWatch(); teamProj = null; if (LS.get("imorat.teamPending", "")) loadTeams(); } else if (LS.get("imorat.refPending", "")) { const rc = LS.get("imorat.refPending", ""); LS.set("imorat.refPending", ""); setTimeout(() => applyRefCode(rc, true), 400); }
   toast(then === "seller" ? L("Магазин отправлен на проверку", "Do‘kon tekshiruvga yuborildi") : L(`Добро пожаловать, ${u.name}!`, `Xush kelibsiz, ${u.name}!`));
   if (then === "checkout") openDrawer("checkout"); else if (then === "seller") { sellerData = null; go("seller"); } else if (typeof then === "function") setTimeout(then, 0); else if (drawerView === "profile") renderDrawer();
   if (route.view === "masters" && typeof then !== "function") { mApi.list = null; mApi.me = undefined; renderMasters(); }
@@ -4286,7 +4293,8 @@ function renderDesign() {
   let panel = "";
   if (st === 1) panel = `<h2 class="h-m">${L("Сфотографируйте комнату", "Xonani suratga oling")}</h2>
     <p class="mu">${L("Встаньте в угол, чтобы в кадр попали две стены, окно и пол — как коробка. Usta AI посмотрит фото и подскажет, что сделать.", "Burchakda turing — kadrga ikki devor, deraza va pol tushsin. Usta AI rasmni ko‘rib maslahat beradi.")}</p>
-    <label class="ds-photo">${d.photo ? `<img src="${d.photo}" alt="${L("Фото комнаты", "Xona rasmi")}">` : `${ui("photo", 30)}<b>${L("Сделать фото или выбрать", "Suratga olish yoki tanlash")}</b>`}<input type="file" accept="image/*" capture="environment" id="dsFile" hidden></label>
+    <label class="ds-photo">${d.photo ? `<img src="${d.photo}" alt="${L("Фото комнаты", "Xona rasmi")}">` : `${ui("photo", 30)}<b>${L("Выбрать фото из галереи", "Galereyadan rasm tanlash")}</b><small class="mu">${L("или нажмите «Сфотографировать» ниже", "yoki pastdagi «Suratga olish» ni bosing")}</small>`}<input type="file" accept="image/*" id="dsFile" hidden></label>
+    <div class="ds-photo-btns"><label class="btn btn-line">${ui("camera", 16)} ${L("Сфотографировать", "Suratga olish")}<input type="file" accept="image/*" capture="environment" id="dsCam" hidden></label><label class="btn btn-line">${ui("photo", 16)} ${d.photo ? L("Выбрать другое фото", "Boshqa rasm tanlash") : L("Из галереи", "Galereyadan")}<input type="file" accept="image/*" id="dsGal" hidden></label></div>
     ${d.busy ? `<p class="mu">${L("Usta AI смотрит фото…", "Usta AI rasmni ko‘rmoqda…")}</p>` : d.notes ? `<div class="note">${ui("spark", 14)} ${esc(d.notes)}</div>` : d.photo && !dsAIon() ? `<p class="mu" style="font-size:13px">${L("Фото сохранено в проекте. Разбор фото AI работает, когда подключён Usta AI.", "Rasm loyihada saqlandi. AI tahlili Usta AI ulanganda ishlaydi.")}</p>` : ""}
     <div class="ds-nav"><button class="btn btn-line" type="button" data-ds="next">${d.photo ? L("Дальше", "Keyingisi") : L("Пропустить", "O‘tkazib yuborish")}</button>${d.photo ? `<button class="btn btn-primary" type="button" data-ds="next">${L("Дальше: размеры", "Keyingisi: o‘lchamlar")}</button>` : ""}</div>
     ${dsRooms().length ? `<div class="ds-roomsh"><b class="ds-q">${L("Мои комнаты", "Mening xonalarim")}</b><button class="lnk" type="button" data-go="flat">${ui("calc", 15)} ${L("Смета на всю квартиру", "Butun kvartira smetasi")}</button></div><div class="ds-rooms">${dsRooms().map(r => `<div class="ds-room"><button type="button" data-dsroom="${r.id}">${roomSVG(r.d)}<span><b>${esc(r.name)}</b><small>${new Date(r.t).toLocaleDateString("ru-RU")}</small></span></button><button type="button" class="ib" data-dsroomdel="${r.id}" aria-label="${L("Удалить", "O‘chirish")}">${ui("trash", 15)}</button></div>`).join("")}</div>` : ""}`;
@@ -4346,8 +4354,7 @@ function renderDesign() {
         <button class="ib" type="button" data-ds="share" aria-label="${L("Поделиться картинкой", "Rasm bilan ulashish")}" title="${L("Поделиться", "Ulashish")}">${ui("photo", 17)}</button>
       </div>` : ""}${st === 4 ? dsSVG(d, { edit: d.edit }) : roomSVG(d, { nums: st === 2 })}${st === 4 ? `<small class="mu ds-hint">${matchMedia("(pointer: fine)").matches ? L("Перетаскивайте мебель мышкой. Кнопка ↻ в списке поворачивает предмет.", "Mebelni sichqoncha bilan suring. Ro‘yxatdagi ↻ tugmasi buradi.") : d.edit ? L("Ведите пальцем по мебели, чтобы переставить. Нажмите «Двигаю мебель», чтобы снова листать страницу.", "Mebelni barmoq bilan suring. Sahifani aylantirish uchun «Mebelni suryapman» ni bosing.") : L("Нажмите «Двигать мебель», чтобы переставлять пальцем.", "Barmoq bilan surish uchun «Mebelni surish» ni bosing.")}</small>` : ""}<div class="ds-dims mu">${String(d.W).replace(".", ",")} × ${String(d.L).replace(".", ",")} ${L("м", "m")} · ${L("высота", "balandlik")} ${String(d.H).replace(".", ",")} ${L("м", "m")}${d.type ? " · " + ROOMS().find(r => r[0] === d.type)[1] : ""}</div>${!dsAIon() ? `<small class="mu ds-ai-note">${L("Подбор по ответам работает всегда. Свободные пожелания и разбор фото понимает Usta AI, когда он подключён.", "Javoblar bo‘yicha tanlash doim ishlaydi. Erkin istaklar va rasm tahlilini Usta AI ulanganda tushunadi.")}</small>` : ""}</div>
       <div class="ds-panel panel">${panel}</div></div></div>`;
-  const fl = $("#dsFile");
-  if (fl) fl.addEventListener("change", async e => { const f = e.target.files?.[0]; if (!f) return; try { DS.photo = await resizeImg(f); DS.notes = ""; dsSave(); renderDesign(); dsAnalyzePhoto(); } catch (er) { toast(L("Не удалось открыть фото", "Rasmni ochib bo‘lmadi")); } });
+  for (const fl of ["#dsFile", "#dsCam", "#dsGal"].map(x => $(x)).filter(Boolean)) fl.addEventListener("change", async e => { const f = e.target.files?.[0]; if (!f) return; try { DS.photo = await resizeImg(f); DS.notes = ""; dsSave(); renderDesign(); dsAnalyzePhoto(); } catch (er) { toast(L("Не удалось открыть фото", "Rasmni ochib bo‘lmadi")); } });
   document.querySelectorAll("[data-dsdim]").forEach(i => i.addEventListener("input", e => { const k = e.target.dataset.dsdim, v = parseFloat(String(e.target.value).replace(",", ".")); const lim = { W: [1.5, 12], L: [1.5, 15], H: [2.2, 4.5], win: [0, 3], doors: [0, 2] }[k]; if (!(v >= lim[0] && v <= lim[1])) return; const old = DS[k]; DS[k] = k === "win" || k === "doors" ? Math.round(v) : Math.round(v * 100) / 100; dsLayout();
     if ((k === "win" || k === "doors") && (!old) !== (!DS[k])) { dsAutoView(); renderDesign(); const el = $("#ds_" + k); if (el) { el.focus(); } return; }
     $(".ds-view svg").outerHTML = roomSVG(DS, { nums: true }); const mini = $(".ds-mini"); if (mini) mini.innerHTML = planSVG(DS, { nums: 1 }); }));
@@ -5204,7 +5211,7 @@ function renderShop() {
       <label for="shopText"><b>${L("Список", "Ro‘yxat")}</b> <small class="mu">${L("— по одному товару в строке", "— har qatorda bitta mahsulot")}</small></label>
       <textarea id="shopText" rows="9" placeholder="${L("Цемент М400 — 20 мешков\nКирпич красный 1500 шт\nПрофиль ПП 60×27 30 шт\nСаморезы по дереву 2 кг\nШпаклёвка финишная 5", "Sement M400 — 20 qop\nQizil g‘isht 1500 dona\nProfil PP 60×27 30 dona\nYog‘och shuruplari 2 kg\nFinish shpaklyovka 5")}">${esc(shop.text)}</textarea>
       <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-primary" type="button" data-shop="parse">${ui("check", 16)} ${L("Разобрать список", "Ro‘yxatni tahlil qilish")}</button>
-        ${photoAIon() ? `<label class="btn btn-line" style="cursor:pointer">${ui("camera", 16)} ${shop.busy ? L("Читаем фото…", "Rasm o‘qilmoqda…") : L("Фото списка", "Ro‘yxat rasmi")}<input type="file" id="shopPhoto" accept="image/*" capture="environment" hidden></label>` : ""}
+        ${photoAIon() ? `<label class="btn btn-line" style="cursor:pointer">${ui("camera", 16)} ${shop.busy ? L("Читаем фото…", "Rasm o‘qilmoqda…") : L("Фото из галереи", "Galereyadan rasm")}<input type="file" id="shopPhoto" accept="image/*" hidden></label><label class="btn btn-line" style="cursor:pointer">${ui("photo", 16)} ${L("Камера", "Kamera")}<input type="file" id="shopCam" accept="image/*" capture="environment" hidden></label>` : ""}
         <button class="btn btn-line" type="button" data-shop="example">${L("Пример", "Namuna")}</button></div>
       ${photoAIon() ? "" : `<small class="mu">${L("Фото рукописного списка читает Usta AI — кнопка появится, когда он подключён. Текст разбирается всегда.", "Qo‘lda yozilgan ro‘yxat rasmini Usta AI o‘qiydi — u ulanganda tugma chiqadi. Matn har doim tahlil qilinadi.")}</small>`}
     </div>
@@ -5229,7 +5236,7 @@ async function shopFromPhoto(file) {
   toast(L(`Прочитали ${lines.length} строк — проверьте товары`, `${lines.length} qator o‘qildi — mahsulotlarni tekshiring`));
 }
 document.addEventListener("change", e => {
-  if (e.target.id === "shopPhoto") { const f = e.target.files?.[0]; e.target.value = ""; if (f) shopFromPhoto(f); }
+  if (e.target.id === "shopPhoto" || e.target.id === "shopCam") { const f = e.target.files?.[0]; e.target.value = ""; if (f) shopFromPhoto(f); }
   if (e.target.dataset?.shoppick != null && shop.rows) { const r = shop.rows[+e.target.dataset.shoppick], v = e.target.value; r.pick = v === "skip" ? "skip" : +v; r.sure = true; if (PROD[r.pick]) r.qty = shopQty(PROD[r.pick], r); renderShop(); }
 });
 document.addEventListener("click", e => {
@@ -5483,6 +5490,56 @@ document.addEventListener("submit", async e => {
   }
   (revDemo[id] ||= []).unshift({ stars, text, photo: revDraft.photo, t: Date.now(), name: user?.name?.split(" ")[0] || "", mine: true });
   LS.set("imorat.reviews", revDemo); revDraft = { stars: 0, photo: "" }; toast(L("Спасибо! Отзыв сохранён", "Rahmat! Sharh saqlandi")); revRedraw(id);
+});
+
+/* ================= Shared projects for a crew ================= */
+let teamProj = null;
+const b64e = o => btoa(unescape(encodeURIComponent(JSON.stringify(o)))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+const b64d = s => JSON.parse(decodeURIComponent(escape(atob(s.replace(/-/g, "+").replace(/_/g, "/")))));
+const siteBase = () => location.origin + location.pathname;
+{ // links: ?proj=<list> (a copy of a list) and ?team=<code> (join the crew's project)
+  const pj = (location.search.match(/[?&]proj=([\w-]+)/) || [])[1];
+  if (pj) { try { const d = b64d(pj), c = {}; Object.entries(d.c || {}).forEach(([k, q]) => { if (PROD[k.split("|")[0]] && q > 0) c[k] = Math.min(100000, q | 0); }); if (Object.keys(c).length) { projects.unshift({ id: "pr" + Date.now().toString(36), name: String(d.n || L("Список", "Ro‘yxat")).slice(0, 80) + L(" · по ссылке", " · havola orqali"), cart: c, t: Date.now() }); LS.set("imorat.projects", projects); setTimeout(() => { toast(L("Список добавлен в «Проекты ремонта»", "Ro‘yxat «Ta’mir loyihalari»ga qo‘shildi")); openDrawer("projects"); }, 600); } } catch (e) { /* broken link */ } }
+  const tc = (location.search.match(/[?&]team=([A-Za-z2-9]{6})\b/) || [])[1]; if (tc) LS.set("imorat.teamPending", tc.toUpperCase());
+}
+async function loadTeams() {
+  if (!API || !user) return;
+  const pend = LS.get("imorat.teamPending", "");
+  if (pend) { LS.set("imorat.teamPending", ""); try { const r = await api("POST", "/api/team-projects/join", { code: pend }); toast(L(`Вы в проекте «${r.project.name}»`, `Siz «${r.project.name}» loyihasidasiz`)); } catch (e) { toast(apiErr(e)); } }
+  try { teamProj = (await api("GET", "/api/team-projects")).projects; } catch (e) { teamProj = teamProj || []; }
+  if (drawerView === "projects") renderDrawer();
+}
+const itemsSum = items => Object.entries(items).reduce((a, [k, v]) => { const [id, st] = k.split("|"), p = PROD[id], q = typeof v === "object" ? v.q : v; if (!p) return a; const o = p.offers.find(x => x.store === st) || p.offers[0]; return a + o.price * q; }, 0);
+function teamHTML() {
+  if (!API) return `<div class="team"><b>${ui("user", 16)} ${L("Общий проект бригады", "Brigada umumiy loyihasi")}</b><small class="mu">${L("На рабочем сайте прораб создаёт проект, приглашает бригаду по коду, и все добавляют нужное в один список. В демо можно поделиться списком ссылкой — кнопка «Отправить» у проекта.", "Ishchi saytda prorab loyiha yaratadi, brigadani kod bilan taklif qiladi va hamma kerakli narsani bitta ro‘yxatga qo‘shadi. Demo versiyada ro‘yxatni havola bilan ulashish mumkin — loyihadagi «Yuborish» tugmasi.")}</small></div>`;
+  if (!user) return `<div class="team"><b>${ui("user", 16)} ${L("Общий проект бригады", "Brigada umumiy loyihasi")}</b><small class="mu">${L("Войдите, чтобы вести один список закупок вместе с бригадой.", "Brigada bilan bitta xarid ro‘yxatini yuritish uchun kiring.")}</small><button class="btn btn-line" type="button" data-act="login">${L("Войти", "Kirish")}</button></div>`;
+  if (teamProj === null) { teamProj = []; loadTeams(); }
+  return `<div class="team"><b>${ui("user", 16)} ${L("Общие проекты бригады", "Brigada umumiy loyihalari")}</b>
+    ${teamProj.map(p => { const n = Object.keys(p.items).length, mine = p.owner === user.id; return `<div class="proj tp"><span><b>${esc(p.name)}</b><small>${n} ${L(plural(n, ["позиция", "позиции", "позиций"]), "pozitsiya")} · ${fmt(itemsSum(p.items))} · ${p.members.map(m => esc(m.name)).join(", ")}</small><small class="mu">${L("Код", "Kod")}: <b class="mono">${p.code}</b></small></span>
+      <div class="tp-a"><button class="btn btn-primary" type="button" data-tpload="${p.id}" ${n ? "" : "disabled"}>${L("В корзину", "Savatga")}</button><button class="btn btn-line" type="button" data-tpadd="${p.id}" ${cartCount() ? "" : "disabled"}>+ ${L("моя корзина", "savatim")}</button><button class="btn btn-line" type="button" data-tpinv="${p.id}">${ui("send", 14)} ${L("Пригласить", "Taklif qilish")}</button><button class="ib" type="button" data-tpdel="${p.id}" aria-label="${mine ? L("Удалить проект", "Loyihani o‘chirish") : L("Выйти из проекта", "Loyihadan chiqish")}" title="${mine ? L("Удалить", "O‘chirish") : L("Выйти", "Chiqish")}">${ui(mine ? "trash" : "logout", 15)}</button></div></div>`; }).join("")}
+    <div class="tp-new"><button class="btn btn-line" type="button" data-tpnew ${cartCount() ? "" : "disabled"}>${ui("plus", 15)} ${L("Общий проект из корзины", "Savatdan umumiy loyiha")}</button>
+      <form class="tp-join" id="tpJoin"><label class="visually-hidden" for="tpCode">${L("Код проекта", "Loyiha kodi")}</label><input id="tpCode" placeholder="${L("Код от прораба", "Prorab kodi")}" maxlength="6" autocapitalize="characters"><button class="btn btn-line" type="submit">${L("Войти в проект", "Loyihaga kirish")}</button></form></div></div>`;
+}
+async function shareText(text, done) {
+  try { if (navigator.share) { await navigator.share({ title: "Imorat", text }); return; } } catch (e) { if (e?.name === "AbortError") return; }
+  try { await navigator.clipboard.writeText(text); toast(done); } catch (e) { toast(text.slice(-60)); }
+}
+document.addEventListener("click", async e => {
+  const t = e.target.closest("[data-tpload],[data-tpadd],[data-tpinv],[data-tpdel],[data-tpnew],[data-projshare]"); if (!t) return;
+  const d = t.dataset, P = id => (teamProj || []).find(x => x.id === id);
+  if (d.projshare) { const pr = projects.find(x => x.id === d.projshare); if (!pr) return; return shareText(L(`Список для ремонта «${pr.name}» на Imorat: ${siteBase()}?proj=${b64e({ n: pr.name, c: pr.cart })}`, `Imoratda «${pr.name}» ta’mir ro‘yxati: ${siteBase()}?proj=${b64e({ n: pr.name, c: pr.cart })}`), L("Ссылка на список скопирована", "Ro‘yxat havolasi nusxalandi")); }
+  try {
+    if (d.tpnew != null) { const r = await api("POST", "/api/team-projects", { name: L(`Проект ${new Date().toLocaleDateString("ru-RU")}`, `Loyiha ${new Date().toLocaleDateString("ru-RU")}`), items: cart }); teamProj = [r.project, ...(teamProj || [])]; toast(L("Общий проект создан — пригласите бригаду", "Umumiy loyiha yaratildi — brigadani taklif qiling")); return renderDrawer(); }
+    if (d.tpload) { const p = P(d.tpload); Object.entries(p.items).forEach(([k, v]) => { cart[k] = (cart[k] || 0) + (v.q || v); }); saveCart(); refreshCards(); toast(L("Проект в корзине", "Loyiha savatda")); return openDrawer("cart"); }
+    if (d.tpadd) { const r = await api("PATCH", `/api/team-projects/${d.tpadd}`, { add: cart }); teamProj = teamProj.map(x => x.id === d.tpadd ? r.project : x); toast(L("Ваша корзина добавлена в проект", "Savatingiz loyihaga qo‘shildi")); return renderDrawer(); }
+    if (d.tpinv) { const p = P(d.tpinv); return shareText(L(`Присоединяйся к проекту «${p.name}» на Imorat — добавляй, что нужно купить: ${siteBase()}?team=${p.code} (код ${p.code})`, `Imoratda «${p.name}» loyihasiga qo‘shil — nima olish kerakligini qo‘sh: ${siteBase()}?team=${p.code} (kod ${p.code})`), L("Приглашение скопировано — отправьте бригаде", "Taklif nusxalandi — brigadaga yuboring")); }
+    if (d.tpdel) { await api("DELETE", `/api/team-projects/${d.tpdel}`); teamProj = teamProj.filter(x => x.id !== d.tpdel); return renderDrawer(); }
+  } catch (er) { toast(apiErr(er)); }
+});
+document.addEventListener("submit", async e => {
+  if (e.target.id !== "tpJoin") return; e.preventDefault();
+  const code = $("#tpCode").value.trim().toUpperCase(); if (code.length !== 6) return toast(L("Код — 6 символов", "Kod — 6 belgi"));
+  try { const r = await api("POST", "/api/team-projects/join", { code }); teamProj = [r.project, ...(teamProj || []).filter(x => x.id !== r.project.id)]; toast(L(`Вы в проекте «${r.project.name}»`, `Siz «${r.project.name}» loyihasidasiz`)); renderDrawer(); } catch (er) { toast(er.code === "bad_code" ? L("Проекта с таким кодом нет", "Bunday kodli loyiha yo‘q") : apiErr(er)); }
 });
 
 /* ================= Router & render ================= */
