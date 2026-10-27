@@ -1,7 +1,7 @@
 import { createServer } from "node:http";
 import { createReadStream, mkdirSync, writeFileSync, statSync, readdirSync, unlinkSync, existsSync } from "node:fs";
 import { join, extname } from "node:path";
-import { randomBytes } from "node:crypto";
+import { randomBytes, createHash } from "node:crypto";
 import { gzipSync } from "node:zlib";
 import { openDb } from "./db.js";
 import { Router, HttpError, bad, readJson, readBody, send, cors, Limiter, clientIp, int, str } from "./http.js";
@@ -204,9 +204,12 @@ export function createApp(cfg, log = console) {
   });
 
   /* ---------- catalog ---------- */
-  r.get("/api/catalog", (req, res) => {
-    const rev = db.meta("catalog_rev") + ":" + (db.get("SELECT COUNT(*) n, MAX(status_at) t FROM shipments")?.t || 0) + ":" + (db.get("SELECT COUNT(*) n FROM reviews")?.n || 0), etag = `"c${rev.replace(/\D/g, "")}"`;
-    if (req.headers["if-none-match"] === etag) { res.writeHead(304, { ETag: etag }); res.end(); return; }
+  /* The catalog is built once and kept in memory (raw + gzip). It is rebuilt when products/prices change
+     (catalog_rev) or, for store ratings, at most every 60 s — so thousands of visitors cost almost nothing. */
+  let catCache = null;
+  function catalogBody() {
+    const rev = db.meta("catalog_rev"), now = Date.now();
+    if (catCache && catCache.rev === rev && now - catCache.at < 60_000) return catCache;
     const stats = storeStats();
     const stores = db.all("SELECT * FROM stores WHERE status='active' ORDER BY created_at, id").map(s => ({ ...publicStore(s), rating: stats[s.id] || { done: 0, fail: 0, reliability: null, stars: null, reviews: 0, accept_min: null } }));
     const offers = db.all("SELECT o.product_id, o.store_id, o.price, o.stock FROM offers o JOIN stores s ON s.id=o.store_id AND s.status='active' ORDER BY o.product_id, o.price");
@@ -216,10 +219,17 @@ export function createApp(cfg, log = console) {
       id: p.id, cat: p.cat, sub: p.sub, icon: p.icon, ru: p.ru, uz: p.uz, unit: p.unit, kg: p.kg, img: mediaUrl(p.img), group: p.grp, hit: !!p.hit, isNew: !!p.is_new,
       key: p.key, rating: p.rating, reviews: p.reviews, country: JSON.parse(p.country), warranty: p.warranty, desc: p.descr, offers: by.get(p.id)
     }));
-    const body = Buffer.from(JSON.stringify({ rev, stores, products }));
-    const gz = /\bgzip\b/.test(req.headers["accept-encoding"] || "");
-    const out = gz ? gzipSync(body) : body;
-    res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", ETag: etag, "Cache-Control": "no-cache", "Content-Length": out.length, ...(gz ? { "Content-Encoding": "gzip", Vary: "Accept-Encoding, Origin" } : {}) });
+    const json = JSON.stringify({ stores, products }), hash = createHash("sha1").update(json).digest("base64url").slice(0, 16);
+    if (catCache && catCache.hash === hash) { catCache.rev = rev; catCache.at = now; return catCache; }
+    const raw = Buffer.from(JSON.stringify({ rev: hash, stores, products }));
+    catCache = { rev, at: now, hash, etag: `"c${hash}"`, raw, gz: gzipSync(raw) };
+    return catCache;
+  }
+  r.get("/api/catalog", (req, res) => {
+    const c = catalogBody();
+    if (req.headers["if-none-match"] === c.etag) { res.writeHead(304, { ETag: c.etag }); res.end(); return; }
+    const gz = /\bgzip\b/.test(req.headers["accept-encoding"] || ""), out = gz ? c.gz : c.raw;
+    res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", ETag: c.etag, "Cache-Control": "no-cache", "Content-Length": out.length, ...(gz ? { "Content-Encoding": "gzip", Vary: "Accept-Encoding, Origin" } : {}) });
     res.end(out);
   });
 
@@ -714,7 +724,7 @@ export function createApp(cfg, log = console) {
       const m = r.match(req.method, url.pathname);
       if (m === "method") throw new HttpError(405, "method_not_allowed", "Method not allowed");
       if (!m) throw new HttpError(404, "not_found", "Not found");
-      lim.hit("ip:" + req.ip, 600, 60_000);
+      lim.hit("ip:" + req.ip, cfg.ratePerIpMin, 60_000);
       req.user = userFrom(req);
       const out = await m.route.handler(req, res, m.params, url);
       if (!res.headersSent && out !== undefined) send(res, 200, out);

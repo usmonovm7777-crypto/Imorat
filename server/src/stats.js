@@ -7,7 +7,7 @@ const day = t => new Date(t + 5 * 3600000).toISOString().slice(0, 10); // Tashke
 export function registerStats({ r, db, lim, needSeller }) {
   const bump = db.raw.prepare("INSERT INTO events_daily(day,product_id,store_id,kind,n) VALUES(?,?,?,?,1) ON CONFLICT(day,product_id,store_id,kind) DO UPDATE SET n=n+1");
   r.post("/api/events", async req => {
-    lim.hit("ev:" + req.ip, 120, 60_000);
+    lim.hit("ev:" + req.ip, 1500, 60_000); // generous: many phones share one IP on mobile networks
     const b = await readJson(req, 32 * 1024);
     const evs = Array.isArray(b.events) ? b.events.slice(0, 50) : [];
     const d = day(Date.now()); let n = 0;
