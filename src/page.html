@@ -175,6 +175,9 @@ h1, h2, h3 { text-wrap: balance; }
 .h-m { font-family: var(--f-display); font-weight: 500; font-size: 18px; letter-spacing: -.02em; margin: 0; }
 .eyebrow { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; display: inline-flex; gap: 6px; align-items: center; }
 .sec { padding-block: 26px; }
+/* sections below the first screen are laid out only when scrolled to — faster start on cheap phones */
+#app .sec ~ .sec { content-visibility: auto; contain-intrinsic-size: auto 640px; }
+html.cv-all #app .sec ~ .sec { content-visibility: visible; }
 .sec-head { display: flex; align-items: end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
 .sec-head p { margin: 6px 0 0; color: var(--muted); }
 .link { color: var(--accent); font-weight: 600; font-size: 14px; display: inline-flex; align-items: center; gap: 4px; }
@@ -1119,7 +1122,8 @@ const L = (ru, uz) => (lang === "uz" ? uzNew(uz) : ru);
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const plural = (n, f) => { const a = n % 10, b = n % 100; return f[a === 1 && b !== 11 ? 0 : a >= 2 && a <= 4 && (b < 10 || b >= 20) ? 1 : 2]; };
-const fmtN = n => Math.round(n).toLocaleString("ru-RU").replace(/ /g, " ");
+const NF = new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }); // one formatter: toLocaleString per call is slow on cheap phones
+const fmtN = n => NF.format(Math.round(n)).replace(/[\u00a0\u202f]/g, " ");
 const fmt = n => fmtN(n) + L(" сум", " so‘m");
 const fmtKg = n => n < 1 ? Math.round(n * 1000) + L(" г", " g") : (n < 10 ? (Math.round(n * 10) / 10).toString().replace(".", ",") : fmtN(n)) + L(" кг", " kg");
 
@@ -1910,6 +1914,7 @@ function card(p) {
 
 /* ================= Home ================= */
 function renderHome() {
+  document.documentElement.classList.remove("cv-all");
   const hits = PRODUCTS.filter(p => p.hit);
   const winter = PRODUCTS.filter(p => p.id <= 96 && (p.cat === "heat" || p.sub === "insul" || p.sub === "win"));
   const seenG = new Set(); const fresh = PRODUCTS.filter(p => p.id > 100 && p.id < 1000 && p.img.includes("/v") && !seenG.has(p.group) && seenG.add(p.group)).filter((_, i) => i % 3 === 0).slice(0, 16);
@@ -5634,7 +5639,7 @@ function routeTo() { const prevCat = route.cat; route = parseHash(); if (route.c
 window.addEventListener("hashchange", () => { if (document.startViewTransition && motionOK()) document.startViewTransition(routeTo); else routeTo(); });
 function scrollToSec(id) {
   closeMega(); if (drawerView) closeDrawer(); if (aiOpen) closeAI(); if (widOpen) closeWidgets();
-  const doIt = () => { const el = document.getElementById(id); if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - ($("#hdr").offsetHeight + 12), behavior: "smooth" }); };
+  const doIt = () => { document.documentElement.classList.add("cv-all"); const el = document.getElementById(id); if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - ($("#hdr").offsetHeight + 12), behavior: "smooth" }); };
   if (route.view !== "home") { location.hash = "home"; setTimeout(doIt, 80); } else doIt();
 }
 

@@ -17,6 +17,12 @@ RESET = (":root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padd
          "img{max-width:100%}[hidden]{display:none!important}")
 meta = ('<meta name="description" content="Imorat — маркетплейс строительных магазинов Ташкента: '
         'сравнение цен, Usta AI, калькуляторы ремонта и доставка Яндекс.">')
+# Smaller page for phones: CSS without comments and indentation (JS is left as written)
+def _css_min(m):
+    css = re.sub(r"/\*.*?\*/", "", m.group(1), flags=re.S)
+    css = re.sub(r"\s*\n\s*", "\n", css).strip()
+    return "<style>" + css + "</style>"
+body = re.sub(r"<style>(.*?)</style>", _css_min, body, count=1, flags=re.S)
 html = ("<!doctype html>\n<html lang=\"ru\">\n<head>\n<meta charset=\"utf-8\">\n"
         "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1,viewport-fit=cover\">\n"
         f"{meta}\n<style>{RESET}</style>\n<script src=\"config.js\"></script>\n<link rel=\"manifest\" href=\"manifest.webmanifest\">\n<meta name=\"theme-color\" content=\"#0B6E69\">\n<link rel=\"icon\" type=\"image/png\" href=\"icons/favicon-64.png\">\n<link rel=\"apple-touch-icon\" href=\"icons/apple-touch-icon.png\">\n<meta name=\"apple-mobile-web-app-capable\" content=\"yes\">\n<meta name=\"apple-mobile-web-app-title\" content=\"Imorat\">\n<meta name=\"apple-mobile-web-app-status-bar-style\" content=\"default\">\n{head_tags.strip()}\n</head>\n<body>\n{body.strip()}\n</body>\n</html>\n")
