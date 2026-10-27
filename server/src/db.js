@@ -1,0 +1,89 @@
+import { DatabaseSync } from "node:sqlite";
+import { readFileSync, mkdirSync } from "node:fs";
+import { dirname } from "node:path";
+
+const SCHEMA = `
+CREATE TABLE IF NOT EXISTS meta(k TEXT PRIMARY KEY, v TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS users(
+  id TEXT PRIMARY KEY, phone TEXT UNIQUE, name TEXT NOT NULL DEFAULT '', email TEXT NOT NULL DEFAULT '',
+  google_sub TEXT UNIQUE, apple_sub TEXT UNIQUE, role TEXT NOT NULL DEFAULT 'buyer', district TEXT NOT NULL DEFAULT 'mirob',
+  vip INTEGER NOT NULL DEFAULT 0, store_id TEXT, created_at INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS otp(
+  phone TEXT PRIMARY KEY, code_hash TEXT NOT NULL, expires_at INTEGER NOT NULL, attempts INTEGER NOT NULL DEFAULT 0,
+  sent_at INTEGER NOT NULL, window_start INTEGER NOT NULL, window_count INTEGER NOT NULL DEFAULT 0);
+CREATE TABLE IF NOT EXISTS stores(
+  id TEXT PRIMARY KEY, name TEXT NOT NULL, district TEXT NOT NULL, addr TEXT NOT NULL DEFAULT '', addr_uz TEXT NOT NULL DEFAULT '',
+  hours TEXT NOT NULL DEFAULT '', ru TEXT NOT NULL DEFAULT '', uz TEXT NOT NULL DEFAULT '', phone TEXT NOT NULL DEFAULT '',
+  la REAL, lo REAL, owner_id TEXT, status TEXT NOT NULL DEFAULT 'active', created_at INTEGER NOT NULL,
+  descr TEXT NOT NULL DEFAULT '', cats TEXT NOT NULL DEFAULT '[]', landmark TEXT NOT NULL DEFAULT '', telegram TEXT NOT NULL DEFAULT '',
+  loc_src TEXT NOT NULL DEFAULT 'district', review_note TEXT NOT NULL DEFAULT '');
+CREATE TABLE IF NOT EXISTS products(
+  id INTEGER PRIMARY KEY, cat TEXT NOT NULL, sub TEXT NOT NULL, icon TEXT NOT NULL DEFAULT 'box', ru TEXT NOT NULL, uz TEXT NOT NULL,
+  unit TEXT NOT NULL, kg REAL NOT NULL, img TEXT NOT NULL DEFAULT '', grp INTEGER, hit INTEGER NOT NULL DEFAULT 0,
+  is_new INTEGER NOT NULL DEFAULT 0, key TEXT, rating REAL NOT NULL DEFAULT 0, reviews INTEGER NOT NULL DEFAULT 0,
+  country TEXT NOT NULL DEFAULT '[]', warranty INTEGER NOT NULL DEFAULT 0, descr TEXT NOT NULL DEFAULT '',
+  store_id TEXT, active INTEGER NOT NULL DEFAULT 1, created_at INTEGER NOT NULL DEFAULT 0);
+CREATE TABLE IF NOT EXISTS offers(
+  product_id INTEGER NOT NULL REFERENCES products(id), store_id TEXT NOT NULL REFERENCES stores(id),
+  price INTEGER NOT NULL, stock INTEGER NOT NULL DEFAULT 0, updated_at INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(product_id, store_id));
+CREATE TABLE IF NOT EXISTS orders(
+  id INTEGER PRIMARY KEY AUTOINCREMENT, num TEXT UNIQUE NOT NULL, user_id TEXT NOT NULL REFERENCES users(id), created_at INTEGER NOT NULL,
+  status TEXT NOT NULL DEFAULT 'active', pay TEXT NOT NULL, pay_status TEXT NOT NULL DEFAULT 'pending', form TEXT NOT NULL,
+  goods INTEGER NOT NULL, del INTEGER NOT NULL, svc INTEGER NOT NULL, disc INTEGER NOT NULL, promo_disc INTEGER NOT NULL,
+  total INTEGER NOT NULL, cash INTEGER NOT NULL, promo TEXT, services TEXT NOT NULL DEFAULT '[]');
+CREATE TABLE IF NOT EXISTS shipments(
+  id INTEGER PRIMARY KEY AUTOINCREMENT, order_id INTEGER NOT NULL REFERENCES orders(id), store_id TEXT NOT NULL,
+  tariff TEXT, price INTEGER NOT NULL, kg REAL NOT NULL, dist REAL NOT NULL DEFAULT 0, lines TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'new', status_at INTEGER NOT NULL, history TEXT NOT NULL DEFAULT '[]', claim_id TEXT, courier TEXT);
+CREATE TABLE IF NOT EXISTS promo_uses(user_id TEXT NOT NULL, code TEXT NOT NULL, order_id INTEGER, PRIMARY KEY(user_id, code));
+CREATE INDEX IF NOT EXISTS orders_user ON orders(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS ship_store ON shipments(store_id, status_at DESC);
+CREATE INDEX IF NOT EXISTS ship_order ON shipments(order_id);
+CREATE INDEX IF NOT EXISTS offers_store ON offers(store_id);
+`;
+
+export function openDb(path, catalogPath) {
+  if (path !== ":memory:") mkdirSync(dirname(path), { recursive: true });
+  const raw = new DatabaseSync(path);
+  raw.exec("PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA busy_timeout=5000;");
+  raw.exec(SCHEMA);
+  const cache = new Map();
+  const st = sql => { let s = cache.get(sql); if (!s) { s = raw.prepare(sql); cache.set(sql, s); } return s; };
+  const clean = p => p.map(v => (v === undefined ? null : typeof v === "boolean" ? (v ? 1 : 0) : v));
+  const db = {
+    raw,
+    all: (sql, ...p) => st(sql).all(...clean(p)),
+    get: (sql, ...p) => st(sql).get(...clean(p)),
+    run: (sql, ...p) => st(sql).run(...clean(p)),
+    tx(fn) {
+      raw.exec("BEGIN IMMEDIATE");
+      try { const r = fn(); raw.exec("COMMIT"); return r; } catch (e) { raw.exec("ROLLBACK"); throw e; }
+    },
+    meta: k => db.get("SELECT v FROM meta WHERE k=?", k)?.v,
+    setMeta: (k, v) => db.run("INSERT INTO meta(k,v) VALUES(?,?) ON CONFLICT(k) DO UPDATE SET v=excluded.v", k, String(v))
+  };
+  const ref = JSON.parse(readFileSync(catalogPath, "utf8"));
+  if (!db.meta("seeded")) seed(db, ref);
+  db.ref = ref;
+  return db;
+}
+
+/* First start: load stores, products and offers from data/catalog.json (exported from the website). */
+function seed(db, ref) {
+  const D = Object.fromEntries(ref.districts.map(d => [d.id, d]));
+  const now = Date.now();
+  db.tx(() => {
+    for (const s of ref.stores) {
+      db.run("INSERT OR IGNORE INTO stores(id,name,district,addr,addr_uz,hours,ru,uz,la,lo,status,created_at) VALUES(?,?,?,?,?,?,?,?,?,?, 'active', ?)",
+        s.id, s.name, s.d, s.addr, s.addrUz, s.hours, s.ru, s.uz, D[s.d]?.la, D[s.d]?.lo, now);
+    }
+    for (const p of ref.products) {
+      db.run(`INSERT OR IGNORE INTO products(id,cat,sub,icon,ru,uz,unit,kg,img,grp,hit,is_new,key,rating,reviews,country,warranty,active,created_at)
+              VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1,?)`,
+        p.id, p.cat, p.sub, p.icon, p.ru, p.uz, p.unit, p.kg, p.img, p.group, p.hit, p.isNew, p.key, p.rating, p.reviews, JSON.stringify(p.country), p.warranty, now);
+      for (const o of p.offers) db.run("INSERT OR IGNORE INTO offers(product_id,store_id,price,stock,updated_at) VALUES(?,?,?,?,?)", p.id, o.store, o.price, o.stock, now);
+    }
+    db.setMeta("seeded", now);
+    db.setMeta("catalog_rev", now);
+  });
+}

@@ -1,0 +1,13 @@
+{
+  "name": "imorat-server",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Imorat marketplace API: auth (SMS, Google, Apple), catalog, orders, Yandex delivery, Usta AI, seller cabinet",
+  "type": "module",
+  "engines": { "node": ">=22.13" },
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning src/server.js",
+    "dev": "node --disable-warning=ExperimentalWarning --watch src/server.js",
+    "test": "node --disable-warning=ExperimentalWarning --test test/*.test.mjs"
+  }
+}

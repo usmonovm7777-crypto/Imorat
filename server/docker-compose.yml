@@ -1,0 +1,28 @@
+# Production on any VPS (Ubuntu + Docker): API + automatic HTTPS (Caddy).
+# 1) Point a DNS record (e.g. api.imorat.uz) to the server's IP.
+# 2) cp .env.example .env  and fill it in (API_DOMAIN, JWT_SECRET, ADMIN_PHONES, keys).
+# 3) docker compose up -d --build
+services:
+  api:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      DB_PATH: /data/imorat.db
+      UPLOADS_DIR: /data/uploads
+      TRUST_PROXY: "1"
+    volumes:
+      - imorat-data:/data
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports: ["80:80", "443:443"]
+    env_file: .env
+    command: caddy reverse-proxy --from ${API_DOMAIN} --to api:8787
+    volumes:
+      - caddy-data:/data
+    depends_on: [api]
+volumes:
+  imorat-data:
+  caddy-data:

@@ -1,0 +1,71 @@
+# Сервер Imorat (API)
+
+Бэкенд маркетплейса: вход по SMS / Google / Apple, каталог, заказы с серверным расчётом цен и остатков,
+доставка Яндекс, Usta AI, регистрация магазинов с модерацией и кабинет продавца.
+
+- **Без сторонних библиотек**: нужен только Node.js 22.13+ (встроенные `node:http`, `node:sqlite`, `crypto`).
+- **База** — один файл SQLite (`data/imorat.db`); при первом запуске заполняется из `data/catalog.json` (9 магазинов, 347 товаров).
+- **Работает без ключей** в тестовом режиме: SMS-код показывается на сайте, доставка считается по тарифам, Usta AI отвечает офлайн.
+
+## Запуск на компьютере
+
+```bash
+cd server
+cp .env.example .env      # впишите JWT_SECRET и ADMIN_PHONES
+npm start                 # http://localhost:8787/api/health
+npm test                  # автотесты API
+```
+
+Чтобы сайт работал с этим сервером, в файле `config.js` в корне сайта укажите адрес:
+`window.IMORAT_API = "http://localhost:8787";`
+
+## Запуск в интернете (VPS + Docker)
+
+1. Арендуйте VPS с Ubuntu (1 ГБ памяти достаточно) и установите Docker.
+2. Направьте домен, например `api.imorat.uz`, на IP сервера (A-запись в DNS).
+3. На сервере:
+   ```bash
+   git clone https://github.com/usmonovm7777-crypto/Imorat.git && cd Imorat/server
+   cp .env.example .env && nano .env     # API_DOMAIN, PUBLIC_URL, JWT_SECRET, ADMIN_PHONES, ключи
+   docker compose up -d --build
+   ```
+   Caddy сам получит HTTPS-сертификат. Данные хранятся в Docker-томе `imorat-data`.
+4. В `config.js` сайта: `window.IMORAT_API = "https://api.imorat.uz";` — и запушить на GitHub.
+
+Резервная копия базы: `docker compose exec api sh -c "cp /data/imorat.db /data/backup-$(date +%F).db"`.
+
+## Ключи (всё необязательно, подключайте по мере готовности)
+
+| Что | Переменные | Где взять |
+|---|---|---|
+| SMS-коды | `ESKIZ_EMAIL`, `ESKIZ_PASSWORD`, `SMS_TEMPLATE` | Кабинет eskiz.uz; текст SMS должен совпадать с одобренным шаблоном |
+| Вход через Google | `GOOGLE_CLIENT_ID` | Google Cloud Console → Credentials → OAuth client (Web), добавить домен сайта |
+| Вход через Apple | `APPLE_CLIENT_ID`, `APPLE_REDIRECT_URI` | Apple Developer → Services ID с Sign in with Apple |
+| Usta AI | `ANTHROPIC_API_KEY` | console.anthropic.com |
+| Цены Яндекс Доставки | `YANDEX_DELIVERY_TOKEN` | Бизнес-аккаунт Яндекс Доставки → API-токен |
+
+Модераторы магазинов — номера в `ADMIN_PHONES`: после входа на сайт они видят блок «Модерация магазинов» в кабинете продавца.
+
+## API кратко
+
+| Метод | Путь | Что делает |
+|---|---|---|
+| GET | `/api/config` | какие сервисы подключены |
+| POST | `/api/auth/otp/send`, `/api/auth/otp/verify` | вход по SMS (5 мин, 5 попыток, повтор через 60 с) |
+| POST | `/api/auth/google`, `/api/auth/apple` | проверка ID-токена; новый аккаунт подтверждает телефон |
+| GET/PATCH | `/api/me` | профиль: имя, район, роль покупатель/прораб |
+| GET | `/api/catalog` | магазины, товары, цены и остатки (ETag, gzip) |
+| POST | `/api/quote` | расчёт корзины: опт, комплекты, промокод, доставка |
+| POST | `/api/orders` | заказ: проверка остатков, списание, разбивка по магазинам |
+| GET | `/api/orders`, `/api/orders/:num` | заказы и статусы доставки |
+| POST | `/api/ai/chat` | Usta AI (потоковый ответ, лимиты в день) |
+| POST/PATCH | `/api/seller/store` | анкета магазина: описание, категории, телефон, часы, адрес, геоточка |
+| GET | `/api/seller/summary` | кабинет: заказы, выручка, товары |
+| PATCH/POST | `/api/seller/offers…`, `/api/seller/products…` | цены, остатки, новые товары, фото |
+| PATCH | `/api/seller/shipments/:id` | сборка → курьер → доставлен |
+| GET/PATCH | `/api/admin/stores…` | модерация магазинов |
+
+## Что дальше
+- Оплата Click / Payme / Uzum (поле `pay_status` уже есть в заказах).
+- Создание заявки в Яндекс Доставке при «Вызвать курьера» и статусы от Яндекса.
+- SMS покупателю о статусе заказа.

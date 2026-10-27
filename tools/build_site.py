@@ -19,6 +19,6 @@ meta = ('<meta name="description" content="Imorat — маркетплейс с�
         'сравнение цен, Usta AI, калькуляторы ремонта и доставка Яндекс.">')
 html = ("<!doctype html>\n<html lang=\"ru\">\n<head>\n<meta charset=\"utf-8\">\n"
         "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1,viewport-fit=cover\">\n"
-        f"{meta}\n<style>{RESET}</style>\n{head_tags.strip()}\n</head>\n<body>\n{body.strip()}\n</body>\n</html>\n")
+        f"{meta}\n<style>{RESET}</style>\n<script src=\"config.js\"></script>\n{head_tags.strip()}\n</head>\n<body>\n{body.strip()}\n</body>\n</html>\n")
 (ROOT / "index.html").write_text(html, encoding="utf-8")
 print("built index.html", len(html), "bytes")
