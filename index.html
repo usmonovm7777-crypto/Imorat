@@ -3793,6 +3793,8 @@ async function dsShare() {
     x.fillText(`imorat · ${ROOMS().find(r => r[0] === DS.type)?.[1] || ""} ${String(DS.W).replace(".", ",")}×${String(DS.L).replace(".", ",")} ${L("м", "m")}`, 30, h + 40);
     x.font = "26px system-ui, sans-serif"; x.fillText(`${L("Смета", "Smeta")}: ${fmt(e.total)}`, 30, h + 76);
     const blob = await new Promise(r => c.toBlob(r, "image/png")), file = new File([blob], "imorat-room.png", { type: "image/png" });
+    const dl = window.claude && typeof window.claude.use === "function" ? await window.claude.use("downloads").catch(() => null) : null;
+    if (dl) { try { await dl.save({ filename: "imorat-room.png", data: blob }); toast(L("Картинка комнаты сохранена", "Xona rasmi saqlandi")); } catch (er) { if (er?.code !== "declined") toast(L("Не удалось сохранить картинку", "Rasmni saqlab bo‘lmadi")); } return; }
     if (navigator.canShare?.({ files: [file] })) await navigator.share({ files: [file], title: "Imorat", text: L("Моя комната в AI-дизайнере Imorat", "Imorat AI dizaynerida xonam") });
     else { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "imorat-room.png"; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); toast(L("Картинка комнаты сохранена", "Xona rasmi saqlandi")); }
   } catch (er) { if (er?.name !== "AbortError") toast(L("Не удалось сохранить картинку", "Rasmni saqlab bo‘lmadi")); }
