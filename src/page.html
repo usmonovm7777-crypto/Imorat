@@ -105,10 +105,16 @@ a { color: inherit; }
 .cat-btn { display: inline-flex; align-items: center; gap: 8px; background: var(--accent); color: var(--accent-ink); border-radius: 12px; padding: 10px 16px; font-weight: 600; flex: none; }
 .cat-btn:hover { filter: brightness(1.08); }
 .search { flex: 1; min-width: 0; position: relative; }
-.search input { width: 100%; border: 1.5px solid var(--line-strong); background: var(--raised); border-radius: 12px; padding: 10px 112px 10px 42px; transition: border-color .15s; }
+.search input { width: 100%; border: 1.5px solid var(--line-strong); background: var(--raised); border-radius: 12px; padding: 10px 184px 10px 42px; transition: border-color .15s; }
 .search input:focus { border-color: var(--accent); outline: none; background: var(--surface); }
 .search > svg { position: absolute; left: 14px; top: 50%; translate: 0 -50%; color: var(--faint); pointer-events: none; }
-.search .ask { position: absolute; right: 5px; top: 50%; translate: 0 -50%; display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 9px; font-size: 13px; font-weight: 600; background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 55%, var(--signal))); color: #fff; }
+.search .s-tools { position: absolute; right: 5px; top: 50%; translate: 0 -50%; display: flex; gap: 2px; align-items: center; }
+.search .s-ic { width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center; color: var(--muted); }
+.search .s-ic:hover { color: var(--accent); background: var(--accent-soft); }
+.search.listening .s-ic[data-act="voice"] { color: #fff; background: #d92d20; animation: micPulse 1.2s ease-in-out infinite; }
+.search.busy .s-ic[data-act="photo-search"] { color: var(--accent); animation: micPulse 1s ease-in-out infinite; }
+@keyframes micPulse { 50% { box-shadow: 0 0 0 6px color-mix(in srgb, currentColor 0%, transparent), 0 0 0 4px rgba(217, 45, 32, .25); } }
+.search .ask { position: static; translate: none; display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 9px; font-size: 13px; font-weight: 600; background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 55%, var(--signal))); color: #fff; }
 .where { display: inline-flex; align-items: center; gap: 6px; border-radius: 12px; padding: 6px 4px 6px 10px; color: var(--muted); font-size: 13px; flex: none; }
 .where:hover { background: var(--raised); }
 .where select { border: 0; background: transparent; font-size: 13px; font-weight: 500; color: var(--ink); padding: 4px 2px; max-width: 150px; cursor: pointer; }
@@ -134,7 +140,7 @@ a { color: inherit; }
   .search { order: 5; flex-basis: 100%; }
   .cat-btn, .hb, .cart-btn, .rail-nav { display: none; }
   .search .ask .t { display: none; }
-  .search input { padding-right: 52px; }
+  .search input { padding-right: 124px; }
 }
 
 /* ---------- Bottom nav (mobile) ---------- */
@@ -764,6 +770,17 @@ html.ds-dragging, html.ds-dragging * { cursor: grabbing !important; user-select:
 .ds-wish { display: flex; gap: 6px; }
 .ds-wish input { flex: 1; min-width: 0; border: 1.5px solid var(--line); border-radius: 12px; padding: 10px 12px; background: var(--raised); font: inherit; color: inherit; }
 .ds-sw { display: flex; flex-wrap: wrap; gap: 6px; }
+.ds-roomsh { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.flat-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 12px; align-items: start; }
+.flat-grid > .panel { display: grid; gap: 10px; }
+.flat-rooms { display: grid; gap: 8px; }
+.flat-room { display: grid; grid-template-columns: auto 84px 1fr; gap: 10px; align-items: center; padding: 8px; border: 1px solid var(--line); border-radius: 14px; cursor: pointer; opacity: .55; }
+.flat-room.on { opacity: 1; border-color: var(--accent); }
+.flat-room .fr-v svg { width: 84px; height: 64px; display: block; }
+.flat-room b { display: block; font-size: 14px; } .flat-room small { display: block; }
+#printArea { display: none; }
+@media print { body > *:not(#printArea) { display: none !important; } #printArea { display: block; color: #000; font: 12pt/1.4 system-ui, sans-serif; } #printArea table { width: 100%; border-collapse: collapse; margin-bottom: 14pt; } #printArea th, #printArea td { border: 1px solid #999; padding: 4pt 6pt; text-align: left; font-size: 10pt; } #printArea h1 { font-size: 18pt; } #printArea h2 { font-size: 13pt; margin: 12pt 0 6pt; } .pa-note { font-size: 9pt; color: #555; } }
+@media (max-width: 760px) { .flat-grid { grid-template-columns: 1fr; } }
 .mgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 12px; }
 .mcard { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 16px; display: grid; gap: 10px; align-content: start; }
 .mc-top { display: flex; gap: 12px; align-items: center; }
@@ -1139,6 +1156,8 @@ const UI = {
   idcard: '<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2.2"/><path d="M5.8 16c.6-1.6 1.8-2.4 3.2-2.4s2.6.8 3.2 2.4M14 10h4M14 13h3"/>',
   logout: '<path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h10"/>',
   menu: '<path d="M4 7h16M4 12h16M4 17h16"/>',
+  mic: '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7"/>',
+  camera: '<path d="M4 8h3l1.6-2.4h6.8L17 8h3v11H4z"/><circle cx="12" cy="13" r="3.6"/>',
   calc: '<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8M8 12h.01M12 12h.01M16 12h.01M8 16h.01M12 16h.01M16 16h.01"/>',
   pkg: '<path d="M3 7l9-4 9 4v10l-9 4-9-4z"/><path d="M3 7l9 4 9-4M12 11v10"/>'
 };
@@ -1734,7 +1753,7 @@ function renderHeader() {
     <button class="menu-btn" type="button" data-act="widgets" aria-label="${L("Виджеты и инструменты", "Vidjetlar va asboblar")}" title="${L("Виджеты", "Vidjetlar")}">${ui("menu", 22)}<span class="dot" aria-hidden="true"></span></button>
     <button class="logo" type="button" data-go="home" aria-label="Imorat"><span class="logo-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span><b>imorat</b></button>
     <button class="cat-btn" type="button" data-act="mega">${ui("grid", 18)}${L("Каталог", "Katalog")}</button>
-    <div class="search" role="search">${ui("search", 18)}<input id="q" type="search" value="${esc(f.q)}" placeholder="${L("Цемент, смеситель, ламинат…", "Sement, aralashtirgich, laminat…")}" aria-label="${L("Поиск по каталогу", "Katalog bo‘yicha qidiruv")}" autocomplete="off"><button class="ask" type="button" data-act="ask-search">${ui("spark", 14)}<span class="t">${L("Спросить AI", "AI dan so‘rash")}</span></button></div>
+    <div class="search" role="search">${ui("search", 18)}<input id="q" type="search" value="${esc(f.q)}" placeholder="${L("Цемент, смеситель, ламинат…", "Sement, aralashtirgich, laminat…")}" aria-label="${L("Поиск по каталогу", "Katalog bo‘yicha qidiruv")}" autocomplete="off"><span class="s-tools"><button class="s-ic" type="button" data-act="voice" ${SRec ? "" : "hidden"} aria-label="${L("Поиск голосом", "Ovozli qidiruv")}" title="${L("Поиск голосом", "Ovozli qidiruv")}">${ui("mic", 18)}</button><button class="s-ic" type="button" data-act="photo-search" ${photoAIon() ? "" : "hidden"} aria-label="${L("Поиск по фото", "Rasm bo‘yicha qidiruv")}" title="${L("Поиск по фото", "Rasm bo‘yicha qidiruv")}">${ui("camera", 18)}</button><button class="ask" type="button" data-act="ask-search">${ui("spark", 14)}<span class="t">${L("Спросить AI", "AI dan so‘rash")}</span></button></span><input type="file" id="psFile" accept="image/*" capture="environment" hidden></div>
     <label class="where" title="${L("Район доставки", "Yetkazish tumani")}">${ui("pin", 16)}<span class="visually-hidden">${L("Район доставки", "Yetkazish tumani")}</span><select id="distSel">${DISTRICTS.map(d => `<option value="${d.id}" ${d.id === district ? "selected" : ""}>${L(d.ru, d.uz)}</option>`).join("")}</select></label>
     <button class="fx-btn" type="button" data-act="fx-toggle" aria-pressed="${motionOK()}" aria-label="${motionOK() ? L("Яркий режим включён — переключить на простой", "Yorqin rejim yoqilgan — oddiyga o‘tish") : L("Простой режим — включить яркий", "Oddiy rejim — yorqinni yoqish")}" title="${motionOK() ? L("Яркий режим", "Yorqin rejim") : L("Простой режим", "Oddiy rejim")}">${ui("spark", 18)}</button>
     <div class="seg" role="group" aria-label="Язык / Til"><button type="button" data-lang="ru" aria-pressed="${lang === "ru"}">RU</button><button type="button" data-lang="uz" aria-pressed="${lang === "uz"}">UZ</button></div>
@@ -1750,7 +1769,7 @@ function renderHeader() {
     <button type="button" class="hl" data-scroll="vip">Imorat VIP</button>
     <button type="button" data-go="seller">${L("Продавцам", "Sotuvchilarga")}</button>
   </nav></div>`;
-  $("#q").addEventListener("input", e => { f.q = e.target.value; if (route.view !== "catalog") { route = { view: "catalog", cat: null }; history.replaceState(null, "", "#catalog"); renderMain(); } else renderList(); });
+  $("#q").addEventListener("input", e => { f.q = e.target.value; f.photo = null; if (route.view !== "catalog") { route = { view: "catalog", cat: null }; history.replaceState(null, "", "#catalog"); renderMain(); } else renderList(); });
   $("#q").addEventListener("keydown", e => { if (e.key === "Enter" && f.q.trim() && route.view === "catalog" && !filtered().length) openAI(f.q); });
   $("#distSel").addEventListener("change", e => setDistrict(e.target.value));
   $("#fab").innerHTML = `${ui("spark", 22)}<span class="lbl">Usta AI</span><span class="pulse"></span>`;
@@ -2150,7 +2169,8 @@ function filtered() {
     (!f.stores.length || p.offers.some(o => f.stores.includes(o.store))) &&
     (!f.inStock || p.offers.some(o => stockOf(p, o.store) > 0)) &&
     (!f.max || minPrice(p) <= f.max) &&
-    (!q || fold(`${p.ru} ${p.uz} ${CAT[p.cat].ru} ${CAT[p.cat].uz} ${subName(p.cat, p.sub)}`).includes(q)));
+    (!q || (h => h.includes(q) || q.split(/\s+/).filter(w => w.length > 1).every(w => h.includes(w.length > 4 ? w.slice(0, -1) : w)))(fold(`${p.ru} ${p.uz} ${CAT[p.cat].ru} ${CAT[p.cat].uz} ${subName(p.cat, p.sub)}`))));
+  if (f.photo) return f.photo.ids.map(id => PROD[id]).filter(p => p && (!route.cat || p.cat === route.cat));
   const score = p => (p.hit ? 1000 : 0) + p.rating * p.reviews;
   return list.sort((a, b) => f.sort === "asc" ? minPrice(a) - minPrice(b) : f.sort === "desc" ? minPrice(b) - minPrice(a) : f.sort === "rate" ? b.rating - a.rating : score(b) - score(a));
 }
@@ -2161,6 +2181,7 @@ function renderList(keep) {
   const list = filtered();
   $("#cnt").textContent = `${list.length} ${L(plural(list.length, ["товар", "товара", "товаров"]), "mahsulot")}`;
   const af = [];
+  if (f.photo) af.push(`<button type="button" data-clear="photo">${ui("camera", 12)} ${esc(f.photo.what || L("по фото", "rasm bo‘yicha"))} ${ui("close", 12)}</button>`);
   if (f.q) af.push(`<button type="button" data-clear="q">«${esc(f.q)}» ${ui("close", 12)}</button>`);
   f.stores.forEach(s => af.push(`<button type="button" data-clear="store:${s}">${esc(STORE[s].name)} ${ui("close", 12)}</button>`));
   if (f.inStock) af.push(`<button type="button" data-clear="stock">${L("В наличии", "Mavjud")} ${ui("close", 12)}</button>`);
@@ -2914,11 +2935,45 @@ function logout() {
 }
 
 /* ================= Usta AI ================= */
+/* ---------- Voice and photo search ---------- */
+const SRec = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+let srec = null;
+const photoAIon = () => !!((typeof sampleFn !== "undefined" && sampleFn && aiImg) || (API && apiCfg?.ai));
+function syncSearchTools() { const b = $('[data-act="photo-search"]'); if (b) b.hidden = !photoAIon(); }
+function voiceSearch() {
+  if (!SRec) return toast(L("Ваш браузер не поддерживает голосовой ввод", "Brauzeringiz ovozli kiritishni qo‘llamaydi"));
+  const box = $(".search"), inp = $("#q");
+  if (srec) { srec.stop(); return; }
+  try { srec = new SRec(); } catch (e) { srec = null; return toast(L("Голосовой ввод недоступен", "Ovozli kiritish mavjud emas")); }
+  srec.lang = lang === "uz" ? "uz-UZ" : "ru-RU"; srec.interimResults = true; srec.maxAlternatives = 1;
+  let final = "";
+  srec.onresult = ev => { let t = ""; for (const r of ev.results) t += r[0].transcript; final = t.trim().replace(/[.!?]+$/, ""); inp.value = final; };
+  srec.onerror = ev => { toast(ev.error === "not-allowed" || ev.error === "service-not-allowed" ? L("Разрешите доступ к микрофону в настройках браузера", "Brauzer sozlamalarida mikrofonga ruxsat bering") : ev.error === "no-speech" ? L("Ничего не услышали — попробуйте ещё раз", "Hech narsa eshitilmadi — yana urinib ko‘ring") : ev.error === "language-not-supported" ? L("Этот язык браузер пока не распознаёт — попробуйте русский", "Brauzer bu tilni hali tanimaydi — rus tilida urinib ko‘ring") : L("Голосовой ввод не сработал", "Ovozli kiritish ishlamadi")); };
+  srec.onend = () => { srec = null; box?.classList.remove("listening"); if (final) { f.q = final; f.photo = null; inp.value = final; if (route.view !== "catalog") { route = { view: "catalog", cat: null }; history.replaceState(null, "", "#catalog"); renderMain(); } else renderList(); toast(L(`Ищем: «${final}»`, `Qidiruv: «${final}»`)); } };
+  box?.classList.add("listening"); inp.value = ""; inp.placeholder = L("Говорите…", "Gapiring…");
+  try { srec.start(); } catch (e) { srec = null; box?.classList.remove("listening"); }
+  setTimeout(() => { if (inp) inp.placeholder = L("Цемент, смеситель, ламинат…", "Sement, aralashtirgich, laminat…"); }, 8000);
+}
+async function photoSearch(file) {
+  const box = $(".search"); let url;
+  try { url = await resizeImg(file); } catch (e) { return toast(L("Не удалось открыть фото", "Rasmni ochib bo‘lmadi")); }
+  box?.classList.add("busy"); toast(L("Usta AI смотрит фото…", "Usta AI rasmni ko‘rmoqda…"));
+  const cat = PRODUCTS.filter(p => !p.mine).map(p => `${p.id} ${p.ru}`).join("\n");
+  const r = await dsAI(`На фото — товар для ремонта или стройки, или деталь, которую нужно заменить. Определи, что это, и подбери из каталога Imorat до 8 подходящих товаров, самые похожие первыми. Ответь ТОЛЬКО JSON: {"what":"что на фото, 2–5 слов на ${lang === "uz" ? "узбекском (новая латиница: ö, ğ, ş, ç)" : "русском"}","ids":[id, ...]}. Если подходящего нет — "ids": [].\nКаталог (id название):\n${cat}`, url);
+  box?.classList.remove("busy");
+  const ids = (r && Array.isArray(r.ids) ? r.ids.map(Number).filter(id => PROD[id]) : []).slice(0, 12);
+  if (!ids.length) return toast(r?.what ? L(`Похоже на «${r.what}», но такого в каталоге нет — спросите Usta AI`, `«${r.what}» ga o‘xshaydi, lekin katalogda yo‘q — Usta AI dan so‘rang`) : L("Не удалось распознать фото — попробуйте снять ближе или спросите Usta AI", "Rasmni aniqlab bo‘lmadi — yaqinroqdan suratga oling yoki Usta AI dan so‘rang"));
+  f.photo = { what: String(r.what || "").slice(0, 60), ids }; f.q = ""; f.sub = null; f.stores = [];
+  if (route.view === "catalog" && !route.cat) { renderCatalog(); } else { route = { view: "catalog", cat: null }; history.replaceState(null, "", "#catalog"); renderMain(); }
+  window.scrollTo(0, 0);
+}
+document.addEventListener("change", e => { if (e.target.id === "psFile") { const fl = e.target.files?.[0]; e.target.value = ""; if (fl) photoSearch(fl); } });
 let sampleFn = null, aiReady = false, aiImg = false, aiOpen = false, aiBusy = false, aiCtl = null, aiFile = null, aiFileURL = "";
 let aiMsgs = []; // {role:'user'|'assistant', content, img?, error?}
 (async () => {
   try { sampleFn = window.claude && typeof window.claude.use === "function" ? await window.claude.use("sample") : null; } catch (e) { sampleFn = null; }
   if (sampleFn) { const lim = await sampleFn.limits().catch(() => null); aiImg = !!lim?.images; }
+  syncSearchTools();
   aiReady = true; if (aiOpen) renderAI();
 })();
 function catalogForAI() {
@@ -3106,6 +3161,7 @@ async function apiBoot() {
   try { apiCfg = await api("GET", "/api/config"); } catch (e) { apiCfg = null; toast(L("Сервер Imorat недоступен — показываем сохранённый каталог", "Imorat serveri mavjud emas — saqlangan katalog ko‘rsatilmoqda")); return; }
   stockOv = {};
   if (apiCfg.ai) { aiImg = true; if (aiOpen) renderAI(); }
+  syncSearchTools();
   if (apiToken) {
     try {
       const r = await api("GET", "/api/me");
@@ -4108,7 +4164,7 @@ function renderDesign() {
     <label class="ds-photo">${d.photo ? `<img src="${d.photo}" alt="${L("Фото комнаты", "Xona rasmi")}">` : `${ui("photo", 30)}<b>${L("Сделать фото или выбрать", "Suratga olish yoki tanlash")}</b>`}<input type="file" accept="image/*" capture="environment" id="dsFile" hidden></label>
     ${d.busy ? `<p class="mu">${L("Usta AI смотрит фото…", "Usta AI rasmni ko‘rmoqda…")}</p>` : d.notes ? `<div class="note">${ui("spark", 14)} ${esc(d.notes)}</div>` : d.photo && !dsAIon() ? `<p class="mu" style="font-size:13px">${L("Фото сохранено в проекте. Разбор фото AI работает, когда подключён Usta AI.", "Rasm loyihada saqlandi. AI tahlili Usta AI ulanganda ishlaydi.")}</p>` : ""}
     <div class="ds-nav"><button class="btn btn-line" type="button" data-ds="next">${d.photo ? L("Дальше", "Keyingisi") : L("Пропустить", "O‘tkazib yuborish")}</button>${d.photo ? `<button class="btn btn-primary" type="button" data-ds="next">${L("Дальше: размеры", "Keyingisi: o‘lchamlar")}</button>` : ""}</div>
-    ${dsRooms().length ? `<b class="ds-q">${L("Мои комнаты", "Mening xonalarim")}</b><div class="ds-rooms">${dsRooms().map(r => `<div class="ds-room"><button type="button" data-dsroom="${r.id}">${roomSVG(r.d)}<span><b>${esc(r.name)}</b><small>${new Date(r.t).toLocaleDateString("ru-RU")}</small></span></button><button type="button" class="ib" data-dsroomdel="${r.id}" aria-label="${L("Удалить", "O‘chirish")}">${ui("trash", 15)}</button></div>`).join("")}</div>` : ""}`;
+    ${dsRooms().length ? `<div class="ds-roomsh"><b class="ds-q">${L("Мои комнаты", "Mening xonalarim")}</b><button class="lnk" type="button" data-go="flat">${ui("calc", 15)} ${L("Смета на всю квартиру", "Butun kvartira smetasi")}</button></div><div class="ds-rooms">${dsRooms().map(r => `<div class="ds-room"><button type="button" data-dsroom="${r.id}">${roomSVG(r.d)}<span><b>${esc(r.name)}</b><small>${new Date(r.t).toLocaleDateString("ru-RU")}</small></span></button><button type="button" class="ib" data-dsroomdel="${r.id}" aria-label="${L("Удалить", "O‘chirish")}">${ui("trash", 15)}</button></div>`).join("")}</div>` : ""}`;
   else if (st === 2) panel = `<h2 class="h-m">${L("Размеры комнаты", "Xona o‘lchamlari")}</h2><p class="mu">${L("Измерьте рулеткой. 3D-коробка справа сразу меняется.", "Ruletka bilan o‘lchang. 3D quti darhol o‘zgaradi.")}</p>
     <div class="ds-grid">${[["W", L("Ширина, м", "Eni, m"), 1.5, 12, .1], ["L", L("Длина, м", "Bo‘yi, m"), 1.5, 15, .1], ["H", L("Высота, м", "Balandligi, m"), 2.2, 4.5, .05], ["win", L("Окон", "Derazalar"), 0, 3, 1], ["doors", L("Дверей", "Eshiklar"), 0, 2, 1]].map(([k, t, mn, mx, sp]) => `<div class="f"><label for="ds_${k}">${t}</label><input id="ds_${k}" type="number" inputmode="decimal" min="${mn}" max="${mx}" step="${sp}" value="${d[k]}" data-dsdim="${k}"></div>`).join("")}</div>
     ${d.win > 0 || d.doors > 0 ? `<div class="ds-walls"><div>${d.win > 0 ? `<b class="ds-q">${L("Окна на стене", "Derazalar devorda")}</b>${wchips("winWall", d.winWall || "A")}` : ""}${d.doors > 0 ? `<b class="ds-q">${L("Дверь на стене", "Eshik devorda")}</b>${wchips("doorWall", d.doorWall || "B")}<b class="ds-q">${L("Где дверь", "Eshik qayerda")}</b><div class="chips ds-chips">${[["start", L("У одного угла", "Bir burchakda")], ["mid", L("По центру", "O‘rtada")], ["end", L("У другого угла", "Boshqa burchakda")]].map(([v, t]) => `<button type="button" class="chip" data-dsw="doorPos" data-v="${v}" aria-pressed="${(d.doorPos || "end") === v}">${t}</button>`).join("")}</div>` : ""}</div><div class="ds-mini" aria-hidden="true">${planSVG(d, { nums: 1 })}</div></div>` : ""}
@@ -4151,7 +4207,7 @@ function renderDesign() {
         <div class="sumrow"><span class="mu">${L("Мебель", "Mebel")} · ${e.furn.reduce((a, l) => a + l.q, 0)} ${L("шт", "dona")}</span><span class="num">${fmt(e.furnSum)}</span></div>
         <div class="sumrow total"><span>${L("Итого", "Jami")}</span><span class="num">${fmt(e.total)}</span></div>
         <div class="ds-nav"><button class="btn btn-line" type="button" data-ds="proj">${ui("folder", 16)} ${L("В проект", "Loyihaga")}</button><button class="btn btn-primary" type="button" data-ds="cart">${ui("cart", 16)} ${L("Всё в корзину", "Hammasini savatga")}</button></div>
-        <div class="ds-nav" style="justify-content:flex-start"><button class="btn btn-line" type="button" data-ds="save-room">${ui("heart", 16)} ${L("Сохранить комнату", "Xonani saqlash")}</button><button class="btn btn-line" type="button" data-ds="share">${ui("photo", 16)} ${L("Поделиться", "Ulashish")}</button><button class="btn btn-line" type="button" data-mfind="${{ bath: "tile", kitchen: "furn", hall: "furn" }[d.type] || "paint"}">${ui("wrench", 16)} ${L("Найти мастера", "Usta topish")}</button><button class="btn btn-line" type="button" data-ds="relayout">${ui("repeat", 16)} ${L("Расставить заново", "Qayta joylash")}</button></div>
+        <div class="ds-nav" style="justify-content:flex-start"><button class="btn btn-line" type="button" data-ds="save-room">${ui("heart", 16)} ${L("Сохранить комнату", "Xonani saqlash")}</button><button class="btn btn-line" type="button" data-ds="share">${ui("photo", 16)} ${L("Поделиться", "Ulashish")}</button>${dsRooms().length ? `<button class="btn btn-line" type="button" data-go="flat">${ui("calc", 16)} ${L("Смета квартиры", "Kvartira smetasi")} · ${dsRooms().length}</button>` : ""}<button class="btn btn-line" type="button" data-mfind="${{ bath: "tile", kitchen: "furn", hall: "furn" }[d.type] || "paint"}">${ui("wrench", 16)} ${L("Найти мастера", "Usta topish")}</button><button class="btn btn-line" type="button" data-ds="relayout">${ui("repeat", 16)} ${L("Расставить заново", "Qayta joylash")}</button></div>
         <button class="lnk" type="button" data-ds="restart" style="justify-self:start;color:var(--muted)">${L("Начать заново", "Qaytadan boshlash")}</button></div>`;
   }
   $("#app").innerHTML = `<div class="wrap">
@@ -4721,12 +4777,92 @@ function mastersTeaser() {
     <div class="mgrid">${top.map(masterCard).join("")}</div></section>`;
 }
 
+/* ================= Whole-apartment estimate from saved rooms ================= */
+let flatSel = LS.get("imorat.flatSel", null); // ids of saved rooms included; null = all
+const flatRooms = () => dsRooms().filter(r => !flatSel || flatSel.includes(r.id));
+function flatEstimate(rooms) {
+  const mats = new Map(), furn = new Map(), per = [];
+  const addTo = (m, l, room) => { const k = l.p.id, x = m.get(k) || { p: l.p, q: 0, rooms: [] }; x.q += l.q; if (!x.rooms.includes(room)) x.rooms.push(room); m.set(k, x); };
+  for (const r of rooms) {
+    const d = { ...dsNew(), ...r.d }, e = dsEstimate(d);
+    e.mats.forEach(l => addTo(mats, l, r.name)); e.furn.forEach(l => addTo(furn, l, r.name));
+    per.push({ id: r.id, name: r.name, total: e.total, area: d.W * d.L, d });
+  }
+  const sum = m => [...m.values()].reduce((a, l) => a + minPrice(l.p) * l.q, 0);
+  return { mats: [...mats.values()], furn: [...furn.values()], per, matSum: sum(mats), furnSum: sum(furn), total: sum(mats) + sum(furn), area: per.reduce((a, x) => a + x.area, 0) };
+}
+function renderFlat() {
+  const all = dsRooms(), rooms = flatRooms(), e = flatEstimate(rooms);
+  const row = l => `<div class="sumrow"><span>${esc(pName(l.p))} × ${l.q}${l.rooms.length > 1 ? `<small class="mu"> · ${esc(l.rooms.join(", "))}</small>` : ""}</span><span class="num">${fmt(minPrice(l.p) * l.q)}</span></div>`;
+  $("#app").innerHTML = `<div class="wrap flat">
+    <nav class="crumbs"><button type="button" data-go="home">${L("Главная", "Asosiy")}</button>${ui("chev", 12)}<button type="button" data-go="design">${L("AI-дизайнер комнаты", "AI xona dizayneri")}</button>${ui("chev", 12)}<span>${L("Смета квартиры", "Kvartira smetasi")}</span></nav>
+    <div class="ds-head"><h1 class="h-l">${L("Смета на всю квартиру", "Butun kvartira smetasi")}</h1><p class="mu">${L("Сохранённые комнаты из AI-дизайнера в одной смете: одинаковые материалы сложены, видно, что и для какой комнаты. Отправьте мастеру или в семейный чат.", "AI dizaynerda saqlangan xonalar bitta smetada: bir xil materiallar qo‘shilgan, qaysi xona uchunligi ko‘rinadi. Ustaga yoki oilaviy chatga yuboring.")}</p></div>
+    ${!all.length ? `<div class="panel"><p style="margin:0 0 10px">${L("Пока нет сохранённых комнат. Спроектируйте комнату и нажмите «Сохранить комнату» — она появится здесь.", "Hozircha saqlangan xona yo‘q. Xonani loyihalab «Xonani saqlash» ni bosing — u shu yerda chiqadi.")}</p><button class="btn btn-primary" type="button" data-go="design">${ui("spark", 16)} ${L("Спроектировать комнату", "Xonani loyihalash")}</button></div>` : `
+    <div class="flat-grid"><div class="panel"><div class="panel-h"><h2 class="h-m">${L("Комнаты", "Xonalar")}</h2><span class="mu" style="font-size:13px">${rooms.length} ${L("из", "/")} ${all.length} · ${fmtN(e.area)} ${L("м²", "m²")}</span></div>
+      <div class="flat-rooms">${all.map(r => { const on = !flatSel || flatSel.includes(r.id), x = e.per.find(p => p.id === r.id); return `<label class="flat-room ${on ? "on" : ""}"><input type="checkbox" data-flatroom="${r.id}" ${on ? "checked" : ""}><span class="fr-v">${roomSVG(r.d)}</span><span><b>${esc(r.name)}</b><small class="mu">${x ? fmt(x.total) : L("не входит", "kirmaydi")}</small></span></label>`; }).join("")}</div>
+      <button class="btn btn-line" type="button" data-go="design" style="justify-self:start">${ui("plus", 16)} ${L("Добавить комнату", "Xona qo‘shish")}</button></div>
+    <div class="panel ds-est"><div class="panel-h"><h2 class="h-m">${L("Материалы", "Materiallar")}</h2><span class="num">${fmt(e.matSum)}</span></div>
+      ${e.mats.map(row).join("") || `<p class="mu">${L("Материалов нет", "Material yo‘q")}</p>`}
+      <div class="panel-h" style="margin-top:8px"><h2 class="h-m">${L("Мебель и техника", "Mebel va texnika")}</h2><span class="num">${fmt(e.furnSum)}</span></div>
+      ${e.furn.map(row).join("") || `<p class="mu">${L("Мебели нет", "Mebel yo‘q")}</p>`}
+      <div class="sumrow total"><span>${L("Итого по квартире", "Kvartira bo‘yicha jami")}</span><span class="num">${fmt(e.total)}</span></div>
+      ${e.total >= 500000 ? `<p class="mu" style="font-size:13px;margin:0">${L(`В рассрочку на 12 месяцев — от ${fmt(monthly(e.total))} в месяц`, `12 oyga muddatli to‘lov — oyiga ${fmt(monthly(e.total))}dan`)}</p>` : ""}
+      <div class="ds-nav" style="justify-content:flex-start"><button class="btn btn-primary" type="button" data-flat="cart" ${rooms.length ? "" : "disabled"}>${ui("cart", 16)} ${L("Всё в корзину", "Hammasini savatga")}</button><button class="btn btn-line" type="button" data-flat="png" ${rooms.length ? "" : "disabled"}>${ui("photo", 16)} ${L("Картинкой", "Rasm qilib")}</button><button class="btn btn-line" type="button" data-flat="print" ${rooms.length ? "" : "disabled"}>${ui("folder", 16)} ${L("Печать / PDF", "Chop etish / PDF")}</button><button class="btn btn-line" type="button" data-mfind="tile">${ui("wrench", 16)} ${L("Найти мастера", "Usta topish")}</button></div></div></div>`}
+  </div>`;
+}
+function flatLines(e) { return [...e.mats, ...e.furn].map(l => [`${pName(l.p)} × ${l.q}`, fmt(minPrice(l.p) * l.q)]); }
+async function flatPNG() {
+  const rooms = flatRooms(), e = flatEstimate(rooms), lines = flatLines(e), w = 1200, lh = 40, h = 230 + lines.length * lh + 120;
+  const c = document.createElement("canvas"); c.width = w; c.height = h; const x = c.getContext("2d");
+  x.fillStyle = "#f6f7f5"; x.fillRect(0, 0, w, h); x.fillStyle = "#0B6E69"; x.fillRect(0, 0, w, 10);
+  x.fillStyle = "#131b1a"; x.font = "700 44px system-ui, sans-serif"; x.fillText(L("Смета квартиры", "Kvartira smetasi"), 50, 80);
+  x.font = "26px system-ui, sans-serif"; x.fillStyle = "#5d6b67"; x.fillText(rooms.map(r => r.name).join(" · ").slice(0, 80), 50, 125); x.fillText(`imorat · ${new Date().toLocaleDateString("ru-RU")} · ${fmtN(e.area)} ${L("м²", "m²")}`, 50, 165);
+  let y = 230; x.font = "26px system-ui, sans-serif";
+  for (const [t, v] of lines) { x.fillStyle = "#131b1a"; x.textAlign = "left"; x.fillText(t.length > 64 ? t.slice(0, 62) + "…" : t, 50, y); x.textAlign = "right"; x.fillText(v, w - 50, y); x.strokeStyle = "#e0e5df"; x.beginPath(); x.moveTo(50, y + 14); x.lineTo(w - 50, y + 14); x.stroke(); y += lh; }
+  x.font = "700 34px system-ui, sans-serif"; x.textAlign = "left"; x.fillText(L("Итого", "Jami"), 50, y + 50); x.textAlign = "right"; x.fillText(fmt(e.total), w - 50, y + 50);
+  const blob = await new Promise(r => c.toBlob(r, "image/png"));
+  await saveBlobFile(blob, "imorat-smeta.png", L("Смета квартиры на Imorat", "Imoratdagi kvartira smetasi"));
+}
+/* Save or share a generated file: Claude downloads, the phone share sheet, or a normal download */
+async function saveBlobFile(blob, name, text) {
+  try {
+    const dl = window.claude && typeof window.claude.use === "function" ? await window.claude.use("downloads").catch(() => null) : null;
+    if (dl) { try { await dl.save({ filename: name, data: blob }); toast(L("Файл сохранён", "Fayl saqlandi")); } catch (er) { if (er?.code !== "declined") toast(L("Не удалось сохранить файл", "Faylni saqlab bo‘lmadi")); } return; }
+    const file = new File([blob], name, { type: blob.type });
+    if (navigator.canShare?.({ files: [file] })) { await navigator.share({ files: [file], title: "Imorat", text }); return; }
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); toast(L("Файл сохранён", "Fayl saqlandi"));
+  } catch (er) { if (er?.name !== "AbortError") toast(L("Не удалось сохранить файл", "Faylni saqlab bo‘lmadi")); }
+}
+function flatPrint() {
+  const rooms = flatRooms(), e = flatEstimate(rooms);
+  let el = $("#printArea"); if (!el) { el = document.createElement("div"); el.id = "printArea"; document.body.appendChild(el); }
+  const tbl = (title, ls, sum) => `<h2>${title}</h2><table><thead><tr><th>${L("Наименование", "Nomi")}</th><th>${L("Кол-во", "Soni")}</th><th>${L("Цена", "Narx")}</th><th>${L("Сумма", "Summa")}</th><th>${L("Комнаты", "Xonalar")}</th></tr></thead><tbody>${ls.map(l => `<tr><td>${esc(pName(l.p))}</td><td>${l.q} ${esc(unitName(l.p.unit))}</td><td>${fmt(minPrice(l.p))}</td><td>${fmt(minPrice(l.p) * l.q)}</td><td>${esc(l.rooms.join(", "))}</td></tr>`).join("")}</tbody><tfoot><tr><td colspan="3">${L("Итого", "Jami")}</td><td colspan="2">${fmt(sum)}</td></tr></tfoot></table>`;
+  el.innerHTML = `<h1>${L("Смета квартиры", "Kvartira smetasi")} · imorat</h1><p>${new Date().toLocaleDateString("ru-RU")} · ${rooms.map(r => esc(r.name)).join(", ")} · ${fmtN(e.area)} ${L("м²", "m²")}</p>
+    ${tbl(L("Материалы", "Materiallar"), e.mats, e.matSum)}${tbl(L("Мебель и техника", "Mebel va texnika"), e.furn, e.furnSum)}<h2>${L("Итого по квартире", "Kvartira bo‘yicha jami")}: ${fmt(e.total)}</h2>
+    <p class="pa-note">${L("Цены — минимальные в магазинах Imorat на дату сметы. Доставка и работа мастеров не включены.", "Narxlar — smeta sanasidagi Imorat do‘konlaridagi eng past narxlar. Yetkazish va usta ishi kiritilmagan.")}</p>`;
+  try { window.print(); } catch (er) { toast(L("Печать здесь недоступна — сохраните смету картинкой", "Bu yerda chop etib bo‘lmaydi — smetani rasm qilib saqlang")); }
+}
+document.addEventListener("change", e => {
+  if (e.target.dataset?.flatroom == null) return;
+  const ids = dsRooms().map(r => r.id), cur = new Set(flatSel || ids);
+  e.target.checked ? cur.add(e.target.dataset.flatroom) : cur.delete(e.target.dataset.flatroom);
+  flatSel = cur.size === ids.length ? null : [...cur]; LS.set("imorat.flatSel", flatSel); renderFlat();
+});
+document.addEventListener("click", e => {
+  const t = e.target.closest("[data-flat]"); if (!t) return;
+  const act = t.dataset.flat;
+  if (act === "cart") { const fe = flatEstimate(flatRooms()); [...fe.mats, ...fe.furn].forEach(l => addToCart(l.p.id, null, l.q, true)); toast(L("Вся квартира в корзине", "Butun kvartira savatda")); return openDrawer("cart"); }
+  if (act === "png") return flatPNG();
+  if (act === "print") return flatPrint();
+});
+
 /* ================= Router & render ================= */
 function parseHash() {
   const h = location.hash.slice(1);
   if (h === "seller") return { view: "seller", cat: null };
   if (h === "design") return { view: "design", cat: null };
   if (h === "masters") return { view: "masters", cat: null };
+  if (h === "flat") return { view: "flat", cat: null };
   if (h === "catalog") return { view: "catalog", cat: null };
   if (h.startsWith("cat-") && CAT[h.slice(4)]) return { view: "catalog", cat: h.slice(4) };
   if (/^p-\d+$/.test(h) && PROD[+h.slice(2)]) return { view: "catalog", cat: PROD[+h.slice(2)].cat, prod: +h.slice(2) };
@@ -4737,6 +4873,7 @@ function renderMain() {
   else if (route.view === "seller") renderSeller();
   else if (route.view === "design") renderDesign();
   else if (route.view === "masters") renderMasters();
+  else if (route.view === "flat") renderFlat();
   else renderHome();
   renderTabbar(); counts(); settleMotion();
   if (route.prod) { const id = route.prod; route.prod = 0; setTimeout(() => openProduct(id), 0); }
@@ -4791,7 +4928,7 @@ document.addEventListener("click", e => {
   if (ds.q) { f.q = ds.q; route = { view: "catalog", cat: null }; history.replaceState(null, "", "#catalog"); renderMain(); $("#q").value = f.q; return window.scrollTo(0, 0); }
   if (ds.scroll) return scrollToSec(ds.scroll);
   if (ds.calc) { const items = calcOut[ds.calc] || []; items.forEach(([p, q]) => q > 0 && addToCart(p.id, null, q, true)); toast(L("Материалы добавлены в корзину", "Materiallar savatga qo‘shildi")); return; }
-  if (ds.clear) { const c = ds.clear; if (c === "q") { f.q = ""; $("#q").value = ""; } else if (c === "stock") f.inStock = false; else if (c.startsWith("store:")) f.stores = f.stores.filter(x => x !== c.slice(6)); return renderCatalog(); }
+  if (ds.clear) { const c = ds.clear; if (c === "photo") f.photo = null; else if (c === "q") { f.q = ""; $("#q").value = ""; } else if (c === "stock") f.inStock = false; else if (c.startsWith("store:")) f.stores = f.stores.filter(x => x !== c.slice(6)); return renderCatalog(); }
   if (ds.order) return openDrawer("track", ds.order);
   if (ds.bundle) return addBundle(ds.bundle);
   if (ds.ask) return openAI(ds.ask);
@@ -4853,6 +4990,8 @@ document.addEventListener("click", e => {
     case "close-ai": return closeAI();
     case "ai-clear": aiCtl?.abort(); aiMsgs = []; return renderAI();
     case "ai-unattach": aiFile = null; aiFileURL = ""; $("#aiAtt").hidden = true; $("#aiFile").value = ""; return;
+    case "voice": return voiceSearch();
+    case "photo-search": return $("#psFile")?.click();
     case "ask-search": return openAI(f.q.trim() ? L(`Помоги выбрать: ${f.q.trim()}`, `Tanlashga yordam ber: ${f.q.trim()}`) : undefined);
     case "ai-cat": return openAI(route.cat ? L(`Помоги выбрать в разделе «${CAT[route.cat].ru}»: что лучше и на что смотреть?`, `«${CAT[route.cat].uz}» bo‘limida tanlashga yordam ber: qaysi biri yaxshi?`) : undefined, { send: !!route.cat });
     case "compare": return openDrawer("compare");

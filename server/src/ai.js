@@ -42,7 +42,7 @@ const JSON_RULES = `Ты — AI-дизайнер интерьера маркет
 Тексты внутри JSON — на языке клиента (русский или узбекский новой латиницей: ö, ğ, ş, ç). Отвечай только на темы ремонта и интерьера.`;
 export function buildRequest(db, ref, cfg, body, user) {
   const msgs = Array.isArray(body.messages) ? body.messages.slice(-12) : [];
-  const clean = msgs.map(m => ({ role: m?.role === "assistant" ? "assistant" : "user", content: String(m?.content || "").slice(0, body.mode === "json" ? 12000 : 4000) })).filter(m => m.content);
+  const clean = msgs.map(m => ({ role: m?.role === "assistant" ? "assistant" : "user", content: String(m?.content || "").slice(0, body.mode === "json" ? 40000 : 4000) })).filter(m => m.content);
   while (clean.length && clean[0].role !== "user") clean.shift();
   if (!clean.length || clean[clean.length - 1].role !== "user") throw bad("bad_messages", "The last message must be from the user");
   if (typeof body.image === "string" && body.image) {
@@ -57,7 +57,7 @@ export function buildRequest(db, ref, cfg, body, user) {
   }).filter(Boolean).join("; ") || "пусто";
   const district = D[body.district]?.ru || D[user?.district]?.ru || "не указан";
   const who = user ? `имя — ${user.name || "—"}; роль — ${user.role === "pro" ? "мастер/прораб (оптовые цены −3%)" : user.role === "seller" ? "представитель магазина" : "покупатель"}; ` : "";
-  if (body.mode === "json") return { model: cfg.model, max_tokens: Math.max(cfg.maxTokens, 1500), stream: true, system: [{ type: "text", text: JSON_RULES }], messages: clean.map(m => typeof m.content === "string" ? { ...m, content: m.content.slice(0, 12000) } : m) };
+  if (body.mode === "json") return { model: cfg.model, max_tokens: Math.max(cfg.maxTokens, 1500), stream: true, system: [{ type: "text", text: JSON_RULES }], messages: clean.map(m => typeof m.content === "string" ? { ...m, content: m.content.slice(0, 40000) } : m) };
   return {
     model: cfg.model, max_tokens: cfg.maxTokens, stream: true,
     system: [
