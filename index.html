@@ -659,43 +659,44 @@ html.lock { overflow: hidden; }
 .flyer { position: fixed; z-index: 80; width: 64px; height: 64px; border-radius: 50%; overflow: hidden; pointer-events: none; box-shadow: var(--shadow); }
 .flyer img, .flyer svg { width: 100%; height: 100%; object-fit: cover; }
 @property --ang { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
-@media (prefers-reduced-motion: no-preference) and (hover: hover) and (min-width: 761px) {
-  .askbar { border: 2px solid transparent; background: linear-gradient(var(--hero-fg), var(--hero-fg)) padding-box, conic-gradient(from var(--ang), var(--hero-acc), var(--signal), #ffffff, var(--hero-acc)) border-box; animation: spin 5s linear infinite; }
+/* Rich mode (glow, motion): html.fx — on by default on desktop, switchable by the user */
+
+  html.fx .askbar { border: 2px solid transparent; background: linear-gradient(var(--hero-fg), var(--hero-fg)) padding-box, conic-gradient(from var(--ang), var(--hero-acc), var(--signal), #ffffff, var(--hero-acc)) border-box; animation: spin 5s linear infinite; }
   @keyframes spin { to { --ang: 360deg; } }
-  .hero .h-xl { animation: rise 1s cubic-bezier(.2,.8,.2,1) both; }
-  .hero .lead, .hero .askbar, .hero .hero-q, .hero .stats { animation: rise 1s cubic-bezier(.2,.8,.2,1) both; }
-  .hero .lead { animation-delay: .08s; } .hero .askbar { animation-delay: .16s; } .hero .hero-q { animation-delay: .22s; } .hero .stats { animation-delay: .28s; }
+  html.fx .hero .h-xl { animation: rise 1s cubic-bezier(.2,.8,.2,1) both; }
+  html.fx .hero .lead, html.fx .hero .askbar, html.fx .hero .hero-q, html.fx .hero .stats { animation: rise 1s cubic-bezier(.2,.8,.2,1) both; }
+  html.fx .hero .lead { animation-delay: .08s; } html.fx .hero .askbar { animation: rise 1s cubic-bezier(.2,.8,.2,1) .16s both, spin 5s linear infinite; } html.fx .hero .hero-q { animation-delay: .22s; } html.fx .hero .stats { animation-delay: .28s; }
   @keyframes rise { from { transform: translateY(22px); filter: blur(3px); } to { transform: none; filter: none; } }
-  .collage .tile { transform: translate3d(calc(var(--px, 0) * var(--d, 10) * 1px), calc(var(--py, 0) * var(--d, 10) * 1px + var(--oy, 0px)), 0); transition: transform .25s ease-out, box-shadow .25s; }
-  .collage .tile:nth-child(1) { --d: 14; } .collage .tile:nth-child(2) { --d: 22; --oy: 18px; } .collage .tile:nth-child(3) { --d: 10; }
-  .collage .tile:nth-child(4) { --d: 26; --oy: 18px; } .collage .tile:nth-child(5) { --d: 12; } .collage .tile:nth-child(6) { --d: 18; --oy: 18px; }
-  .collage .tile:hover { box-shadow: 0 26px 60px rgba(0,0,0,.4); }
-  .hero::after { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; background: radial-gradient(420px 320px at var(--gx, 70%) var(--gy, 30%), color-mix(in srgb, var(--hero-acc) 18%, transparent), transparent 70%); transition: background .2s; }
-  .mq-track { animation: marquee 48s linear infinite; }
-  .marquee:hover .mq-track { animation-play-state: paused; }
+  html.fx .collage .tile { transform: translate3d(calc(var(--px, 0) * var(--d, 10) * 1px), calc(var(--py, 0) * var(--d, 10) * 1px + var(--oy, 0px)), 0); transition: transform .25s ease-out, box-shadow .25s; }
+  html.fx .collage .tile:nth-child(1) { --d: 14; } html.fx .collage .tile:nth-child(2) { --d: 22; --oy: 18px; } html.fx .collage .tile:nth-child(3) { --d: 10; }
+  html.fx .collage .tile:nth-child(4) { --d: 26; --oy: 18px; } html.fx .collage .tile:nth-child(5) { --d: 12; } html.fx .collage .tile:nth-child(6) { --d: 18; --oy: 18px; }
+  html.fx .collage .tile:hover { box-shadow: 0 26px 60px rgba(0,0,0,.4); }
+  html.fx .hero::after { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; background: radial-gradient(420px 320px at var(--gx, 70%) var(--gy, 30%), color-mix(in srgb, var(--hero-acc) 18%, transparent), transparent 70%); transition: background .2s; }
+  html.fx .mq-track { animation: marquee 48s linear infinite; }
+  html.fx .marquee:hover .mq-track { animation-play-state: paused; }
   @keyframes marquee { to { transform: translateX(-50%); } }
-  .card, .bundle, .cat-tile { transform-style: preserve-3d; will-change: transform; }
-  .tilt { transform: perspective(900px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) translateY(-4px) !important; transition: transform .08s linear, box-shadow .2s !important; box-shadow: 0 22px 40px rgba(14, 26, 24, .16) !important; }
-  .card::after, .bundle::after { content: ""; position: absolute; inset: 0; pointer-events: none; border-radius: inherit; opacity: 0; transition: opacity .25s; background: radial-gradient(260px 200px at var(--mx, 50%) var(--my, 30%), rgba(255,255,255,.22), transparent 70%); z-index: 2; }
-  .tilt::after { opacity: 1; }
-  .bundle { position: relative; }
-  .sec-head .h-l { background: linear-gradient(currentColor, currentColor) 0 100% / 0 3px no-repeat; transition: background-size .6s; padding-bottom: 4px; }
-  .sec-head:hover .h-l { background-size: 64px 3px; }
-  .route .dash { stroke-dasharray: 6 8; animation: dash 1.2s linear infinite; }
+  html.fx .card, html.fx .bundle, html.fx .cat-tile { transform-style: preserve-3d; will-change: transform; }
+  html.fx .tilt { transform: perspective(900px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) translateY(-4px) !important; transition: transform .08s linear, box-shadow .2s !important; box-shadow: 0 22px 40px rgba(14, 26, 24, .16) !important; }
+  html.fx .card::after, html.fx .bundle::after { content: ""; position: absolute; inset: 0; pointer-events: none; border-radius: inherit; opacity: 0; transition: opacity .25s; background: radial-gradient(260px 200px at var(--mx, 50%) var(--my, 30%), rgba(255,255,255,.22), transparent 70%); z-index: 2; }
+  html.fx .tilt::after { opacity: 1; }
+  html.fx .bundle { position: relative; }
+  html.fx .sec-head .h-l { background: linear-gradient(currentColor, currentColor) 0 100% / 0 3px no-repeat; transition: background-size .6s; padding-bottom: 4px; }
+  html.fx .sec-head:hover .h-l { background-size: 64px 3px; }
+  html.fx .route .dash { stroke-dasharray: 6 8; animation: dash 1.2s linear infinite; }
   @keyframes dash { to { stroke-dashoffset: -28; } }
   @supports (animation-timeline: view()) {
-    .rv { animation: rv linear both; animation-timeline: view(); animation-range: entry 0% cover 24%; }
+    html.fx .rv { animation: rv linear both; animation-timeline: view(); animation-range: entry 0% cover 24%; }
     @keyframes rv { from { opacity: .2; transform: translateY(48px) scale(.985); } to { opacity: 1; transform: none; } }
-    .rv-x > * { animation: rvx linear both; animation-timeline: view(); animation-range: entry 0% cover 30%; }
+    html.fx .rv-x > * { animation: rvx linear both; animation-timeline: view(); animation-range: entry 0% cover 30%; }
     @keyframes rvx { from { opacity: .2; transform: translateX(60px) rotate(1.5deg); } to { opacity: 1; transform: none; } }
   }
-  ::view-transition-old(root), ::view-transition-new(root) { animation-duration: .35s; }
-}
+  html.fx::view-transition-old(root), html.fx::view-transition-new(root) { animation-duration: .35s; }
+
 @media (max-width: 760px), (hover: none) {
-  .marquee { overflow-x: auto; -webkit-mask: none; mask: none; scrollbar-width: none; }
-  .marquee::-webkit-scrollbar { display: none; }
-  .mq-track { padding-inline: 10px; }
-  .collage .tile { animation: none; }
+  html:not(.fx) .marquee { overflow-x: auto; -webkit-mask: none; mask: none; scrollbar-width: none; }
+  html:not(.fx) .marquee::-webkit-scrollbar { display: none; }
+  html:not(.fx) .mq-track { padding-inline: 10px; }
+  html:not(.fx) .collage .tile { animation: none; }
 }
 @media (max-width: 760px) {
   input, select, textarea { font-size: 16px !important; }
@@ -739,6 +740,9 @@ html.lock { overflow: hidden; }
 .acct .av { width: 52px; height: 52px; font-size: 20px; }
 .acct small { display: block; color: var(--muted); }
 .roles { display: grid; gap: 8px; }
+.fx-btn { width: 36px; height: 36px; border-radius: 11px; display: grid; place-items: center; flex: none; color: var(--muted); border: 1px solid var(--line-strong); transition: color .2s, box-shadow .3s, background .2s; }
+.fx-btn:hover { color: var(--ink); }
+html.fx .fx-btn { color: #fff; border-color: transparent; background: linear-gradient(135deg, var(--accent), var(--signal)); box-shadow: 0 0 0 3px color-mix(in srgb, var(--signal) 22%, transparent), 0 6px 18px color-mix(in srgb, var(--signal) 35%, transparent); }
 .srate { font-size: 12.5px; color: var(--muted); }
 .srate b { color: var(--ink); font-weight: 600; } .srate b::first-letter { color: #e8a317; }
 .srate.new { color: var(--accent); font-weight: 600; }
@@ -886,7 +890,7 @@ html.lock { overflow: hidden; }
     <div class="ai-row">
       <button class="ib" type="button" id="aiPhotoBtn" hidden></button>
       <input type="file" id="aiFile" accept="image/jpeg,image/png,image/webp" hidden>
-      <label class="visually-hidden" for="aiInput">Сообщение</label>
+      <label class="visually-hidden" for="aiInput" id="aiInputL">Сообщение</label>
       <textarea id="aiInput" rows="1"></textarea>
       <button class="ai-send" type="submit" id="aiSend"></button>
     </div>
@@ -1463,7 +1467,21 @@ function bundleDisc() {
 }
 const mqFine = matchMedia("(hover: hover) and (pointer: fine) and (min-width: 761px)");
 const mqReduce = matchMedia("(prefers-reduced-motion: reduce)");
-const motionOK = () => mqFine.matches && !mqReduce.matches;
+/* Look settings: rich (glow + motion) or simple; theme auto / light / dark. Saved per browser. */
+let fxPref = LS.get("imorat.fx", "auto"), themePref = LS.get("imorat.theme", "auto"), themeSet = false;
+function applyLook() {
+  const fx = fxPref === "on" || (fxPref === "auto" && mqFine.matches && !mqReduce.matches);
+  document.documentElement.classList.toggle("fx", fx);
+  if (themePref === "light" || themePref === "dark") { document.documentElement.setAttribute("data-theme", themePref); themeSet = true; }
+  else if (themeSet) { document.documentElement.removeAttribute("data-theme"); themeSet = false; }
+}
+applyLook();
+const motionOK = () => document.documentElement.classList.contains("fx");
+function setLook(fx, theme) {
+  if (fx) { fxPref = fx; LS.set("imorat.fx", fx); }
+  if (theme) { themePref = theme; LS.set("imorat.theme", theme); }
+  applyLook(); renderAll(); settleMotion();
+}
 function setPanel(el, on) { el.classList.toggle("on", on); el.setAttribute("aria-hidden", on ? "false" : "true"); if (on) el.removeAttribute("inert"); else el.setAttribute("inert", ""); }
 function syncLock() { document.documentElement.classList.toggle("lock", !!drawerView || aiOpen || $("#modal").classList.contains("on") || $("#mega").classList.contains("on") || $("#authM").classList.contains("on") || $("#wid").classList.contains("on")); }
 function settleMotion() { if (motionOK()) return; document.querySelectorAll(".route").forEach(svg => { try { svg.pauseAnimations(); svg.setCurrentTime(3); } catch (e) {} }); }
@@ -1521,6 +1539,7 @@ function renderHeader() {
     <button class="cat-btn" type="button" data-act="mega">${ui("grid", 18)}${L("Каталог", "Katalog")}</button>
     <div class="search" role="search">${ui("search", 18)}<input id="q" type="search" value="${esc(f.q)}" placeholder="${L("Цемент, смеситель, ламинат…", "Sement, aralashtirgich, laminat…")}" aria-label="${L("Поиск по каталогу", "Katalog bo‘yicha qidiruv")}" autocomplete="off"><button class="ask" type="button" data-act="ask-search">${ui("spark", 14)}<span class="t">${L("Спросить AI", "AI dan so‘rash")}</span></button></div>
     <label class="where" title="${L("Район доставки", "Yetkazish tumani")}">${ui("pin", 16)}<span class="visually-hidden">${L("Район доставки", "Yetkazish tumani")}</span><select id="distSel">${DISTRICTS.map(d => `<option value="${d.id}" ${d.id === district ? "selected" : ""}>${L(d.ru, d.uz)}</option>`).join("")}</select></label>
+    <button class="fx-btn" type="button" data-act="fx-toggle" aria-pressed="${motionOK()}" aria-label="${motionOK() ? L("Яркий режим включён — переключить на простой", "Yorqin rejim yoqilgan — oddiyga o‘tish") : L("Простой режим — включить яркий", "Oddiy rejim — yorqinni yoqish")}" title="${motionOK() ? L("Яркий режим", "Yorqin rejim") : L("Простой режим", "Oddiy rejim")}">${ui("spark", 18)}</button>
     <div class="seg" role="group" aria-label="Язык / Til"><button type="button" data-lang="ru" aria-pressed="${lang === "ru"}">RU</button><button type="button" data-lang="uz" aria-pressed="${lang === "uz"}">UZ</button></div>
     <button class="hb" type="button" data-act="favs" aria-label="${L("Избранное", "Saralanganlar")}">${ui("heart", 22)}<span class="dot" id="favDot" hidden></span></button>
     <button class="hb" type="button" data-act="${user ? "profile" : "login"}" aria-label="${user ? L("Профиль", "Profil") : L("Войти", "Kirish")}">${user ? `<span class="av">${esc(initial(user.name))}</span>` : ui("user", 22)}</button>
@@ -1886,7 +1905,7 @@ function renderCatalog() {
   const c = route.cat ? CAT[route.cat] : null;
   const base = PRODUCTS.filter(p => !c || p.cat === c.id);
   const maxP = Math.max(...base.map(minPrice), 1000);
-  if (!f.max || f.max > maxP) f.max = maxP;
+  if (!f.max || f.max > maxP || f.maxFor !== (route.cat || "all")) { f.max = maxP; f.maxFor = route.cat || "all"; }
   const storesHere = STORES.filter(s => base.some(p => p.offers.some(o => o.store === s.id)));
   const open = window.innerWidth > 860;
   $("#app").innerHTML = `<div class="wrap">
@@ -2246,6 +2265,8 @@ function dProfile() {
       <small>${vip ? L("Точный час без доплаты, курьер в приоритете, кешбэк 3%.", "Aniq soat bepul, ustuvor kuryer, 3% keshbek.") : L(`${fmt(VIP_FEE)} в месяц, первый месяц бесплатно.`, `Oyiga ${fmt(VIP_FEE)}, birinchi oy bepul.`)}</small>
       <button class="btn ${vip ? "btn-line" : "btn-primary"}" type="button" data-act="${vip ? "vip-off" : "vip-on"}" style="${vip ? "border-color:color-mix(in srgb,var(--vip-fg) 35%,transparent)" : "background:var(--signal);color:#fff"}">${vip ? L("Отключить", "O‘chirish") : L("Подключить VIP", "VIP ulash")}</button></div>
     <div class="f"><label for="pDist">${L("Район доставки по умолчанию", "Standart yetkazish tumani")}</label><select id="pDist" class="sel">${DISTRICTS.map(x => `<option value="${x.id}" ${x.id === district ? "selected" : ""}>${L(x.ru, x.uz)}</option>`).join("")}</select></div>
+    <div class="f"><span>${L("Оформление", "Ko‘rinish")}</span><div class="seg" role="group" style="justify-self:start"><button type="button" data-look="on" aria-pressed="${fxPref === "on"}">${L("Яркое", "Yorqin")}</button><button type="button" data-look="off" aria-pressed="${fxPref === "off"}">${L("Простое", "Oddiy")}</button><button type="button" data-look="auto" aria-pressed="${fxPref === "auto"}">${L("Авто", "Avto")}</button></div><small style="color:var(--muted)">${L("Яркое — подсветка и анимации. Простое — спокойно и быстрее на слабом телефоне.", "Yorqin — yoritish va animatsiyalar. Oddiy — sokin va kuchsiz telefonda tezroq.")}</small></div>
+    <div class="f"><span>${L("Тема", "Mavzu")}</span><div class="seg" role="group" style="justify-self:start"><button type="button" data-theme-set="auto" aria-pressed="${themePref === "auto"}">${L("Авто", "Avto")}</button><button type="button" data-theme-set="light" aria-pressed="${themePref === "light"}">${L("Светлая", "Yorug‘")}</button><button type="button" data-theme-set="dark" aria-pressed="${themePref === "dark"}">${L("Тёмная", "Qorong‘i")}</button></div></div>
     <div class="f"><span>${L("Язык", "Til")}</span><div class="seg" role="group" style="justify-self:start"><button type="button" data-lang="ru" aria-pressed="${lang === "ru"}">Русский</button><button type="button" data-lang="uz" aria-pressed="${lang === "uz"}">Özbekça</button></div></div>
     <div style="display:grid;gap:8px">
       <button class="order-row" type="button" data-act="orders"><b>${L("Мои заказы", "Buyurtmalarim")}</b><b class="num">${orders.length}</b><small>${last ? `${L("Последний", "Oxirgi")}: ${last.num} · ${orderStatus(last)[0]}` : L("Пока пусто", "Hozircha bo‘sh")}</small></button>
@@ -2738,6 +2759,7 @@ function openAI(prefill, opts = {}) {
 function closeAI() { aiOpen = false; setPanel($("#ai"), false); $("#fab").hidden = false; showScrim(); syncLock(); }
 function renderAI() {
   $("#aiHead").innerHTML = `<span class="ai-av">${ui("spark", 20)}</span><h2>Usta AI<small>${L("Подберёт материалы и посчитает количество", "Materiallarni tanlaydi va miqdorini hisoblaydi")}</small></h2>${aiMsgs.length ? `<button class="ib" type="button" data-act="ai-clear" aria-label="${L("Новый диалог", "Yangi suhbat")}" title="${L("Новый диалог", "Yangi suhbat")}">${ui("trash", 16)}</button>` : ""}<button class="ib" type="button" data-act="close-ai" aria-label="${L("Закрыть", "Yopish")}">${ui("close", 16)}</button>`;
+  $("#aiInputL").textContent = L("Сообщение", "Xabar");
   $("#aiInput").placeholder = L("Опишите задачу или задайте вопрос…", "Vazifani yozing yoki savol bering…");
   $("#aiPhotoBtn").innerHTML = ui("photo", 20); $("#aiPhotoBtn").hidden = !aiImg; $("#aiPhotoBtn").setAttribute("aria-label", L("Приложить фото", "Rasm biriktirish"));
   $("#aiFootNote").textContent = (sampleFn || (API && apiCfg?.ai)) ? L("Usta AI может ошибаться. Сверяйте размеры и совместимость перед покупкой.", "Usta AI xato qilishi mumkin. Xariddan oldin o‘lcham va moslikni tekshiring.") : aiReady ? L("Офлайн-режим: полные ответы AI доступны, когда страница открыта в Claude.", "Oflayn rejim: to‘liq AI javoblari sahifa Claude’da ochilganda ishlaydi.") : "";
@@ -3234,6 +3256,10 @@ function sellerExtraHTML(d) {
     <div class="mini-kpis"><div><b>${fmt(f.goods)}</b><small>${L("продано за месяц", "oylik sotuv")}</small></div><div><b>${fmt(f.commission)}</b><small>${L("комиссия за месяц", "oylik komissiya")}</small></div><div><b>${fmt(f.settled)}</b><small>${L("оплачено Imorat", "Imoratga to‘langan")}</small></div><div><b style="color:${f.balance > 0 ? "var(--signal)" : "var(--ok)"}">${fmt(f.balance)}</b><small>${L("к оплате", "to‘lanishi kerak")}</small></div></div>
     <small style="color:var(--muted)">${L("Сейчас покупатели платят магазину напрямую. Комиссия Imorat считается только с выполненных заказов и оплачивается раз в месяц.", "Hozir xaridorlar do‘konga to‘g‘ridan-to‘g‘ri to‘laydi. Imorat komissiyasi faqat bajarilgan buyurtmalardan hisoblanadi va oyiga bir marta to‘lanadi.")}</small></div>`;
 }
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-look],[data-theme-set]"); if (!b) return;
+  setLook(b.dataset.look, b.dataset.themeSet);
+});
 document.addEventListener("submit", async e => {
   const f = e.target.closest("[data-reply]"); if (!f) return;
   e.preventDefault(); const v = f.querySelector("input").value.trim(); if (!v) return;
@@ -3427,7 +3453,7 @@ function go(h, sub) {
   else location.hash = h;
   window.scrollTo(0, 0);
 }
-function routeTo() { route = parseHash(); renderMain(); const qi = $("#q"); if (qi) qi.value = f.q; window.scrollTo(0, 0); }
+function routeTo() { const prevCat = route.cat; route = parseHash(); if (route.cat !== prevCat) { f.sub = null; f.max = 0; } renderMain(); const qi = $("#q"); if (qi) qi.value = f.q; window.scrollTo(0, 0); }
 window.addEventListener("hashchange", () => { if (document.startViewTransition && motionOK()) document.startViewTransition(routeTo); else routeTo(); });
 function scrollToSec(id) {
   closeMega(); if (drawerView) closeDrawer(); if (aiOpen) closeAI(); if (widOpen) closeWidgets();
@@ -3493,6 +3519,7 @@ document.addEventListener("click", e => {
     case "store-approve-demo": if (myStore) { myStore.status = "active"; LS.set("imorat.myStore", myStore); toast(L("Демо: магазин одобрен", "Demo: do‘kon tasdiqlandi")); } return renderSeller();
     case "seller-reload": sellerData = null; adminStores = null; adminFin = null; return renderSeller();
     case "install": if (widOpen) closeWidgets(); return installApp();
+    case "fx-toggle": { const on = !motionOK(); setLook(on ? "on" : "off"); toast(on ? L("✨ Яркий режим: подсветка и анимации", "✨ Yorqin rejim: yoritish va animatsiyalar") : L("Простой режим: без анимаций", "Oddiy rejim: animatsiyalarsiz")); return; }
     case "tg-link": return linkTelegram();
     case "tg-unlink": return unlinkTelegram();
     case "push-on": return enablePush();
@@ -3552,7 +3579,7 @@ renderCmpBar();
 apiBoot();
 if (location.hash === "#orders") setTimeout(() => openDrawer("orders"), 300);
 ["#drawer", "#ai", "#modal", "#mega", "#authM", "#wid"].forEach(s => $(s).setAttribute("inert", ""));
-mqFine.addEventListener?.("change", () => { if (route.view === "home") renderMain(); });
+mqFine.addEventListener?.("change", () => { applyLook(); if (route.view === "home") renderMain(); });
 })();
 </script>
 </body>
