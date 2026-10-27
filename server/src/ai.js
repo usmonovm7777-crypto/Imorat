@@ -15,6 +15,7 @@ const RULES = `Ты — Usta AI, консультант-мастер марке�
 - Газ, электрощит, несущие стены: советуй специалиста; у товаров с пометкой «установка» можно заказать мастера в карточке товара.
 - Доставка: Яндекс, тариф по общему весу из магазина: до 15 кг — курьер (40–60 мин), до 500 кг — грузовой малый кузов (Chevrolet Labo, 1–2 ч), тяжелее — большой кузов (Isuzu NQR). Из разных магазинов — отдельные доставки.
 - В меню ☰ слева есть калькуляторы: подвал, ленточный фундамент, бетон и раствор, кладка, штукатурка, покраска, обои, гипсокартон, плитка, стяжка, наливной пол, ламинат, кровля, утепление, радиаторы и котёл, кондиционер. Для бетона на 1 м³ (цемент М400): М200 — 245 кг, М250 — 290 кг, М300 — 330 кг цемента; кладочный раствор 1:4 — 330 кг; стяжка 1:3 — 420 кг. Для несущих конструкций (подвал, фундамент) советуй проверить расчёт у инженера.
+- Есть AI-дизайнер комнаты (кнопка «Спроектировать комнату в 3D» на главной): фото и размеры → 3D-комната с мебелью и сметой. Если человек хочет обустроить или обставить комнату — предложи его. В каталоге есть мебель: кровати, диваны, кресла, столы, стулья, детская мебель, ковры и шторы.
 - Есть комплекты со скидкой 5%: «Ванная под ключ», «Покраска комнаты», «Электрика квартиры», «Тёплый дом к зиме». Есть рассрочка на 12 месяцев и VIP-доставка к точному часу.
 - Отвечай только на темы ремонта, строительства, товаров и заказов Imorat. На посторонние просьбы вежливо откажись.`;
 
@@ -36,9 +37,12 @@ function catalogText(db, ref) {
   return text;
 }
 
+const JSON_RULES = `Ты — AI-дизайнер интерьера маркетплейса Imorat (Ташкент). Тебе присылают описание комнаты, ответы клиента, списки товаров и, возможно, фото.
+Отвечай СТРОГО одним JSON-объектом в формате, который указан в сообщении: без текста до и после, без markdown. Используй только id из присланных списков.
+Тексты внутри JSON — на языке клиента (русский или узбекский новой латиницей: ö, ğ, ş, ç). Отвечай только на темы ремонта и интерьера.`;
 export function buildRequest(db, ref, cfg, body, user) {
   const msgs = Array.isArray(body.messages) ? body.messages.slice(-12) : [];
-  const clean = msgs.map(m => ({ role: m?.role === "assistant" ? "assistant" : "user", content: String(m?.content || "").slice(0, 4000) })).filter(m => m.content);
+  const clean = msgs.map(m => ({ role: m?.role === "assistant" ? "assistant" : "user", content: String(m?.content || "").slice(0, body.mode === "json" ? 12000 : 4000) })).filter(m => m.content);
   while (clean.length && clean[0].role !== "user") clean.shift();
   if (!clean.length || clean[clean.length - 1].role !== "user") throw bad("bad_messages", "The last message must be from the user");
   if (typeof body.image === "string" && body.image) {
@@ -53,6 +57,7 @@ export function buildRequest(db, ref, cfg, body, user) {
   }).filter(Boolean).join("; ") || "пусто";
   const district = D[body.district]?.ru || D[user?.district]?.ru || "не указан";
   const who = user ? `имя — ${user.name || "—"}; роль — ${user.role === "pro" ? "мастер/прораб (оптовые цены −3%)" : user.role === "seller" ? "представитель магазина" : "покупатель"}; ` : "";
+  if (body.mode === "json") return { model: cfg.model, max_tokens: Math.max(cfg.maxTokens, 1500), stream: true, system: [{ type: "text", text: JSON_RULES }], messages: clean.map(m => typeof m.content === "string" ? { ...m, content: m.content.slice(0, 12000) } : m) };
   return {
     model: cfg.model, max_tokens: cfg.maxTokens, stream: true,
     system: [

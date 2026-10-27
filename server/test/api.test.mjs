@@ -31,6 +31,7 @@ const fake = createServer(async (req, res) => {
   if (req.url === "/ai/v1/messages") {
     const b = JSON.parse(body);
     assert.equal(req.headers["x-api-key"], "sk-test");
+    if (b.system[0].text.includes("AI-дизайнер")) { res.writeHead(200, { "content-type": "text/event-stream" }); res.write(`data: ${JSON.stringify({ type: "content_block_delta", delta: { type: "text_delta", text: '{"items":[520],"say":"ok"}' } })}\n\n`); return res.end(); }
     assert.ok(b.system[0].text.includes("Цемент М400"));
     res.writeHead(200, { "content-type": "text/event-stream" });
     for (const t of ["Для подвала ", "нужен цемент ", "[[1:115]]"]) res.write(`event: content_block_delta\ndata: ${JSON.stringify({ type: "content_block_delta", index: 0, delta: { type: "text_delta", text: t } })}\n\n`);
@@ -200,6 +201,9 @@ test("Usta AI streams text from the model", async () => {
   const r = await fetch(base + "/api/ai/chat", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ messages: [{ role: "user", content: "Сколько цемента на подвал?" }], lang: "ru", cart: [{ id: 1, q: 2 }] }) });
   assert.equal(r.status, 200);
   assert.equal(await r.text(), "Для подвала нужен цемент [[1:115]]");
+  const j = await fetch(base + "/api/ai/chat", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ mode: "json", messages: [{ role: "user", content: "Комната 3×4" }] }) });
+  assert.equal(JSON.parse(await j.text()).items[0], 520);
+  assert.ok((await call("GET", "/api/catalog")).data.products.some(p => p.id === 520 && p.sub === "sofa"));
   const bad = await call("POST", "/api/ai/chat", { messages: [] });
   assert.equal(bad.data.error, "bad_messages");
 });

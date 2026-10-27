@@ -79,8 +79,24 @@ export function openDb(path, catalogPath) {
   };
   const ref = JSON.parse(readFileSync(catalogPath, "utf8"));
   if (!db.meta("seeded")) seed(db, ref);
+  else addNewProducts(db, ref);
   db.ref = ref;
   return db;
+}
+
+/* Later releases add products to catalog.json: insert the ones the database does not have yet */
+function addNewProducts(db, ref) {
+  const have = new Set(db.all("SELECT id FROM products").map(r => r.id)), now = Date.now();
+  const fresh = ref.products.filter(p => !have.has(p.id));
+  if (!fresh.length) return;
+  db.tx(() => {
+    for (const p of fresh) {
+      db.run(`INSERT INTO products(id,cat,sub,icon,ru,uz,unit,kg,img,grp,hit,is_new,key,rating,reviews,country,warranty,active,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1,?)`,
+        p.id, p.cat, p.sub, p.icon, p.ru, p.uz, p.unit, p.kg, p.img, p.group, p.hit, p.isNew, p.key, p.rating, p.reviews, JSON.stringify(p.country), p.warranty, now);
+      for (const o of p.offers) if (db.get("SELECT 1 FROM stores WHERE id=?", o.store)) db.run("INSERT OR IGNORE INTO offers(product_id,store_id,price,stock,updated_at) VALUES(?,?,?,?,?)", p.id, o.store, o.price, o.stock, now);
+    }
+    db.setMeta("catalog_rev", now);
+  });
 }
 
 /* First start: load stores, products and offers from data/catalog.json (exported from the website). */
