@@ -1,6 +1,6 @@
 // Load test: many shoppers at once against a fresh server
-import { createApp } from "/home/claude/imorat-site/server/src/app.js";
-import { loadConfig } from "/home/claude/imorat-site/server/src/config.js";
+import { createApp } from "../src/app.js";
+import { loadConfig } from "../src/config.js";
 import { mkdtempSync } from "node:fs"; import { tmpdir } from "node:os"; import { join } from "node:path";
 import http from "node:http";
 const mode = process.argv[2];
