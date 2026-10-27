@@ -19,6 +19,7 @@ import { createBonus } from "./bonus.js";
 import { registerStats } from "./stats.js";
 import { createChannel } from "./channel.js";
 import { registerDisputes } from "./disputes.js";
+import { registerQuestions } from "./questions.js";
 
 export const STEPS = {
   yandex: ["new", "assembling", "searching", "to_store", "on_way", "delivered"],
@@ -108,7 +109,7 @@ export function createApp(cfg, log = console) {
   };
   const publicStore = s => ({
     id: s.id, name: s.name, d: s.district, addr: s.addr, addrUz: s.addr_uz || s.addr, hours: s.hours, ru: s.ru || s.descr.slice(0, 80), uz: s.uz || s.ru || s.descr.slice(0, 80),
-    descr: s.descr, cats: JSON.parse(s.cats || "[]"), phone: s.phone, telegram: s.telegram, landmark: s.landmark, la: s.la, lo: s.lo, status: s.status, loc_src: s.loc_src, note: s.review_note, created: s.created_at
+    descr: s.descr, cats: JSON.parse(s.cats || "[]"), phone: s.phone, telegram: s.telegram, verified: !!s.verified, landmark: s.landmark, la: s.la, lo: s.lo, status: s.status, loc_src: s.loc_src, note: s.review_note, created: s.created_at
   });
 
   /* ---------- meta ---------- */
@@ -655,7 +656,7 @@ export function createApp(cfg, log = console) {
     needAdmin(req); const b = await readJson(req);
     const s = db.get("SELECT * FROM stores WHERE id=?", p.id); if (!s) throw new HttpError(404, "not_found", "Store not found");
     if (b.status && !["active", "pending", "rejected", "blocked"].includes(b.status)) throw bad("bad_status", "Unknown status");
-    db.run("UPDATE stores SET status=COALESCE(?,status), review_note=COALESCE(?,review_note) WHERE id=?", b.status || null, b.note != null ? str(b.note, 300) : null, s.id);
+    db.run("UPDATE stores SET status=COALESCE(?,status), review_note=COALESCE(?,review_note), verified=COALESCE(?,verified) WHERE id=?", b.status || null, b.note != null ? str(b.note, 300) : null, b.verified == null ? null : b.verified ? 1 : 0, s.id);
     audit(req, "store." + (b.status || "edit"), s.id, { note: b.note, owner_phone: b.owner_phone });
     if (b.status === "active" && s.status !== "active") channel.storeApproved(s).catch(e => log.warn("[channel]", e.message));
     if (b.status && s.owner_id) { const ow = db.get("SELECT tg_chat FROM users WHERE id=?", s.owner_id); if (ow?.tg_chat) tg.send(ow.tg_chat, b.status === "active" ? `🎉 Магазин «${s.name.replace(/[<>&]/g, "")}» одобрен и виден покупателям на Imorat.` : `Статус магазина «${s.name.replace(/[<>&]/g, "")}»: ${b.status}.${b.note ? " " + str(b.note, 300).replace(/[<>&]/g, "") : ""}`); }
@@ -690,6 +691,7 @@ export function createApp(cfg, log = console) {
   bonus.routes(r, need, lim);
   registerStats({ r, db, lim, needSeller });
   channel.routes(r, needAdmin);
+  registerQuestions({ r, db, cfg, need, needSeller, lim, tg, push, log });
   registerDisputes({ r, db, cfg, need, needSeller, needAdmin, isAdmin, audit, lim, tg, push, saveImage, mediaUrl, log });
 
   /* ---------- HTTP server ---------- */

@@ -770,6 +770,24 @@ html.ds-dragging, html.ds-dragging * { cursor: grabbing !important; user-select:
 .ds-wish { display: flex; gap: 6px; }
 .ds-wish input { flex: 1; min-width: 0; border: 1.5px solid var(--line); border-radius: 12px; padding: 10px 12px; background: var(--raised); font: inherit; color: inherit; }
 .ds-sw { display: flex; flex-wrap: wrap; gap: 6px; }
+.slink { text-align: left; color: inherit; } .slink:hover b { color: var(--accent); text-decoration: underline; }
+.vmini { color: var(--accent); vertical-align: -1px; }
+.vbadge { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; color: var(--accent); background: var(--accent-soft); padding: 3px 9px; border-radius: 999px; vertical-align: middle; }
+.sp-grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 12px; margin-top: 8px; }
+.sp-info { display: grid; gap: 10px; align-content: start; }
+.sp-h { display: flex; gap: 12px; align-items: center; } .sp-h .av.big { width: 56px; height: 56px; border-radius: 16px; font-size: 24px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); font-weight: 700; flex: none; }
+.sp-contact { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.smap { position: relative; display: block; min-height: 260px; border-radius: 18px; overflow: hidden; border: 1px solid var(--line); background: var(--raised); }
+.smap-t { position: absolute; left: 0; top: 0; display: grid; grid-template-columns: repeat(3, 256px); width: 768px; }
+.smap-t img { width: 256px; height: 256px; display: block; }
+.smap .pin { position: absolute; left: 50%; top: 50%; width: 36px; height: 36px; translate: -50% -100%; color: var(--signal); filter: drop-shadow(0 2px 3px rgba(0,0,0,.3)); }
+.smap .attr { position: absolute; right: 6px; bottom: 6px; font-size: 11px; background: color-mix(in srgb, var(--surface) 85%, transparent); padding: 2px 6px; border-radius: 6px; color: var(--muted); }
+.sp-qa { display: grid; gap: 10px; margin-top: 12px; }
+.sp-ask { display: grid; grid-template-columns: 1fr minmax(0, 220px) auto; gap: 8px; }
+.sp-ask input { font: inherit; font-size: 14px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); min-width: 0; }
+.sq { border-top: 1px solid var(--line); padding-top: 8px; } .sq p { margin: 4px 0 0; color: var(--ink); } .sq.mine { color: var(--muted); }
+.sp-cats { flex-wrap: wrap; margin-bottom: 12px; }
+@media (max-width: 760px) { .sp-grid { grid-template-columns: 1fr; } .sp-ask { grid-template-columns: 1fr; } }
 .prob summary { cursor: pointer; font-size: 13px; color: var(--muted); display: inline-flex; gap: 6px; align-items: center; padding: 6px 0; }
 .prob[open] summary { color: var(--signal); }
 .prob-f { display: grid; gap: 10px; margin-top: 6px; }
@@ -1963,7 +1981,7 @@ function renderHome() {
 
     <section class="sec" id="stores">
       <div class="sec-head"><div><h2 class="h-l">${L("Магазины-партнёры", "Hamkor do‘konlar")}</h2><p>${L("Курьер забирает заказ прямо со склада магазина", "Kuryer buyurtmani do‘kon omboridan oladi")}</p></div></div>
-      <div class="stores rv">${STORES.map(s => { const n = PRODUCTS.filter(p => p.offers.some(o => o.store === s.id)).length; return `<div class="store"><span class="av">${esc(s.name.slice(0, 1))}</span><div><b>${esc(s.name)}</b><span class="m">${dName(s.d)}, ${L(s.addr, s.addrUz)}</span><br><span class="m">${L(s.ru, s.uz)}</span>${ratingHTML(s, true)}<div class="r"><span class="pill ${openState(s).open ? "ok" : "closed"}">${openState(s).text}</span><button class="link" type="button" data-store="${s.id}">${n} ${L(plural(n, ["товар", "товара", "товаров"]), "mahsulot")} ${ui("chev", 14)}</button></div></div></div>`; }).join("")}</div>
+      <div class="stores rv">${STORES.map(s => { const n = PRODUCTS.filter(p => p.offers.some(o => o.store === s.id)).length; return `<div class="store"><span class="av">${esc(s.name.slice(0, 1))}</span><div><button type="button" class="slink" data-go="store-${s.id}"><b>${esc(s.name)}</b>${isVerified(s) ? ` <span class="vmini">${ui("shield", 12)}</span>` : ""}</button><span class="m">${dName(s.d)}, ${L(s.addr, s.addrUz)}</span><br><span class="m">${L(s.ru, s.uz)}</span>${ratingHTML(s, true)}<div class="r"><span class="pill ${openState(s).open ? "ok" : "closed"}">${openState(s).text}</span><button class="link" type="button" data-store="${s.id}">${n} ${L(plural(n, ["товар", "товара", "товаров"]), "mahsulot")} ${ui("chev", 14)}</button></div></div></div>`; }).join("")}</div>
     </section>
 
     <section class="sec">
@@ -2258,7 +2276,7 @@ function openProduct(id) {
       <p class="desc">${esc(pDesc(p))}</p>
       <dl class="specs"><dt>${L("Единица", "O‘lchov")}</dt><dd>${unitName(p.unit)}</dd><dt>${L("Вес", "Vazn")}</dt><dd>${fmtKg(p.kg)}</dd><dt>${L("Страна", "Mamlakat")}</dt><dd>${L(...p.country)}</dd><dt>${L("Гарантия", "Kafolat")}</dt><dd>${p.warranty ? `${p.warranty} ${L("мес.", "oy")}` : L("по закону о защите прав потребителей", "iste’molchilar huquqlari qonuni bo‘yicha")}</dd><dt>${L("Цена", "Narx")}</dt><dd>${offers.length > 1 ? `${fmt(offers[0].price)} – ${fmt(offers[offers.length - 1].price)}` : fmt(mp)}</dd></dl>
       <div><h3 class="h-m" style="margin-bottom:10px">${L("Цены в магазинах", "Do‘konlardagi narxlar")}</h3>
-      <div class="offers">${offers.map((o, i) => { const s = STORE[o.store], st = stockOf(p, o.store); return `<div class="offer ${i === 0 && offers.length > 1 ? "best" : ""}"><div><b>${esc(s.name)}</b><small>${dName(s.d)} · ${openState(s).text}</small><small>${ratingHTML(s)}</small>${i === 0 && offers.length > 1 ? `<small style="color:var(--accent);font-weight:600">${L("Лучшая цена", "Eng yaxshi narx")}</small>` : ""}</div><div style="display:grid;justify-items:end;gap:4px"><span class="pr">${fmt(o.price)}</span>${stockTxt(st)}</div><button class="btn btn-primary" type="button" data-addo="${p.id}|${o.store}">${L("В корзину", "Savatga")}</button></div>`; }).join("")}</div></div>
+      <div class="offers">${offers.map((o, i) => { const s = STORE[o.store], st = stockOf(p, o.store); return `<div class="offer ${i === 0 && offers.length > 1 ? "best" : ""}"><div><button type="button" class="slink" data-go="store-${s.id}"><b>${esc(s.name)}</b>${isVerified(s) ? ` <span class="vmini" title="${L("Проверенный магазин", "Tekshirilgan do‘kon")}">${ui("shield", 12)}</span>` : ""}</button><small>${dName(s.d)} · ${openState(s).text}</small><small>${ratingHTML(s)}</small>${i === 0 && offers.length > 1 ? `<small style="color:var(--accent);font-weight:600">${L("Лучшая цена", "Eng yaxshi narx")}</small>` : ""}</div><div style="display:grid;justify-items:end;gap:4px"><span class="pr">${fmt(o.price)}</span>${stockTxt(st)}</div><button class="btn btn-primary" type="button" data-addo="${p.id}|${o.store}">${L("В корзину", "Savatga")}</button></div>`; }).join("")}</div></div>
       ${svc ? `<label class="infobox" for="svcChk">${ui("wrench", 20)}<span><b>${L("Установка мастером", "Usta o‘rnatishi")}</b><small>${fmt(svc)} ${L("за", "har")} ${unitName(p.unit)} · ${L("мастер приедет после доставки", "usta yetkazilgandan keyin keladi")}</small></span><span class="check"><input type="checkbox" id="svcChk" data-svc="${p.id}" ${svcOn ? "checked" : ""}></span></label>` : ""}
       ${SUB_SPEC[p.sub] ? `<button class="infobox lnkbox" type="button" data-mfind="${SUB_SPEC[p.sub]}">${ui("wrench", 20)}<span><b>${L("Найти мастера", "Usta topish")}: ${esc(mSpecName(SUB_SPEC[p.sub]).toLowerCase())}</b><small>${L("С отзывами покупателей, в вашем районе", "Xaridorlar sharhlari bilan, tumaningizda")}</small></span>${ui("chev", 16)}</button>` : ""}
       ${mp >= 500000 ? `<div class="infobox">${ui("wallet", 20)}<span><b>${L("Рассрочка на 12 месяцев", "12 oyga muddatli to‘lov")}</b><small>${L(`от ${fmt(monthly(mp))} в месяц`, `oyiga ${fmt(monthly(mp))}dan`)} · ${L("оформление при оплате, условия партнёра", "to‘lovda rasmiylashtiriladi, hamkor shartlari")}</small></span></div>` : ""}
@@ -2326,7 +2344,7 @@ function dCart() {
     $("#dFoot").innerHTML = `<div style="display:grid;gap:8px"><button class="btn btn-primary" type="button" data-go="catalog">${L("Перейти в каталог", "Katalogga o‘tish")}</button><button class="btn btn-line" type="button" data-go="list">${ui("camera", 16)} ${L("Есть список от прораба?", "Prorab ro‘yxati bormi?")}</button></div>`; return;
   }
   $("#dBody").innerHTML = gs.map(g => { const t = pickTariff(g.kg); return `<div>
-    <div class="gh"><span><b>${esc(g.store.name)}</b> · ${dName(g.store.d)}</span><span class="pill acc">${ui(t.icon, 14)} ${fmtKg(g.kg)}</span></div>
+    <div class="gh"><span><button type="button" class="slink" data-go="store-${g.store.id}"><b>${esc(g.store.name)}</b></button> · ${dName(g.store.d)}</span><span class="pill acc">${ui(t.icon, 14)} ${fmtKg(g.kg)}</span></div>
     ${g.lines.map(l => `<div class="line">${mini(l.p)}<div class="nm"><button type="button" data-open="${l.p.id}" style="text-align:left">${esc(pName(l.p))}</button><small>${fmt(l.price)} · ${unitName(l.p.unit)}${l.tier ? ` · <span class="ws">${L("опт", "ulgurji")} −${Math.round(l.tier * 100)}%</span>` : ""}</small></div>
       <div class="rt"><div class="qty"><button type="button" data-dec="${l.k}" aria-label="${L("Меньше", "Kamroq")}">−</button><span>${l.q}</span><button type="button" data-inc="${l.k}" aria-label="${L("Больше", "Ko‘proq")}">+</button></div><b class="num" style="font-size:14px">${fmt(l.price * l.q)}</b></div></div>`).join("")}
   </div>`; }).join("") +
@@ -3356,6 +3374,8 @@ function adminMastersHTML() {
     </tbody></table></div></div>`;
 }
 document.addEventListener("click", async e => {
+  const v = e.target.closest("[data-admv]");
+  if (v) { const [id, on] = v.dataset.admv.split("|"); v.disabled = true; try { await adminApi("PATCH", "/api/admin/stores/" + encodeURIComponent(id), { verified: on === "1" }); toast(on === "1" ? L("Магазин отмечен проверенным", "Do‘kon tekshirilgan deb belgilandi") : L("Отметка снята", "Belgi olib tashlandi")); adminStores = null; renderSeller(); syncCatalog(); } catch (er) { v.disabled = false; toast(apiErr(er)); } return; }
   const t = e.target.closest("[data-admm],[data-mtabgo]"); if (!t) return;
   if (t.dataset.mtabgo) { mf.tab = t.dataset.mtabgo; mf.sel = null; return; }
   const [id, st] = t.dataset.admm.split("|"); t.disabled = true;
@@ -3371,7 +3391,7 @@ function adminHTML() {
   return `<div class="panel" style="margin-top:12px"><div class="panel-h"><h2 class="h-m">${L("Модерация магазинов", "Do‘konlar moderatsiyasi")}</h2><span class="pill ${pend.length ? "warn" : "ok"}">${pend.length} ${L("ждут", "kutmoqda")}</span></div>
     <div class="tbl-wrap"><table><thead><tr><th>${L("Магазин", "Do‘kon")}</th><th>${L("Владелец", "Egasi")}</th><th>${L("Статус", "Holat")}</th><th></th></tr></thead><tbody>
     ${adminStores.slice(0, 40).map(s => { const [lb, c] = ST_STATUS()[s.status] || ["?", "mute"]; return `<tr><td><b>${esc(s.name)}</b><br><small style="color:var(--muted)">${dName(s.d)}, ${esc(s.addr)} · ${(s.cats || []).map(catName).join(", ")}</small><br><small>${esc(s.descr || "")}</small></td><td style="font-size:13px">${esc(s.owner_name || "—")}<br><span class="num">${esc(s.owner_phone ? "+" + s.owner_phone : "")}</span></td><td><span class="pill ${c}">${lb}</span></td>
-      <td style="white-space:nowrap">${s.status !== "active" ? `<button class="btn btn-primary" type="button" data-adm="${esc(s.id)}|active">${L("Одобрить", "Tasdiqlash")}</button>` : ""} ${s.status === "pending" ? `<button class="btn btn-line" type="button" data-adm="${esc(s.id)}|rejected">${L("Отклонить", "Rad etish")}</button>` : s.status === "active" ? `<button class="btn btn-line" type="button" data-adm="${esc(s.id)}|blocked">${L("Скрыть", "Yashirish")}</button>` : ""}</td></tr>`; }).join("")}
+      <td style="white-space:nowrap">${s.status !== "active" ? `<button class="btn btn-primary" type="button" data-adm="${esc(s.id)}|active">${L("Одобрить", "Tasdiqlash")}</button>` : ""} ${s.status === "pending" ? `<button class="btn btn-line" type="button" data-adm="${esc(s.id)}|rejected">${L("Отклонить", "Rad etish")}</button>` : s.status === "active" ? `<button class="btn btn-line" type="button" data-adm="${esc(s.id)}|blocked">${L("Скрыть", "Yashirish")}</button>` : ""} <button class="btn btn-line" type="button" data-admv="${esc(s.id)}|${s.verified ? 0 : 1}">${s.verified ? "✓ " + L("Проверен", "Tekshirilgan") : L("Отметить проверенным", "Tekshirilgan deb belgilash")}</button></td></tr>`; }).join("")}
     </tbody></table></div></div>${adminProblemsHTML()}${adminMastersHTML()}${adminChannelHTML()}${adminFinanceHTML()}`;
 }
 function renderSellerApi() {
@@ -3388,6 +3408,7 @@ function renderSellerApi() {
     <div class="s-head" style="padding-top:4px"><div><h1 class="h-l">${esc(s.name)}</h1><p>${dName(s.d)}, ${esc(s.addr)} · ${esc(s.hours)}</p></div></div>
     ${storeBanner(s)}
     ${sellerProblemsHTML(s.id)}
+    ${sellerQuestionsHTML(s.id)}
     <div class="kpis">
       <div class="kpi"><span>${L("Открытых заказов", "Ochiq buyurtmalar")}</span><b>${kpi.open}</b><small style="color:${kpi.open ? "var(--signal)" : "var(--ok)"}">${kpi.open ? L("Ждут действий", "Harakat kutmoqda") : L("Всё обработано", "Hammasi bajarilgan")}</small></div>
       <div class="kpi"><span>${L("Выручка за 30 дней", "30 kunlik tushum")}</span><b>${fmtN(kpi.revenue30 / 1000)} ${L("тыс", "ming")}</b><small>${L("сум", "so‘m")}</small></div>
@@ -4591,6 +4612,7 @@ function renderSeller() {
       <div class="f" style="min-width:200px"><label for="sStore">${L("Магазин", "Do‘kon")}</label><select class="sel" id="sStore">${[...(myStore ? [myStore] : []), ...STORES].map(x => `<option value="${x.id}" ${x.id === s.id ? "selected" : ""}>${esc(x.name)}</option>`).join("")}</select></div></div>
     ${s.mine ? storeBanner(s, true) + storeCardHTML(s) : ""}
     ${sellerProblemsHTML(s.id)}
+    ${sellerQuestionsHTML(s.id)}
     <div class="kpis">
       <div class="kpi"><span>${L("Новых заказов", "Yangi buyurtmalar")}</span><b>${newCount}</b><small style="color:${newCount ? "var(--signal)" : "var(--ok)"}">${newCount ? L("Ждут сборки", "Yig‘ishni kutmoqda") : L("Все собраны", "Hammasi yig‘ilgan")}</small></div>
       <div class="kpi"><span>${L("Выручка за 7 дней", "7 kunlik tushum")}</span><b>${String(Math.round(week * 10) / 10).replace(".", ",")} ${L("млн", "mln")}</b><small>${s.mine ? L("новый магазин", "yangi do‘kon") : `+${8 + seed % 9}% ${L("к прошлой неделе", "o‘tgan haftaga")}`}</small></div>
@@ -5290,6 +5312,88 @@ document.addEventListener("submit", async e => {
   try { await adminApi("PATCH", `/api/admin/problems/${f.dataset.probres}`, { status: st, resolution }); toast(L("Решение сохранено и отправлено сторонам", "Qaror saqlandi va tomonlarga yuborildi")); adminProblems = null; renderMain(); } catch (er) { toast(apiErr(er)); }
 });
 
+/* ================= Store page: contacts, map, rating, products, questions ================= */
+let storeQA = {}, myQuestions = null, sellerQuestions = null, qDemo = LS.get("imorat.questions", []);
+const isVerified = s => !!s.verified || (ratingOf(s).reliability ?? 0) >= 95;
+const storePt = s => (s.la != null && s.lo != null ? { la: +s.la, lo: +s.lo } : DIST[s.d] ? { la: DIST[s.d].la, lo: DIST[s.d].lo } : null);
+function storeMapHTML(s) {
+  const pt = storePt(s); if (!pt) return "";
+  const z = 15, n = 2 ** z, xt = (pt.lo + 180) / 360 * n, r = pt.la * Math.PI / 180, yt = (1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2 * n;
+  const x0 = Math.floor(xt) - 1, y0 = Math.floor(yt) - 1, ox = (xt - x0) * 256, oy = (yt - y0) * 256;
+  let t = ""; for (let j = 0; j < 3; j++) for (let i = 0; i < 3; i++) t += `<img src="https://tile.openstreetmap.org/${z}/${x0 + i}/${y0 + j}.png" alt="" loading="lazy" decoding="async" onerror="this.style.visibility='hidden'">`;
+  return `<a class="smap" href="${yaLink(pt.la, pt.lo)}" target="_blank" rel="noopener" aria-label="${L("Открыть магазин на карте", "Do‘konni xaritada ochish")}"><span class="smap-t" style="transform:translate(calc(50% - ${ox.toFixed(0)}px), calc(50% - ${oy.toFixed(0)}px))">${t}</span>${PIN}<span class="attr">© OpenStreetMap · ${L("открыть в Яндекс Картах", "Yandex Xaritada ochish")}</span></a>`;
+}
+function renderStore(id) {
+  const s = STORE[id]; if (!s) { $("#app").innerHTML = `<div class="wrap"><div class="panel" style="margin:16px 0">${L("Магазин не найден", "Do‘kon topilmadi")}</div></div>`; return; }
+  const prods = PRODUCTS.filter(p => p.offers.some(o => o.store === id)), r = ratingOf(s), os = openState(s);
+  const phone = String(s.phone || "").replace(/\D/g, ""), tgh = String(s.telegram || "").replace(/^@|https?:\/\/t\.me\//g, "").trim();
+  const cats = [...new Set(prods.map(p => p.cat))];
+  if (API && !storeQA[id]) { storeQA[id] = { list: [] }; api("GET", `/api/stores/${encodeURIComponent(id)}/questions`).then(x => { storeQA[id] = { list: x.questions }; if (route.view === "store") renderStore(id); }).catch(() => {}); }
+  if (API && user && myQuestions === null) { myQuestions = []; api("GET", "/api/me/questions").then(x => { myQuestions = x.questions; if (route.view === "store") renderStore(id); }).catch(() => {}); }
+  const pub = API ? storeQA[id]?.list || [] : qDemo.filter(q => q.store === id && q.answer);
+  const mine = (API ? myQuestions || [] : qDemo).filter(q => q.store === id && !q.answer);
+  const sel = storeFilter.store === id ? storeFilter.cat : "";
+  const shown = prods.filter(p => !sel || p.cat === sel);
+  $("#app").innerHTML = `<div class="wrap spage">
+    <nav class="crumbs"><button type="button" data-go="home">${L("Главная", "Asosiy")}</button>${ui("chev", 12)}<button type="button" data-scroll="stores">${L("Магазины", "Do‘konlar")}</button>${ui("chev", 12)}<span>${esc(s.name)}</span></nav>
+    <div class="sp-grid"><div class="panel sp-info">
+      <div class="sp-h"><span class="av big">${esc(s.name.slice(0, 1))}</span><div><h1 class="h-l" style="margin:0">${esc(s.name)} ${isVerified(s) ? `<span class="vbadge" title="${L("Магазин проверен модератором Imorat и выполняет заказы без срывов", "Do‘kon Imorat moderatori tomonidan tekshirilgan va buyurtmalarni uzilishsiz bajaradi")}">${ui("shield", 14)} ${L("Проверенный", "Tekshirilgan")}</span>` : ""}</h1>
+        <p class="mu" style="margin:4px 0 0">${esc(L(s.ru || "", s.uz || s.ru || ""))}</p></div></div>
+      ${ratingHTML(s, true)}
+      <dl class="specs"><dt>${L("Адрес", "Manzil")}</dt><dd>${dName(s.d)}, ${esc(L(s.addr || "", s.addrUz || s.addr || ""))}${s.landmark ? `<br><small class="mu">${esc(s.landmark)}</small>` : ""}</dd>
+        <dt>${L("Часы", "Ish vaqti")}</dt><dd>${esc(s.hours || "")} · <span class="pill ${os.open ? "ok" : "mute"}">${os.text}</span></dd>
+        <dt>${L("Товаров", "Mahsulotlar")}</dt><dd>${prods.length}</dd>
+        ${r.accept_min ? `<dt>${L("Подтверждает заказ", "Buyurtmani tasdiqlaydi")}</dt><dd>${L(`в среднем за ${r.accept_min} мин`, `o‘rtacha ${r.accept_min} daqiqada`)}</dd>` : ""}</dl>
+      <div class="sp-contact">${phone ? `<a class="btn btn-primary" href="tel:+${phone.length === 9 ? "998" + phone : phone}">${ui("user", 16)} ${L("Позвонить", "Qo‘ng‘iroq qilish")}</a>` : ""}${tgh ? `<a class="btn btn-line" href="https://t.me/${esc(tgh)}" target="_blank" rel="noopener">${ui("send", 16)} Telegram</a>` : ""}
+        ${!phone && !tgh ? `<small class="mu">${API ? L("Магазин не указал контакты — задайте вопрос ниже.", "Do‘kon kontakt ko‘rsatmagan — quyida savol bering.") : L("В демо-версии номера магазинов скрыты. На рабочем сайте здесь будут кнопки «Позвонить» и Telegram.", "Demo versiyada do‘kon raqamlari yashirin. Ishchi saytda bu yerda «Qo‘ng‘iroq qilish» va Telegram tugmalari bo‘ladi.")}</small>` : ""}</div>
+    </div>${storeMapHTML(s)}</div>
+    <div class="panel sp-qa"><div class="panel-h"><h2 class="h-m">${L("Вопросы магазину", "Do‘konga savollar")}</h2></div>
+      <form class="sp-ask" id="spAsk"><label class="visually-hidden" for="spQ">${L("Ваш вопрос", "Savolingiz")}</label><input id="spQ" placeholder="${L("Например: есть ли этот цвет? Можно ли забрать сегодня?", "Masalan: bu rang bormi? Bugun olib ketsa bo‘ladimi?")}" maxlength="800">
+        <select class="sel" id="spP" aria-label="${L("Товар", "Mahsulot")}"><option value="">${L("Без товара", "Mahsulotsiz")}</option>${prods.slice(0, 200).map(p => `<option value="${p.id}" ${storeFilter.ask === p.id ? "selected" : ""}>${esc(pName(p)).slice(0, 60)}</option>`).join("")}</select>
+        <button class="btn btn-primary" type="submit">${ui("send", 16)} ${L("Спросить", "So‘rash")}</button></form>
+      ${mine.map(q => `<div class="sq mine"><b>${L("Ваш вопрос", "Savolingiz")}:</b> ${esc(q.text)} <span class="pill warn">${L("ждёт ответа", "javob kutilmoqda")}</span></div>`).join("")}
+      ${pub.length ? pub.map(q => `<div class="sq"><b>${esc(q.text)}</b>${q.product ? `<small class="mu"> · ${esc(q.product)}</small>` : ""}<p>${ui("store", 14)} ${esc(q.answer)}</p></div>`).join("") : `<p class="mu" style="margin:0;font-size:13px">${L("Ответы магазина на вопросы покупателей появятся здесь.", "Do‘konning xaridorlar savollariga javoblari shu yerda chiqadi.")}</p>`}
+    </div>
+    <div class="sec-head" style="margin-top:18px"><div><h2 class="h-l">${L("Товары магазина", "Do‘kon mahsulotlari")}</h2></div></div>
+    <div class="chips ds-chips sp-cats"><button type="button" class="chip" data-spcat="" aria-pressed="${!sel}">${L("Все", "Hammasi")} · ${prods.length}</button>${cats.map(c => `<button type="button" class="chip" data-spcat="${c}" aria-pressed="${sel === c}">${catName(c)} · ${prods.filter(p => p.cat === c).length}</button>`).join("")}</div>
+    <div class="grid">${shown.slice(0, storeFilter.n || 24).map(card).join("")}</div>
+    ${shown.length > (storeFilter.n || 24) ? `<div class="more"><button class="btn btn-line" type="button" data-spmore>${L("Показать ещё", "Yana ko‘rsatish")} · ${shown.length - (storeFilter.n || 24)}</button></div>` : ""}
+  </div>`;
+}
+let storeFilter = { store: null, cat: "", n: 24, ask: null };
+document.addEventListener("click", e => {
+  const t = e.target.closest("[data-spcat],[data-spmore]"); if (!t || route.view !== "store") return;
+  if (t.dataset.spcat != null) { storeFilter = { ...storeFilter, store: route.store, cat: t.dataset.spcat, n: 24 }; } else storeFilter.n = (storeFilter.n || 24) + 24;
+  renderStore(route.store);
+});
+document.addEventListener("submit", async e => {
+  if (e.target.id === "spAsk") {
+    e.preventDefault(); const text = $("#spQ").value.trim(), pid = +$("#spP").value || null, sid = route.store;
+    if (text.length < 4) return toast(L("Напишите вопрос", "Savolni yozing"));
+    if (API) {
+      if (!user) return openAuth(() => go("store-" + sid));
+      try { await api("POST", `/api/stores/${encodeURIComponent(sid)}/questions`, { text, product_id: pid }); myQuestions = null; toast(L("Вопрос отправлен магазину — ответ придёт в Telegram и появится здесь", "Savol do‘konga yuborildi — javob Telegramga keladi va shu yerda chiqadi")); renderStore(sid); } catch (er) { toast(apiErr(er)); }
+      return;
+    }
+    qDemo.unshift({ id: Date.now(), store: sid, product_id: pid, product: pid ? PROD[pid]?.ru : null, text, answer: null, created: Date.now(), name: user?.name || "" }); LS.set("imorat.questions", qDemo);
+    toast(L("Вопрос сохранён. В демо-версии магазин его не получит — ответить можно из кабинета продавца", "Savol saqlandi. Demo versiyada do‘kon uni olmaydi — sotuvchi kabinetidan javob berish mumkin")); renderStore(sid);
+  }
+  const f = e.target.closest("[data-sqans]"); if (!f) return; e.preventDefault();
+  const id = f.dataset.sqans, text = f.querySelector("input").value.trim(); if (!text) return;
+  if (API) { try { await api("POST", `/api/seller/questions/${id}/answer`, { text }); sellerQuestions = null; toast(L("Ответ отправлен", "Javob yuborildi")); renderSeller(); } catch (er) { toast(apiErr(er)); } return; }
+  const q = qDemo.find(x => String(x.id) === id); if (q) { q.answer = text; q.answered = Date.now(); LS.set("imorat.questions", qDemo); } toast(L("Ответ сохранён — он виден на странице магазина", "Javob saqlandi — do‘kon sahifasida ko‘rinadi")); renderSeller();
+});
+function sellerQuestionsHTML(sid) {
+  let list;
+  if (API) { if (sellerQuestions === null) { sellerQuestions = false; api("GET", "/api/seller/questions").then(r => { sellerQuestions = r.questions; if (route.view === "seller") renderSeller(); }).catch(() => { sellerQuestions = []; }); return ""; } list = sellerQuestions || []; }
+  else list = qDemo.filter(q => q.store === sid);
+  if (!list.length) return "";
+  const open = list.filter(q => !q.answer).length;
+  return `<div class="panel" style="margin-top:12px;display:grid;gap:10px"><div class="panel-h"><h2 class="h-m">❓ ${L("Вопросы покупателей", "Xaridorlar savollari")}</h2><span class="pill ${open ? "warn" : "ok"}">${open} ${L("без ответа", "javobsiz")}</span></div>
+    ${list.slice(0, 20).map(q => `<div class="sq"><b>${esc(q.text)}</b>${q.product ? `<small class="mu"> · ${esc(q.product)}</small>` : ""}${q.phone ? `<small class="mu"> · ${esc(q.name || "")} <a href="tel:+${esc(String(q.phone).replace(/\D/g, ""))}">+${esc(String(q.phone).replace(/\D/g, ""))}</a></small>` : ""}
+      ${q.answer ? `<p>${ui("store", 14)} ${esc(q.answer)}</p>` : `<form class="pc-reply" data-sqans="${q.id}"><input placeholder="${L("Ваш ответ — его увидят все покупатели", "Javobingiz — uni barcha xaridorlar ko‘radi")}"><button class="btn btn-primary" type="submit">${L("Ответить", "Javob berish")}</button></form>`}</div>`).join("")}</div>`;
+}
+
 /* ================= Router & render ================= */
 function parseHash() {
   const h = location.hash.slice(1);
@@ -5298,6 +5402,7 @@ function parseHash() {
   if (h === "masters") return { view: "masters", cat: null };
   if (h === "flat") return { view: "flat", cat: null };
   if (h === "list") return { view: "shop", cat: null };
+  if (h.startsWith("store-")) return { view: "store", cat: null, store: h.slice(6) };
   if (h === "catalog") return { view: "catalog", cat: null };
   if (h.startsWith("cat-") && CAT[h.slice(4)]) return { view: "catalog", cat: h.slice(4) };
   if (/^p-\d+$/.test(h) && PROD[+h.slice(2)]) return { view: "catalog", cat: PROD[+h.slice(2)].cat, prod: +h.slice(2) };
@@ -5310,6 +5415,7 @@ function renderMain() {
   else if (route.view === "masters") renderMasters();
   else if (route.view === "flat") renderFlat();
   else if (route.view === "shop") renderShop();
+  else if (route.view === "store") renderStore(route.store);
   else renderHome();
   renderTabbar(); counts(); settleMotion();
   if (route.prod) { const id = route.prod; route.prod = 0; setTimeout(() => openProduct(id), 0); }

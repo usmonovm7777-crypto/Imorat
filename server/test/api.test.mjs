@@ -499,3 +499,25 @@ test("Order problems: buyer reports with a photo, store answers, moderator resol
   assert.equal((await call("PATCH", `/api/admin/problems/${id}`, { status: "resolved", resolution: "Магазин заменил кирпич" }, globalThis.ADMIN)).data.problem.status, "resolved");
   assert.equal((await call("POST", `/api/seller/problems/${id}/reply`, { text: "ещё" }, seller)).status, 409);
 });
+
+test("Questions to a store, answers, public FAQ; verified badge", async () => {
+  const seller = (await login("992220011")).data.token;
+  const st = await call("POST", "/api/seller/store", { name: "Savol Market", descr: "Магазин для проверки вопросов покупателей", cats: ["paint"], phone: "712002200", telegram: "@savolmarket", addr: "ул. Вопросов, 4", hours: "00:00–00:00", district: "yakka" }, seller);
+  const sid = st.data.store.id;
+  await call("POST", `/api/stores/${sid}/questions`, { text: "Есть ли краска?" }, (await login("992220022")).data.token).then(r => assert.equal(r.status, 404, "pending store"));
+  await call("PATCH", `/api/admin/stores/${sid}`, { status: "active", verified: true }, globalThis.ADMIN);
+  const cat = (await call("GET", "/api/catalog")).data.stores.find(s => s.id === sid);
+  assert.equal(cat.verified, true); assert.match(cat.phone, /712002200$/); assert.equal(cat.telegram, "savolmarket");
+  await call("POST", "/api/seller/offers", { product_id: 7, price: 80000, stock: 5 }, seller);
+  const buyer = (await login("992220022")).data.token;
+  assert.equal((await call("POST", `/api/stores/${sid}/questions`, { text: "Есть ли в наличии 20 листов?", product_id: 1 }, buyer)).status, 400, "product not sold here");
+  const qq = await call("POST", `/api/stores/${sid}/questions`, { text: "Есть ли в наличии 20 листов?", product_id: 7 }, buyer);
+  assert.equal(qq.status, 200, JSON.stringify(qq.data));
+  assert.equal((await call("GET", `/api/stores/${sid}/questions`)).data.questions.length, 0, "unanswered questions are not public");
+  const sq = (await call("GET", "/api/seller/questions", null, seller)).data.questions;
+  assert.equal(sq[0].phone, "998992220022");
+  assert.equal((await call("POST", `/api/seller/questions/${sq[0].id}/answer`, { text: "Да, 40 листов на складе" }, seller)).status, 200);
+  const pub = (await call("GET", `/api/stores/${sid}/questions`)).data.questions;
+  assert.equal(pub[0].answer, "Да, 40 листов на складе"); assert.equal(pub[0].phone, undefined);
+  assert.equal((await call("GET", "/api/me/questions", null, buyer)).data.questions[0].answer, "Да, 40 листов на складе");
+});
