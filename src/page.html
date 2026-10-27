@@ -3296,6 +3296,24 @@ function storeCardHTML(s) {
     <div class="cat-picks" style="margin-top:4px">${(s.cats || []).map(c => `<span class="pill mute">${esc(catName(c))}</span>`).join("")}</div>
     <small style="color:var(--muted)">${ui("pin", 13)} ${dName(s.d)}, ${esc(s.addr)}${s.landmark ? " · " + esc(s.landmark) : ""}${s.la != null && s.loc_src !== "district" ? ` · <a href="${yaLink(s.la, s.lo)}" target="_blank" rel="noopener">${L("на карте", "xaritada")}</a>` : ""} · ${ui("clock", 13)} ${esc(s.hours)} · ${esc(s.phone ? "+" + digitsOf(s.phone) : "")}${s.telegram ? " · @" + esc(s.telegram) : ""}</small></div>`;
 }
+/* Telegram channel autoposts: status, preview and "post now" */
+let adminChannel = null;
+function adminChannelHTML() {
+  if (adminChannel === null) { adminChannel = false; adminApi("GET", "/api/admin/channel").then(r => { adminChannel = r; if (route.view === "seller") renderSeller(); }).catch(() => { adminChannel = { error: true }; }); return ""; }
+  if (!adminChannel || adminChannel.error) return "";
+  const c = adminChannel, K = { day: L("Товар дня", "Kun mahsuloti"), new: L("Новинки", "Yangi mahsulotlar"), drop: L("Снижения цен", "Narx tushishi") };
+  const plain = t => esc(String(t).replace(/<[^>]+>/g, "")).replace(/\n/g, "<br>");
+  return `<div class="panel" style="margin-top:12px;display:grid;gap:10px"><div class="panel-h"><h2 class="h-m">${ui("send", 18)} ${L("Telegram-канал", "Telegram kanal")}</h2><span class="pill ${c.enabled ? "ok" : "mute"}">${c.enabled ? esc(c.chat) : L("не подключён", "ulanmagan")}</span></div>
+    <p class="mu" style="margin:0;font-size:13px">${c.enabled ? L(`Каждый день в ${c.hour}:00 по Ташкенту бот публикует товар дня, новинки и снижения цен, а новые магазины — сразу после одобрения.`, `Har kuni Toshkent vaqti bilan ${c.hour}:00 da bot kun mahsuloti, yangiliklar va narx tushishini, yangi do‘konlarni esa tasdiqlangandan so‘ng darhol e’lon qiladi.`) : L("Чтобы включить: создайте канал, добавьте бота администратором и укажите TELEGRAM_CHANNEL=@имя_канала в настройках сервера.", "Yoqish uchun: kanal yarating, botni administrator qiling va server sozlamalarida TELEGRAM_CHANNEL=@kanal_nomi ni ko‘rsating.")}</p>
+    ${c.preview.map(p => `<details><summary>${L("Пример поста", "Post namunasi")}: ${K[p.kind] || p.kind}</summary><div class="note" style="margin-top:6px">${plain(p.text)}</div></details>`).join("")}
+    ${c.enabled ? `<div style="display:flex;gap:8px;flex-wrap:wrap">${Object.entries(K).map(([k, t]) => `<button class="btn btn-line" type="button" data-chpost="${k}">${L("Опубликовать", "E’lon qilish")}: ${t}</button>`).join("")}</div>` : ""}
+    ${c.last.length ? `<small class="mu">${L("Последние посты", "Oxirgi postlar")}: ${c.last.slice(0, 5).map(x => `${K[x.kind] || L("магазин", "do‘kon")} ${new Date(x.created_at).toLocaleDateString("ru-RU")}`).join(" · ")}</small>` : ""}</div>`;
+}
+document.addEventListener("click", async e => {
+  const t = e.target.closest("[data-chpost]"); if (!t) return; t.disabled = true;
+  try { const r = await adminApi("POST", "/api/admin/channel/post", { kind: t.dataset.chpost }); toast(r.posted ? L("Опубликовано в канале", "Kanalda e’lon qilindi") : L("Пока нечего публиковать", "Hozircha e’lon qiladigan narsa yo‘q")); adminChannel = null; renderSeller(); }
+  catch (er) { t.disabled = false; toast(apiErr(er)); }
+});
 function adminMastersHTML() {
   if (!adminMasters?.length) return "";
   const pend = adminMasters.filter(m => m.status === "pending"), S = ST_STATUS();
@@ -3322,7 +3340,7 @@ function adminHTML() {
     <div class="tbl-wrap"><table><thead><tr><th>${L("Магазин", "Do‘kon")}</th><th>${L("Владелец", "Egasi")}</th><th>${L("Статус", "Holat")}</th><th></th></tr></thead><tbody>
     ${adminStores.slice(0, 40).map(s => { const [lb, c] = ST_STATUS()[s.status] || ["?", "mute"]; return `<tr><td><b>${esc(s.name)}</b><br><small style="color:var(--muted)">${dName(s.d)}, ${esc(s.addr)} · ${(s.cats || []).map(catName).join(", ")}</small><br><small>${esc(s.descr || "")}</small></td><td style="font-size:13px">${esc(s.owner_name || "—")}<br><span class="num">${esc(s.owner_phone ? "+" + s.owner_phone : "")}</span></td><td><span class="pill ${c}">${lb}</span></td>
       <td style="white-space:nowrap">${s.status !== "active" ? `<button class="btn btn-primary" type="button" data-adm="${esc(s.id)}|active">${L("Одобрить", "Tasdiqlash")}</button>` : ""} ${s.status === "pending" ? `<button class="btn btn-line" type="button" data-adm="${esc(s.id)}|rejected">${L("Отклонить", "Rad etish")}</button>` : s.status === "active" ? `<button class="btn btn-line" type="button" data-adm="${esc(s.id)}|blocked">${L("Скрыть", "Yashirish")}</button>` : ""}</td></tr>`; }).join("")}
-    </tbody></table></div></div>${adminMastersHTML()}${adminFinanceHTML()}`;
+    </tbody></table></div></div>${adminMastersHTML()}${adminChannelHTML()}${adminFinanceHTML()}`;
 }
 function renderSellerApi() {
   const crumbs = `<nav class="crumbs"><button type="button" data-go="home">${L("Главная", "Asosiy")}</button>${ui("chev", 12)}<span>${L("Кабинет продавца", "Sotuvchi kabineti")}</span></nav>`;

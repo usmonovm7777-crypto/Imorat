@@ -25,7 +25,7 @@ const fake = createServer(async (req, res) => {
     const m = req.url.split("/").pop(), b = body ? JSON.parse(body) : {};
     if (m === "getMe") return json(200, { ok: true, result: { username: "imorat_test_bot" } });
     if (m === "getUpdates") return json(200, { ok: true, result: tgUpdates.splice(0) });
-    if (m === "sendMessage" || m === "editMessageText" || m === "answerCallbackQuery") { tgSent.push({ m, ...b }); return json(200, { ok: true, result: { message_id: tgSent.length } }); }
+    if (m === "sendMessage" || m === "sendPhoto" || m === "editMessageText" || m === "answerCallbackQuery") { tgSent.push({ m, ...b }); return json(200, { ok: true, result: { message_id: tgSent.length } }); }
   }
   if (req.url === "/push/ep1") { pushes.push({ body: raw, auth: req.headers.authorization, enc: req.headers["content-encoding"] }); res.writeHead(201); return res.end(); }
   if (req.url === "/ai/v1/messages") {
@@ -67,7 +67,7 @@ before(async () => {
   const cfg = loadConfig({
     JWT_SECRET: "test-secret", DB_PATH: join(dir, "t.db"), UPLOADS_DIR: join(dir, "up"), ADMIN_PHONES: "998901111111",
     GOOGLE_CLIENT_ID: "gid", GOOGLE_JWKS_URL: fakeBase + "/jwks", ANTHROPIC_API_KEY: "sk-test", ANTHROPIC_URL: fakeBase + "/ai", SMS_MODE: "dev",
-    TELEGRAM_BOT_TOKEN: "TGTOKEN", TELEGRAM_API_URL: fakeBase + "/tg", TELEGRAM_POLL_TIMEOUT: "0", BACKUP_DIR: join(dir, "bk"), OTP_PER_IP_HOUR: "200"
+    TELEGRAM_BOT_TOKEN: "TGTOKEN", TELEGRAM_API_URL: fakeBase + "/tg", TELEGRAM_POLL_TIMEOUT: "0", BACKUP_DIR: join(dir, "bk"), OTP_PER_IP_HOUR: "200", TELEGRAM_CHANNEL: "@imorat_test", CHANNEL_HOUR: "25"
   });
   app = createApp(cfg, { info() {}, warn() {}, error: console.error });
   await new Promise(r => app.listen(0, "127.0.0.1", r));
@@ -444,4 +444,28 @@ test("Seller statistics: anonymous views and cart adds, orders, price position",
   assert.equal(s.series.length, 30); assert.ok(s.series.at(-1).views >= 3);
   assert.equal(s.prices.pricier, 1); assert.equal(s.prices.cheapest, 1);
   assert.equal((await call("GET", "/api/seller/stats", null, (await login("997770022")).data.token)).status, 403);
+});
+
+test("Telegram channel: new store post, product of the day with photo, new products, price drops, admin controls", async () => {
+  await until(() => tgSent.some(x => x.chat_id === "@imorat_test" && /Новый магазин/.test(x.text)));
+  const ch = app.channel;
+  assert.deepEqual(await ch.daily(Date.now(), true), ["day"], "first run: product of the day only, prices remembered");
+  const day = tgSent.filter(x => x.chat_id === "@imorat_test" && x.m === "sendPhoto").at(-1);
+  assert.match(day.caption, /Товар дня/); assert.match(day.caption, /Kun mahsuloti/); assert.match(day.photo, /^https:\/\/.+\/img\/.+\.webp$/);
+  assert.match(day.reply_markup.inline_keyboard[0][0].url, /#p-\d+$/);
+  // a seller drops a price and adds a product → next day both are posted
+  const seller = (await login("995550011")).data.token;
+  const st = await call("POST", "/api/seller/store", { name: "Arzon Qurilish", descr: "Магазин для проверки канала Telegram", cats: ["build"], phone: "712005544", addr: "ул. Канальная, 1", hours: "00:00–00:00", district: "chil" }, seller);
+  await call("PATCH", `/api/admin/stores/${st.data.store.id}`, { status: "active" }, globalThis.ADMIN);
+  await call("POST", "/api/seller/offers", { product_id: 3, price: 40000, stock: 10 }, seller);
+  await call("POST", "/api/seller/products", { ru: "Клей для газоблока Arzon, 25 кг", cat: "build", sub: "dry", unit: "bag25", price: 39000, stock: 20, kg: 25 }, seller);
+  const kinds = await ch.daily(Date.now() + 86400000, true);
+  assert.ok(kinds.includes("new") && kinds.includes("drop"), JSON.stringify(kinds));
+  assert.ok(tgSent.some(x => x.chat_id === "@imorat_test" && /Новинки/.test(x.text) && /Arzon/.test(x.text)));
+  assert.ok(tgSent.some(x => x.chat_id === "@imorat_test" && /Цены снизились/.test(x.text) && /Шпаклёвка финишная/.test(x.text)));
+  const adm = (await call("GET", "/api/admin/channel", null, globalThis.ADMIN)).data;
+  assert.equal(adm.enabled, true); assert.ok(adm.last.length >= 3); assert.ok(adm.preview.length >= 1);
+  assert.equal((await call("POST", "/api/admin/channel/post", { kind: "nope" }, globalThis.ADMIN)).status, 400);
+  assert.equal((await call("POST", "/api/admin/channel/post", { kind: "day" }, globalThis.ADMIN)).data.posted, true);
+  assert.equal((await call("GET", "/api/admin/channel", null, seller)).status, 403);
 });

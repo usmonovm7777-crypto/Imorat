@@ -39,6 +39,7 @@ export function createTelegram(cfg, log = console) {
     },
     stop() { stopped = true; },
     send: (chat_id, text, buttons) => call("sendMessage", { chat_id, text, parse_mode: "HTML", disable_web_page_preview: true, ...(buttons ? { reply_markup: { inline_keyboard: buttons } } : {}) }),
+    sendPhoto: (chat_id, photo, caption, buttons) => call("sendPhoto", { chat_id, photo, caption, parse_mode: "HTML", ...(buttons ? { reply_markup: { inline_keyboard: buttons } } : {}) }, 20000),
     edit: (chat_id, message_id, text, buttons) => call("editMessageText", { chat_id, message_id, text, parse_mode: "HTML", disable_web_page_preview: true, reply_markup: { inline_keyboard: buttons || [] } }),
     answer: (id, text) => call("answerCallbackQuery", { callback_query_id: id, text: text || "", show_alert: false })
   };

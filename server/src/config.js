@@ -61,6 +61,7 @@ export function loadConfig(env = process.env) {
     adminMfa: env.ADMIN_MFA !== "0",
     backupDir: env.BACKUP_DIR || "",
     smsSellerTemplate: env.SMS_SELLER_TEMPLATE || "Imorat: yangi buyurtma {num}. Iltimos, qabul qiling.",
+    channel: { chat: env.TELEGRAM_CHANNEL || "", hour: Number(env.CHANNEL_HOUR ?? 10), dropPct: Number(env.CHANNEL_DROP_PCT ?? 0.05) },
     otpPerIpHour: Number(env.OTP_PER_IP_HOUR || 20),
     bonus: { rate: Number(env.BONUS_RATE ?? 0.01), ratePro: Number(env.BONUS_RATE_PRO ?? 0.02), maxShare: Number(env.BONUS_MAX_SHARE ?? 0.2), referral: Number(env.BONUS_REFERRAL ?? 30000), welcome: Number(env.BONUS_WELCOME ?? 30000) },
     smsMasterTemplate: env.SMS_MASTER_TEMPLATE ?? "Imorat: sizga ustalik uchun yangi so‘rov keldi. Saytda qabul qiling.",

@@ -17,6 +17,7 @@ import { newSecret, checkTotp, otpauthUrl } from "./totp.js";
 import { registerMasters } from "./masters.js";
 import { createBonus } from "./bonus.js";
 import { registerStats } from "./stats.js";
+import { createChannel } from "./channel.js";
 
 export const STEPS = {
   yandex: ["new", "assembling", "searching", "to_store", "on_way", "delivered"],
@@ -41,6 +42,7 @@ export function createApp(cfg, log = console) {
   const push = createPush(db, cfg.pushSubject, log);
   const notify = createNotify({ db, cfg, tg, push, sms, ref, log });
   const bonus = createBonus({ db, cfg, log });
+  const channel = createChannel({ db, cfg, tg, log });
   const PCAT = new Map(db.all("SELECT id, cat FROM products").map(p => [p.id, p.cat]));
   const rateOf = cat => cfg.commission[cat] ?? cfg.commission["*"] ?? 0;
   const audit = (req, action, target, details) => db.run("INSERT INTO audit(user_id,action,target,details,ip,created_at) VALUES(?,?,?,?,?,?)", req?.user?.id || null, action, target == null ? null : String(target), details ? JSON.stringify(details) : null, req?.ip || null, Date.now());
@@ -646,6 +648,7 @@ export function createApp(cfg, log = console) {
     if (b.status && !["active", "pending", "rejected", "blocked"].includes(b.status)) throw bad("bad_status", "Unknown status");
     db.run("UPDATE stores SET status=COALESCE(?,status), review_note=COALESCE(?,review_note) WHERE id=?", b.status || null, b.note != null ? str(b.note, 300) : null, s.id);
     audit(req, "store." + (b.status || "edit"), s.id, { note: b.note, owner_phone: b.owner_phone });
+    if (b.status === "active" && s.status !== "active") channel.storeApproved(s).catch(e => log.warn("[channel]", e.message));
     if (b.status && s.owner_id) { const ow = db.get("SELECT tg_chat FROM users WHERE id=?", s.owner_id); if (ow?.tg_chat) tg.send(ow.tg_chat, b.status === "active" ? `🎉 Магазин «${s.name.replace(/[<>&]/g, "")}» одобрен и виден покупателям на Imorat.` : `Статус магазина «${s.name.replace(/[<>&]/g, "")}»: ${b.status}.${b.note ? " " + str(b.note, 300).replace(/[<>&]/g, "") : ""}`); }
     if (b.owner_phone) {
       const ph = parsePhone(b.owner_phone), ou = db.get("SELECT * FROM users WHERE phone=?", ph);
@@ -677,6 +680,7 @@ export function createApp(cfg, log = console) {
   registerMasters({ r, db, cfg, ref, need, needAdmin, audit, lim, tg, push, sms, log });
   bonus.routes(r, need, lim);
   registerStats({ r, db, lim, needSeller });
+  channel.routes(r, needAdmin);
 
   /* ---------- HTTP server ---------- */
   const server = createServer(async (req, res) => {
@@ -743,12 +747,13 @@ export function createApp(cfg, log = console) {
       readdirSync(cfg.backupDir).filter(f => /^imorat-\d{4}-\d{2}-\d{2}\.db$/.test(f)).sort().slice(0, -14).forEach(f => unlinkSync(join(cfg.backupDir, f)));
     } catch (e) { log.error("[backup] failed", e.message); notify.admins("⚠️ Резервная копия базы не сохранилась: " + String(e.message).slice(0, 150)); }
   }
-  const timers = [setInterval(() => { try { sweep(); } catch (e) { log.error("[sweep]", e); } }, 30000), setInterval(backup, 3600000)];
+  const timers = [setInterval(() => { try { sweep(); } catch (e) { log.error("[sweep]", e); } if (channel.enabled()) channel.daily().catch(e => log.error("[channel]", e)); }, 30000), setInterval(backup, 3600000)];
   server.on("listening", () => { tg.start(); backup(); });
   server.stopJobs = () => { timers.forEach(clearInterval); tg.stop(); };
   server.on("close", server.stopJobs);
   server.sweep = sweep;
   server.backup = backup;
+  server.channel = channel;
   server.db = db;
   return server;
 }
