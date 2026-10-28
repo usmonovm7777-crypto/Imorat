@@ -9,7 +9,7 @@ import html, json, os, re, shutil
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-SITE = os.environ.get("SITE_URL", "https://usmonovm7777-crypto.github.io/Imorat/").rstrip("/") + "/"
+SITE = os.environ.get("SITE_URL", "https://usmonovm7777-crypto.github.io/Imorat Go/").rstrip("/") + "/"
 cat = json.loads((ROOT / "server" / "data" / "catalog.json").read_text(encoding="utf-8"))
 STORES = {s["id"]: s for s in cat["stores"]}
 CATS = {c["id"]: c for c in cat["cats"]}
@@ -30,15 +30,15 @@ def slug(t):
 def fmt(n): return f"{round(n):,}".replace(",", " ")
 E = lambda s: html.escape(str(s), quote=True)
 T = {
-    "ru": dict(buy="Купить на Imorat", from_="от", sum="сум", city="в Ташкенте", stores="Цены в магазинах", store="Магазин", price="Цена", stock="Наличие",
+    "ru": dict(buy="Купить на Imorat Go", from_="от", sum="сум", city="в Ташкенте", stores="Цены в магазинах", store="Магазин", price="Цена", stock="Наличие",
                yes="в наличии", no="под заказ", delivery="Доставка Яндекс по Ташкенту: курьер до 15 кг, грузовое такси для тяжёлых заказов. Самовывоз из магазина бесплатно.",
                unit="Единица", kg="Вес", country="Страна", similar="Похожие товары", home="Главная", catalog="Каталог", all_in="Все товары", items="товаров",
-               site="Imorat — маркетплейс строительных магазинов Ташкента", open="Открыть каталог", buy_title="купить", lang_other="Özbekça",
+               site="Imorat Go — маркетплейс строительных магазинов Ташкента", open="Открыть каталог", buy_title="купить", lang_other="Özbekça",
                desc_tail="Сравните цены {n} магазинов, закажите с доставкой Яндекс по Ташкенту."),
-    "uz": dict(buy="Imoratda sotib olish", from_="dan", sum="so‘m", city="Toshkentda", stores="Do‘konlardagi narxlar", store="Do‘kon", price="Narx", stock="Mavjudligi",
+    "uz": dict(buy="Imorat Go’da sotib olish", from_="dan", sum="so‘m", city="Toshkentda", stores="Do‘konlardagi narxlar", store="Do‘kon", price="Narx", stock="Mavjudligi",
                yes="bor", no="buyurtma asosida", delivery="Toshkent bo‘ylab Yandex yetkazib berish: 15 kg gacha kuryer, og‘ir buyurtmalar uchun yuk taksi. Do‘kondan olib ketish bepul.",
                unit="O‘lchov", kg="Vazni", country="Mamlakat", similar="O‘xshash mahsulotlar", home="Asosiy", catalog="Katalog", all_in="Barcha mahsulotlar", items="ta mahsulot",
-               site="Imorat — Toshkent qurilish do‘konlari marketpleysi", open="Katalogni ochish", buy_title="sotib olish", lang_other="Русский",
+               site="Imorat Go — Toshkent qurilish do‘konlari marketpleysi", open="Katalogni ochish", buy_title="sotib olish", lang_other="Русский",
                desc_tail="{n} ta do‘kon narxlarini solishtiring, Toshkent bo‘ylab Yandex yetkazib berish bilan buyurtma qiling."),
 }
 def tr(lang, key): v = T[lang][key]; return uz_new(v) if lang == "uz" else v
@@ -86,7 +86,7 @@ def page(lang, depth, title, desc, canon, alt, body, ld, img=None):
 <script type="application/ld+json">{json.dumps(ld, ensure_ascii=False)}</script>
 </head>
 <body>
-<header><a class="logo" href="{up}index.html?lang={lang}"><img src="{up}icons/icon-192.png" alt="">imorat</a><a href="{up}{alt}" hreflang="{other}">{tr(lang, 'lang_other')}</a></header>
+<header><a class="logo" href="{up}index.html?lang={lang}"><img src="{up}icons/icon-192.png" alt="">imorat <b style="color:#0B6E69">go</b></a><a href="{up}{alt}" hreflang="{other}">{tr(lang, 'lang_other')}</a></header>
 <main>
 {body}
 </main>
@@ -105,7 +105,7 @@ def product_page(p, lang, by_sub):
     unit = UNITS.get(p["unit"], UNITS["pcs"])[1 if lang == "uz" else 0]
     d = DESC.get(p["sub"])
     desc_txt = uz_new(d[1]) if (d and lang == "uz") else (d[0] if d else "")
-    title = f"{nm} — купить в Ташкенте {from_price(lang, mp)} | Imorat" if lang == "ru" else f"{nm} — Toshkentda {from_price(lang, mp)} sotib olish | Imorat"
+    title = f"{nm} — купить в Ташкенте {from_price(lang, mp)} | Imorat Go" if lang == "ru" else f"{nm} — Toshkentda {from_price(lang, mp)} sotib olish | Imorat Go"
     meta = f"{nm}: {fmt(mp)} {tr(lang, 'sum')}/{unit}. " + tr(lang, "desc_tail").format(n=len(offers))
     rows = "".join(f"<tr><td>{E(STORES[o['store']]['name'])}<br><small class=mu>{E(uz_new(DIST[STORES[o['store']]['d']]['uz']) if lang == 'uz' else DIST[STORES[o['store']]['d']]['ru'])}</small></td><td class=r><b>{fmt(o['price'])}</b> {tr(lang, 'sum')}</td><td>{tr(lang, 'yes') if o.get('stock', 0) > 0 else tr(lang, 'no')}</td></tr>" for o in offers if o["store"] in STORES)
     sim = [x for x in by_sub.get(p["sub"], []) if x["id"] != p["id"]][:8]
@@ -143,7 +143,7 @@ def cat_page(c, lang, items):
         if not xs: continue
         groups += f"<h2>{E(uz_new(s[2]) if lang == 'uz' else s[1])}</h2><ul class=cards>" + "".join(
             f'<li><a href="{up}{purl(x, lang)}"><img src="{up}{E(x["img"])}" alt="" loading="lazy" width="180" height="180"><b>{E(name(x, lang))}</b><span>{from_price(lang, min_price(x))}</span></a></li>' for x in xs) + "</ul>"
-    title = f"{cn} {tr(lang, 'city')} — {len(items)} {tr(lang, 'items')} | Imorat"
+    title = f"{cn} {tr(lang, 'city')} — {len(items)} {tr(lang, 'items')} | Imorat Go"
     meta = f"{cn}: " + ", ".join(name(x, lang) for x in items[:6]) + ". " + tr(lang, "desc_tail").format(n=len({o['store'] for x in items for o in x['offers']}))
     body = f"""<nav class="bc"><a href="{up}index.html?lang={lang}">{tr(lang, 'home')}</a> › {E(cn)}</nav>
 <h1>{E(cn)} {tr(lang, 'city')}</h1><p><a class="btn" href="{app_link(lang, 'cat-' + c['id'], depth)}">{tr(lang, 'open')}</a></p>{groups}"""

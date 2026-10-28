@@ -38,7 +38,7 @@ export function loadConfig(env = process.env) {
       eskizEmail: env.ESKIZ_EMAIL || "",
       eskizPassword: env.ESKIZ_PASSWORD || "",
       eskizFrom: env.ESKIZ_FROM || "4546",
-      template: env.SMS_TEMPLATE || "Imorat: tasdiqlash kodi {code}. Kodni hech kimga bermang."
+      template: env.SMS_TEMPLATE || "Imorat Go: tasdiqlash kodi {code}. Kodni hech kimga bermang."
     },
     google: { clientId: env.GOOGLE_CLIENT_ID || "", jwksUrl: env.GOOGLE_JWKS_URL || "https://www.googleapis.com/oauth2/v3/certs" },
     apple: { clientId: env.APPLE_CLIENT_ID || "", redirectUri: env.APPLE_REDIRECT_URI || "", jwksUrl: env.APPLE_JWKS_URL || "https://appleid.apple.com/auth/keys" },
@@ -53,21 +53,21 @@ export function loadConfig(env = process.env) {
     yandex: { token: env.YANDEX_DELIVERY_TOKEN || "", url: (env.YANDEX_DELIVERY_URL || "https://b2b.taxi.yandex.net").replace(/\/$/, "") },
     telegram: { token: env.TELEGRAM_BOT_TOKEN || "", name: env.TELEGRAM_BOT_NAME || "imoratGo_bot", url: (env.TELEGRAM_API_URL || "https://api.telegram.org").replace(/\/$/, ""), pollTimeout: env.TELEGRAM_POLL_TIMEOUT != null ? Number(env.TELEGRAM_POLL_TIMEOUT) : 25 },
     pushSubject: env.VAPID_SUBJECT || "mailto:support@imorat.uz",
-    siteUrl: (env.SITE_URL || "https://usmonovm7777-crypto.github.io/Imorat/").replace(/\/?$/, "/"),
+    siteUrl: (env.SITE_URL || "https://usmonovm7777-crypto.github.io/Imorat Go/").replace(/\/?$/, "/"),
     // Seller deadlines (minutes): reminder, SMS, auto-cancel if not accepted; hours to hand the order over
     timers: { remind: Number(env.ACCEPT_REMIND_MIN) || 5, sms: Number(env.ACCEPT_SMS_MIN) || 10, cancel: Number(env.ACCEPT_TIMEOUT_MIN) || 20, handover: Number(env.HANDOVER_HOURS) || 4 },
     // Commission by category, %: "build:5,metal:5,fasten:5,*:10"
     commission: Object.fromEntries(String(env.COMMISSION || "build:5,metal:5,fasten:5,*:10").split(",").map(x => x.split(":")).filter(x => x.length === 2).map(([k, v]) => [k.trim(), Number(v) / 100])),
     adminMfa: env.ADMIN_MFA !== "0",
     backupDir: env.BACKUP_DIR || "",
-    smsSellerTemplate: env.SMS_SELLER_TEMPLATE || "Imorat: yangi buyurtma {num}. Iltimos, qabul qiling.",
+    smsSellerTemplate: env.SMS_SELLER_TEMPLATE || "Imorat Go: yangi buyurtma {num}. Iltimos, qabul qiling.",
     channel: { chat: env.TELEGRAM_CHANNEL ?? "@imoratgo", hour: Number(env.CHANNEL_HOUR ?? 10), dropPct: Number(env.CHANNEL_DROP_PCT ?? 0.05) },
     // Mobile operators in Uzbekistan put many phones behind one IP (CGNAT), so per-IP limits are generous;
     // the real protection is per phone number (5 codes an hour) and per account.
     otpPerIpHour: Number(env.OTP_PER_IP_HOUR || 150),
     ratePerIpMin: Number(env.RATE_PER_IP_MIN || 3000),
     bonus: { rate: Number(env.BONUS_RATE ?? 0.01), ratePro: Number(env.BONUS_RATE_PRO ?? 0.02), maxShare: Number(env.BONUS_MAX_SHARE ?? 0.2), referral: Number(env.BONUS_REFERRAL ?? 30000), welcome: Number(env.BONUS_WELCOME ?? 30000) },
-    smsMasterTemplate: env.SMS_MASTER_TEMPLATE ?? "Imorat: sizga ustalik uchun yangi so‘rov keldi. Saytda qabul qiling.",
+    smsMasterTemplate: env.SMS_MASTER_TEMPLATE ?? "Imorat Go: sizga ustalik uchun yangi so‘rov keldi. Saytda qabul qiling.",
     paymentsOnline: list(env.PAYMENTS) // e.g. "click,payme" once the company and contracts exist
   };
 }

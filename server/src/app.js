@@ -595,7 +595,7 @@ export function createApp(cfg, log = console) {
     return { ok: true };
   });
   r.post("/api/push/unsubscribe", async req => { const u = need(req), b = await readJson(req); db.run("DELETE FROM push_subs WHERE endpoint=? AND user_id=?", str(b.endpoint, 1000), u.id); return { ok: true }; });
-  r.post("/api/push/test", async req => { const u = need(req); const n = await push.toUser(u.id, { title: "Imorat", body: "Уведомления работают ✅", url: cfg.siteUrl }); return { sent: n }; });
+  r.post("/api/push/test", async req => { const u = need(req); const n = await push.toUser(u.id, { title: "Imorat Go", body: "Уведомления работают ✅", url: cfg.siteUrl }); return { sent: n }; });
   r.post("/api/me/logout-all", req => {
     const u = need(req);
     db.run("UPDATE users SET token_ver=token_ver+1 WHERE id=?", u.id); db.run("DELETE FROM push_subs WHERE user_id=?", u.id);
@@ -665,7 +665,7 @@ export function createApp(cfg, log = console) {
     db.run("UPDATE stores SET status=COALESCE(?,status), review_note=COALESCE(?,review_note), verified=COALESCE(?,verified) WHERE id=?", b.status || null, b.note != null ? str(b.note, 300) : null, b.verified == null ? null : b.verified ? 1 : 0, s.id);
     audit(req, "store." + (b.status || "edit"), s.id, { note: b.note, owner_phone: b.owner_phone });
     if (b.status === "active" && s.status !== "active") channel.storeApproved(s).catch(e => log.warn("[channel]", e.message));
-    if (b.status && s.owner_id) { const ow = db.get("SELECT tg_chat FROM users WHERE id=?", s.owner_id); if (ow?.tg_chat) tg.send(ow.tg_chat, b.status === "active" ? `🎉 Магазин «${s.name.replace(/[<>&]/g, "")}» одобрен и виден покупателям на Imorat.` : `Статус магазина «${s.name.replace(/[<>&]/g, "")}»: ${b.status}.${b.note ? " " + str(b.note, 300).replace(/[<>&]/g, "") : ""}`); }
+    if (b.status && s.owner_id) { const ow = db.get("SELECT tg_chat FROM users WHERE id=?", s.owner_id); if (ow?.tg_chat) tg.send(ow.tg_chat, b.status === "active" ? `🎉 Магазин «${s.name.replace(/[<>&]/g, "")}» одобрен и виден покупателям на Imorat Go.` : `Статус магазина «${s.name.replace(/[<>&]/g, "")}»: ${b.status}.${b.note ? " " + str(b.note, 300).replace(/[<>&]/g, "") : ""}`); }
     if (b.owner_phone) {
       const ph = parsePhone(b.owner_phone), ou = db.get("SELECT * FROM users WHERE phone=?", ph);
       if (!ou) throw new HttpError(404, "user_not_found", "The owner must sign in once first");

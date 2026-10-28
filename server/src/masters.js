@@ -49,7 +49,7 @@ export function registerMasters({ r, db, cfg, ref, need, needAdmin, audit, lim, 
         : T(buyer, `🏁 Мастер ${q.mname} отметил работу выполненной. Как всё прошло? Оценка поможет другим людям.`, `🏁 Usta ${q.mname} ishni bajarilgan deb belgiladi. Qanday o‘tdi? Bahoyingiz boshqalarga yordam beradi.`);
       const rate = status === "done" ? [[1, 2, 3, 4, 5].map(n => ({ text: `${n} ⭐`, callback_data: `rv:${q.id}:${n}` }))] : null;
       if (buyer?.tg_chat) safe(tg.send(buyer.tg_chat, h(text), rate));
-      if (buyer) safe(push.toUser(buyer.id, { title: "Imorat · мастер", body: text, url: `${cfg.siteUrl}#masters`, tag: "mreq-" + q.id }));
+      if (buyer) safe(push.toUser(buyer.id, { title: "Imorat Go · мастер", body: text, url: `${cfg.siteUrl}#masters`, tag: "mreq-" + q.id }));
     } else {
       const owner = db.get("SELECT tg_chat FROM users WHERE id=?", q.muid);
       if (owner?.tg_chat) safe(tg.send(owner.tg_chat, `🚫 Клиент отменил заявку №${q.id} · Mijoz arizani bekor qildi`));
@@ -152,7 +152,7 @@ export function registerMasters({ r, db, cfg, ref, need, needAdmin, audit, lim, 
     db.run("UPDATE masters SET status=?, note=? WHERE id=?", b.status, b.note != null ? str(b.note, 300) : m.note, m.id);
     audit(req, "master." + b.status, m.id, { note: b.note });
     const ow = db.get("SELECT tg_chat FROM users WHERE id=?", m.user_id);
-    if (ow?.tg_chat) safe(tg.send(ow.tg_chat, b.status === "active" ? `🎉 Ваша анкета мастера одобрена — клиенты видят её в разделе «Мастера» на Imorat.` : `Статус анкеты мастера: ${b.status}.${b.note ? " " + h(str(b.note, 300)) : ""}`));
+    if (ow?.tg_chat) safe(tg.send(ow.tg_chat, b.status === "active" ? `🎉 Ваша анкета мастера одобрена — клиенты видят её в разделе «Мастера» на Imorat Go.` : `Статус анкеты мастера: ${b.status}.${b.note ? " " + h(str(b.note, 300)) : ""}`));
     return { master: pub(db.get("SELECT * FROM masters WHERE id=?", m.id)) };
   });
   return { createRequest, moveRequest, reviewed, masterCard, REQ_MOVES, stats, pub };

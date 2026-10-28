@@ -58,7 +58,7 @@ export function registerTeams({ r, db, cfg, need, lim, tg, log }) {
     const name = b.name != null ? str(b.name, 80) || p.name : p.name;
     db.run("UPDATE team_projects SET items=?, name=?, updated_at=? WHERE id=?", JSON.stringify(items), name, now, p.id);
     if (added) for (const m of db.all("SELECT u.* FROM team_members m JOIN users u ON u.id=m.user_id WHERE m.project_id=? AND u.id<>?", p.id, u.id))
-      if (m.tg_chat) safe(tg.send(m.tg_chat, `🧱 ${h((u.name || "Участник").split(" ")[0])} добавил ${added} поз. в проект «${h(name)}» на Imorat.`));
+      if (m.tg_chat) safe(tg.send(m.tg_chat, `🧱 ${h((u.name || "Участник").split(" ")[0])} добавил ${added} поз. в проект «${h(name)}» на Imorat Go.`));
     return { project: out(db.get("SELECT * FROM team_projects WHERE id=?", p.id)) };
   });
   r.del("/api/team-projects/:id", (req, res, pp) => {

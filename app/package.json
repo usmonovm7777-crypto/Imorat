@@ -2,7 +2,7 @@
   "name": "imorat-app",
   "version": "1.0.0",
   "private": true,
-  "description": "Imorat mobile app (Android / iOS) built from the website with Capacitor",
+  "description": "Imorat Go mobile app (Android / iOS) built from the website with Capacitor",
   "scripts": {
     "www": "node scripts/prepare-www.mjs",
     "android": "npm run www && npx cap sync android && npx cap open android",

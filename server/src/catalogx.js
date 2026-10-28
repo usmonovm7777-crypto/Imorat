@@ -21,7 +21,7 @@ export function registerCatalogExtras({ r, db, cfg, need, lim, tg, push, saveIma
       const users = db.all("SELECT u.* FROM stock_watch w JOIN users u ON u.id=w.user_id WHERE w.product_id=?", b.pid);
       db.run("DELETE FROM stock_watch WHERE product_id=?", b.pid);
       for (const u of users) {
-        const text = `✅ Снова в наличии: «${b.ru}». Успейте заказать на Imorat.`;
+        const text = `✅ Снова в наличии: «${b.ru}». Успейте заказать на Imorat Go.`;
         if (u.tg_chat) safe(tg.send(u.tg_chat, h(text), [[{ text: "Открыть · Ochish", url: `${cfg.siteUrl}#p-${b.pid}` }]]));
         safe(push.toUser(u.id, { title: "Снова в наличии", body: b.ru, url: `${cfg.siteUrl}#p-${b.pid}`, tag: "stock-" + b.pid }));
       }

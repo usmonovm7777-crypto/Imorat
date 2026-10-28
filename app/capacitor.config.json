@@ -1,6 +1,6 @@
 {
   "appId": "uz.imorat.app",
-  "appName": "Imorat",
+  "appName": "Imorat Go",
   "webDir": "www",
   "server": { "androidScheme": "https" },
   "plugins": {

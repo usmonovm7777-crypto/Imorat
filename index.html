@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="description" content="Imorat — маркетплейс строительных магазинов Ташкента: сравнение цен, Usta AI, калькуляторы ремонта и доставка Яндекс.">
+<meta name="description" content="Imorat Go — маркетплейс строительных магазинов Ташкента: сравнение цен, Usta AI, калькуляторы ремонта и доставка Яндекс.">
 <style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.5 system-ui,-apple-system,'Segoe UI',Roboto,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
 <script src="config.js"></script>
 <link rel="manifest" href="manifest.webmanifest">
@@ -11,9 +11,9 @@
 <link rel="icon" type="image/png" href="icons/favicon-64.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Imorat">
+<meta name="apple-mobile-web-app-title" content="Imorat Go">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<title>Imorat Market</title>
+<title>Imorat Go</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -113,6 +113,7 @@ linear-gradient(180deg, hsl(var(--h) var(--tile-s) var(--tile-l)) 0 70%, hsl(var
 .logo-mark i:nth-child(2) { background: var(--signal); }
 .logo-mark i:nth-child(3) { opacity: .55; }
 .logo b { font-family: var(--f-display); font-weight: 700; font-size: 19px; letter-spacing: -.03em; }
+.logo b em { font-style: normal; color: var(--accent); margin-left: .2em; }
 .cat-btn { display: inline-flex; align-items: center; gap: 8px; background: var(--accent); color: var(--accent-ink); border-radius: 12px; padding: 10px 16px; font-weight: 600; flex: none; }
 .cat-btn:hover { filter: brightness(1.08); }
 .sugg { position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 60; background: var(--surface); border: 1px solid var(--line-strong); border-radius: 16px; box-shadow: 0 18px 50px rgb(0 0 0 / .18); padding: 8px; max-height: min(70vh, 560px); overflow-y: auto; overscroll-behavior: contain; display: grid; gap: 2px; }
@@ -1276,7 +1277,7 @@ const UI = {
 const ui = (k, s = 20) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${UI[k]}</svg>`;
 
 /* ================= Server API =================
-   window.IMORAT_API (set in config.js on the website) is the address of the Imorat server.
+   window.IMORAT_API (set in config.js on the website) is the address of the Imorat Go server.
    Without it the page runs as a self-contained demo: data stays in this browser. */
 const API = String(window.IMORAT_API || "").replace(/\/+$/, "");
 let apiToken = LS.get("imorat.token", ""), apiCfg = null, apiCat = null, myStore = LS.get("imorat.myStore", null), sellerData = null, adminStores = null, adminMasters = null;
@@ -1863,7 +1864,7 @@ function renderHeader() {
   $("#hdr").innerHTML = `
   <div class="wrap hdr-row">
     <button class="menu-btn" type="button" data-act="widgets" aria-label="${L("Виджеты и инструменты", "Vidjetlar va asboblar")}" title="${L("Виджеты", "Vidjetlar")}">${ui("menu", 22)}<span class="dot" aria-hidden="true"></span></button>
-    <button class="logo" type="button" data-go="home" aria-label="Imorat"><span class="logo-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span><b>imorat</b></button>
+    <button class="logo" type="button" data-go="home" aria-label="Imorat Go"><span class="logo-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span><b>imorat<em>go</em></b></button>
     <button class="cat-btn" type="button" data-act="mega">${ui("grid", 18)}${L("Каталог", "Katalog")}</button>
     <div class="search" role="search">${ui("search", 18)}<input id="q" type="search" enterkeyhint="search" role="combobox" aria-controls="sugg" aria-expanded="false" aria-autocomplete="list" value="${esc(f.q)}" placeholder="${L("Цемент, смеситель, ламинат…", "Sement, aralashtirgich, laminat…")}" aria-label="${L("Поиск по каталогу", "Katalog bo‘yicha qidiruv")}" autocomplete="off"><div class="sugg" id="sugg" role="listbox" aria-label="${L("Подсказки поиска", "Qidiruv takliflari")}" hidden></div><span class="s-tools"><button class="s-ic" type="button" data-act="voice" ${SRec ? "" : "hidden"} aria-label="${L("Поиск голосом", "Ovozli qidiruv")}" title="${L("Поиск голосом", "Ovozli qidiruv")}">${ui("mic", 18)}</button><button class="s-ic" type="button" data-act="photo-search" ${photoAIon() ? "" : "hidden"} aria-label="${L("Поиск по фото", "Rasm bo‘yicha qidiruv")}" title="${L("Поиск по фото", "Rasm bo‘yicha qidiruv")}">${ui("camera", 18)}</button><button class="ask" type="button" data-act="ask-search">${ui("spark", 14)}<span class="t">${L("Спросить AI", "AI dan so‘rash")}</span></button></span><input type="file" id="psFile" accept="image/*" hidden></div>
     <label class="where" title="${L("Район доставки", "Yetkazish tumani")}">${ui("pin", 16)}<span class="visually-hidden">${L("Район доставки", "Yetkazish tumani")}</span><select id="distSel">${DISTRICTS.map(d => `<option value="${d.id}" ${d.id === district ? "selected" : ""}>${L(d.ru, d.uz)}</option>`).join("")}</select></label>
@@ -1878,7 +1879,7 @@ function renderHeader() {
     <button type="button" class="ms-l" data-go="masters">${ui("wrench", 15)}${L("Мастера", "Ustalar")}</button>
     ${quick.map(id => `<button type="button" data-go="cat-${id}">${catName(id)}</button>`).join("")}
     <button type="button" class="hl" data-scroll="bundles">${L("Комплекты", "To‘plamlar")}</button>
-    <button type="button" class="hl" data-scroll="vip">Imorat VIP</button>
+    <button type="button" class="hl" data-scroll="vip">Imorat Go VIP</button>
     <button type="button" data-go="seller">${L("Продавцам", "Sotuvchilarga")}</button>
   </nav></div>`;
   $("#q").addEventListener("input", e => { f.q = e.target.value; f.photo = null; if (route.view === "catalog") renderList(); suggInput(); });
@@ -1890,12 +1891,12 @@ function renderHeader() {
 function setDistrict(d) { district = d; LS.set("imorat.district", d); form.district = d; LS.set("imorat.form2", form); if (route.view === "home") updateEstimator(); toast(L("Доставка в: ", "Yetkazish: ") + dName(d)); }
 function renderFooter() {
   $("#foot").innerHTML = `<div class="wrap foot">
-    <div><button class="logo" type="button" data-go="home"><span class="logo-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span><b>imorat</b></button>
+    <div><button class="logo" type="button" data-go="home"><span class="logo-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span><b>imorat<em>go</em></b></button>
       <p style="margin:10px 0 0;max-width:36ch">${L("Маркетплейс строительных магазинов Узбекистана. Прототип интерфейса: магазины, цены и доставка демонстрационные.", "O‘zbekiston qurilish do‘konlari marketpleysi. Interfeys prototipi: do‘konlar, narxlar va yetkazish namunaviy.")}</p>
       <p class="num" style="margin:10px 0 0">+998 71 200 00 00 · 08:00–22:00</p>
       <a class="tg-l" href="https://t.me/${esc(apiCfg?.telegram_bot || "imoratGo_bot")}" target="_blank" rel="noopener">${ui("send", 16)} Telegram · @${esc(apiCfg?.telegram_bot || "imoratGo_bot")}</a></div>
     <div><b>${L("Покупателям", "Xaridorlarga")}</b><ul><li><button type="button" data-go="catalog">${L("Весь каталог", "Butun katalog")}</button></li><li><button type="button" data-act="ai">Usta AI</button></li><li><button type="button" data-scroll="calc">${L("Калькуляторы ремонта", "Ta’mir kalkulyatorlari")}</button></li><li><button type="button" data-go="list">${L("Список покупок → корзина", "Xaridlar ro‘yxati → savat")}</button></li><li><button type="button" data-act="orders">${L("Мои заказы", "Buyurtmalarim")}</button></li></ul></div>
-    <div><b>${L("Доставка и оплата", "Yetkazish va to‘lov")}</b><ul><li>${L("Яндекс Доставка", "Yandex Yetkazib berish")}</li><li><button type="button" data-scroll="vip">Imorat VIP</button></li><li>${L("Рассрочка на 12 месяцев", "12 oyga muddatli to‘lov")}</li><li><button type="button" data-go="masters">${L("Мастера для ремонта", "Ta’mir ustalari")}</button></li></ul></div>
+    <div><b>${L("Доставка и оплата", "Yetkazish va to‘lov")}</b><ul><li>${L("Яндекс Доставка", "Yandex Yetkazib berish")}</li><li><button type="button" data-scroll="vip">Imorat Go VIP</button></li><li>${L("Рассрочка на 12 месяцев", "12 oyga muddatli to‘lov")}</li><li><button type="button" data-go="masters">${L("Мастера для ремонта", "Ta’mir ustalari")}</button></li></ul></div>
     <div><b>${L("Партнёрам", "Hamkorlarga")}</b><ul><li><button type="button" data-go="seller">${L("Кабинет продавца", "Sotuvchi kabineti")}</button></li><li><button type="button" data-scroll="stores">${L("Магазины", "Do‘konlar")}</button></li><li><button type="button" data-go="admin">${L("Панель владельца", "Egasi paneli")}</button></li><li><button type="button" data-go="masters" data-mtabgo="me">${L("Стать мастером", "Usta bo‘lish")}</button></li></ul></div>
   </div>`;
 }
@@ -2093,7 +2094,7 @@ function vipBlock() {
     ["truck", L("Доставка бесплатно", "Bepul yetkazish"), L(`Курьером от ${fmt(VIP_FREE_FROM)}, грузовой со скидкой 50%`, `${fmt(VIP_FREE_FROM)}dan kuryer bepul, yuk mashinasi 50% chegirma`)],
     ["percent", L("Кешбэк 3%", "3% keshbek"), L("Баллами на следующие покупки", "Keyingi xaridlar uchun ballar")]];
   return `<div class="vip"><div>
-    <span class="eyebrow">${ui("crown", 14)} Imorat VIP</span>
+    <span class="eyebrow">${ui("crown", 14)} Imorat Go VIP</span>
     <h2 class="h-l" style="margin-top:10px">${L("Привезём ровно к нужному часу", "Kerakli soatga aniq yetkazamiz")}</h2>
     <p>${L("Мастер ждёт материалы к 9 утра? С VIP вы выбираете часовой интервал доставки, а курьер и грузовое авто назначаются в приоритете.", "Usta materiallarni ertalab 9 da kutyaptimi? VIP bilan bir soatlik oraliqni tanlaysiz, kuryer va yuk mashinasi ustuvor biriktiriladi.")}</p>
     <div class="vip-price"><b class="num">${fmt(VIP_FEE)}</b><span>${L("в месяц · первый месяц бесплатно", "oyiga · birinchi oy bepul")}</span></div>
@@ -2476,7 +2477,7 @@ function dCheckout() {
       <div class="f"><label for="fPromo">${L("Промокод", "Promokod")}</label><div class="promo-row"><input id="fPromo" value="${esc(promo)}" placeholder="IMORAT5" autocomplete="off" autocapitalize="characters"><button class="btn btn-line" type="button" data-act="promo">${L("Применить", "Qo‘llash")}</button></div><span class="promo-msg" id="promoMsg"></span></div>
       <div class="f"><label for="fComment">${L("Комментарий курьеру", "Kuryerga izoh")}</label><textarea id="fComment" name="comment" rows="2" placeholder="${L("Позвоните за 10 минут", "10 daqiqa oldin qo‘ng‘iroq qiling")}">${esc(d.comment)}</textarea></div>
     </fieldset>
-    ${vip ? "" : `<div class="note vipn">${ui("crown", 14)} <b>Imorat VIP</b> — ${L("бесплатная доставка курьером от 500 000 сум, грузовой −50%, точный час без доплаты.", "500 000 so‘mdan kuryer bepul, yuk mashinasi −50%, aniq soat qo‘shimcha to‘lovsiz.")} <button type="button" class="link" data-act="vip-on">${L("Подключить", "Ulash")}</button></div>`}
+    ${vip ? "" : `<div class="note vipn">${ui("crown", 14)} <b>Imorat Go VIP</b> — ${L("бесплатная доставка курьером от 500 000 сум, грузовой −50%, точный час без доплаты.", "500 000 so‘mdan kuryer bepul, yuk mashinasi −50%, aniq soat qo‘shimcha to‘lovsiz.")} <button type="button" class="link" data-act="vip-on">${L("Подключить", "Ulash")}</button></div>`}
     <div id="shipBox" style="display:grid;gap:8px"></div>
   </form>`;
   $("#dFoot").innerHTML = `<div id="totals" style="display:grid;gap:6px"></div><button class="btn btn-primary" type="submit" form="orderForm" id="payBtn" style="width:100%"></button>`;
@@ -2617,7 +2618,7 @@ function dProfile() {
     : `<div class="acct" style="grid-template-columns:1fr"><span><b>${L("Войдите, чтобы сохранять заказы", "Buyurtmalarni saqlash uchun kiring")}</b><small>${L("Google, Apple или номер телефона — займёт меньше минуты", "Google, Apple yoki telefon raqami — bir daqiqadan kam")}</small></span><button class="btn btn-primary" type="button" data-act="login">${L("Войти или зарегистрироваться", "Kirish yoki ro‘yxatdan o‘tish")}</button></div>`) + `
     ${bonusCardHTML()}
     ${notifyRows()}
-    <div class="vip-card"><span class="eyebrow" style="color:var(--signal)">${ui("crown", 14)} Imorat VIP</span>
+    <div class="vip-card"><span class="eyebrow" style="color:var(--signal)">${ui("crown", 14)} Imorat Go VIP</span>
       <b style="font-size:17px">${vip ? L("VIP подключён", "VIP ulangan") : L("Доставка в точный час и бесплатно", "Aniq soatda va bepul yetkazish")}</b>
       <small>${vip ? L("Точный час без доплаты, курьер в приоритете, кешбэк 3%.", "Aniq soat bepul, ustuvor kuryer, 3% keshbek.") : L(`${fmt(VIP_FEE)} в месяц, первый месяц бесплатно.`, `Oyiga ${fmt(VIP_FEE)}, birinchi oy bepul.`)}</small>
       <button class="btn ${vip ? "btn-line" : "btn-primary"}" type="button" data-act="${vip ? "vip-off" : "vip-on"}" style="${vip ? "border-color:color-mix(in srgb,var(--vip-fg) 35%,transparent)" : "background:var(--signal);color:#fff"}">${vip ? L("Отключить", "O‘chirish") : L("Подключить VIP", "VIP ulash")}</button></div>
@@ -2630,12 +2631,12 @@ function dProfile() {
       <button class="order-row" type="button" data-act="projects"><b>${L("Проекты ремонта", "Ta’mir loyihalari")}</b><b class="num">${projects.length}</b><small>${L("Сохранённые списки материалов", "Saqlangan material ro‘yxatlari")}</small></button>
       <button class="order-row" type="button" data-act="watch"><b>${L("Слежу за ценой", "Narx kuzatuvi")}</b><b class="num">${watch.length}</b><small>${L("Сообщим о снижении цены", "Narx tushsa xabar beramiz")}</small></button>
       <button class="order-row" type="button" data-act="favs"><b>${L("Избранное", "Saralanganlar")}</b><b class="num">${favs.length}</b><small>${L("Сохранённые товары", "Saqlangan mahsulotlar")}</small></button>
-      ${user?.admin ? `<button class="order-row" type="button" data-go="admin"><b>${L("Панель Imorat", "Imorat paneli")}</b>${ui("calc", 18)}<small>${L("Оборот, заказы, магазины, модерация", "Aylanma, buyurtmalar, do‘konlar, moderatsiya")}</small></button>` : ""}
+      ${user?.admin ? `<button class="order-row" type="button" data-go="admin"><b>${L("Панель Imorat Go", "Imorat Go paneli")}</b>${ui("calc", 18)}<small>${L("Оборот, заказы, магазины, модерация", "Aylanma, buyurtmalar, do‘konlar, moderatsiya")}</small></button>` : ""}
       <button class="order-row" type="button" data-go="masters" data-mtabgo="mine"><b>${L("Заявки мастерам", "Ustalarga so‘rovlar")}</b>${ui("wrench", 18)}<small>${L("Плиточники, электрики, сантехники", "Kafelchi, elektrik, santexnik")}</small></button>
       <button class="order-row" type="button" data-act="ai"><b>Usta AI</b>${ui("spark", 18)}<small>${L("Подбор материалов и советы", "Material tanlash va maslahatlar")}</small></button>
-      ${user && user.store_id && myStore ? `<button class="order-row" type="button" data-go="seller"><b>${esc(myStore.name)}</b>${ui("store", 18)}<small>${L("Кабинет продавца", "Sotuvchi kabineti")} · ${(ST_STATUS()[myStore.status] || ST_STATUS().pending)[0]}</small></button>` : `<button class="order-row" type="button" data-act="store-reg"><b>${L("Добавить свой магазин", "Do‘konimni qo‘shish")}</b>${ui("store", 18)}<small>${L("Продавайте на Imorat: витрина, заказы, доставка Яндекс", "Imoratda soting: vitrina, buyurtmalar, Yandex yetkazish")}</small></button>`}${API ? "" : `<button class="order-row" type="button" data-go="seller"><b>${L("Кабинет продавца", "Sotuvchi kabineti")}</b>${ui("chev", 18)}<small>${L("Для магазинов-партнёров", "Hamkor do‘konlar uchun")}</small></button>`}
+      ${user && user.store_id && myStore ? `<button class="order-row" type="button" data-go="seller"><b>${esc(myStore.name)}</b>${ui("store", 18)}<small>${L("Кабинет продавца", "Sotuvchi kabineti")} · ${(ST_STATUS()[myStore.status] || ST_STATUS().pending)[0]}</small></button>` : `<button class="order-row" type="button" data-act="store-reg"><b>${L("Добавить свой магазин", "Do‘konimni qo‘shish")}</b>${ui("store", 18)}<small>${L("Продавайте на Imorat Go: витрина, заказы, доставка Яндекс", "Imorat Go’da soting: vitrina, buyurtmalar, Yandex yetkazish")}</small></button>`}${API ? "" : `<button class="order-row" type="button" data-go="seller"><b>${L("Кабинет продавца", "Sotuvchi kabineti")}</b>${ui("chev", 18)}<small>${L("Для магазинов-партнёров", "Hamkor do‘konlar uchun")}</small></button>`}
     </div>`;
-  $("#dFoot").innerHTML = `${API && user ? `<button class="lnk" type="button" data-act="logout-all" style="font-size:12px;color:var(--muted);justify-self:start">${L("Выйти на всех устройствах", "Barcha qurilmalardan chiqish")}</button>` : ""}<span style="font-size:12px;color:var(--muted)">${(API ? L("Аккаунт, заказы и магазин хранятся на сервере Imorat.", "Akkaunt, buyurtmalar va do‘kon Imorat serverida saqlanadi.") : L("Данные этого прототипа хранятся только в вашем браузере.", "Prototip ma’lumotlari faqat brauzeringizda saqlanadi."))}</span>`;
+  $("#dFoot").innerHTML = `${API && user ? `<button class="lnk" type="button" data-act="logout-all" style="font-size:12px;color:var(--muted);justify-self:start">${L("Выйти на всех устройствах", "Barcha qurilmalardan chiqish")}</button>` : ""}<span style="font-size:12px;color:var(--muted)">${(API ? L("Аккаунт, заказы и магазин хранятся на сервере Imorat Go.", "Akkaunt, buyurtmalar va do‘kon Imorat Go serverida saqlanadi.") : L("Данные этого прототипа хранятся только в вашем браузере.", "Prototip ma’lumotlari faqat brauzeringizda saqlanadi."))}</span>`;
   $("#pDist").addEventListener("change", e => { setDistrict(e.target.value); renderHeader(); });
 }
 
@@ -2662,10 +2663,10 @@ function renderWidgets() {
       ${tile('data-act="watch"', "bell", "Слежу за ценой", "Narx kuzatuvi", "Сообщим о снижении", "Tushsa xabar beramiz", watch.length)}
       ${tile('data-act="orders"', "clock", "Мои заказы", "Buyurtmalarim", "Статус и машина на карте", "Holat va xaritadagi mashina", orders.length)}
       ${tile('data-scroll="bundles"', "gift", "Комплекты", "To‘plamlar", "Под ключ на 5% дешевле", "Tayyor, 5% arzonroq")}
-      ${tile('data-scroll="vip"', "crown", "Imorat VIP", "Imorat VIP", vip ? "Подключён" : "Доставка в точный час", vip ? "Ulangan" : "Aniq soatda yetkazish")}
+      ${tile('data-scroll="vip"', "crown", "Imorat Go VIP", "Imorat Go VIP", vip ? "Подключён" : "Доставка в точный час", vip ? "Ulangan" : "Aniq soatda yetkazish")}
       ${tile('data-act="mega"', "grid", "Все категории", "Barcha toifalar", `${CATS.length} разделов, ${PRODUCTS.length} товаров`, `${CATS.length} bo‘lim, ${PRODUCTS.length} mahsulot`)}
       ${tile('data-go="seller"', "store", "Продавцам", "Sotuvchilarga", "Кабинет магазина", "Do‘kon kabineti")}
-      ${canInstall() ? tile('data-act="install"', "pkg", "Приложение Imorat", "Imorat ilovasi", "Установить на телефон — заказы и уведомления в одно касание", "Telefonga o‘rnatish — buyurtma va bildirishnomalar bir bosishda") : ""}
+      ${canInstall() ? tile('data-act="install"', "pkg", "Приложение Imorat Go", "Imorat Go ilovasi", "Установить на телефон — заказы и уведомления в одно касание", "Telefonga o‘rnatish — buyurtma va bildirishnomalar bir bosishda") : ""}
     </div>
     <span class="wsec">${L("Аккаунт", "Akkaunt")}</span>
     ${user ? `<div class="acct"><span class="av">${esc(initial(user.name))}</span><span><b>${esc(user.name)}</b><small class="num">${esc(user.phone)}</small></span><button class="ib" type="button" data-act="profile" aria-label="${L("Профиль", "Profil")}">${ui("chev", 16)}</button></div>`
@@ -2869,7 +2870,7 @@ function storeFormHTML() {
   const cats = s.cats || [];
   return `${auth.fromProfile && !auth.edit ? `<button class="lnk" type="button" data-authstep="profile" style="justify-self:start">${L("← Назад", "← Orqaga")}</button>` : ""}
     <h2>${auth.edit ? L("Данные магазина", "Do‘kon ma’lumotlari") : L("Добавьте свой магазин", "Do‘koningizni qo‘shing")}</h2>
-    <p>${L("Это увидят покупатели на витрине Imorat. Паспортные данные не нужны — только информация о магазине.", "Buni xaridorlar Imorat vitrinasida ko‘radi. Pasport ma’lumotlari kerak emas — faqat do‘kon haqida.")}</p>
+    <p>${L("Это увидят покупатели на витрине Imorat Go. Паспортные данные не нужны — только информация о магазине.", "Buni xaridorlar Imorat Go vitrinasida ko‘radi. Pasport ma’lumotlari kerak emas — faqat do‘kon haqida.")}</p>
     <form id="storeForm" novalidate style="display:grid;gap:14px">
       <div class="f"><label for="sName">${L("Название магазина", "Do‘kon nomi")}</label><input id="sName" name="name" maxlength="80" value="${esc(s.name || "")}" placeholder="${L("Например: Stroy Baraka", "Masalan: Stroy Baraka")}" autocomplete="organization"></div>
       <div class="f"><label for="sDescr">${L("Описание", "Tavsif")}</label><textarea id="sDescr" name="descr" rows="3" maxlength="600" placeholder="${L("Что продаёте, какие бренды, опт или розница, есть ли своя доставка", "Nima sotasiz, qaysi brendlar, ulgurji yoki chakana, o‘z yetkazishingiz bormi")}">${esc(s.descr || "")}</textarea></div>
@@ -2887,7 +2888,7 @@ function storeFormHTML() {
       </div></fieldset>
       <span class="err" id="sErr" role="alert" hidden></span>
       <button class="btn btn-primary" type="submit">${auth.edit ? L("Сохранить", "Saqlash") : L("Отправить на проверку", "Tekshiruvga yuborish")}</button>
-      ${auth.edit ? "" : `<p class="fine">${L("Модератор Imorat проверит данные, обычно в течение дня. Пока магазин на проверке, вы уже можете добавлять товары в кабинете продавца.", "Imorat moderatori ma’lumotlarni odatda bir kun ichida tekshiradi. Tekshiruv paytida sotuvchi kabinetida mahsulot qo‘shishingiz mumkin.")}</p>`}
+      ${auth.edit ? "" : `<p class="fine">${L("Модератор Imorat Go проверит данные, обычно в течение дня. Пока магазин на проверке, вы уже можете добавлять товары в кабинете продавца.", "Imorat Go moderatori ma’lumotlarni odatda bir kun ichida tekshiradi. Tekshiruv paytida sotuvchi kabinetida mahsulot qo‘shishingiz mumkin.")}</p>`}
     </form>`;
 }
 function bindStoreForm() {
@@ -2944,7 +2945,7 @@ function renderAuth() {
     </form>`;
   let h = "";
   if (st === "start") {
-    h = `<span class="logo" aria-hidden="true"><span class="logo-mark"><i></i><i></i><i></i><i></i></span><b>imorat</b></span>
+    h = `<span class="logo" aria-hidden="true"><span class="logo-mark"><i></i><i></i><i></i><i></i></span><b>imorat<em>go</em></b></span>
       <h2>${auth.then === "checkout" ? L("Войдите, чтобы оформить заказ", "Buyurtma berish uchun kiring") : auth.then === "store" ? L("Войдите, чтобы добавить магазин", "Do‘kon qo‘shish uchun kiring") : L("Вход или регистрация", "Kirish yoki ro‘yxatdan o‘tish")}</h2>
       <p>${L("Один аккаунт для заказов, избранного, VIP и Usta AI. Новый аккаунт создаётся автоматически.", "Buyurtmalar, saralanganlar, VIP va Usta AI uchun bitta akkaunt. Yangi akkaunt avtomatik yaratiladi.")}</p>
       <button class="soc" type="button" data-oauth="google">${ui("mail", 20)} ${L("Продолжить с Google", "Google bilan davom etish")}</button>
@@ -2991,7 +2992,7 @@ function renderAuth() {
         <fieldset><legend>${L("Кто вы?", "Siz kimsiz?")}</legend><div class="roles opts">
           <label class="opt"><input type="radio" name="role" value="buyer" ${role === "buyer" ? "checked" : ""}><span><b>${L("Покупатель", "Xaridor")}</b><small>${L("Ремонт дома или квартиры", "Uy yoki kvartira ta’miri")}</small></span><span></span></label>
           <label class="opt"><input type="radio" name="role" value="pro" ${role === "pro" ? "checked" : ""}><span><b>${L("Мастер или прораб", "Usta yoki prorab")}</b><small>${L("Оптовая цена −3% на материалы с первой штуки", "Materiallarga birinchi donadan −3% ulgurji narx")}</small></span><span class="tag">−3%</span></label>
-          <label class="opt"><input type="radio" name="role" value="store" ${role === "store" ? "checked" : ""}><span><b>${L("Хочу добавить свой магазин", "Do‘konimni qo‘shmoqchiman")}</b><small>${L("Продавайте на Imorat: витрина, заказы и доставка Яндекс", "Imoratda soting: vitrina, buyurtmalar va Yandex yetkazish")}</small></span><span class="tag">${ui("store", 14)}</span></label>
+          <label class="opt"><input type="radio" name="role" value="store" ${role === "store" ? "checked" : ""}><span><b>${L("Хочу добавить свой магазин", "Do‘konimni qo‘shmoqchiman")}</b><small>${L("Продавайте на Imorat Go: витрина, заказы и доставка Яндекс", "Imorat Go’da soting: vitrina, buyurtmalar va Yandex yetkazish")}</small></span><span class="tag">${ui("store", 14)}</span></label>
         </div></fieldset>
         <span class="err" id="pErr" role="alert" hidden>${L("Укажите имя", "Ismni kiriting")}</span>
         <button class="btn btn-primary" type="submit" id="pGo">${role === "store" ? L("Дальше: данные магазина", "Keyingisi: do‘kon ma’lumotlari") : L("Готово", "Tayyor")}</button>
@@ -3098,7 +3099,7 @@ async function photoSearch(file) {
   try { url = await resizeImg(file); } catch (e) { return toast(L("Не удалось открыть фото", "Rasmni ochib bo‘lmadi")); }
   box?.classList.add("busy"); toast(L("Usta AI смотрит фото…", "Usta AI rasmni ko‘rmoqda…"));
   const cat = PRODUCTS.filter(p => !p.mine).map(p => `${p.id} ${p.ru}`).join("\n");
-  const r = await dsAI(`На фото — товар для ремонта или стройки, или деталь, которую нужно заменить. Определи, что это, и подбери из каталога Imorat до 8 подходящих товаров, самые похожие первыми. Ответь ТОЛЬКО JSON: {"what":"что на фото, 2–5 слов на ${lang === "uz" ? "узбекском (новая латиница: ö, ğ, ş, ç)" : "русском"}","ids":[id, ...]}. Если подходящего нет — "ids": [].\nКаталог (id название):\n${cat}`, url);
+  const r = await dsAI(`На фото — товар для ремонта или стройки, или деталь, которую нужно заменить. Определи, что это, и подбери из каталога Imorat Go до 8 подходящих товаров, самые похожие первыми. Ответь ТОЛЬКО JSON: {"what":"что на фото, 2–5 слов на ${lang === "uz" ? "узбекском (новая латиница: ö, ğ, ş, ç)" : "русском"}","ids":[id, ...]}. Если подходящего нет — "ids": [].\nКаталог (id название):\n${cat}`, url);
   box?.classList.remove("busy");
   const ids = (r && Array.isArray(r.ids) ? r.ids.map(Number).filter(id => PROD[id]) : []).slice(0, 12);
   if (!ids.length) return toast(r?.what ? L(`Похоже на «${r.what}», но такого в каталоге нет — спросите Usta AI`, `«${r.what}» ga o‘xshaydi, lekin katalogda yo‘q — Usta AI dan so‘rang`) : L("Не удалось распознать фото — попробуйте снять ближе или спросите Usta AI", "Rasmni aniqlab bo‘lmadi — yaqinroqdan suratga oling yoki Usta AI dan so‘rang"));
@@ -3120,7 +3121,7 @@ function catalogForAI() {
 }
 function aiRules() {
   const cartTxt = cartLines().map(l => `${l.p.id} ${l.p.ru} × ${l.q}`).join("; ") || "пусто";
-  return `Ты — Usta AI, консультант-мастер маркетплейса стройматериалов Imorat в Ташкенте (Узбекистан). Помогаешь покупателю понять, что купить для ремонта, сравнить варианты и посчитать количество.
+  return `Ты — Usta AI, консультант-мастер маркетплейса стройматериалов Imorat Go в Ташкенте (Узбекистан). Помогаешь покупателю понять, что купить для ремонта, сравнить варианты и посчитать количество.
 
 Язык: отвечай на том языке, на котором пишет пользователь (русский или узбекский). Узбекский пиши новой латиницей (закон 2026 г.): ö, ğ, ş, ç вместо oʻ, gʻ, sh, ch — например «Özbekiston», «şpaklyovka», «çilonzor». Интерфейс сейчас: ${lang === "uz" ? "узбекский" : "русский"}.
 
@@ -3297,7 +3298,7 @@ async function syncCatalog() {
 async function apiBoot() {
   if (window.IMORAT_SITE && "serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
   if (!API) return;
-  try { apiCfg = await api("GET", "/api/config"); } catch (e) { apiCfg = null; toast(L("Сервер Imorat недоступен — показываем сохранённый каталог", "Imorat serveri mavjud emas — saqlangan katalog ko‘rsatilmoqda")); return; }
+  try { apiCfg = await api("GET", "/api/config"); } catch (e) { apiCfg = null; toast(L("Сервер Imorat Go недоступен — показываем сохранённый каталог", "Imorat Go serveri mavjud emas — saqlangan katalog ko‘rsatilmoqda")); return; }
   stockOv = {};
   if (apiCfg.ai) { aiImg = true; if (aiOpen) renderAI(); }
   syncSearchTools();
@@ -3400,7 +3401,7 @@ async function loadAdmin() {
 }
 function storeBanner(s, demo) {
   const [lbl, cls] = ST_STATUS()[s.status] || ST_STATUS().pending;
-  const msg = s.status === "pending" ? L("Модератор Imorat проверит данные магазина, обычно в течение дня. Добавляйте товары уже сейчас — они появятся в каталоге после одобрения.", "Imorat moderatori do‘kon ma’lumotlarini odatda bir kun ichida tekshiradi. Mahsulotlarni hozirdan qo‘shing — tasdiqlangach katalogda chiqadi.")
+  const msg = s.status === "pending" ? L("Модератор Imorat Go проверит данные магазина, обычно в течение дня. Добавляйте товары уже сейчас — они появятся в каталоге после одобрения.", "Imorat Go moderatori do‘kon ma’lumotlarini odatda bir kun ichida tekshiradi. Mahsulotlarni hozirdan qo‘shing — tasdiqlangach katalogda chiqadi.")
     : s.status === "active" ? L("Магазин виден покупателям в каталоге и на карте доставки.", "Do‘kon katalogda va yetkazish xaritasida xaridorlarga ko‘rinadi.")
     : L("Магазин скрыт из каталога.", "Do‘kon katalogdan yashirilgan.") + (s.note ? " " + esc(s.note) : "");
   return `<div class="st-banner ${s.status === "active" ? "ok" : ""}"><span class="pill ${cls}">${lbl}</span><span>${msg}${demo && s.status === "pending" ? ` <button class="lnk" type="button" data-act="store-approve-demo">${L("Демо: одобрить сейчас", "Demo: hozir tasdiqlash")}</button>` : ""}</span></div>`;
@@ -3462,7 +3463,7 @@ function adminHTML() {
 function renderSellerApi() {
   const crumbs = `<nav class="crumbs"><button type="button" data-go="home">${L("Главная", "Asosiy")}</button>${ui("chev", 12)}<span>${L("Кабинет продавца", "Sotuvchi kabineti")}</span></nav>`;
   const cta = (title, text, btns) => `<div class="wrap">${crumbs}<div class="panel" style="margin:12px 0;display:grid;gap:12px;justify-items:start"><h1 class="h-l" style="margin:0">${title}</h1><p style="margin:0;color:var(--muted)">${text}</p><div style="display:flex;gap:8px;flex-wrap:wrap">${btns}</div></div>${adminHTML()}</div>`;
-  if (!user) { $("#app").innerHTML = cta(L("Кабинет продавца", "Sotuvchi kabineti"), L("Продавайте на Imorat: витрина для покупателей Ташкента, заказы онлайн и доставка Яндекс. Войдите и добавьте свой магазин — это займёт пару минут.", "Imoratda soting: Toshkent xaridorlari uchun vitrina, onlayn buyurtmalar va Yandex yetkazish. Kiring va do‘koningizni qo‘shing — bir necha daqiqa."), `<button class="btn btn-primary" type="button" data-act="store-reg">${ui("store", 18)} ${L("Добавить свой магазин", "Do‘konimni qo‘shish")}</button><button class="btn btn-line" type="button" data-act="login">${L("Войти", "Kirish")}</button>`); return; }
+  if (!user) { $("#app").innerHTML = cta(L("Кабинет продавца", "Sotuvchi kabineti"), L("Продавайте на Imorat Go: витрина для покупателей Ташкента, заказы онлайн и доставка Яндекс. Войдите и добавьте свой магазин — это займёт пару минут.", "Imorat Go’da soting: Toshkent xaridorlari uchun vitrina, onlayn buyurtmalar va Yandex yetkazish. Kiring va do‘koningizni qo‘shing — bir necha daqiqa."), `<button class="btn btn-primary" type="button" data-act="store-reg">${ui("store", 18)} ${L("Добавить свой магазин", "Do‘konimni qo‘shish")}</button><button class="btn btn-line" type="button" data-act="login">${L("Войти", "Kirish")}</button>`); return; }
   if (!user.store_id) { $("#app").innerHTML = cta(L("У вас пока нет магазина", "Sizda hali do‘kon yo‘q"), L("Заполните короткую анкету: название, описание, что продаёте, телефон и где находится магазин. Паспортные данные не нужны.", "Qisqa anketani to‘ldiring: nomi, tavsifi, nima sotasiz, telefon va do‘kon qayerda. Pasport ma’lumotlari kerak emas."), `<button class="btn btn-primary" type="button" data-act="store-reg">${ui("store", 18)} ${L("Добавить свой магазин", "Do‘konimni qo‘shish")}</button>`); return; }
   if (!sellerData) { $("#app").innerHTML = `<div class="wrap">${crumbs}<div class="panel" style="margin:12px 0">${L("Загружаем кабинет…", "Kabinet yuklanmoqda…")}</div></div>`; loadSeller(); return; }
   if (sellerData.error) { $("#app").innerHTML = cta(L("Не удалось открыть кабинет", "Kabinetni ochib bo‘lmadi"), esc(sellerData.error), `<button class="btn btn-primary" type="button" data-act="seller-reload">${L("Повторить", "Qayta urinish")}</button>`); return; }
@@ -3496,8 +3497,8 @@ function renderSellerApi() {
       ${shown.map(p => { const lp = PROD[p.id]; return `<tr><td><div class="pcell">${lp ? mini(lp) : ""}<span>${esc(p.ru)}${p.own ? ` <span class="pill acc">${L("ваш", "sizniki")}</span><br><button class="ph-btn" type="button" data-sphoto="${p.id}">${ui("photo", 14)} ${p.img ? L("Заменить фото", "Rasmni almashtirish") : L("Загрузить фото", "Rasm yuklash")}</button>` : ""}</span></div></td>
         <td class="r"><label class="visually-hidden" for="opr${p.id}">${L("Цена", "Narx")}</label><input class="stk num" id="opr${p.id}" type="number" min="100" step="100" value="${p.price}" data-offp="${p.id}" style="width:110px"></td>
         <td class="r"><label class="visually-hidden" for="ost${p.id}">${L("Остаток", "Qoldiq")}</label><input class="stk num" id="ost${p.id}" type="number" min="0" value="${p.stock}" data-offs="${p.id}"></td></tr>`; }).join("")}
-      </tbody></table></div>${products.length > 40 && !sellerAll ? `<button class="btn btn-line" type="button" data-act="seller-all" style="justify-self:start">${L("Показать все", "Hammasi")} · ${products.length}</button>` : ""}` : `<p style="color:var(--muted);margin:0">${L("Пока нет товаров. Добавьте свои или выберите из каталога Imorat те, что есть у вас в наличии.", "Hozircha mahsulot yo‘q. O‘zingiznikini qo‘shing yoki Imorat katalogidan mavjudlarini tanlang.")}</p>`}</div>
-    <div class="panel" style="margin-top:12px"><div class="panel-h"><h2 class="h-m">${L("Продаю товар из каталога", "Katalogdagi mahsulotni sotaman")}</h2><span style="font-size:13px;color:var(--muted)">${L("Тот же цемент или плитка, что уже есть на Imorat — укажите свою цену", "Imoratdagi o‘sha sement yoki kafel — o‘z narxingizni kiriting")}</span></div>
+      </tbody></table></div>${products.length > 40 && !sellerAll ? `<button class="btn btn-line" type="button" data-act="seller-all" style="justify-self:start">${L("Показать все", "Hammasi")} · ${products.length}</button>` : ""}` : `<p style="color:var(--muted);margin:0">${L("Пока нет товаров. Добавьте свои или выберите из каталога Imorat Go те, что есть у вас в наличии.", "Hozircha mahsulot yo‘q. O‘zingiznikini qo‘shing yoki Imorat Go katalogidan mavjudlarini tanlang.")}</p>`}</div>
+    <div class="panel" style="margin-top:12px"><div class="panel-h"><h2 class="h-m">${L("Продаю товар из каталога", "Katalogdagi mahsulotni sotaman")}</h2><span style="font-size:13px;color:var(--muted)">${L("Тот же цемент или плитка, что уже есть на Imorat Go — укажите свою цену", "Imorat Go’dagi o‘sha sement yoki kafel — o‘z narxingizni kiriting")}</span></div>
       <form class="add-form" id="offerForm" novalidate>
         <div class="f wide"><label for="oProd">${L("Товар", "Mahsulot")}</label><input id="oProd" list="oList" placeholder="${L("Начните вводить: цемент, ламинат…", "Yozing: sement, laminat…")}" autocomplete="off"><datalist id="oList">${PRODUCTS.filter(p => !products.some(x => x.id === p.id)).map(p => `<option value="${esc(p.ru)} · #${p.id}"></option>`).join("")}</datalist></div>
         <div class="f"><label for="oPrice">${L("Ваша цена, сум", "Narxingiz, so‘m")}</label><input id="oPrice" type="number" min="100" inputmode="numeric"></div>
@@ -3571,7 +3572,7 @@ async function setVipApi(on) {
 
 /* ================= Ratings, timers, reviews, notifications, finance (v2) ================= */
 const hhmm = ms => new Date(ms).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
-const CANCEL_TXT = () => ({ not_accepted: L("магазин не подтвердил заказ вовремя", "do‘kon buyurtmani o‘z vaqtida tasdiqlamadi"), out_of_stock: L("товара не оказалось в наличии", "mahsulot mavjud emas ekan"), not_shipped: L("магазин не передал заказ вовремя", "do‘kon buyurtmani o‘z vaqtida topshirmadi"), buyer: L("вы отменили заказ", "buyurtmani bekor qildingiz"), admin: L("отменено поддержкой Imorat", "Imorat yordam xizmati bekor qildi") });
+const CANCEL_TXT = () => ({ not_accepted: L("магазин не подтвердил заказ вовремя", "do‘kon buyurtmani o‘z vaqtida tasdiqlamadi"), out_of_stock: L("товара не оказалось в наличии", "mahsulot mavjud emas ekan"), not_shipped: L("магазин не передал заказ вовремя", "do‘kon buyurtmani o‘z vaqtida topshirmadi"), buyer: L("вы отменили заказ", "buyurtmani bekor qildingiz"), admin: L("отменено поддержкой Imorat Go", "Imorat Go yordam xizmati bekor qildi") });
 /* Store hours are Tashkent time (UTC+5) */
 function openState(s) {
   const m = String(s.hours || "").match(/(\d{1,2}):(\d{2})\D+(\d{1,2}):(\d{2})/);
@@ -3694,8 +3695,8 @@ function sellerExtraHTML(d) {
       ${d.reviews?.length ? d.reviews.slice(0, 6).map(r => `<div class="rv-item"><span class="stars-ro">${"★".repeat(r.stars)}${"☆".repeat(5 - r.stars)}</span> <b>${esc(r.name || L("Покупатель", "Xaridor"))}</b> <small style="color:var(--muted)">${new Date(r.created_at).toLocaleDateString("ru-RU")}</small>${r.text ? `<p>${esc(r.text)}</p>` : ""}${r.reply ? `<small>${L("Ваш ответ", "Javobingiz")}: ${esc(r.reply)}</small>` : `<form class="reply-f" data-reply="${r.ship_id}"><label class="visually-hidden" for="rp${r.ship_id}">${L("Ответ", "Javob")}</label><input id="rp${r.ship_id}" maxlength="500" placeholder="${L("Ответить покупателю", "Xaridorga javob berish")}"><button class="btn btn-line" type="submit">${L("Ответить", "Javob")}</button></form>`}</div>`).join("") : `<small style="color:var(--muted)">${L("Отзывов пока нет. Покупатели оценивают магазин после получения заказа.", "Hozircha sharhlar yo‘q. Xaridorlar buyurtmani olgach baholaydi.")}</small>`}</div>
   </div>
   <div class="panel" style="margin-top:12px"><div class="panel-h"><h2 class="h-m">${L("Финансы", "Moliya")} · ${esc(f.month)}</h2><span style="font-size:13px;color:var(--muted)">${L("Комиссия", "Komissiya")}: ${esc(rateTxt)}</span></div>
-    <div class="mini-kpis"><div><b>${fmt(f.goods)}</b><small>${L("продано за месяц", "oylik sotuv")}</small></div><div><b>${fmt(f.commission)}</b><small>${L("комиссия за месяц", "oylik komissiya")}</small></div><div><b>${fmt(f.settled)}</b><small>${L("оплачено Imorat", "Imoratga to‘langan")}</small></div><div><b style="color:${f.balance > 0 ? "var(--signal)" : "var(--ok)"}">${fmt(f.balance)}</b><small>${L("к оплате", "to‘lanishi kerak")}</small></div></div>
-    <small style="color:var(--muted)">${L("Сейчас покупатели платят магазину напрямую. Комиссия Imorat считается только с выполненных заказов и оплачивается раз в месяц.", "Hozir xaridorlar do‘konga to‘g‘ridan-to‘g‘ri to‘laydi. Imorat komissiyasi faqat bajarilgan buyurtmalardan hisoblanadi va oyiga bir marta to‘lanadi.")}</small></div>`;
+    <div class="mini-kpis"><div><b>${fmt(f.goods)}</b><small>${L("продано за месяц", "oylik sotuv")}</small></div><div><b>${fmt(f.commission)}</b><small>${L("комиссия за месяц", "oylik komissiya")}</small></div><div><b>${fmt(f.settled)}</b><small>${L("оплачено Imorat Go", "Imorat Go’ga to‘langan")}</small></div><div><b style="color:${f.balance > 0 ? "var(--signal)" : "var(--ok)"}">${fmt(f.balance)}</b><small>${L("к оплате", "to‘lanishi kerak")}</small></div></div>
+    <small style="color:var(--muted)">${L("Сейчас покупатели платят магазину напрямую. Комиссия Imorat Go считается только с выполненных заказов и оплачивается раз в месяц.", "Hozir xaridorlar do‘konga to‘g‘ridan-to‘g‘ri to‘laydi. Imorat Go komissiyasi faqat bajarilgan buyurtmalardan hisoblanadi va oyiga bir marta to‘lanadi.")}</small></div>`;
 }
 document.addEventListener("click", e => {
   const b = e.target.closest("[data-look],[data-theme-set]"); if (!b) return;
@@ -3718,7 +3719,7 @@ async function adminApi(method, path, body) {
 function adminGateHTML() {
   if (adminState.need === "setup") return `<div class="panel" style="margin-top:12px;display:grid;gap:10px"><div class="panel-h"><h2 class="h-m">${ui("shield", 18)} ${L("Защита входа модератора", "Moderator kirishini himoyalash")}</h2></div>
     <p style="margin:0">${L("Перед модерацией включите второй шаг входа: код из приложения-аутентификатора (Google Authenticator, «Пароли» на iPhone). Так никто не войдёт как модератор, даже перехватив SMS.", "Moderatsiyadan oldin ikkinchi bosqichni yoqing: autentifikator ilovasidagi kod. Shunda SMS ushlansa ham hech kim moderator bo‘lib kira olmaydi.")}</p>
-    ${adminState.secret ? `<ol style="margin:0;padding-left:18px;display:grid;gap:6px"><li>${L("Откройте ссылку на телефоне — аутентификатор добавит Imorat сам:", "Havolani telefonda oching — autentifikator Imoratni o‘zi qo‘shadi:")} <a href="${esc(adminState.url)}">${L("добавить в аутентификатор", "autentifikatorga qo‘shish")}</a></li><li>${L("Или введите ключ вручную:", "Yoki kalitni qo‘lda kiriting:")} <code class="mono" style="word-break:break-all">${esc(adminState.secret.replace(/(.{4})/g, "$1 ").trim())}</code></li><li>${L("Введите 6 цифр из приложения:", "Ilovadagi 6 raqamni kiriting:")}</li></ol>
+    ${adminState.secret ? `<ol style="margin:0;padding-left:18px;display:grid;gap:6px"><li>${L("Откройте ссылку на телефоне — аутентификатор добавит Imorat Go сам:", "Havolani telefonda oching — autentifikator Imorat Go’ni o‘zi qo‘shadi:")} <a href="${esc(adminState.url)}">${L("добавить в аутентификатор", "autentifikatorga qo‘shish")}</a></li><li>${L("Или введите ключ вручную:", "Yoki kalitni qo‘lda kiriting:")} <code class="mono" style="word-break:break-all">${esc(adminState.secret.replace(/(.{4})/g, "$1 ").trim())}</code></li><li>${L("Введите 6 цифр из приложения:", "Ilovadagi 6 raqamni kiriting:")}</li></ol>
       <form id="mfaForm" style="display:flex;gap:8px;flex-wrap:wrap"><label class="visually-hidden" for="mfaCode">${L("Код", "Kod")}</label><input id="mfaCode" class="code-in" style="max-width:200px" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="••••••"><button class="btn btn-primary" type="submit">${L("Подтвердить", "Tasdiqlash")}</button></form>`
       : `<button class="btn btn-primary" type="button" data-act="mfa-setup" style="justify-self:start">${L("Включить защиту", "Himoyani yoqish")}</button>`}</div>`;
   if (adminState.need === "verify") return `<div class="panel" style="margin-top:12px;display:grid;gap:10px"><div class="panel-h"><h2 class="h-m">${ui("shield", 18)} ${L("Код модератора", "Moderator kodi")}</h2></div><p style="margin:0">${L("Введите 6 цифр из приложения-аутентификатора. Код нужен раз в 12 часов.", "Autentifikator ilovasidagi 6 raqamni kiriting. Kod 12 soatda bir marta kerak.")}</p>
@@ -3728,7 +3729,7 @@ function adminGateHTML() {
 function adminFinanceHTML() {
   if (!adminFin) return "";
   const F = adminFin;
-  return `<div class="panel" style="margin-top:12px"><div class="panel-h"><h2 class="h-m">${L("Финансы Imorat", "Imorat moliyasi")}</h2><label class="visually-hidden" for="finMonth">${L("Месяц", "Oy")}</label><input type="month" id="finMonth" class="sel" value="${esc(F.month)}" style="max-width:170px"></div>
+  return `<div class="panel" style="margin-top:12px"><div class="panel-h"><h2 class="h-m">${L("Финансы Imorat Go", "Imorat Go moliyasi")}</h2><label class="visually-hidden" for="finMonth">${L("Месяц", "Oy")}</label><input type="month" id="finMonth" class="sel" value="${esc(F.month)}" style="max-width:170px"></div>
     <div class="mini-kpis"><div><b>${fmt(F.totals.goods)}</b><small>${L("оборот магазинов", "do‘konlar aylanmasi")}</small></div><div><b>${fmt(F.totals.commission)}</b><small>${L("ваша комиссия за месяц", "oylik komissiyangiz")}</small></div><div><b>${fmt(F.totals.balance)}</b><small>${L("магазины должны всего", "do‘konlar jami qarzi")}</small></div></div>
     ${F.stores.length ? `<div class="tbl-wrap"><table><thead><tr><th>${L("Магазин", "Do‘kon")}</th><th class="r">${L("Оборот", "Aylanma")}</th><th class="r">${L("Комиссия", "Komissiya")}</th><th class="r">${L("Долг", "Qarz")}</th><th>${L("Получено от магазина", "Do‘kondan olindi")}</th></tr></thead><tbody>
     ${F.stores.map(s => `<tr><td><b>${esc(s.name)}</b><br><small style="color:var(--muted)">${s.orders} ${L("заказов", "buyurtma")}</small></td><td class="r">${fmt(s.goods)}</td><td class="r">${fmt(s.commission)}</td><td class="r" style="color:${s.balance > 0 ? "var(--signal)" : "var(--ok)"}">${fmt(s.balance)}</td>
@@ -3752,16 +3753,16 @@ document.addEventListener("change", e => { if (e.target.id === "finMonth") { adm
 /* ================= Installable app (PWA) ================= */
 let installEvt = null;
 window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); installEvt = e; });
-window.addEventListener("appinstalled", () => { installEvt = null; toast(L("Приложение Imorat установлено", "Imorat ilovasi o‘rnatildi")); });
+window.addEventListener("appinstalled", () => { installEvt = null; toast(L("Приложение Imorat Go установлено", "Imorat Go ilovasi o‘rnatildi")); });
 const isStandalone = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
 const canInstall = () => !!window.IMORAT_SITE && !isStandalone();
 function installApp() {
   if (installEvt) { installEvt.prompt(); installEvt.userChoice.finally(() => { installEvt = null; }); return; }
   const ios = /iPhone|iPad|iPod/.test(navigator.userAgent);
   setPanel($("#authM"), true); $("#authBox").classList.remove("wide");
-  $("#authBox").innerHTML = `<button class="ib m-close" type="button" data-act="close-auth" aria-label="${L("Закрыть", "Yopish")}">${ui("close", 18)}</button><div class="auth-in"><h2>${L("Установите Imorat на телефон", "Imoratni telefonga o‘rnating")}</h2>
+  $("#authBox").innerHTML = `<button class="ib m-close" type="button" data-act="close-auth" aria-label="${L("Закрыть", "Yopish")}">${ui("close", 18)}</button><div class="auth-in"><h2>${L("Установите Imorat Go на телефон", "Imorat Go’ni telefonga o‘rnating")}</h2>
     <ol style="margin:0;padding-left:20px;display:grid;gap:8px">${ios ? `<li>${L("Откройте сайт в Safari", "Saytni Safari’da oching")}</li><li>${L("Нажмите «Поделиться» внизу экрана", "Ekran pastidagi «Ulashish» tugmasini bosing")}</li><li>${L("Выберите «На экран „Домой“»", "«Uy ekraniga» ni tanlang")}</li>` : `<li>${L("Откройте меню браузера (⋮)", "Brauzer menyusini oching (⋮)")}</li><li>${L("Нажмите «Установить приложение» или «Добавить на главный экран»", "«Ilovani o‘rnatish» yoki «Bosh ekranga qo‘shish» ni bosing")}</li>`}</ol>
-    <p>${L("Imorat появится среди приложений: открывается без адресной строки, присылает уведомления о заказах.", "Imorat ilovalar orasida paydo bo‘ladi: manzil satrisiz ochiladi va buyurtmalar haqida xabar beradi.")}</p></div>`;
+    <p>${L("Imorat Go появится среди приложений: открывается без адресной строки, присылает уведомления о заказах.", "Imorat Go ilovalar orasida paydo bo‘ladi: manzil satrisiz ochiladi va buyurtmalar haqida xabar beradi.")}</p></div>`;
   syncLock();
 }
 
@@ -4188,12 +4189,12 @@ async function dsShare() {
     const c = document.createElement("canvas"); c.width = w; c.height = h + 90; const x = c.getContext("2d");
     x.fillStyle = "#f6f7f5"; x.fillRect(0, 0, c.width, c.height); x.drawImage(img, 0, 0, w, h);
     const e = dsEstimate(DS); x.fillStyle = "#131b1a"; x.font = "600 30px system-ui, sans-serif";
-    x.fillText(`imorat · ${ROOMS().find(r => r[0] === DS.type)?.[1] || ""} ${String(DS.W).replace(".", ",")}×${String(DS.L).replace(".", ",")} ${L("м", "m")}`, 30, h + 40);
+    x.fillText(`imorat go · ${ROOMS().find(r => r[0] === DS.type)?.[1] || ""} ${String(DS.W).replace(".", ",")}×${String(DS.L).replace(".", ",")} ${L("м", "m")}`, 30, h + 40);
     x.font = "26px system-ui, sans-serif"; x.fillText(`${L("Смета", "Smeta")}: ${fmt(e.total)}`, 30, h + 76);
     const blob = await new Promise(r => c.toBlob(r, "image/png")), file = new File([blob], "imorat-room.png", { type: "image/png" });
     const dl = window.claude && typeof window.claude.use === "function" ? await window.claude.use("downloads").catch(() => null) : null;
     if (dl) { try { await dl.save({ filename: "imorat-room.png", data: blob }); toast(L("Картинка комнаты сохранена", "Xona rasmi saqlandi")); } catch (er) { if (er?.code !== "declined") toast(L("Не удалось сохранить картинку", "Rasmni saqlab bo‘lmadi")); } return; }
-    if (navigator.canShare?.({ files: [file] })) await navigator.share({ files: [file], title: "Imorat", text: L("Моя комната в AI-дизайнере Imorat", "Imorat AI dizaynerida xonam") });
+    if (navigator.canShare?.({ files: [file] })) await navigator.share({ files: [file], title: "Imorat Go", text: L("Моя комната в AI-дизайнере Imorat Go", "Imorat Go AI dizaynerida xonam") });
     else { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "imorat-room.png"; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); toast(L("Картинка комнаты сохранена", "Xona rasmi saqlandi")); }
   } catch (er) { if (er?.name !== "AbortError") toast(L("Не удалось сохранить картинку", "Rasmni saqlab bo‘lmadi")); }
 }
@@ -4255,7 +4256,7 @@ const dsCtx = d => {
 async function dsAnalyzePhoto() {
   if (!DS.photo || !dsAIon()) return;
   DS.busy = true; renderDesign();
-  const r = await dsAI(`Ты дизайнер интерьера маркетплейса Imorat (Ташкент). На фото — комната клиента. Ответь ТОЛЬКО JSON без пояснений: {"type":"kids|bed|living|study|kitchen|bath|hall|other","notes":"2–3 коротких предложения на ${lang === "uz" ? "узбекском (новая латиница)" : "русском"}: что видно (окна, двери, пол, стены, состояние) и что лучше сделать","windows":число окон,"doors":число дверей}`, DS.photo);
+  const r = await dsAI(`Ты дизайнер интерьера маркетплейса Imorat Go (Ташкент). На фото — комната клиента. Ответь ТОЛЬКО JSON без пояснений: {"type":"kids|bed|living|study|kitchen|bath|hall|other","notes":"2–3 коротких предложения на ${lang === "uz" ? "узбекском (новая латиница)" : "русском"}: что видно (окна, двери, пол, стены, состояние) и что лучше сделать","windows":число окон,"doors":число дверей}`, DS.photo);
   DS.busy = false;
   if (r) { DS.notes = String(r.notes || "").slice(0, 600); if (ROOMS().some(x => x[0] === r.type)) DS.type ||= r.type; if (r.windows >= 0 && r.windows <= 3) DS.win = r.windows | 0; if (r.doors >= 0 && r.doors <= 2) DS.doors = r.doors | 0; }
   else DS.notes = DS.notes || L("Не удалось разобрать фото — ничего страшного, продолжим по размерам и ответам.", "Rasmni tahlil qilib bo‘lmadi — o‘lcham va javoblar bo‘yicha davom etamiz.");
@@ -4268,7 +4269,7 @@ async function dsWish(text) {
   let done = false;
   if (dsAIon()) {
     const paints = paintsAll().map(p => `${p.id}|${p.ru}`).join("\n"), floors = floorsAll().map(p => `${p.id}|${p.ru}`).join("\n"), furn = furnAll().map(p => `${p.id}|${p.ru}|${dInfo(p).size.join("×")} м|${minPrice(p)} сум`).join("\n");
-    const r = await dsAI(`Ты AI-дизайнер интерьера маркетплейса Imorat. ${dsCtx(DS)}
+    const r = await dsAI(`Ты AI-дизайнер интерьера маркетплейса Imorat Go. ${dsCtx(DS)}
 Пожелание клиента: «${text}».
 Подбери изменения ТОЛЬКО из списков ниже. Учитывай размер комнаты (не перегружай), бюджет и пожелание. Верни ТОЛЬКО JSON:
 {"wall": id краски или null (оставить), "wtile": id настенной плитки или null (для ванной), "accent": {"wall": "A|B|C|D", "id": id краски или плитки} или "none" (убрать) или null (оставить), "floor": id пола или null, "items": [id мебели, ...] — ПОЛНЫЙ новый список мебели (стулья можно повторять), "say": "1–2 предложения, что изменил и почему, на языке клиента"}
@@ -4475,7 +4476,7 @@ $("#photoIn").addEventListener("change", async e => {
 });
 /* ================= Price list import (Excel / CSV / text from Telegram) =================
    The file is read in the browser: .xlsx is a zip of XML, unpacked with DecompressionStream.
-   Each row is matched to the Imorat catalog by words and numbers in the name; the seller checks the matches before applying. */
+   Each row is matched to the Imorat Go catalog by words and numbers in the name; the seller checks the matches before applying. */
 async function impUnzip(buf) {
   const dv = new DataView(buf), u8 = new Uint8Array(buf);
   let e = buf.byteLength - 22; while (e >= 0 && dv.getUint32(e, true) !== 0x06054b50) e--;
@@ -4598,7 +4599,7 @@ function importHTML(sid) {
   else if (imp) {
     const r = imp.rows, sure = r.filter(x => x.pick !== "skip" && x.pick !== "new" && x.sure).length, check = r.filter(x => x.pick !== "skip" && x.pick !== "new" && !x.sure).length, none = r.filter(x => x.pick === "skip").length, nw = r.filter(x => x.pick === "new").length;
     body = `<p style="margin:0">${L(`Строк в прайсе: <b>${r.length}</b> · нашли пару: <b>${sure}</b> · проверьте: <b style="color:var(--signal)">${check}</b> · без пары: <b>${none}</b>${nw ? ` · новых товаров: <b>${nw}</b>` : ""}`, `Prays qatorlari: <b>${r.length}</b> · juftligi topildi: <b>${sure}</b> · tekshiring: <b style="color:var(--signal)">${check}</b> · juftsiz: <b>${none}</b>${nw ? ` · yangi mahsulotlar: <b>${nw}</b>` : ""}`)}</p>
-      <div class="tbl-wrap imp-tbl"><table><thead><tr><th>${L("Строка из прайса", "Prays qatori")}</th><th>${L("Товар на Imorat", "Imoratdagi mahsulot")}</th><th class="r">${L("Цена", "Narx")}</th><th class="r">${L("Остаток", "Qoldiq")}</th></tr></thead><tbody>
+      <div class="tbl-wrap imp-tbl"><table><thead><tr><th>${L("Строка из прайса", "Prays qatori")}</th><th>${L("Товар на Imorat Go", "Imorat Go’dagi mahsulot")}</th><th class="r">${L("Цена", "Narx")}</th><th class="r">${L("Остаток", "Qoldiq")}</th></tr></thead><tbody>
       ${r.slice(0, imp.all ? 1000 : 60).map((x, i) => { const p = PROD[x.pick], mn = p ? minPrice(p) : 0, odd = p && (x.price > mn * 3 || x.price < mn / 3);
         return `<tr class="${x.pick === "skip" ? "off" : !x.sure && x.pick !== "new" ? "chk" : ""}"><td style="min-width:150px">${esc(x.name)}</td>
         <td style="min-width:200px"><label class="visually-hidden" for="impP${i}">${L("Товар", "Mahsulot")}</label><select class="sel" id="impP${i}" data-imppick="${i}">${x.cands.map(c => `<option value="${c.id}" ${x.pick === c.id ? "selected" : ""}>${esc(pName(PROD[c.id]))} · ${Math.round(c.s * 100)}%</option>`).join("")}<option value="new" ${x.pick === "new" ? "selected" : ""}>＋ ${L("Новый товар", "Yangi mahsulot")}</option><option value="skip" ${x.pick === "skip" ? "selected" : ""}>${L("Пропустить", "O‘tkazib yuborish")}</option></select>
@@ -4844,7 +4845,7 @@ function masterCabinetHTML() {
 function masterFormHTML(me) {
   const v = me || { name: user?.name || "", specs: [], districts: [district], exp: 3, price: 0, price_unit: "m2", about: "" };
   const U = MUNITS();
-  return `<form class="panel" id="mForm" style="display:grid;gap:12px" novalidate><h2 class="h-m">${me ? L("Анкета мастера", "Usta anketasi") : L("Стать мастером на Imorat", "Imoratda usta bo‘lish")}</h2>
+  return `<form class="panel" id="mForm" style="display:grid;gap:12px" novalidate><h2 class="h-m">${me ? L("Анкета мастера", "Usta anketasi") : L("Стать мастером на Imorat Go", "Imorat Go’da usta bo‘lish")}</h2>
     ${me ? "" : `<p class="mu" style="margin:0">${L("Покупатели материалов сразу ищут, кто их уложит и установит. Заполните анкету — после проверки модератором вы появитесь в разделе «Мастера», а заявки будут приходить в кабинет и в Telegram. Это бесплатно.", "Material xaridorlari ularni kim o‘rnatishini darhol qidiradi. Anketani to‘ldiring — moderator tekshirgach «Ustalar» bo‘limida chiqasiz, so‘rovlar kabinetga va Telegramga keladi. Bu bepul.")}</p>`}
     <div class="f"><label for="mfName">${L("Имя и фамилия", "Ism va familiya")}</label><input id="mfName" value="${esc(v.name)}" autocomplete="name"></div>
     <b class="ds-q">${L("Что вы делаете", "Nima qilasiz")}</b><div class="chips ds-chips">${MSPECS().map(([id, t, e]) => `<button type="button" class="chip" data-mfspec="${id}" aria-pressed="${v.specs.includes(id)}">${e} ${t}</button>`).join("")}</div>
@@ -4985,12 +4986,12 @@ async function flatPNG() {
   const c = document.createElement("canvas"); c.width = w; c.height = h; const x = c.getContext("2d");
   x.fillStyle = "#f6f7f5"; x.fillRect(0, 0, w, h); x.fillStyle = "#0B6E69"; x.fillRect(0, 0, w, 10);
   x.fillStyle = "#131b1a"; x.font = "700 44px system-ui, sans-serif"; x.fillText(L("Смета квартиры", "Kvartira smetasi"), 50, 80);
-  x.font = "26px system-ui, sans-serif"; x.fillStyle = "#5d6b67"; x.fillText(rooms.map(r => r.name).join(" · ").slice(0, 80), 50, 125); x.fillText(`imorat · ${new Date().toLocaleDateString("ru-RU")} · ${fmtN(e.area)} ${L("м²", "m²")}`, 50, 165);
+  x.font = "26px system-ui, sans-serif"; x.fillStyle = "#5d6b67"; x.fillText(rooms.map(r => r.name).join(" · ").slice(0, 80), 50, 125); x.fillText(`imorat go · ${new Date().toLocaleDateString("ru-RU")} · ${fmtN(e.area)} ${L("м²", "m²")}`, 50, 165);
   let y = 230; x.font = "26px system-ui, sans-serif";
   for (const [t, v] of lines) { x.fillStyle = "#131b1a"; x.textAlign = "left"; x.fillText(t.length > 64 ? t.slice(0, 62) + "…" : t, 50, y); x.textAlign = "right"; x.fillText(v, w - 50, y); x.strokeStyle = "#e0e5df"; x.beginPath(); x.moveTo(50, y + 14); x.lineTo(w - 50, y + 14); x.stroke(); y += lh; }
   x.font = "700 34px system-ui, sans-serif"; x.textAlign = "left"; x.fillText(L("Итого", "Jami"), 50, y + 50); x.textAlign = "right"; x.fillText(fmt(e.total), w - 50, y + 50);
   const blob = await new Promise(r => c.toBlob(r, "image/png"));
-  await saveBlobFile(blob, "imorat-smeta.png", L("Смета квартиры на Imorat", "Imoratdagi kvartira smetasi"));
+  await saveBlobFile(blob, "imorat-smeta.png", L("Смета квартиры на Imorat Go", "Imorat Go’dagi kvartira smetasi"));
 }
 /* Save or share a generated file: Claude downloads, the phone share sheet, or a normal download */
 async function saveBlobFile(blob, name, text) {
@@ -4998,7 +4999,7 @@ async function saveBlobFile(blob, name, text) {
     const dl = window.claude && typeof window.claude.use === "function" ? await window.claude.use("downloads").catch(() => null) : null;
     if (dl) { try { await dl.save({ filename: name, data: blob }); toast(L("Файл сохранён", "Fayl saqlandi")); } catch (er) { if (er?.code !== "declined") toast(L("Не удалось сохранить файл", "Faylni saqlab bo‘lmadi")); } return; }
     const file = new File([blob], name, { type: blob.type });
-    if (navigator.canShare?.({ files: [file] })) { await navigator.share({ files: [file], title: "Imorat", text }); return; }
+    if (navigator.canShare?.({ files: [file] })) { await navigator.share({ files: [file], title: "Imorat Go", text }); return; }
     const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); toast(L("Файл сохранён", "Fayl saqlandi"));
   } catch (er) { if (er?.name !== "AbortError") toast(L("Не удалось сохранить файл", "Faylni saqlab bo‘lmadi")); }
 }
@@ -5008,7 +5009,7 @@ function flatPrint() {
   const tbl = (title, ls, sum) => `<h2>${title}</h2><table><thead><tr><th>${L("Наименование", "Nomi")}</th><th>${L("Кол-во", "Soni")}</th><th>${L("Цена", "Narx")}</th><th>${L("Сумма", "Summa")}</th><th>${L("Комнаты", "Xonalar")}</th></tr></thead><tbody>${ls.map(l => `<tr><td>${esc(pName(l.p))}</td><td>${l.q} ${esc(unitName(l.p.unit))}</td><td>${fmt(minPrice(l.p))}</td><td>${fmt(minPrice(l.p) * l.q)}</td><td>${esc(l.rooms.join(", "))}</td></tr>`).join("")}</tbody><tfoot><tr><td colspan="3">${L("Итого", "Jami")}</td><td colspan="2">${fmt(sum)}</td></tr></tfoot></table>`;
   el.innerHTML = `<h1>${L("Смета квартиры", "Kvartira smetasi")} · imorat</h1><p>${new Date().toLocaleDateString("ru-RU")} · ${rooms.map(r => esc(r.name)).join(", ")} · ${fmtN(e.area)} ${L("м²", "m²")}</p>
     ${tbl(L("Материалы", "Materiallar"), e.mats, e.matSum)}${tbl(L("Мебель и техника", "Mebel va texnika"), e.furn, e.furnSum)}<h2>${L("Итого по квартире", "Kvartira bo‘yicha jami")}: ${fmt(e.total)}</h2>
-    <p class="pa-note">${L("Цены — минимальные в магазинах Imorat на дату сметы. Доставка и работа мастеров не включены.", "Narxlar — smeta sanasidagi Imorat do‘konlaridagi eng past narxlar. Yetkazish va usta ishi kiritilmagan.")}</p>`;
+    <p class="pa-note">${L("Цены — минимальные в магазинах Imorat Go на дату сметы. Доставка и работа мастеров не включены.", "Narxlar — smeta sanasidagi Imorat Go do‘konlaridagi eng past narxlar. Yetkazish va usta ishi kiritilmagan.")}</p>`;
   try { window.print(); } catch (er) { toast(L("Печать здесь недоступна — сохраните смету картинкой", "Bu yerda chop etib bo‘lmaydi — smetani rasm qilib saqlang")); }
 }
 document.addEventListener("change", e => {
@@ -5091,8 +5092,8 @@ document.addEventListener("click", async e => {
   const t = e.target.closest("[data-bonus]"); if (!t) return;
   const code = API ? bonusApi?.code : bonusDemoState().code; if (!code) return;
   const url = `${location.origin}${location.pathname}?ref=${code}`, c = bonusCfg();
-  const text = L(`Стройматериалы из магазинов Ташкента с доставкой — Imorat. По моему коду ${code} получите ${fmt(c.welcome)} бонусов на первый заказ: ${url}`, `Toshkent do‘konlaridan qurilish materiallari yetkazib berish bilan — Imorat. Mening ${code} kodim bilan birinchi buyurtmaga ${fmt(c.welcome)} bonus oling: ${url}`);
-  try { if (navigator.share) { await navigator.share({ title: "Imorat", text }); return; } } catch (er) { if (er?.name === "AbortError") return; }
+  const text = L(`Стройматериалы из магазинов Ташкента с доставкой — Imorat Go. По моему коду ${code} получите ${fmt(c.welcome)} бонусов на первый заказ: ${url}`, `Toshkent do‘konlaridan qurilish materiallari yetkazib berish bilan — Imorat Go. Mening ${code} kodim bilan birinchi buyurtmaga ${fmt(c.welcome)} bonus oling: ${url}`);
+  try { if (navigator.share) { await navigator.share({ title: "Imorat Go", text }); return; } } catch (er) { if (er?.name === "AbortError") return; }
   try { await navigator.clipboard.writeText(text); toast(L("Приглашение скопировано — отправьте другу", "Taklif nusxalandi — do‘stingizga yuboring")); } catch (er) { toast(code); }
 });
 
@@ -5305,7 +5306,7 @@ function problemCard(p, seller) {
     <p>${esc(p.text)}</p>${(p.photos || []).length ? `<div class="pc-ph">${p.photos.map(u => `<a href="${esc(mediaSrc(u))}" target="_blank" rel="noopener"><img src="${esc(mediaSrc(u))}" alt="${L("Фото к жалобе", "Shikoyat rasmi")}" loading="lazy"></a>`).join("")}</div>` : ""}
     ${seller && p.phone ? `<small class="mu">${esc(p.buyer || "")} · <a href="tel:+${esc(String(p.phone).replace(/\D/g, ""))}">+${esc(String(p.phone).replace(/\D/g, ""))}</a> · ${esc(p.order || "")}</small>` : ""}
     ${p.seller_reply ? `<div class="pc-r"><b>${L("Ответ магазина", "Do‘kon javobi")}${p.store_name ? ` «${esc(p.store_name)}»` : ""}:</b> ${esc(p.seller_reply)}</div>` : ""}
-    ${p.resolution ? `<div class="pc-r ok"><b>${L("Решение Imorat", "Imorat qarori")}:</b> ${esc(p.resolution)}</div>` : ""}
+    ${p.resolution ? `<div class="pc-r ok"><b>${L("Решение Imorat Go", "Imorat Go qarori")}:</b> ${esc(p.resolution)}</div>` : ""}
     ${seller && ["open", "answered"].includes(p.status) ? `<form class="pc-reply" data-probreply="${p.id}"><label class="visually-hidden" for="pr${p.id}">${L("Ответ покупателю", "Xaridorga javob")}</label><input id="pr${p.id}" placeholder="${L("Например: привезём замену завтра до 12:00", "Masalan: ertaga 12:00 gacha almashtirib beramiz")}" value="${esc(p.seller_reply || "")}"><button class="btn btn-primary" type="submit">${L("Ответить", "Javob berish")}</button></form>` : ""}
   </div>`;
 }
@@ -5322,7 +5323,7 @@ function problemHTML(o, s, i) {
       <div class="pc-ph">${ph.map((u, k) => `<span class="pf"><img src="${u}" alt=""><button type="button" class="ib" data-probdel="${esc(o.num)}|${key}|${k}" aria-label="${L("Убрать фото", "Rasmni olib tashlash")}">${ui("close", 12)}</button></span>`).join("")}${ph.length < 3 ? `<label class="pf add">${ui("camera", 20)}<input type="file" accept="image/*" multiple hidden data-probfile="${esc(o.num)}|${key}"></label>` : ""}</div>
       <span class="err" hidden></span>
       <button class="btn btn-primary" type="submit">${L("Отправить жалобу", "Shikoyat yuborish")}</button>
-      <small class="mu">${o.api ? L("Жалобу увидят магазин и модератор Imorat. Ответ придёт сюда и в Telegram.", "Shikoyatni do‘kon va Imorat moderatori ko‘radi. Javob shu yerga va Telegramga keladi.") : L("В демо-версии жалоба сохраняется только у вас.", "Demo versiyada shikoyat faqat sizda saqlanadi.")}</small>
+      <small class="mu">${o.api ? L("Жалобу увидят магазин и модератор Imorat Go. Ответ придёт сюда и в Telegram.", "Shikoyatni do‘kon va Imorat Go moderatori ko‘radi. Javob shu yerga va Telegramga keladi.") : L("В демо-версии жалоба сохраняется только у вас.", "Demo versiyada shikoyat faqat sizda saqlanadi.")}</small>
     </form></details>`;
 }
 document.addEventListener("input", e => { const f = e.target.closest?.("[data-probform]"); if (!f) return; const fd = new FormData(f); probDraft[f.dataset.probform] = { reason: fd.get("reason"), text: fd.get("text") }; });
@@ -5412,7 +5413,7 @@ function renderStore(id) {
   $("#app").innerHTML = `<div class="wrap spage">
     <nav class="crumbs"><button type="button" data-go="home">${L("Главная", "Asosiy")}</button>${ui("chev", 12)}<button type="button" data-scroll="stores">${L("Магазины", "Do‘konlar")}</button>${ui("chev", 12)}<span>${esc(s.name)}</span></nav>
     <div class="sp-grid"><div class="panel sp-info">
-      <div class="sp-h"><span class="av big">${esc(s.name.slice(0, 1))}</span><div><h1 class="h-l" style="margin:0">${esc(s.name)} ${isVerified(s) ? `<span class="vbadge" title="${L("Магазин проверен модератором Imorat и выполняет заказы без срывов", "Do‘kon Imorat moderatori tomonidan tekshirilgan va buyurtmalarni uzilishsiz bajaradi")}">${ui("shield", 14)} ${L("Проверенный", "Tekshirilgan")}</span>` : ""}</h1>
+      <div class="sp-h"><span class="av big">${esc(s.name.slice(0, 1))}</span><div><h1 class="h-l" style="margin:0">${esc(s.name)} ${isVerified(s) ? `<span class="vbadge" title="${L("Магазин проверен модератором Imorat Go и выполняет заказы без срывов", "Do‘kon Imorat Go moderatori tomonidan tekshirilgan va buyurtmalarni uzilishsiz bajaradi")}">${ui("shield", 14)} ${L("Проверенный", "Tekshirilgan")}</span>` : ""}</h1>
         <p class="mu" style="margin:4px 0 0">${esc(L(s.ru || "", s.uz || s.ru || ""))}</p></div></div>
       ${ratingHTML(s, true)}
       <dl class="specs"><dt>${L("Адрес", "Manzil")}</dt><dd>${dName(s.d)}, ${esc(L(s.addr || "", s.addrUz || s.addr || ""))}${s.landmark ? `<br><small class="mu">${esc(s.landmark)}</small>` : ""}</dd>
@@ -5501,7 +5502,7 @@ function prodReviewsHTML(p) {
     <div class="pc-ph">${revDraft.photo ? `<span class="pf"><img src="${revDraft.photo}" alt=""><button type="button" class="ib" data-prvphdel aria-label="${L("Убрать фото", "Rasmni olib tashlash")}">${ui("close", 12)}</button></span>` : `<label class="pf add">${ui("camera", 20)}<input type="file" accept="image/*" hidden data-prvphoto></label>`}</div>
     <button class="btn btn-primary" type="submit" ${revDraft.stars ? "" : "disabled"}>${L("Опубликовать отзыв", "Sharhni e’lon qilish")}</button></form>` : "";
   return `<div class="h-m" style="margin-bottom:6px">${L("Отзывы покупателей", "Xaridorlar sharhlari")}${d.count ? ` · <span class="s">★ ${String(d.stars).replace(".", ",")}</span> <small class="mu">(${d.count})</small>` : ""}</div>
-    ${d.reviews.length ? d.reviews.slice(0, 10).map(r => `<div class="prv"><b>${esc(r.name || L("Покупатель", "Xaridor"))}</b> <span class="s">${"★".repeat(r.stars)}${"☆".repeat(5 - r.stars)}</span> <small class="mu">${new Date(r.t).toLocaleDateString("ru-RU")}</small>${r.text ? `<p>${esc(r.text)}</p>` : ""}${r.photo ? `<a href="${esc(mediaSrc(r.photo))}" target="_blank" rel="noopener"><img src="${esc(mediaSrc(r.photo))}" alt="${L("Фото покупателя", "Xaridor rasmi")}" loading="lazy"></a>` : ""}</div>`).join("") : `<p class="mu" style="margin:0;font-size:13px">${L("Пока нет отзывов от покупателей Imorat. Отзыв может оставить тот, кто получил товар.", "Hozircha Imorat xaridorlaridan sharh yo‘q. Sharhni mahsulotni olgan xaridor qoldira oladi.")}</p>`}
+    ${d.reviews.length ? d.reviews.slice(0, 10).map(r => `<div class="prv"><b>${esc(r.name || L("Покупатель", "Xaridor"))}</b> <span class="s">${"★".repeat(r.stars)}${"☆".repeat(5 - r.stars)}</span> <small class="mu">${new Date(r.t).toLocaleDateString("ru-RU")}</small>${r.text ? `<p>${esc(r.text)}</p>` : ""}${r.photo ? `<a href="${esc(mediaSrc(r.photo))}" target="_blank" rel="noopener"><img src="${esc(mediaSrc(r.photo))}" alt="${L("Фото покупателя", "Xaridor rasmi")}" loading="lazy"></a>` : ""}</div>`).join("") : `<p class="mu" style="margin:0;font-size:13px">${L("Пока нет отзывов от покупателей Imorat Go. Отзыв может оставить тот, кто получил товар.", "Hozircha Imorat Go xaridorlaridan sharh yo‘q. Sharhni mahsulotni olgan xaridor qoldira oladi.")}</p>`}
     ${form}`;
 }
 const revRedraw = id => { const el = $("#pRev"); if (el && +el.dataset.pid === +id) el.innerHTML = prodReviewsHTML(PROD[id]); };
@@ -5562,18 +5563,18 @@ function teamHTML() {
       <form class="tp-join" id="tpJoin"><label class="visually-hidden" for="tpCode">${L("Код проекта", "Loyiha kodi")}</label><input id="tpCode" placeholder="${L("Код от прораба", "Prorab kodi")}" maxlength="6" autocapitalize="characters"><button class="btn btn-line" type="submit">${L("Войти в проект", "Loyihaga kirish")}</button></form></div></div>`;
 }
 async function shareText(text, done) {
-  try { if (navigator.share) { await navigator.share({ title: "Imorat", text }); return; } } catch (e) { if (e?.name === "AbortError") return; }
+  try { if (navigator.share) { await navigator.share({ title: "Imorat Go", text }); return; } } catch (e) { if (e?.name === "AbortError") return; }
   try { await navigator.clipboard.writeText(text); toast(done); } catch (e) { toast(text.slice(-60)); }
 }
 document.addEventListener("click", async e => {
   const t = e.target.closest("[data-tpload],[data-tpadd],[data-tpinv],[data-tpdel],[data-tpnew],[data-projshare]"); if (!t) return;
   const d = t.dataset, P = id => (teamProj || []).find(x => x.id === id);
-  if (d.projshare) { const pr = projects.find(x => x.id === d.projshare); if (!pr) return; return shareText(L(`Список для ремонта «${pr.name}» на Imorat: ${siteBase()}?proj=${b64e({ n: pr.name, c: pr.cart })}`, `Imoratda «${pr.name}» ta’mir ro‘yxati: ${siteBase()}?proj=${b64e({ n: pr.name, c: pr.cart })}`), L("Ссылка на список скопирована", "Ro‘yxat havolasi nusxalandi")); }
+  if (d.projshare) { const pr = projects.find(x => x.id === d.projshare); if (!pr) return; return shareText(L(`Список для ремонта «${pr.name}» на Imorat Go: ${siteBase()}?proj=${b64e({ n: pr.name, c: pr.cart })}`, `Imorat Go’da «${pr.name}» ta’mir ro‘yxati: ${siteBase()}?proj=${b64e({ n: pr.name, c: pr.cart })}`), L("Ссылка на список скопирована", "Ro‘yxat havolasi nusxalandi")); }
   try {
     if (d.tpnew != null) { const r = await api("POST", "/api/team-projects", { name: L(`Проект ${new Date().toLocaleDateString("ru-RU")}`, `Loyiha ${new Date().toLocaleDateString("ru-RU")}`), items: cart }); teamProj = [r.project, ...(teamProj || [])]; toast(L("Общий проект создан — пригласите бригаду", "Umumiy loyiha yaratildi — brigadani taklif qiling")); return renderDrawer(); }
     if (d.tpload) { const p = P(d.tpload); Object.entries(p.items).forEach(([k, v]) => { cart[k] = (cart[k] || 0) + (v.q || v); }); saveCart(); refreshCards(); toast(L("Проект в корзине", "Loyiha savatda")); return openDrawer("cart"); }
     if (d.tpadd) { const r = await api("PATCH", `/api/team-projects/${d.tpadd}`, { add: cart }); teamProj = teamProj.map(x => x.id === d.tpadd ? r.project : x); toast(L("Ваша корзина добавлена в проект", "Savatingiz loyihaga qo‘shildi")); return renderDrawer(); }
-    if (d.tpinv) { const p = P(d.tpinv); return shareText(L(`Присоединяйся к проекту «${p.name}» на Imorat — добавляй, что нужно купить: ${siteBase()}?team=${p.code} (код ${p.code})`, `Imoratda «${p.name}» loyihasiga qo‘shil — nima olish kerakligini qo‘sh: ${siteBase()}?team=${p.code} (kod ${p.code})`), L("Приглашение скопировано — отправьте бригаде", "Taklif nusxalandi — brigadaga yuboring")); }
+    if (d.tpinv) { const p = P(d.tpinv); return shareText(L(`Присоединяйся к проекту «${p.name}» на Imorat Go — добавляй, что нужно купить: ${siteBase()}?team=${p.code} (код ${p.code})`, `Imorat Go’da «${p.name}» loyihasiga qo‘shil — nima olish kerakligini qo‘sh: ${siteBase()}?team=${p.code} (kod ${p.code})`), L("Приглашение скопировано — отправьте бригаде", "Taklif nusxalandi — brigadaga yuboring")); }
     if (d.tpdel) { await api("DELETE", `/api/team-projects/${d.tpdel}`); teamProj = teamProj.filter(x => x.id !== d.tpdel); return renderDrawer(); }
   } catch (er) { toast(apiErr(er)); }
 });
@@ -5599,11 +5600,11 @@ function demoDash() {
     counts: { users: 2140, stores_active: STORES.length, stores_pending: 2, masters_active: 12, masters_pending: 3, problems_open: 2, questions_open: 5 }, series, top_products: tp, top_stores: ts.sort((a, b) => b.gmv - a.gmv), slow_stores: ts.filter(s => s.fail || s.accept_min > 10).sort((a, b) => b.fail_pct - a.fail_pct) };
 }
 function renderAdmin() {
-  const crumbs = `<nav class="crumbs"><button type="button" data-go="home">${L("Главная", "Asosiy")}</button>${ui("chev", 12)}<span>${L("Панель Imorat", "Imorat paneli")}</span></nav>`;
+  const crumbs = `<nav class="crumbs"><button type="button" data-go="home">${L("Главная", "Asosiy")}</button>${ui("chev", 12)}<span>${L("Панель Imorat Go", "Imorat Go paneli")}</span></nav>`;
   let D;
   if (API) {
     if (!user) { $("#app").innerHTML = `<div class="wrap">${crumbs}<div class="panel" style="margin:12px 0;display:grid;gap:10px;justify-items:start"><h1 class="h-l" style="margin:0">${L("Панель владельца", "Egasi paneli")}</h1><p class="mu" style="margin:0">${L("Войдите номером модератора.", "Moderator raqami bilan kiring.")}</p><button class="btn btn-primary" type="button" data-act="login">${L("Войти", "Kirish")}</button></div></div>`; return; }
-    if (!user.admin) { $("#app").innerHTML = `<div class="wrap">${crumbs}<div class="panel" style="margin:12px 0">${L("Эта страница только для модераторов Imorat.", "Bu sahifa faqat Imorat moderatorlari uchun.")}</div></div>`; return; }
+    if (!user.admin) { $("#app").innerHTML = `<div class="wrap">${crumbs}<div class="panel" style="margin:12px 0">${L("Эта страница только для модераторов Imorat Go.", "Bu sahifa faqat Imorat Go moderatorlari uchun.")}</div></div>`; return; }
     if (adminState.need) { $("#app").innerHTML = `<div class="wrap">${crumbs}${adminGateHTML()}</div>`; return; }
     if (!dash) { $("#app").innerHTML = `<div class="wrap">${crumbs}<div class="panel" style="margin:12px 0">${L("Загружаем…", "Yuklanmoqda…")}</div></div>`; loadDash(); return; }
     if (dash.error !== undefined) { $("#app").innerHTML = `<div class="wrap">${crumbs}<div class="panel" style="margin:12px 0">${esc(dash.error || "")}</div></div>`; return; }
@@ -5618,13 +5619,13 @@ function renderAdmin() {
   const att = [[c.stores_pending, L("магазинов ждут проверки", "do‘kon tekshiruvni kutmoqda"), "seller"], [c.masters_pending, L("анкет мастеров", "usta anketasi"), "seller"], [c.problems_open, L("жалоб открыто", "ochiq shikoyat"), "seller"], [c.questions_open, L("вопросов без ответа магазина", "do‘kon javob bermagan savol"), null]].filter(x => x[0]);
   const tbl = (head, rows) => `<div class="tbl-wrap"><table><thead><tr>${head.map((h, i) => `<th class="${i ? "r" : ""}">${h}</th>`).join("")}</tr></thead><tbody>${rows.join("") || `<tr><td colspan="${head.length}" class="mu">${L("Пока нет данных", "Hozircha ma’lumot yo‘q")}</td></tr>`}</tbody></table></div>`;
   $("#app").innerHTML = `<div class="wrap adm">${crumbs}
-    <div class="ds-head" style="display:flex;justify-content:space-between;gap:12px;align-items:end;flex-wrap:wrap"><div><h1 class="h-l">${L("Панель Imorat", "Imorat paneli")} ${D.demo ? `<span class="pill mute">${L("демо-данные", "demo ma’lumot")}</span>` : ""}</h1><p class="mu" style="margin:0">${L("Как идут дела у маркетплейса", "Marketpleys ishlari qanday ketmoqda")}</p></div>
+    <div class="ds-head" style="display:flex;justify-content:space-between;gap:12px;align-items:end;flex-wrap:wrap"><div><h1 class="h-l">${L("Панель Imorat Go", "Imorat Go paneli")} ${D.demo ? `<span class="pill mute">${L("демо-данные", "demo ma’lumot")}</span>` : ""}</h1><p class="mu" style="margin:0">${L("Как идут дела у маркетплейса", "Marketpleys ishlari qanday ketmoqda")}</p></div>
       <div class="seg" role="group" aria-label="${L("Период", "Davr")}">${[7, 30, 90].map(n => `<button type="button" data-dashdays="${n}" aria-pressed="${dashDays === n}">${n} ${L("дн", "kun")}</button>`).join("")}</div></div>
     ${att.length ? `<div class="adm-att">${att.map(([n, tx, go]) => `<button type="button" class="chip" ${go ? `data-go="${go}"` : ""}><b>${n}</b> ${tx}</button>`).join("")}</div>` : ""}
     <div class="kpis adm-k">
       <div class="kpi"><span>${L("Оборот товаров", "Mahsulot aylanmasi")}</span><b>${big(t.gmv)}</b>${delta(t.gmv, t.gmv_prev)}</div>
       <div class="kpi"><span>${L("Заказов", "Buyurtmalar")}</span><b>${fmtN(t.orders)}</b>${delta(t.orders, t.orders_prev)}</div>
-      <div class="kpi"><span>${L("Комиссия Imorat", "Imorat komissiyasi")}</span><b>${big(t.commission)}</b><small>${L("с выполненных заказов", "bajarilgan buyurtmalardan")}</small></div>
+      <div class="kpi"><span>${L("Комиссия Imorat Go", "Imorat Go komissiyasi")}</span><b>${big(t.commission)}</b><small>${L("с выполненных заказов", "bajarilgan buyurtmalardan")}</small></div>
       <div class="kpi"><span>${L("Средний чек", "O‘rtacha chek")}</span><b>${big(t.avg_check)}</b><small>${L("сум", "so‘m")}</small></div>
       <div class="kpi"><span>${L("Покупателей", "Xaridorlar")}</span><b>${fmtN(t.buyers)}</b><small>${t.repeat_pct}% ${L("покупают повторно", "qayta xarid qiladi")}</small></div>
       <div class="kpi"><span>${L("Новых пользователей", "Yangi foydalanuvchilar")}</span><b>${fmtN(t.new_users)}</b><small>${L("всего", "jami")} ${fmtN(c.users)}</small></div>
@@ -5880,7 +5881,7 @@ async function dsPhotoStart() {
 async function dsPhotoSave() {
   if (!dsPh.url) return toast(L("Фото ещё рендерится", "Foto hali chizilmoqda"));
   const blob = await (await fetch(dsPh.url)).blob();
-  await saveBlobFile(blob, "imorat-room-photo.jpg", L("Моя комната в AI-дизайнере Imorat", "Imorat AI dizaynerida xonam"));
+  await saveBlobFile(blob, "imorat-room-photo.jpg", L("Моя комната в AI-дизайнере Imorat Go", "Imorat Go AI dizaynerida xonam"));
 }
 
 /* ================= Smart search: typos, Latin/Cyrillic, synonyms, live suggestions ================= */

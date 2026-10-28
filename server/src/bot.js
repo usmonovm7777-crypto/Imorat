@@ -2,7 +2,7 @@ import { escHtml as h } from "./telegram.js";
 import { createSearch } from "./search.js";
 import { newUserId } from "./auth.js";
 
-/* The Imorat Telegram bot for people and masters.
+/* The Imorat Go Telegram bot for people and masters.
    Everyone: product search in plain words (typos, Uzbek, synonyms), masters by trade with a request
    in three taps, orders and bonuses, sign-in by sharing the phone number, RU / UZ.
    Masters: requests arrive with Accept / Decline / Done buttons, list of open requests, pause button.
@@ -61,8 +61,8 @@ export function registerBot({ db, cfg, ref, tg, bonus, masters, log = console })
   /* ---------- texts ---------- */
   function welcome(ch, from) {
     const name = h(from?.first_name || ch.user?.name?.split(" ")[0] || "");
-    return ch.L(`Ассалому алейкум${name ? ", " + name : ""}! 👋\n\nЯ бот <b>Imorat</b> — стройматериалы из магазинов Ташкента и мастера для ремонта.\n\n🔎 <b>Напишите, что ищете</b> — «цемент м400», «кран для ванны», «ламинат дуб» — я найду и покажу цены.\n🧰 <b>Мастера</b> — плиточники, электрики, сантехники: выберите и отправьте заявку.\n📦 Статусы заказов и ответы мастеров приходят сюда.${ch.user ? "" : "\n\n📱 Чтобы оформлять заявки и видеть заказы, нажмите «Войти по номеру телефона» внизу."}`,
-      `Assalomu alaykum${name ? ", " + name : ""}! 👋\n\nMen <b>Imorat</b> botiman — Toşkent do‘konlaridan qurilish mollari va ta’mir ustalari.\n\n🔎 <b>Nima kerakligini yozing</b> — «sement m400», «laminat», «aralaştirgiç» — topib, narxlarini ko‘rsataman.\n🧰 <b>Ustalar</b> — kafelçi, elektrik, santexnik: tanlang va ariza yuboring.\n📦 Buyurtma holati va ustalar javobi şu yerga keladi.${ch.user ? "" : "\n\n📱 Ariza berish va buyurtmalarni ko‘riş uçun pastdagi «Telefon raqam bilan kiriş» tugmasini bosing."}`);
+    return ch.L(`Ассалому алейкум${name ? ", " + name : ""}! 👋\n\nЯ бот <b>Imorat Go</b> — стройматериалы из магазинов Ташкента и мастера для ремонта.\n\n🔎 <b>Напишите, что ищете</b> — «цемент м400», «кран для ванны», «ламинат дуб» — я найду и покажу цены.\n🧰 <b>Мастера</b> — плиточники, электрики, сантехники: выберите и отправьте заявку.\n📦 Статусы заказов и ответы мастеров приходят сюда.${ch.user ? "" : "\n\n📱 Чтобы оформлять заявки и видеть заказы, нажмите «Войти по номеру телефона» внизу."}`,
+      `Assalomu alaykum${name ? ", " + name : ""}! 👋\n\nMen <b>Imorat Go</b> botiman — Toşkent do‘konlaridan qurilish mollari va ta’mir ustalari.\n\n🔎 <b>Nima kerakligini yozing</b> — «sement m400», «laminat», «aralaştirgiç» — topib, narxlarini ko‘rsataman.\n🧰 <b>Ustalar</b> — kafelçi, elektrik, santexnik: tanlang va ariza yuboring.\n📦 Buyurtma holati va ustalar javobi şu yerga keladi.${ch.user ? "" : "\n\n📱 Ariza berish va buyurtmalarni ko‘riş uçun pastdagi «Telefon raqam bilan kiriş» tugmasini bosing."}`);
   }
   const helpText = ch => ch.L(`<b>Что умеет бот</b>\n\n🔎 Просто напишите название товара — можно с ошибками, по-русски или по-узбекски.\n🧰 /masters — мастера по специальностям и заявка в три шага.\n📦 /orders — ваши заказы и где они сейчас.\n🎁 /bonus — бонусы и код для друзей.${masterOf(ch.user) ? "\n📋 /requests — ваши заявки как мастера, кнопки «Принять» и «Выполнено»." : ""}\n🌐 /lang — O‘zbekcha / Русский.\n\nМагазинам: заказы с кнопками приходят сюда после «Подключить Telegram» в кабинете продавца.${channel ? `\n\n📣 Скидки и товар дня — в канале @${channel}` : ""}`,
     `<b>Bot nimalar qila oladi</b>\n\n🔎 Mahsulot nomini yozing — xato bilan ham, o‘zbekça yoki ruscha.\n🧰 /masters — ustalar va uç qadamda ariza.\n📦 /orders — buyurtmalaringiz va ular qayerda.\n🎁 /bonus — bonuslar va do‘stlar uçun kod.${masterOf(ch.user) ? "\n📋 /requests — usta sifatida arizalaringiz, «Qabul qiliş» va «Bajarildi» tugmalari." : ""}\n🌐 /lang — Русский / O‘zbekcha.\n\nDo‘konlarga: sotuvçi kabinetida «Telegramni ulaş» dan keyin buyurtmalar şu yerga keladi.${channel ? `\n\n📣 Çegirmalar va kun mahsuloti — @${channel} kanalida` : ""}`);
@@ -94,7 +94,7 @@ export function registerBot({ db, cfg, ref, tg, bonus, masters, log = console })
   }
 
   /* ---------- masters for people ---------- */
-  const specMenu = ch => tg.send(ch.id, ch.L("🧰 <b>Какой мастер нужен?</b>\nВсе мастера проверены модератором, у каждого — отзывы клиентов Imorat.", "🧰 <b>Qanday usta kerak?</b>\nBarça ustalar moderator tomonidan tekşirilgan, har birida Imorat mijozlari sharhlari bor."),
+  const specMenu = ch => tg.send(ch.id, ch.L("🧰 <b>Какой мастер нужен?</b>\nВсе мастера проверены модератором, у каждого — отзывы клиентов Imorat Go.", "🧰 <b>Qanday usta kerak?</b>\nBarça ustalar moderator tomonidan tekşirilgan, har birida Imorat Go mijozlari sharhlari bor."),
     [...chunk(Object.entries(SPEC).map(([k, v]) => ({ text: `${v[0]} ${ch.uz ? v[2] : v[1]}`, callback_data: "ms:" + k })), 2), [{ text: ch.L("🧑‍🔧 Я мастер — разместить анкету", "🧑‍🔧 Men ustaman — anketa joylaş"), url: `${site}${ch.uz ? "?lang=uz" : ""}#masters` }]]);
   function mastersBySpec(ch, spec) {
     const st = masters.stats(), D = Object.fromEntries(ref.districts.map(d => [d.id, d]));
@@ -151,7 +151,7 @@ export function registerBot({ db, cfg, ref, tg, bonus, masters, log = console })
   function myBonus(ch) {
     if (!ch.user) return needLogin(ch);
     const u = db.get("SELECT * FROM users WHERE id=?", ch.user.id), code = bonus.codeFor(u), link = `${site}?ref=${code}`;
-    const share = `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(ch.L(`Стройматериалы из магазинов Ташкента с доставкой — Imorat. По моей ссылке ${cfg.bonus?.referral ? money(cfg.bonus.referral) + " бонусов" : "бонус"} на первый заказ`, `Toşkent do‘konlaridan qurilish mollari yetkaziş bilan — Imorat. Havolam orqali birinçi buyurtmaga bonus`))}`;
+    const share = `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(ch.L(`Стройматериалы из магазинов Ташкента с доставкой — Imorat Go. По моей ссылке ${cfg.bonus?.referral ? money(cfg.bonus.referral) + " бонусов" : "бонус"} на первый заказ`, `Toşkent do‘konlaridan qurilish mollari yetkaziş bilan — Imorat Go. Havolam orqali birinçi buyurtmaga bonus`))}`;
     return tg.send(ch.id, ch.L(`🎁 <b>Бонусы: ${money(u.points || 0)}</b>\nКешбэк приходит после получения заказа. Бонусами можно оплатить до 20% товаров.\n\n👫 Ваш код для друзей: <code>${code}</code>\nДругу — бонус сразу, вам — после его первого заказа.`, `🎁 <b>Bonuslar: ${money(u.points || 0, true)}</b>\nKeşbek buyurtma olinganidan keyin keladi. Bonus bilan mahsulotlarning 20% gaça to‘laş mumkin.\n\n👫 Do‘stlar uçun kodingiz: <code>${code}</code>\nDo‘stga — bonus darhol, sizga — uning birinçi buyurtmasidan keyin.`),
       [[{ text: ch.L("📤 Отправить другу", "📤 Do‘stga yuboriş"), url: share }]]);
   }

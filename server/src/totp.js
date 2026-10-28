@@ -24,4 +24,4 @@ export function checkTotp(secret, code, t = Date.now()) {
   if (c.length !== 6) return false;
   return [-30000, 0, 30000].some(d => timingSafeEqual(Buffer.from(totp(secret, t + d)), Buffer.from(c)));
 }
-export const otpauthUrl = (secret, label) => `otpauth://totp/${encodeURIComponent("Imorat:" + label)}?secret=${secret}&issuer=Imorat&digits=6&period=30`;
+export const otpauthUrl = (secret, label) => `otpauth://totp/${encodeURIComponent("Imorat Go:" + label)}?secret=${secret}&issuer=Imorat Go&digits=6&period=30`;

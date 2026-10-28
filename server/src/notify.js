@@ -79,7 +79,7 @@ export function createNotify({ db, cfg, tg, push, sms, ref, log = console }) {
         : BUYER_TEXT[c.s.status]?.(c.o, c.st);
       if (!text || !c.buyer || c.s.cancel_reason === "buyer") return;
       if (c.buyer.tg_chat) safe(tg.send(c.buyer.tg_chat, h(text)));
-      safe(push.toUser(c.buyer.id, { title: `Imorat · ${c.o.num}`, body: text, url: `${cfg.siteUrl}#orders`, tag: "order-" + c.o.num }));
+      safe(push.toUser(c.buyer.id, { title: `Imorat Go · ${c.o.num}`, body: text, url: `${cfg.siteUrl}#orders`, tag: "order-" + c.o.num }));
     },
     async admins(text) {
       for (const a of db.all(`SELECT * FROM users WHERE tg_chat IS NOT NULL AND phone IN (${cfg.admins.map(() => "?").join(",") || "''"})`, ...cfg.admins)) safe(tg.send(a.tg_chat, text));

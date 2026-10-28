@@ -16,7 +16,7 @@ export function createChannel({ db, cfg, tg, log = console }) {
     FROM products p JOIN offers o ON o.product_id=p.id JOIN stores s ON s.id=o.store_id AND s.status='active' WHERE p.active=1 GROUP BY p.id`);
   const posted = (kind, pid, days) => !!db.get("SELECT 1 FROM channel_posts WHERE kind=? AND product_id IS ? AND created_at>?", kind, pid ?? null, Date.now() - days * 86400000);
   const record = (kind, pid, msg) => db.run("INSERT INTO channel_posts(kind,product_id,msg_id,created_at) VALUES(?,?,?,?)", kind, pid ?? null, msg?.message_id ?? null, Date.now());
-  const btn = (url, ru = "Открыть на Imorat · Imoratda ochish") => [[{ text: ru, url }]];
+  const btn = (url, ru = "Открыть на Imorat Go · Imorat Go’da ochish") => [[{ text: ru, url }]];
 
   function productOfDay() {
     const list = offers().filter(p => p.instock > 0 && !posted("day", p.id, 45));
@@ -32,7 +32,7 @@ export function createChannel({ db, cfg, tg, log = console }) {
     const list = offers().filter(p => p.created_at && p.created_at > sinceMs && !posted("new", p.id, 365)).slice(0, 8);
     if (!list.length) return null;
     const lines = list.map(p => `• <a href="${h(link(p.id))}">${h(p.ru)}</a> — от ${money(p.mn)} сум`).join("\n");
-    return { kind: "new", pids: list.map(p => p.id), text: `🆕 <b>Новинки на Imorat · Yangi mahsulotlar</b>\n\n${lines}`, buttons: btn(site + "#catalog", "Весь каталог · Butun katalog") };
+    return { kind: "new", pids: list.map(p => p.id), text: `🆕 <b>Новинки на Imorat Go · Yangi mahsulotlar</b>\n\n${lines}`, buttons: btn(site + "#catalog", "Весь каталог · Butun katalog") };
   }
   function priceDrops() {
     const now = offers(), drops = [];
@@ -67,7 +67,7 @@ export function createChannel({ db, cfg, tg, log = console }) {
     enabled: on, daily, send, productOfDay, newProducts, priceDrops,
     async storeApproved(store) {
       if (!on() || posted("store:" + store.id, null, 3650)) return;
-      const m = await tg.send(C.chat, `🏪 <b>Новый магазин на Imorat · Yangi do‘kon</b>\n<b>${h(store.name)}</b>\n${h(store.descr || "").slice(0, 200)}\n📍 ${h(store.addr || "")}`, btn(site + "#catalog", "Смотреть товары · Mahsulotlarni ko‘rish"));
+      const m = await tg.send(C.chat, `🏪 <b>Новый магазин на Imorat Go · Yangi do‘kon</b>\n<b>${h(store.name)}</b>\n${h(store.descr || "").slice(0, 200)}\n📍 ${h(store.addr || "")}`, btn(site + "#catalog", "Смотреть товары · Mahsulotlarni ko‘rish"));
       if (m) record("store:" + store.id, null, m);
     },
     routes(r, needAdmin) {
