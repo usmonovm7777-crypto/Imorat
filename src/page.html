@@ -664,7 +664,7 @@ html.lock { overflow: hidden; }
   html.fx .collage .tile:nth-child(4) { --d: 26; --oy: 18px; } html.fx .collage .tile:nth-child(5) { --d: 12; } html.fx .collage .tile:nth-child(6) { --d: 18; --oy: 18px; }
   html.fx .collage .tile:hover { box-shadow: 0 26px 60px rgba(0,0,0,.4); }
   html.fx .hero::after { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; background: radial-gradient(420px 320px at var(--gx, 70%) var(--gy, 30%), color-mix(in srgb, var(--hero-acc) 18%, transparent), transparent 70%); transition: background .2s; }
-  html.fx .mq-track { animation: marquee 48s linear infinite; }
+  html.fx .mq-track { animation: marquee var(--mq-dur, 600s) linear infinite; }
   html.fx .marquee:hover .mq-track { animation-play-state: paused; }
   @keyframes marquee { to { transform: translateX(-50%); } }
   html.fx .card, html.fx .bundle, html.fx .cat-tile { transform-style: preserve-3d; will-change: transform; }
@@ -2021,6 +2021,8 @@ function renderHome() {
   $("#heroAsk").addEventListener("submit", e => { e.preventDefault(); const v = $("#heroQ").value.trim(); if (v) { openAI(v); $("#heroQ").value = ""; } else $("#heroQ").focus(); });
   updateEstimator();
   bindCalcs("h");
+  // the strip moves at a calm reading speed (px per second), whatever its length or the screen
+  requestAnimationFrame(() => { const t = $(".mq-track"); if (t) t.style.setProperty("--mq-dur", Math.round(t.scrollWidth / 2 / (innerWidth < 761 ? 28 : 38)) + "s"); });
 }
 function bundleCard(b) {
   const items = bundleItems(b), sum = bundleSum(b), on = bundlesOn.includes(b.id) && items.every(([p, q]) => qtyOf(p.id) >= q);
