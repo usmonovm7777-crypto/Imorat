@@ -51,7 +51,7 @@ export function loadConfig(env = process.env) {
       dailyGuest: Number(env.AI_GUEST_DAILY_LIMIT) || 15
     },
     yandex: { token: env.YANDEX_DELIVERY_TOKEN || "", url: (env.YANDEX_DELIVERY_URL || "https://b2b.taxi.yandex.net").replace(/\/$/, "") },
-    telegram: { token: env.TELEGRAM_BOT_TOKEN || "", name: env.TELEGRAM_BOT_NAME || "", url: (env.TELEGRAM_API_URL || "https://api.telegram.org").replace(/\/$/, ""), pollTimeout: env.TELEGRAM_POLL_TIMEOUT != null ? Number(env.TELEGRAM_POLL_TIMEOUT) : 25 },
+    telegram: { token: env.TELEGRAM_BOT_TOKEN || "", name: env.TELEGRAM_BOT_NAME || "imoratGo_bot", url: (env.TELEGRAM_API_URL || "https://api.telegram.org").replace(/\/$/, ""), pollTimeout: env.TELEGRAM_POLL_TIMEOUT != null ? Number(env.TELEGRAM_POLL_TIMEOUT) : 25 },
     pushSubject: env.VAPID_SUBJECT || "mailto:support@imorat.uz",
     siteUrl: (env.SITE_URL || "https://usmonovm7777-crypto.github.io/Imorat/").replace(/\/?$/, "/"),
     // Seller deadlines (minutes): reminder, SMS, auto-cancel if not accepted; hours to hand the order over

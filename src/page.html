@@ -153,6 +153,7 @@ a { color: inherit; }
   .sg-facets { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-inline: -16px; padding-inline: 16px; }
   .sg-facets .chip { flex: none; }
 }
+.tg-l { display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; color: var(--accent); font-weight: 600; }
 .search { flex: 1; min-width: 0; position: relative; }
 .search input { width: 100%; border: 1.5px solid var(--line-strong); background: var(--raised); border-radius: 12px; padding: 10px 184px 10px 42px; transition: border-color .15s; }
 .search input:focus { border-color: var(--accent); outline: none; background: var(--surface); }
@@ -1918,7 +1919,8 @@ function renderFooter() {
   $("#foot").innerHTML = `<div class="wrap foot">
     <div><button class="logo" type="button" data-go="home"><span class="logo-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span><b>imorat</b></button>
       <p style="margin:10px 0 0;max-width:36ch">${L("Маркетплейс строительных магазинов Узбекистана. Прототип интерфейса: магазины, цены и доставка демонстрационные.", "O‘zbekiston qurilish do‘konlari marketpleysi. Interfeys prototipi: do‘konlar, narxlar va yetkazish namunaviy.")}</p>
-      <p class="num" style="margin:10px 0 0">+998 71 200 00 00 · 08:00–22:00</p></div>
+      <p class="num" style="margin:10px 0 0">+998 71 200 00 00 · 08:00–22:00</p>
+      <a class="tg-l" href="https://t.me/${esc(apiCfg?.telegram_bot || "imoratGo_bot")}" target="_blank" rel="noopener">${ui("send", 16)} Telegram · @${esc(apiCfg?.telegram_bot || "imoratGo_bot")}</a></div>
     <div><b>${L("Покупателям", "Xaridorlarga")}</b><ul><li><button type="button" data-go="catalog">${L("Весь каталог", "Butun katalog")}</button></li><li><button type="button" data-act="ai">Usta AI</button></li><li><button type="button" data-scroll="calc">${L("Калькуляторы ремонта", "Ta’mir kalkulyatorlari")}</button></li><li><button type="button" data-go="list">${L("Список покупок → корзина", "Xaridlar ro‘yxati → savat")}</button></li><li><button type="button" data-act="orders">${L("Мои заказы", "Buyurtmalarim")}</button></li></ul></div>
     <div><b>${L("Доставка и оплата", "Yetkazish va to‘lov")}</b><ul><li>${L("Яндекс Доставка", "Yandex Yetkazib berish")}</li><li><button type="button" data-scroll="vip">Imorat VIP</button></li><li>${L("Рассрочка на 12 месяцев", "12 oyga muddatli to‘lov")}</li><li><button type="button" data-go="masters">${L("Мастера для ремонта", "Ta’mir ustalari")}</button></li></ul></div>
     <div><b>${L("Партнёрам", "Hamkorlarga")}</b><ul><li><button type="button" data-go="seller">${L("Кабинет продавца", "Sotuvchi kabineti")}</button></li><li><button type="button" data-scroll="stores">${L("Магазины", "Do‘konlar")}</button></li><li><button type="button" data-go="admin">${L("Панель владельца", "Egasi paneli")}</button></li><li><button type="button" data-go="masters" data-mtabgo="me">${L("Стать мастером", "Usta bo‘lish")}</button></li></ul></div>
