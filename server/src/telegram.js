@@ -3,7 +3,7 @@
 export function createTelegram(cfg, log = console) {
   const enabled = !!cfg.token;
   const base = `${cfg.url}/bot${cfg.token}`;
-  let username = cfg.name || "", offset = 0, stopped = false, handlers = { start: null, callback: null };
+  let username = cfg.name || "", offset = 0, stopped = false, handlers = { start: null, callback: null, message: null };
   async function call(method, body, timeoutMs = 10000) {
     if (!enabled) return null;
     try {
@@ -20,8 +20,9 @@ export function createTelegram(cfg, log = console) {
       for (const u of ups) {
         offset = u.update_id + 1;
         try {
-          if (u.message?.text?.startsWith("/start")) await handlers.start?.(u.message.chat.id, u.message.text.split(" ")[1] || "", u.message.from);
+          if (u.message?.text?.startsWith("/start")) await handlers.start?.(u.message.chat.id, u.message.text.split(" ")[1] || "", u.message.from, u.message);
           else if (u.callback_query) await handlers.callback?.(u.callback_query);
+          else if (u.message && u.message.chat?.type === "private") await handlers.message?.(u.message);
         } catch (e) { log.error("[tg] handler", e); }
       }
       if (cfg.pollTimeout === 0 && !ups.length) await new Promise(r => setTimeout(r, 100));
@@ -35,13 +36,19 @@ export function createTelegram(cfg, log = console) {
       if (!enabled) return;
       const me = await call("getMe");
       if (me?.username) username = me.username;
+      await handlers.ready?.();
       poll();
     },
     stop() { stopped = true; },
     send: (chat_id, text, buttons) => call("sendMessage", { chat_id, text, parse_mode: "HTML", disable_web_page_preview: true, ...(buttons ? { reply_markup: { inline_keyboard: buttons } } : {}) }),
     sendPhoto: (chat_id, photo, caption, buttons) => call("sendPhoto", { chat_id, photo, caption, parse_mode: "HTML", ...(buttons ? { reply_markup: { inline_keyboard: buttons } } : {}) }, 20000),
     edit: (chat_id, message_id, text, buttons) => call("editMessageText", { chat_id, message_id, text, parse_mode: "HTML", disable_web_page_preview: true, reply_markup: { inline_keyboard: buttons || [] } }),
-    answer: (id, text) => call("answerCallbackQuery", { callback_query_id: id, text: text || "", show_alert: false })
+    answer: (id, text) => call("answerCallbackQuery", { callback_query_id: id, text: text || "", show_alert: false }),
+    /* a message with the bottom keyboard (menu) instead of inline buttons */
+    sendKb: (chat_id, text, keyboard, inline) => call("sendMessage", { chat_id, text, parse_mode: "HTML", disable_web_page_preview: true, reply_markup: inline ? { inline_keyboard: inline } : keyboard ? { keyboard, resize_keyboard: true, is_persistent: true } : { remove_keyboard: true } }),
+    editButtons: (chat_id, message_id, buttons) => call("editMessageReplyMarkup", { chat_id, message_id, reply_markup: { inline_keyboard: buttons || [] } }),
+    typing: chat_id => call("sendChatAction", { chat_id, action: "typing" }, 4000),
+    call
   };
 }
 export const escHtml = s => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");

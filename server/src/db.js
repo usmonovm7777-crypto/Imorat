@@ -58,6 +58,7 @@ CREATE TABLE IF NOT EXISTS product_reviews(id INTEGER PRIMARY KEY AUTOINCREMENT,
 CREATE TABLE IF NOT EXISTS team_projects(id TEXT PRIMARY KEY, code TEXT NOT NULL UNIQUE, owner_id TEXT NOT NULL, name TEXT NOT NULL, items TEXT NOT NULL DEFAULT '{}', created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS team_members(project_id TEXT NOT NULL, user_id TEXT NOT NULL, role TEXT NOT NULL, joined_at INTEGER NOT NULL, PRIMARY KEY(project_id, user_id));
 CREATE TABLE IF NOT EXISTS tg_links(token TEXT PRIMARY KEY, user_id TEXT NOT NULL, expires_at INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS tg_chats(chat TEXT PRIMARY KEY, lang TEXT NOT NULL DEFAULT 'ru', state TEXT, data TEXT, updated_at INTEGER NOT NULL DEFAULT 0);
 CREATE INDEX IF NOT EXISTS reviews_store ON reviews(store_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS orders_user ON orders(user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS ship_store ON shipments(store_id, status_at DESC);
@@ -75,6 +76,7 @@ export function openDb(path, catalogPath) {
   addCol("users", "tg_chat", "TEXT"); addCol("users", "token_ver", "INTEGER NOT NULL DEFAULT 0");
   addCol("users", "points", "INTEGER NOT NULL DEFAULT 0"); addCol("users", "ref_code", "TEXT"); addCol("users", "ref_by", "TEXT"); addCol("users", "ref_paid", "INTEGER NOT NULL DEFAULT 0");
   addCol("stores", "verified", "INTEGER NOT NULL DEFAULT 0");
+  addCol("masters", "busy", "INTEGER NOT NULL DEFAULT 0"); addCol("users", "lang", "TEXT NOT NULL DEFAULT 'ru'");
   addCol("orders", "points_used", "INTEGER NOT NULL DEFAULT 0");
   addCol("users", "totp_secret", "TEXT"); addCol("users", "totp_on", "INTEGER NOT NULL DEFAULT 0");
   addCol("shipments", "accepted_at", "INTEGER"); addCol("shipments", "start_at", "INTEGER"); addCol("shipments", "reminded", "INTEGER NOT NULL DEFAULT 0");

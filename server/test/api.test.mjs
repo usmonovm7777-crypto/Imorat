@@ -25,7 +25,7 @@ const fake = createServer(async (req, res) => {
     const m = req.url.split("/").pop(), b = body ? JSON.parse(body) : {};
     if (m === "getMe") return json(200, { ok: true, result: { username: "imorat_test_bot" } });
     if (m === "getUpdates") return json(200, { ok: true, result: tgUpdates.splice(0) });
-    if (m === "sendMessage" || m === "sendPhoto" || m === "editMessageText" || m === "answerCallbackQuery") { tgSent.push({ m, ...b }); return json(200, { ok: true, result: { message_id: tgSent.length } }); }
+    if (["sendMessage", "sendPhoto", "editMessageText", "answerCallbackQuery", "editMessageReplyMarkup", "setMyCommands", "sendChatAction"].includes(m)) { tgSent.push({ m, ...b }); return json(200, { ok: true, result: { message_id: tgSent.length } }); }
   }
   if (req.url === "/push/ep1") { pushes.push({ body: raw, auth: req.headers.authorization, enc: req.headers["content-encoding"] }); res.writeHead(201); return res.end(); }
   if (req.url === "/ai/v1/messages") {
@@ -237,7 +237,7 @@ test("Telegram: link seller, order arrives with buttons, accept from Telegram", 
   const link = await call("POST", "/api/me/telegram", null, seller);
   assert.match(link.data.url, /^https:\/\/t\.me\/imorat_test_bot\?start=[0-9a-f]+$/);
   tgUpdates.push({ update_id: 1, message: { chat: { id: 555 }, text: "/start " + link.data.url.split("=")[1], from: { id: 555 } } });
-  await until(() => tgSent.some(x => x.chat_id === 555 && /подключён к магазину/.test(x.text)));
+  await until(() => tgSent.some(x => String(x.chat_id) === "555" && /подключён к магазину/.test(x.text)));
   const sum0 = await call("GET", "/api/seller/summary", null, seller);
   assert.equal(sum0.data.telegram, true);
   const buyer = (await login("933334455")).data;
@@ -581,4 +581,84 @@ test("Owner dashboard: totals, daily series, top products and stores, slow store
   assert.ok(d.top_stores.length >= 1);
   assert.equal(d.series.reduce((a, x) => a + x.orders, 0), d.totals.orders);
   assert.ok(Array.isArray(d.slow_stores));
+});
+
+test("Telegram bot: search, sign-in by contact, request to a master with buttons, rating, pause, language", async () => {
+  let uid = 100;
+  const send = (chat, msg) => tgUpdates.push({ update_id: ++uid, message: { chat: { id: chat, type: "private" }, from: { id: chat }, ...msg } });
+  const press = (chat, data) => { const id = "q" + (++uid); tgUpdates.push({ update_id: uid, callback_query: { id, data, from: { id: chat }, message: { chat: { id: chat }, message_id: 1 } } }); return id; };
+  const sentTo = (chat, re) => tgSent.filter(x => String(x.chat_id) === String(chat) && re.test(x.text || ""));
+  // welcome with the menu
+  send(7001, { text: "/start" });
+  const w = await until(() => sentTo(7001, /Imorat/)[0]);
+  assert.ok(w.reply_markup.keyboard.flat().some(b => b.request_contact), "sign-in button for a new chat");
+  // search with a typo and in Uzbek Latin
+  send(7001, { text: "перфаратор" });
+  const s1 = await until(() => sentTo(7001, /Нашли/)[0]);
+  assert.match(s1.text, /Исправили опечатку: <b>перфоратор/); assert.match(s1.text, /Перфоратор/);
+  assert.match(s1.reply_markup.inline_keyboard[0][0].url, /#p-\d+$/);
+  send(7001, { text: "sement" });
+  await until(() => sentTo(7001, /Нашли[\s\S]*Цемент/).length);
+  // a stranger's contact is refused, own contact signs in (new user)
+  send(7001, { contact: { phone_number: "+998901112233", user_id: 999, first_name: "X" } });
+  await until(() => sentTo(7001, /свой номер/).length);
+  // masters need an approved profile and a linked chat
+  const mt = (await login("994440077")).data.token;
+  const prof = await call("POST", "/api/masters/me", { name: "Ильхом Электрик", specs: ["elec"], districts: ["yunus"], exp: 5, price: 60000, price_unit: "pt", about: "Проводка под ключ" }, mt);
+  const mid = prof.data.master.id;
+  await call("PATCH", `/api/admin/masters/${mid}`, { status: "active" }, globalThis.ADMIN);
+  send(7002, { contact: { phone_number: "998994440077", user_id: 7002, first_name: "Ильхом" } });
+  const mk = await until(() => sentTo(7002, /Вы вошли/)[0]);
+  assert.ok(mk.reply_markup.keyboard.flat().some(b => /Мои заявки/.test(b.text)), "masters get the requests button");
+  // the buyer picks a trade and a master, before signing in: asked to sign in, then the flow continues
+  send(7001, { text: "🧰 Мастера" });
+  await until(() => sentTo(7001, /Какой мастер нужен/).length);
+  press(7001, "ms:elec");
+  const lst = await until(() => sentTo(7001, /Ильхом Электрик/)[0]);
+  const mq = lst.reply_markup.inline_keyboard[0][0].callback_data; assert.equal(mq, "mq:" + mid);
+  press(7001, mq);
+  await until(() => sentTo(7001, /Сначала войдите/).length);
+  send(7001, { contact: { phone_number: "+998901112233", user_id: 7001, first_name: "Азиз", last_name: "Т" } });
+  await until(() => sentTo(7001, /Опишите работу/).length);
+  send(7001, { text: "Поменять 6 розеток и выключатели в квартире" });
+  await until(() => sentTo(7001, /Когда нужно/).length);
+  press(7001, "wh:tomorrow");
+  await until(() => sentTo(7001, /Район/).length);
+  press(7001, "di:yunus");
+  await until(() => sentTo(7001, /Заявка №\d+ отправлена/).length);
+  // the master sees it with buttons and accepts right in Telegram
+  const card = await until(() => sentTo(7002, /Новая заявка/)[0]);
+  assert.match(card.text, /6 розеток/); assert.match(card.text, /\+998901112233/);
+  const acc = card.reply_markup.inline_keyboard[0][0].callback_data; assert.match(acc, /^mr:acc:\d+$/);
+  const rid = acc.split(":")[2];
+  press(7001, acc); // a stranger cannot accept
+  await until(() => tgSent.some(x => x.m === "answerCallbackQuery" && /не ваша/.test(x.text)));
+  press(7002, acc);
+  await until(() => sentTo(7001, /принял вашу заявку[\s\S]*\+998994440077/).length);
+  press(7002, `mr:done:${rid}`);
+  const rate = await until(() => sentTo(7001, /выполненной/)[0]);
+  assert.equal(rate.reply_markup.inline_keyboard[0][4].callback_data, `rv:${rid}:5`);
+  press(7001, `rv:${rid}:5`);
+  await until(() => sentTo(7001, /пару слов/).length);
+  send(7001, { text: "Пришёл вовремя, всё аккуратно" });
+  await until(() => sentTo(7002, /⭐⭐⭐⭐⭐[\s\S]*вовремя/).length);
+  const pubm = (await call("GET", `/api/masters/${mid}`)).data;
+  assert.equal(pubm.master.stars, 5); assert.equal(pubm.reviews[0].text, "Пришёл вовремя, всё аккуратно");
+  // pause hides the master from the public list
+  send(7002, { text: "⏸ Пауза для заявок" });
+  await until(() => sentTo(7002, /Пауза включена/).length);
+  assert.ok(!(await call("GET", "/api/masters?spec=elec")).data.masters.some(m => m.id === mid));
+  send(7002, { text: "▶️ Снова принимать заявки" });
+  await until(() => sentTo(7002, /снова принимаете/).length);
+  assert.ok((await call("GET", "/api/masters?spec=elec")).data.masters.some(m => m.id === mid));
+  // orders and bonuses for a signed-in chat; language switch
+  send(7001, { text: "/orders" });
+  await until(() => sentTo(7001, /Заказов пока нет/).length);
+  send(7001, { text: "/bonus" });
+  await until(() => sentTo(7001, /Ваш код для друзей/).length);
+  send(7001, { text: "🌐 O‘zbekcha" });
+  const uzm = await until(() => sentTo(7001, /Til: o‘zbekça/)[0]);
+  assert.ok(uzm.reply_markup.keyboard.flat().some(b => b.text === "🔎 Mahsulot qidiriş"));
+  send(7001, { text: "laminat" });
+  await until(() => sentTo(7001, /Topildi[\s\S]*Laminat/).length);
 });

@@ -15,6 +15,7 @@ import { createPush } from "./push.js";
 import { createNotify } from "./notify.js";
 import { newSecret, checkTotp, otpauthUrl } from "./totp.js";
 import { registerMasters } from "./masters.js";
+import { registerBot } from "./bot.js";
 import { createBonus } from "./bonus.js";
 import { registerStats } from "./stats.js";
 import { createChannel } from "./channel.js";
@@ -47,6 +48,7 @@ export function createApp(cfg, log = console) {
   const push = createPush(db, cfg.pushSubject, log);
   const notify = createNotify({ db, cfg, tg, push, sms, ref, log });
   const bonus = createBonus({ db, cfg, log });
+  let bot = { callback: async () => false };
   const channel = createChannel({ db, cfg, tg, log });
   const PCAT = new Map(db.all("SELECT id, cat FROM products").map(p => [p.id, p.cat]));
   const rateOf = cat => cfg.commission[cat] ?? cfg.commission["*"] ?? 0;
@@ -601,17 +603,8 @@ export function createApp(cfg, log = console) {
     return { ok: true };
   });
 
-  tg.on("start", async (chat, token, from) => {
-    const l = token && db.get("SELECT * FROM tg_links WHERE token=? AND expires_at>?", token, Date.now());
-    if (!l) return tg.send(chat, "Здравствуйте! Это бот Imorat. Чтобы получать заказы и статусы, нажмите «Подключить Telegram» в профиле или кабинете продавца на сайте.\n\nAssalomu alaykum! Buyurtmalarni olish uchun saytdagi profil yoki sotuvchi kabinetida «Telegramni ulash» tugmasini bosing.");
-    db.run("UPDATE users SET tg_chat=NULL WHERE tg_chat=?", String(chat));
-    db.run("UPDATE users SET tg_chat=? WHERE id=?", String(chat), l.user_id);
-    db.run("DELETE FROM tg_links WHERE token=?", token);
-    const u = db.get("SELECT * FROM users WHERE id=?", l.user_id);
-    const st = u.store_id && db.get("SELECT name FROM stores WHERE id=?", u.store_id);
-    tg.send(chat, st ? `✅ Telegram подключён к магазину <b>${st.name.replace(/[<>&]/g, "")}</b>. Новые заказы будут приходить сюда с кнопками «Принять» и «Нет в наличии».` : `✅ Telegram подключён, ${(u.name || "").replace(/[<>&]/g, "")}. Сюда будут приходить статусы ваших заказов.`);
-  });
   tg.on("callback", async q => {
+    if (await bot.callback(q)) return; // people's and masters' buttons
     const [act, idS] = String(q.data || "").split(":");
     const sh = db.get("SELECT * FROM shipments WHERE id=?", Number(idS));
     const st = sh && db.get("SELECT * FROM stores WHERE id=?", sh.store_id);
@@ -700,7 +693,8 @@ export function createApp(cfg, log = console) {
     return { ok: true };
   });
 
-  registerMasters({ r, db, cfg, ref, need, needAdmin, audit, lim, tg, push, sms, log });
+  const mastersApi = registerMasters({ r, db, cfg, ref, need, needAdmin, audit, lim, tg, push, sms, log });
+  bot = registerBot({ db, cfg, ref, tg, bonus, masters: mastersApi, log });
   bonus.routes(r, need, lim);
   registerStats({ r, db, lim, needSeller });
   channel.routes(r, needAdmin);

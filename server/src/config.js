@@ -61,7 +61,7 @@ export function loadConfig(env = process.env) {
     adminMfa: env.ADMIN_MFA !== "0",
     backupDir: env.BACKUP_DIR || "",
     smsSellerTemplate: env.SMS_SELLER_TEMPLATE || "Imorat: yangi buyurtma {num}. Iltimos, qabul qiling.",
-    channel: { chat: env.TELEGRAM_CHANNEL || "", hour: Number(env.CHANNEL_HOUR ?? 10), dropPct: Number(env.CHANNEL_DROP_PCT ?? 0.05) },
+    channel: { chat: env.TELEGRAM_CHANNEL ?? "@imoratgo", hour: Number(env.CHANNEL_HOUR ?? 10), dropPct: Number(env.CHANNEL_DROP_PCT ?? 0.05) },
     // Mobile operators in Uzbekistan put many phones behind one IP (CGNAT), so per-IP limits are generous;
     // the real protection is per phone number (5 codes an hour) and per account.
     otpPerIpHour: Number(env.OTP_PER_IP_HOUR || 150),

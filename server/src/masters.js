@@ -14,13 +14,56 @@ export function registerMasters({ r, db, cfg, ref, need, needAdmin, audit, lim, 
   const stats = () => Object.fromEntries(db.all(`SELECT master_id, AVG(stars) a, COUNT(stars) n, SUM(status='done') done FROM master_requests GROUP BY master_id`)
     .map(x => [x.master_id, { stars: x.n ? Math.round(x.a * 10) / 10 : null, reviews: x.n || 0, done: x.done || 0 }]));
   const pub = (m, st = {}) => ({ id: m.id, name: m.name, specs: JSON.parse(m.specs), districts: JSON.parse(m.districts), exp: m.exp, price: m.price, price_unit: m.price_unit, about: m.about,
-    status: m.status, note: m.note, created: m.created_at, stars: st.stars ?? null, reviews: st.reviews || 0, done: st.done || 0 });
+    status: m.status, note: m.note, created: m.created_at, busy: !!m.busy, stars: st.stars ?? null, reviews: st.reviews || 0, done: st.done || 0 });
   const mine = u => db.get("SELECT * FROM masters WHERE user_id=?", u.id);
   const firstName = n => String(n || "").split(" ")[0];
+  const digits = v => String(v || "").replace(/\D/g, "");
+  const lang = u => (u?.lang === "uz" ? "uz" : "ru");
+  const T = (u, ru, uz) => (lang(u) === "uz" ? uz : ru);
+  /* the master's message about a request, with buttons that work right inside Telegram */
+  function masterCard(q) {
+    const dn = ref.districts.find(d => d.id === q.district);
+    const st = { new: "🆕 Новая заявка · Yangi ariza", accepted: "✅ Вы приняли · Qabul qildingiz", declined: "❌ Отказались · Rad etildi", done: "🏁 Выполнено · Bajarildi", cancelled: "🚫 Клиент отменил · Mijoz bekor qildi" }[q.status] || q.status;
+    const text = `🧰 <b>${st}</b> · №${q.id}\n\n${h(q.text)}\n\n🕒 ${h(q.when_txt)}${dn ? `\n📍 ${h(dn.ru)} р-н${q.street ? ", " + h(q.street) : ""}` : ""}\n👤 ${h(q.name || "")}${["new", "accepted", "done"].includes(q.status) ? `, +${h(digits(q.phone))}` : ""}${q.stars ? `\n${"⭐".repeat(q.stars)}${q.review ? " «" + h(q.review) + "»" : ""}` : ""}`;
+    const buttons = q.status === "new" ? [[{ text: "✅ Принять · Qabul qilish", callback_data: `mr:acc:${q.id}` }], [{ text: "❌ Не смогу · Ololmayman", callback_data: `mr:dec:${q.id}` }]]
+      : q.status === "accepted" ? [[{ text: "🏁 Работа выполнена · Ish bajarildi", callback_data: `mr:done:${q.id}` }]] : [];
+    return { text, buttons };
+  }
+  function createRequest(u, m, { text, when, district, street }) {
+    const now = Date.now();
+    const id = Number(db.run("INSERT INTO master_requests(master_id,user_id,text,when_txt,district,street,phone,name,status,created_at,status_at) VALUES(?,?,?,?,?,?,?,?,'new',?,?)",
+      m.id, u.id, text, when, district, street, u.phone, u.name || "", now, now).lastInsertRowid);
+    const owner = db.get("SELECT * FROM users WHERE id=?", m.user_id);
+    if (owner?.tg_chat) { const c = masterCard(db.get("SELECT * FROM master_requests WHERE id=?", id)); safe(tg.send(owner.tg_chat, c.text + "\n\nПримите заявку — клиент увидит ваш номер. · Qabul qiling — mijoz raqamingizni ko‘radi.", c.buttons)); }
+    if (owner) safe(push.toUser(owner.id, { title: "Новая заявка мастеру", body: text.slice(0, 120), url: `${cfg.siteUrl}#masters`, tag: "mreq-" + id }));
+    if (m.phone && cfg.smsMasterTemplate) safe(sms.sendText(m.phone, cfg.smsMasterTemplate));
+    return id;
+  }
+  /* status change by the master (accepted / declined / done) or the buyer (cancelled); the other side is told */
+  function moveRequest(q, role, status) {
+    db.run("UPDATE master_requests SET status=?, status_at=? WHERE id=?", status, Date.now(), q.id);
+    if (role === "master") {
+      const buyer = db.get("SELECT * FROM users WHERE id=?", q.user_id);
+      const text = status === "accepted" ? T(buyer, `✅ Мастер ${q.mname} принял вашу заявку. Телефон мастера: +${digits(q.mphone)}`, `✅ Usta ${q.mname} arizangizni qabul qildi. Usta telefoni: +${digits(q.mphone)}`)
+        : status === "declined" ? T(buyer, `Мастер ${q.mname} не сможет взяться за заявку. Выберите другого мастера — /masters`, `Usta ${q.mname} bu ishni ololmaydi. Boshqa ustani tanlang — /masters`)
+        : T(buyer, `🏁 Мастер ${q.mname} отметил работу выполненной. Как всё прошло? Оценка поможет другим людям.`, `🏁 Usta ${q.mname} ishni bajarilgan deb belgiladi. Qanday o‘tdi? Bahoyingiz boshqalarga yordam beradi.`);
+      const rate = status === "done" ? [[1, 2, 3, 4, 5].map(n => ({ text: `${n} ⭐`, callback_data: `rv:${q.id}:${n}` }))] : null;
+      if (buyer?.tg_chat) safe(tg.send(buyer.tg_chat, h(text), rate));
+      if (buyer) safe(push.toUser(buyer.id, { title: "Imorat · мастер", body: text, url: `${cfg.siteUrl}#masters`, tag: "mreq-" + q.id }));
+    } else {
+      const owner = db.get("SELECT tg_chat FROM users WHERE id=?", q.muid);
+      if (owner?.tg_chat) safe(tg.send(owner.tg_chat, `🚫 Клиент отменил заявку №${q.id} · Mijoz arizani bekor qildi`));
+    }
+  }
+  function reviewed(id) {
+    const q = db.get("SELECT q.*, m.user_id muid FROM master_requests q JOIN masters m ON m.id=q.master_id WHERE q.id=?", id);
+    const owner = q && db.get("SELECT tg_chat FROM users WHERE id=?", q.muid);
+    if (owner?.tg_chat) safe(tg.send(owner.tg_chat, `${"⭐".repeat(q.stars)} Новая оценка по заявке №${q.id} · Yangi baho${q.review ? `\n«${h(q.review)}»` : ""}`));
+  }
 
   r.get("/api/masters", (req, res, p, url) => {
     const st = stats(), spec = url.searchParams.get("spec"), district = url.searchParams.get("district");
-    let list = db.all("SELECT * FROM masters WHERE status='active' ORDER BY created_at DESC").map(m => pub(m, st[m.id]));
+    let list = db.all("SELECT * FROM masters WHERE status='active' AND busy=0 ORDER BY created_at DESC").map(m => pub(m, st[m.id]));
     if (spec) list = list.filter(m => m.specs.includes(spec));
     if (district) list = list.filter(m => m.districts.includes(district));
     return { masters: list.map(({ note, status, ...m }) => m) };
@@ -69,14 +112,7 @@ export function registerMasters({ r, db, cfg, ref, need, needAdmin, audit, lim, 
     const text = str(b.text, 1000), when = str(b.when, 80) || "как можно скорее", district = D.has(b.district) ? b.district : null, street = str(b.street, 200);
     if (text.length < 5) throw bad("bad_text", "Describe the job in a few words");
     if (!u.phone) throw bad("phone_required", "Add a phone number so the master can call you");
-    const now = Date.now();
-    const id = Number(db.run("INSERT INTO master_requests(master_id,user_id,text,when_txt,district,street,phone,name,status,created_at,status_at) VALUES(?,?,?,?,?,?,?,?,'new',?,?)",
-      m.id, u.id, text, when, district, street, u.phone, u.name || "", now, now).lastInsertRowid);
-    const owner = db.get("SELECT * FROM users WHERE id=?", m.user_id);
-    const dn = ref.districts.find(d => d.id === district)?.ru;
-    if (owner?.tg_chat) safe(tg.send(owner.tg_chat, `🧰 <b>Новая заявка на Imorat</b>\n\n${h(text)}\n\nКогда: ${h(when)}${dn ? `\nГде: ${h(dn)} р-н${street ? ", " + h(street) : ""}` : ""}\nКлиент: ${h(u.name || "")}, +${h(String(u.phone).replace(/\D/g, ""))}\n\nПримите заявку на сайте, чтобы клиент увидел ваш номер.`));
-    if (owner) safe(push.toUser(owner.id, { title: "Новая заявка мастеру", body: text.slice(0, 120), url: `${cfg.siteUrl}#masters`, tag: "mreq-" + id }));
-    if (m.phone && cfg.smsMasterTemplate) safe(sms.sendText(m.phone, cfg.smsMasterTemplate));
+    const id = createRequest(u, m, { text, when, district, street });
     return { request: { id, status: "new" } };
   });
   r.get("/api/me/master-requests", req => {
@@ -91,13 +127,7 @@ export function registerMasters({ r, db, cfg, ref, need, needAdmin, audit, lim, 
     const role = q.muid === u.id ? "master" : q.user_id === u.id ? "buyer" : null;
     if (!role) throw new HttpError(403, "forbidden", "Not your request");
     if (!(REQ_MOVES[role][q.status] || []).includes(b.status)) throw new HttpError(409, "bad_move", `Cannot change status from ${q.status} to ${b.status}`);
-    db.run("UPDATE master_requests SET status=?, status_at=? WHERE id=?", b.status, Date.now(), q.id);
-    if (role === "master") {
-      const buyer = db.get("SELECT * FROM users WHERE id=?", q.user_id);
-      const text = b.status === "accepted" ? `Мастер ${q.mname} принял вашу заявку. Телефон мастера: +${String(q.mphone || "").replace(/\D/g, "")}` : b.status === "declined" ? `Мастер ${q.mname} не сможет взяться за заявку. Выберите другого мастера на Imorat.` : `Мастер ${q.mname} отметил работу выполненной. Оцените мастера на сайте — это поможет другим.`;
-      if (buyer?.tg_chat) safe(tg.send(buyer.tg_chat, h(text)));
-      if (buyer) safe(push.toUser(buyer.id, { title: "Imorat · мастер", body: text, url: `${cfg.siteUrl}#masters`, tag: "mreq-" + q.id }));
-    }
+    moveRequest(q, role, b.status);
     return { request: { id: q.id, status: b.status } };
   });
   r.post("/api/masters/requests/:id/review", async (req, res, p) => {
@@ -108,6 +138,7 @@ export function registerMasters({ r, db, cfg, ref, need, needAdmin, audit, lim, 
     if (q.stars) throw new HttpError(409, "already_reviewed", "You have already reviewed this job");
     const stars = int(b.stars, 1, 5); if (!stars) throw bad("bad_stars", "Stars from 1 to 5");
     db.run("UPDATE master_requests SET stars=?, review=? WHERE id=?", stars, str(b.text, 1000), q.id);
+    reviewed(q.id);
     return { ok: true };
   });
   r.get("/api/admin/masters", req => {
@@ -124,4 +155,5 @@ export function registerMasters({ r, db, cfg, ref, need, needAdmin, audit, lim, 
     if (ow?.tg_chat) safe(tg.send(ow.tg_chat, b.status === "active" ? `🎉 Ваша анкета мастера одобрена — клиенты видят её в разделе «Мастера» на Imorat.` : `Статус анкеты мастера: ${b.status}.${b.note ? " " + h(str(b.note, 300)) : ""}`));
     return { master: pub(db.get("SELECT * FROM masters WHERE id=?", m.id)) };
   });
+  return { createRequest, moveRequest, reviewed, masterCard, REQ_MOVES, stats, pub };
 }

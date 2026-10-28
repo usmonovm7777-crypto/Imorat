@@ -5032,6 +5032,13 @@ const BONUS = { rate: .01, ratePro: .02, maxShare: .2, referral: 30000, welcome:
 let bonusApi = null; // GET /api/me/bonus
 let bonusDemo = LS.get("imorat.bonus", null);
 { const rc = (location.search.match(/[?&]ref=([A-Za-z0-9]{4,12})\b/) || [])[1]; if (rc) LS.set("imorat.refPending", rc.toUpperCase()); }
+{ // links from the Telegram bot: ?q=<search> opens the results, ?ai=<question> asks Usta AI
+  const sp = new URLSearchParams(location.search), q0 = (sp.get("q") || "").trim().slice(0, 120), ai0 = (sp.get("ai") || "").trim().slice(0, 500);
+  if (q0 || ai0) setTimeout(() => {
+    if (q0) { f.q = q0; f.photo = null; route = { view: "catalog", cat: null }; history.replaceState(null, "", location.pathname + "#catalog"); renderMain(); const qi = $("#q"); if (qi) qi.value = q0; saveRecentQ(q0); }
+    else { history.replaceState(null, "", location.pathname + location.hash); openAI(ai0); }
+  }, 300);
+}
 function bonusDemoState() {
   if (!bonusDemo) { const A = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; bonusDemo = { points: 0, code: "IM" + Array.from({ length: 5 }, () => A[Math.floor(Math.random() * A.length)]).join(""), refBy: null, log: [], orders: 0 }; LS.set("imorat.bonus", bonusDemo); }
   return bonusDemo;
