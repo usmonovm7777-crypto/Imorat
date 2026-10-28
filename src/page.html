@@ -182,7 +182,18 @@ a { color: inherit; }
 .rail-nav button:hover { color: var(--ink); background: var(--raised); }
 .rail-nav button.hl { color: var(--signal); font-weight: 600; }
 .rail-nav button.ai-l { color: var(--accent); font-weight: 600; }
-@media (max-width: 1080px) { .where { display: none; } }
+@media (max-width: 1180px) { .where { display: none; } }
+/* narrow desktop windows and tablets: icons instead of labels so the search box keeps room */
+.search input { min-width: 0; }
+@media (max-width: 1240px) and (min-width: 761px) { .search .ask .t { display: none; } .search input { padding-right: 124px; } }
+@media (max-width: 1080px) and (min-width: 761px) {
+  .hdr-row { gap: 8px; }
+  .cat-btn, .cart-btn { padding: 10px 11px; font-size: 0; gap: 0; }
+  .cat-btn svg, .cart-btn svg { width: 20px; height: 20px; }
+  .cart-btn .dot { font-size: 11px; margin-left: 4px; }
+  .hdr-row .fx-btn { display: none; }
+  .search { min-width: 180px; }
+}
 @media (max-width: 760px) {
   :root { --nav-h: calc(64px + env(safe-area-inset-bottom, 0px)); }
   .hdr-row { flex-wrap: wrap; gap: 10px; padding-block: 10px; }
