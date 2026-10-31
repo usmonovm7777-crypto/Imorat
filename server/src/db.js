@@ -66,7 +66,7 @@ CREATE INDEX IF NOT EXISTS ship_order ON shipments(order_id);
 CREATE INDEX IF NOT EXISTS offers_store ON offers(store_id);
 `;
 
-export function openDb(path, catalogPath) {
+export function openDb(path, catalogPath, opts = {}) {
   if (path !== ":memory:") mkdirSync(dirname(path), { recursive: true });
   const raw = new DatabaseSync(path);
   raw.exec("PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA busy_timeout=5000;");
@@ -98,14 +98,16 @@ export function openDb(path, catalogPath) {
     setMeta: (k, v) => db.run("INSERT INTO meta(k,v) VALUES(?,?) ON CONFLICT(k) DO UPDATE SET v=excluded.v", k, String(v))
   };
   const ref = JSON.parse(readFileSync(catalogPath, "utf8"));
-  if (!db.meta("seeded")) seed(db, ref);
-  else addNewProducts(db, ref);
+  const demo = opts.demoStores !== false;
+  if (!db.meta("seeded")) seed(db, ref, demo);
+  else addNewProducts(db, ref, demo);
+  if (!demo) dropDemoStores(db, ref);
   db.ref = ref;
   return db;
 }
 
 /* Later releases add products to catalog.json: insert the ones the database does not have yet */
-function addNewProducts(db, ref) {
+function addNewProducts(db, ref, demo = true) {
   const have = new Set(db.all("SELECT id FROM products").map(r => r.id)), now = Date.now();
   const fresh = ref.products.filter(p => !have.has(p.id));
   if (!fresh.length) return;
@@ -113,18 +115,18 @@ function addNewProducts(db, ref) {
     for (const p of fresh) {
       db.run(`INSERT INTO products(id,cat,sub,icon,ru,uz,unit,kg,img,grp,hit,is_new,key,rating,reviews,country,warranty,active,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1,?)`,
         p.id, p.cat, p.sub, p.icon, p.ru, p.uz, p.unit, p.kg, p.img, p.group, p.hit, p.isNew, p.key, p.rating, p.reviews, JSON.stringify(p.country), p.warranty, now);
-      for (const o of p.offers) if (db.get("SELECT 1 FROM stores WHERE id=?", o.store)) db.run("INSERT OR IGNORE INTO offers(product_id,store_id,price,stock,updated_at) VALUES(?,?,?,?,?)", p.id, o.store, o.price, o.stock, now);
+      if (demo) for (const o of p.offers) if (db.get("SELECT 1 FROM stores WHERE id=?", o.store)) db.run("INSERT OR IGNORE INTO offers(product_id,store_id,price,stock,updated_at) VALUES(?,?,?,?,?)", p.id, o.store, o.price, o.stock, now);
     }
     db.setMeta("catalog_rev", now);
   });
 }
 
 /* First start: load stores, products and offers from data/catalog.json (exported from the website). */
-function seed(db, ref) {
+function seed(db, ref, demo = true) {
   const D = Object.fromEntries(ref.districts.map(d => [d.id, d]));
   const now = Date.now();
   db.tx(() => {
-    for (const s of ref.stores) {
+    if (demo) for (const s of ref.stores) {
       db.run("INSERT OR IGNORE INTO stores(id,name,district,addr,addr_uz,hours,ru,uz,la,lo,status,created_at) VALUES(?,?,?,?,?,?,?,?,?,?, 'active', ?)",
         s.id, s.name, s.d, s.addr, s.addrUz, s.hours, s.ru, s.uz, D[s.d]?.la, D[s.d]?.lo, now);
     }
@@ -132,9 +134,20 @@ function seed(db, ref) {
       db.run(`INSERT OR IGNORE INTO products(id,cat,sub,icon,ru,uz,unit,kg,img,grp,hit,is_new,key,rating,reviews,country,warranty,active,created_at)
               VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1,?)`,
         p.id, p.cat, p.sub, p.icon, p.ru, p.uz, p.unit, p.kg, p.img, p.group, p.hit, p.isNew, p.key, p.rating, p.reviews, JSON.stringify(p.country), p.warranty, now);
-      for (const o of p.offers) db.run("INSERT OR IGNORE INTO offers(product_id,store_id,price,stock,updated_at) VALUES(?,?,?,?,?)", p.id, o.store, o.price, o.stock, now);
+      if (demo) for (const o of p.offers) db.run("INSERT OR IGNORE INTO offers(product_id,store_id,price,stock,updated_at) VALUES(?,?,?,?,?)", p.id, o.store, o.price, o.stock, now);
     }
     db.setMeta("seeded", now);
     db.setMeta("catalog_rev", now);
+  });
+}
+
+/* Real site (DEMO_STORES=0): the sample stores from catalog.json go away together with their prices.
+   A sample store that a real owner has claimed (owner_id set) is kept — it is a real store now. */
+function dropDemoStores(db, ref) {
+  const ids = ref.stores.map(s => s.id).filter(id => db.get("SELECT 1 FROM stores WHERE id=? AND owner_id IS NULL", id));
+  if (!ids.length) return;
+  db.tx(() => {
+    for (const id of ids) { db.run("DELETE FROM offers WHERE store_id=?", id); db.run("DELETE FROM stores WHERE id=?", id); }
+    db.setMeta("catalog_rev", Date.now());
   });
 }

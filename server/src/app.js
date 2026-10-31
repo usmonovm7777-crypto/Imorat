@@ -35,7 +35,7 @@ const SESSION_TTL = 60 * 86400;
 const MIME = { ".webp": "image/webp", ".jpg": "image/jpeg", ".png": "image/png" };
 
 export function createApp(cfg, log = console) {
-  const db = openDb(cfg.dbPath, cfg.catalogPath);
+  const db = openDb(cfg.dbPath, cfg.catalogPath, { demoStores: cfg.demoStores });
   const ref = db.ref;
   const sms = createSms(cfg.sms, log);
   const lim = new Limiter();
@@ -122,8 +122,8 @@ export function createApp(cfg, log = console) {
   r.get("/api/config", () => ({
     sms: sms.mode, google_client_id: cfg.google.clientId || null, apple_client_id: cfg.apple.clientId || null,
     apple_redirect_uri: cfg.apple.redirectUri || null, ai: !!cfg.ai.key, yandex: !!cfg.yandex.token, vip_free: cfg.vipFree,
-    payments: cfg.paymentsOnline, telegram_bot: tg.enabled ? tg.username || null : null, push_key: push.publicKey,
-    timers: cfg.timers, commission: cfg.commission
+    payments: cfg.paymentsOnline, telegram_bot: tg.enabled ? tg.username || null : null, telegram_channel: /^@/.test(cfg.channel?.chat || "") ? cfg.channel.chat : null, push_key: push.publicKey,
+    timers: cfg.timers, commission: cfg.commission, demo: cfg.demoStores
   }));
 
   /* ---------- auth ---------- */
