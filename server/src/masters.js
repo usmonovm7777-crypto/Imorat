@@ -4,8 +4,8 @@ import { escHtml as h } from "./telegram.js";
 /* Masters (tilers, electricians, plumbers…): public profiles approved by a moderator,
    requests from buyers, and reviews after the job is done. The master's phone is shown to the
    buyer only after the master accepts the request; the buyer's phone goes to the master with the request. */
-export const SPECS = ["tile", "elec", "plumb", "paint", "floor", "drywall", "weld", "roof", "furn", "ac", "door"];
-export const PRICE_UNITS = ["job", "m2", "hour", "day", "pt"];
+export const SPECS = ["tile", "elec", "plumb", "paint", "floor", "drywall", "weld", "roof", "furn", "ac", "door", "mason", "concrete", "demol", "labor", "excav", "tractor", "crane", "truck", "mixer"];
+export const PRICE_UNITS = ["job", "m2", "hour", "day", "pt", "shift", "trip", "m3"];
 const REQ_MOVES = { master: { new: ["accepted", "declined"], accepted: ["done"] }, buyer: { new: ["cancelled"], accepted: ["cancelled"] } };
 
 export function registerMasters({ r, db, cfg, ref, need, needAdmin, audit, lim, tg, push, sms, log }) {
