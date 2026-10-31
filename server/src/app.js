@@ -378,11 +378,14 @@ export function createApp(cfg, log = console) {
     db.run("UPDATE orders SET status=? WHERE id=?", st, s.order_id);
     if (status === "delivered" || status === "picked") bonus.shipDone({ ...s, status });
     if (st === "cancelled") bonus.orderCancelled(s.order_id);
+    else if (status === "cancelled") bonus.shipCancelled(s); // the rest of the order goes on: this part's points come back
     // a card-paid shipment the store failed (or the buyer cancelled in time): the money must go back — flagged for the admin until refunds are automated
     if (status === "cancelled" && reason !== "refund") {
       const o = db.get("SELECT * FROM orders WHERE id=?", s.order_id);
       if (o && o.pay_status === "paid" && !["store", "cash"].includes(o.pay)) {
-        const part = JSON.parse(s.lines).reduce((a, l) => a + l.price * l.q, 0) + (s.price || 0);
+        // the buyer paid for this part its goods minus its share of the promo discount and of the points, plus its delivery
+        const goods = JSON.parse(s.lines).reduce((a, l) => a + l.price * l.q, 0), share = o.goods ? goods / o.goods : 1;
+        const part = Math.max(0, Math.round(goods - (o.promo_disc || 0) * share - (o.points_used || 0) * share + (s.price || 0)));
         db.run("UPDATE orders SET pay_status='refund_due' WHERE id=?", o.id);
         notify.admins(`💳 Возврат по заказу ${o.num}: ${part.toLocaleString("ru-RU")} сум (${o.pay}) — отправление отменено (${reason || "—"}). Сделайте возврат в кабинете ${o.pay === "payme" ? "Payme" : "Click"}.`);
       }
@@ -505,7 +508,7 @@ export function createApp(cfg, log = console) {
     const { s } = needSeller(req), b = await readJson(req);
     const pid = int(b.product_id, 1, 1e9), price = int(b.price, 100, 1e8), stock = int(b.stock ?? 0, 0, 1e7);
     if (!pid || !price || stock === null) throw bad("bad_offer", "product_id, price and stock are required");
-    if (!db.get("SELECT 1 FROM products WHERE id=? AND active=1", pid)) throw new HttpError(404, "not_found", "Product not found");
+    if (!db.get("SELECT 1 FROM products WHERE id=? AND active=1 AND (store_id IS NULL OR store_id=?)", pid, s.id)) throw new HttpError(404, "not_found", "Product not found"); // catalog products or the store's own
     db.run("INSERT INTO offers(product_id,store_id,price,stock,updated_at) VALUES(?,?,?,?,?) ON CONFLICT(product_id,store_id) DO UPDATE SET price=excluded.price, stock=excluded.stock, updated_at=excluded.updated_at", pid, s.id, price, stock, Date.now());
     bumpCatalog();
     return { offer: { product_id: pid, store: s.id, price, stock } };
@@ -514,11 +517,12 @@ export function createApp(cfg, log = console) {
     // Price list import: many offers at once (matched in the browser) and new own products
     const { s } = needSeller(req), b = await readJson(req, 1024 * 1024);
     lim.hit("import:" + s.id, 20, 86400_000);
-    const rows = Array.isArray(b.offers) ? b.offers.slice(0, 2000) : [], create = Array.isArray(b.create) ? b.create.slice(0, 300) : [];
+    const isObj = x => x && typeof x === "object";
+    const rows = Array.isArray(b.offers) ? b.offers.filter(isObj).slice(0, 2000) : [], create = Array.isArray(b.create) ? b.create.filter(isObj).slice(0, 300) : [];
     if (create.length) lim.hit("prod-new:" + s.id, 500, 86400_000, create.length);
     const bad1 = [];
     const ok = rows.map((x, i) => ({ i, pid: int(x.product_id, 1, 1e9), price: int(x.price, 100, 1e8), stock: x.stock === undefined || x.stock === null || x.stock === "" ? null : int(x.stock, 0, 1e7) }))
-      .filter(x => { const good = x.pid && x.price && db.get("SELECT 1 FROM products WHERE id=? AND active=1", x.pid); if (!good) bad1.push(x.i); return good; });
+      .filter(x => { const good = x.pid && x.price && db.get("SELECT 1 FROM products WHERE id=? AND active=1 AND (store_id IS NULL OR store_id=?)", x.pid, s.id); if (!good) bad1.push(x.i); return good; }); // another store's own product cannot be listed
     const mk = create.map((x, i) => {
       const ru = str(x.ru, 140), c = ref.cats.find(k => k.id === x.cat), price = int(x.price, 100, 1e8), kg = Number(x.kg) > 0 && Number(x.kg) <= 5000 ? Number(x.kg) : 1;
       return ru.length >= 3 && c && c.subs.some(k => k[0] === x.sub) && price ? { ru, uz: str(x.uz, 140) || ru, c, sub: x.sub, unit: subUnit(c.id, x.sub, x.unit), price, kg, stock: int(x.stock ?? 0, 0, 1e7) ?? 0 } : (bad1.push("n" + i), null);
@@ -723,15 +727,17 @@ export function createApp(cfg, log = console) {
     needAdmin(req); const b = await readJson(req);
     const s = db.get("SELECT * FROM stores WHERE id=?", p.id); if (!s) throw new HttpError(404, "not_found", "Store not found");
     if (b.status && !["active", "pending", "rejected", "blocked"].includes(b.status)) throw bad("bad_status", "Unknown status");
+    // validate everything before the first write, so a bad owner phone does not leave a half-applied change
+    const newOwner = b.owner_phone ? db.get("SELECT * FROM users WHERE phone=?", parsePhone(b.owner_phone)) : null;
+    if (b.owner_phone && !newOwner) throw new HttpError(404, "user_not_found", "The owner must sign in once first");
     db.run("UPDATE stores SET status=COALESCE(?,status), review_note=COALESCE(?,review_note), verified=COALESCE(?,verified) WHERE id=?", b.status || null, b.note != null ? str(b.note, 300) : null, b.verified == null ? null : b.verified ? 1 : 0, s.id);
     audit(req, "store." + (b.status || "edit"), s.id, { note: str(b.note, 300), owner_phone: str(b.owner_phone, 20) });
     if (b.status === "active" && s.status !== "active") channel.storeApproved(s).catch(e => log.warn("[channel]", e.message));
     if (b.status && s.owner_id) { const ow = db.get("SELECT tg_chat FROM users WHERE id=?", s.owner_id); if (ow?.tg_chat) tg.send(ow.tg_chat, b.status === "active" ? `🎉 Магазин «${s.name.replace(/[<>&]/g, "")}» одобрен и виден покупателям на Imorat Go.` : `Статус магазина «${s.name.replace(/[<>&]/g, "")}»: ${b.status}.${b.note ? " " + str(b.note, 300).replace(/[<>&]/g, "") : ""}`); }
-    if (b.owner_phone) {
-      const ph = parsePhone(b.owner_phone), ou = db.get("SELECT * FROM users WHERE phone=?", ph);
-      if (!ou) throw new HttpError(404, "user_not_found", "The owner must sign in once first");
-      db.run("UPDATE stores SET owner_id=? WHERE id=?", ou.id, s.id); db.run("UPDATE users SET role='seller', store_id=? WHERE id=?", s.id, ou.id);
-      db.run("UPDATE users SET store_id=NULL, role='buyer' WHERE store_id=? AND id<>?", s.id, ou.id);
+    if (newOwner) {
+      const ou = newOwner;
+      db.tx(() => { db.run("UPDATE stores SET owner_id=? WHERE id=?", ou.id, s.id); db.run("UPDATE users SET role='seller', store_id=? WHERE id=?", s.id, ou.id);
+        db.run("UPDATE users SET store_id=NULL, role='buyer' WHERE store_id=? AND id<>?", s.id, ou.id); });
     }
     bumpCatalog();
     return { store: publicStore(db.get("SELECT * FROM stores WHERE id=?", s.id)) };
@@ -742,7 +748,19 @@ export function createApp(cfg, log = console) {
     const steps = STEPS[sh.tariff ? "yandex" : "pickup"];
     if (!steps.includes(b.status) && b.status !== "cancelled") throw bad("bad_status", "Unknown status");
     if (b.courier) db.run("UPDATE shipments SET courier=? WHERE id=?", str(b.courier, 80), sh.id);
-    setShipStatus(sh, b.status, b.status === "cancelled" ? "admin" : null);
+    if (b.status === sh.status) return { ok: true };
+    // the admin can move a shipment forward or cancel it, but not revive a cancelled one, hand over an unpaid one, or undo a handover
+    if (sh.status === "cancelled") throw bad("already_cancelled", "This shipment is cancelled");
+    if (["delivered", "picked"].includes(sh.status)) throw bad("already_done", "This shipment has been handed over");
+    const o = db.get("SELECT * FROM orders WHERE id=?", sh.order_id);
+    if (sh.status === "unpaid" && b.status !== "cancelled") throw bad("unpaid", "The order has not been paid yet — mark the payment first");
+    if (["delivered", "picked"].includes(b.status) && !["store", "cash"].includes(o?.pay) && !["paid", "refund_due", "refunded"].includes(o?.pay_status)) throw bad("unpaid", "The order has not been paid yet");
+    if (b.status !== "cancelled" && steps.indexOf(b.status) < steps.indexOf(sh.status)) throw bad("backwards", "A shipment cannot go back to an earlier step");
+    db.tx(() => {
+      if (b.status === "cancelled") for (const l of JSON.parse(sh.lines)) db.run("UPDATE offers SET stock=stock+? WHERE product_id=? AND store_id=?", l.q, l.id, sh.store_id);
+      setShipStatus(sh, b.status, b.status === "cancelled" ? "admin" : null);
+    });
+    if (b.status === "cancelled") bumpCatalog();
     audit(req, "admin.ship." + b.status, sh.id);
     return { ok: true };
   });
@@ -790,7 +808,7 @@ export function createApp(cfg, log = console) {
       if (!res.headersSent && out !== undefined) send(res, 200, out);
     } catch (e) {
       const status = e instanceof HttpError ? e.status : 500;
-      if (status === 500) { log.error("[error]", req.method, url.pathname, e); if (Date.now() - (server.lastAlert || 0) > 600000) { server.lastAlert = Date.now(); notify.admins(`⚠️ Ошибка сервера: ${req.method} ${url.pathname}\n${String(e.message).slice(0, 200).replace(/[<>&]/g, "")}`); } }
+      if (status === 500) { log.error("[error]", req.method, url.pathname, e); if (Date.now() - (server.lastAlert || 0) > 600000) { server.lastAlert = Date.now(); notify.admins(`⚠️ Ошибка сервера: ${req.method} ${url.pathname}\n${String(e?.message ?? e).slice(0, 200).replace(/[<>&]/g, "")}`); } }
       if (!res.headersSent) send(res, status, { error: e instanceof HttpError ? e.code : "server_error", message: e instanceof HttpError ? e.message : "Something went wrong", ...(e.extra || {}) });
       else res.end();
     } finally {

@@ -812,3 +812,75 @@ test("Finance with card payments: money held once, a partner's share survives an
   await advance(sellerA, o3.num, ["assembling"]); app.sweep(Date.now() + 31 * 60000);
   assert.equal((await call("GET", `/api/orders/${o3.num}`, null, buyer)).data.order.status, "active", "a paid order is not expired by the payment sweep");
 });
+
+test("Guard rails: admin shipment moves, partial cancellation refunds points, competitor products, paused masters, disputes, odd JSON", async () => {
+  const seller = (await login("998880066")).data.token, rival = (await login("998880077")).data.token;
+  const mk = async (tok, name) => { const r = await call("POST", "/api/seller/store", { name, descr: "Магазин для проверки ограничений сервера", cats: ["build"], phone: "712004477", addr: "ул. Проверочная, 2", hours: "00:00–00:00", district: "chil" }, tok); assert.equal(r.status, 200, JSON.stringify(r.data)); await call("PATCH", `/api/admin/stores/${r.data.store.id}`, { status: "active" }, globalThis.ADMIN); return r.data.store.id; };
+  const A = await mk(seller, "Guard A"), B = await mk(rival, "Guard B");
+  await call("POST", "/api/seller/offers", { product_id: 1, price: 100000, stock: 50 }, seller);
+  await call("POST", "/api/seller/offers", { product_id: 2, price: 100000, stock: 50 }, rival);
+  const buyer = (await login("998880088")).data.token;
+  const rpc = (method, params) => fetch(base + "/api/pay/payme", { method: "POST", headers: { "content-type": "application/json", authorization: "Basic " + Buffer.from("Paycom:PAYME_SECRET").toString("base64") }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }) }).then(r => r.json());
+  const pay = async (o, id) => { await rpc("CreateTransaction", { id, time: Date.now(), amount: o.total * 100, account: { order: o.num } }); const r = await rpc("PerformTransaction", { id }); assert.equal(r.result?.state, 2, JSON.stringify(r)); };
+  const stock = async (sid, pid = 1) => (await call("GET", "/api/catalog")).data.products.find(p => p.id === pid).offers.find(x => x.store === sid).stock;
+  const form = { name: "Страж", phone: "998998880088", mode: "pickup", pay: "payme" };
+  // 1) admin cannot hand over an unpaid shipment, cancelling it returns the stock, a cancelled one stays cancelled
+  const o1 = (await call("POST", "/api/orders", { lines: [{ id: 1, store: A, q: 3 }], form }, buyer)).data.order;
+  const s1 = o1.ships[0].id; assert.equal(await stock(A), 47);
+  assert.equal((await call("PATCH", `/api/admin/shipments/${s1}`, { status: "picked" }, globalThis.ADMIN)).data.error, "unpaid");
+  assert.equal((await call("PATCH", `/api/admin/shipments/${s1}`, { status: "cancelled" }, globalThis.ADMIN)).status, 200);
+  assert.equal(await stock(A), 50, "stock comes back when the admin cancels");
+  assert.equal((await call("PATCH", `/api/admin/shipments/${s1}`, { status: "picked" }, globalThis.ADMIN)).data.error, "already_cancelled");
+  assert.equal((await call("PATCH", `/api/admin/shipments/${s1}`, { status: "cancelled" }, globalThis.ADMIN)).status, 200, "repeating the same status is a no-op");
+  assert.equal(await stock(A), 50, "stock is not returned twice");
+  assert.equal((await call("GET", `/api/orders/${o1.num}`, null, buyer)).data.order.status, "cancelled");
+  // paid order: admin may move it forward but not backwards, and the handover counts once
+  const o1b = (await call("POST", "/api/orders", { lines: [{ id: 1, store: A, q: 1 }], form }, buyer)).data.order; await pay(o1b, "guard-1");
+  const s1b = o1b.ships[0].id;
+  assert.equal((await call("PATCH", `/api/admin/shipments/${s1b}`, { status: "ready" }, globalThis.ADMIN)).status, 200);
+  assert.equal((await call("PATCH", `/api/admin/shipments/${s1b}`, { status: "assembling" }, globalThis.ADMIN)).data.error, "backwards");
+  assert.equal((await call("PATCH", `/api/admin/shipments/${s1b}`, { status: "picked" }, globalThis.ADMIN)).status, 200);
+  assert.equal((await call("PATCH", `/api/admin/shipments/${s1b}`, { status: "cancelled" }, globalThis.ADMIN)).data.error, "already_done");
+  // 2) two stores, points spent: B cancels its part → B's share of the points comes back, the rest of the order goes on
+  app.db.run("UPDATE users SET points=100000 WHERE phone=?", "998998880088"); // a balance to spend (earned bonuses in real life)
+  const pts0 = (await call("GET", "/api/me/bonus", null, buyer)).data.points;
+  assert.equal(pts0, 100000);
+  {
+    const o2 = (await call("POST", "/api/orders", { lines: [{ id: 1, store: A, q: 1 }, { id: 2, store: B, q: 1 }], form, points: 40000 }, buyer)).data.order;
+    assert.equal(o2.pts, 40000); await pay(o2, "guard-2");
+    const sb = o2.ships.find(x => x.store === B).id, sa = o2.ships.find(x => x.store === A).id;
+    const shipB = (await call("GET", "/api/seller/summary", null, rival)).data.orders.find(x => x.num === o2.num);
+    assert.equal((await call("PATCH", `/api/seller/shipments/${shipB.ship_id}`, { status: "cancelled", reason: "out_of_stock" }, rival)).status, 200);
+    const pts1 = (await call("GET", "/api/me/bonus", null, buyer)).data.points;
+    assert.equal(pts1, pts0 - 40000 + 20000, "half of the points (B's half of the goods) refunded");
+    for (const st of ["assembling", "ready", "picked"]) assert.equal((await call("PATCH", `/api/admin/shipments/${sa}`, { status: st }, globalThis.ADMIN)).status, 200, st);
+    assert.equal((await call("GET", `/api/orders/${o2.num}`, null, buyer)).data.order.status, "done");
+    assert.equal((await call("GET", "/api/me/bonus", null, buyer)).data.points >= pts1, true, "no double refund when the order completes");
+    void sb;
+  }
+  // 3) a store cannot list another store's own product
+  const own = await call("POST", "/api/seller/products", { ru: "Эксклюзив B", cat: "build", sub: "cement", price: 50000, unit: "pcs", kg: 1, descr: "Только у нас" }, rival);
+  if (own.status === 200) {
+    const pid = own.data.product?.id || own.data.id;
+    assert.equal((await call("POST", "/api/seller/offers", { product_id: pid, price: 40000, stock: 5 }, seller)).status, 404);
+    const imp = await call("POST", "/api/seller/import", { offers: [{ product_id: pid, price: 40000, stock: 5 }, null] }, seller);
+    assert.equal(imp.status, 200, JSON.stringify(imp.data)); assert.equal((await call("GET", "/api/catalog")).data.products.find(p => p.id === pid)?.offers.some(x => x.store === A) || false, false);
+  }
+  // 4) requests do not reach a paused master
+  const mt = (await login("998880099")).data.token;
+  const prof = await call("POST", "/api/masters/me", { name: "Пауза Мастер", specs: ["tile"], districts: ["chil"], exp: 3, price: 50000, price_unit: "m2", about: "Проверка паузы" }, mt);
+  assert.equal(prof.status, 200, JSON.stringify(prof.data)); const mid = prof.data.master.id;
+  await call("PATCH", `/api/admin/masters/${mid}`, { status: "active" }, globalThis.ADMIN);
+  assert.equal((await call("POST", `/api/masters/${mid}/requests`, { text: "Положить плитку 6 м²", when: "завтра" }, buyer)).status, 200);
+  assert.equal((await call("PATCH", "/api/masters/me", { busy: true }, mt)).status, 200);
+  assert.equal((await call("POST", `/api/masters/${mid}/requests`, { text: "Положить плитку 6 м²", when: "завтра" }, buyer)).status, 409);
+  // editing name or description sends an active profile back to moderation; a price change does not
+  assert.equal((await call("POST", "/api/masters/me", { name: "Пауза Мастер", specs: ["tile"], districts: ["chil"], exp: 3, price: 60000, price_unit: "m2", about: "Проверка паузы" }, mt)).data.master.status, "active");
+  assert.equal((await call("POST", "/api/masters/me", { name: "Пауза Мастер", specs: ["tile", "plumb"], districts: ["chil"], exp: 3, price: 60000, price_unit: "m2", about: "Проверка паузы" }, mt)).data.master.status, "pending");
+  // 5) no dispute on an unpaid part of an order
+  const o5 = (await call("POST", "/api/orders", { lines: [{ id: 1, store: A, q: 1 }], form }, buyer)).data.order;
+  assert.equal((await call("POST", `/api/orders/${o5.num}/problems`, { ship_id: o5.ships[0].id, reason: "not_delivered", text: "Ничего не привезли" }, buyer)).data.error, "too_early");
+  // 6) odd shapes in valid JSON are answered, not crashed on
+  assert.notEqual((await call("POST", "/api/quote", { lines: [{ id: 1, store: A, q: 1 }], form, services: "x", bundles: 5 }, buyer)).status, 500);
+  assert.notEqual((await call("POST", "/api/seller/import", { offers: [null], create: [null] }, seller)).status, 500);
+});

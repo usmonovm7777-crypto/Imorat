@@ -26,6 +26,7 @@ export function registerDisputes({ r, db, cfg, need, needSeller, needAdmin, isAd
     if (!o) throw new HttpError(404, "not_found", "Order not found");
     const sh = db.get("SELECT * FROM shipments WHERE id=? AND order_id=?", int(b.ship_id, 1, 1e12), o.id);
     if (!sh) throw bad("bad_shipment", "Choose the store the problem is about");
+    if (["unpaid", "cancelled"].includes(sh.status)) throw bad("too_early", "This part of the order is not in progress"); // an unpaid or cancelled part has nothing to complain about
     if (!REASONS.includes(b.reason)) throw bad("bad_reason", "Choose what went wrong");
     const text = str(b.text, 1500);
     if (text.length < 5) throw bad("bad_text", "Describe the problem in a few words");
@@ -41,6 +42,7 @@ export function registerDisputes({ r, db, cfg, need, needSeller, needAdmin, isAd
   r.post("/api/problems/:id/photo", async (req, res, p) => {
     const u = need(req), d = db.get("SELECT * FROM disputes WHERE id=? AND user_id=?", Number(p.id), u.id);
     if (!d) throw new HttpError(404, "not_found", "Problem not found");
+    if (!["open", "answered"].includes(d.status)) throw bad("closed", "This problem is already resolved");
     const photos = JSON.parse(d.photos || "[]");
     if (photos.length >= 3) throw bad("too_many_photos", "Up to 3 photos");
     const path = saveImage(await readBody(req, 5 * 1024 * 1024), "d" + d.id);

@@ -48,7 +48,22 @@ export function createBonus({ db, cfg, log = console }) {
       const o = db.get("SELECT * FROM orders WHERE id=?", orderId);
       if (!o || !o.points_used) return;
       const ref = "refund:" + o.id;
-      if (!has(o.user_id, ref)) add(o.user_id, o.points_used, "refund", ref);
+      if (has(o.user_id, ref)) return;
+      // parts already refunded for single shipments are not refunded twice
+      const partial = db.get("SELECT COALESCE(SUM(delta),0) s FROM points_log WHERE user_id=? AND ref LIKE ?", o.user_id, "refund:" + o.id + ":%").s;
+      const left = o.points_used - partial;
+      if (left > 0) add(o.user_id, left, "refund", ref);
+    },
+    /* one shipment of a multi-store order was cancelled while the rest goes on: its share of the points comes back */
+    shipCancelled(sh) {
+      const o = db.get("SELECT * FROM orders WHERE id=?", sh.order_id);
+      if (!o || !o.points_used || !o.goods) return 0;
+      const ref = `refund:${o.id}:${sh.id}`;
+      if (has(o.user_id, ref)) return 0;
+      const part = JSON.parse(sh.lines).reduce((a, l) => a + l.price * l.q, 0);
+      const pts = Math.min(o.points_used, Math.round(o.points_used * part / o.goods));
+      if (pts > 0) add(o.user_id, pts, "refund", ref);
+      return pts;
     },
     routes(r, need, lim) {
       r.get("/api/me/bonus", req => {

@@ -71,7 +71,7 @@ export function quote(db, ref, { lines, services = [], bundles = [], form = {}, 
   const goods = ships.reduce((a, s) => a + s.g.sum, 0);
   const del = ships.reduce((a, s) => a + s.price, 0);
 
-  const svcLines = [...new Set(services.map(Number))].map(id => {
+  const svcLines = [...new Set((Array.isArray(services) ? services : []).map(Number))].map(id => {
     const l = lines.find(x => x.p.id === id); const price = l && ref.service[l.p.sub];
     return price ? { id, q: qtyOf(id), price } : null;
   }).filter(Boolean);
@@ -80,7 +80,7 @@ export function quote(db, ref, { lines, services = [], bundles = [], form = {}, 
   const byKey = k => db.get("SELECT id FROM products WHERE key=? AND active=1", k)?.id;
   const minPrice = id => db.get("SELECT MIN(o.price) m FROM offers o JOIN stores s ON s.id=o.store_id AND s.status='active' WHERE o.product_id=?", id)?.m || 0;
   let disc = 0; const bundlesApplied = [];
-  for (const bid of new Set(bundles)) {
+  for (const bid of new Set(Array.isArray(bundles) ? bundles : [])) {
     const b = ref.bundles.find(x => x.id === bid); if (!b) continue;
     const items = b.items.map(([k, q]) => [byKey(k), q]).filter(([id]) => id);
     if (!items.length || !items.every(([id, q]) => qtyOf(id) >= q)) continue;

@@ -63,6 +63,12 @@ CREATE INDEX IF NOT EXISTS reviews_store ON reviews(store_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS orders_user ON orders(user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS ship_store ON shipments(store_id, status_at DESC);
 CREATE INDEX IF NOT EXISTS ship_order ON shipments(order_id);
+CREATE INDEX IF NOT EXISTS ship_status ON shipments(status);
+CREATE INDEX IF NOT EXISTS orders_pay ON orders(pay_status, created_at);
+CREATE INDEX IF NOT EXISTS stock_watch_p ON stock_watch(product_id);
+CREATE INDEX IF NOT EXISTS team_members_u ON team_members(user_id);
+CREATE INDEX IF NOT EXISTS disputes_ship ON disputes(ship_id);
+CREATE INDEX IF NOT EXISTS store_questions_s ON store_questions(store_id);
 CREATE INDEX IF NOT EXISTS offers_store ON offers(store_id);
 `;
 

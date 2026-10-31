@@ -83,6 +83,13 @@ export function registerMasters({ r, db, cfg, ref, need, needAdmin, audit, lim, 
     const { note, ...out } = pub(m, stats()[m.id]);
     return { master: out, reviews };
   });
+  /* pause / resume taking requests (the Telegram bot has the same button) */
+  r.patch("/api/masters/me", async req => {
+    const u = need(req), b = await readJson(req), m = db.get("SELECT * FROM masters WHERE user_id=?", u.id);
+    if (!m) throw new HttpError(404, "not_found", "No master profile yet");
+    if (typeof b.busy === "boolean") db.run("UPDATE masters SET busy=? WHERE id=?", b.busy ? 1 : 0, m.id);
+    return { master: pub(db.get("SELECT * FROM masters WHERE id=?", m.id), stats()[m.id]) };
+  });
   r.post("/api/masters/me", async req => {
     const u = need(req), b = await readJson(req), old = mine(u);
     const name = str(b.name, 80) || u.name || "", specs = [...new Set((Array.isArray(b.specs) ? b.specs : []).filter(s => SPECS.includes(s)))].slice(0, 6);
@@ -93,7 +100,11 @@ export function registerMasters({ r, db, cfg, ref, need, needAdmin, audit, lim, 
     if (!districts.length) throw bad("bad_districts", "Choose the districts where you work");
     if (exp === null || price === null) throw bad("bad_numbers", "Experience and price must be numbers");
     const now = Date.now();
-    if (old) db.run("UPDATE masters SET name=?, specs=?, districts=?, exp=?, price=?, price_unit=?, about=?, updated_at=? WHERE id=?", name, JSON.stringify(specs), JSON.stringify(districts), exp, price, unit, about, now, old.id);
+    if (old) {
+      // what customers read (name, trades, description) goes back to the moderator when an active profile changes it; prices, districts and experience do not
+      const recheck = old.status === "active" && (old.name !== name || old.about !== about || JSON.stringify(JSON.parse(old.specs || "[]")) !== JSON.stringify(specs));
+      db.run("UPDATE masters SET name=?, specs=?, districts=?, exp=?, price=?, price_unit=?, about=?, updated_at=?, status=CASE WHEN ? THEN 'pending' ELSE status END WHERE id=?", name, JSON.stringify(specs), JSON.stringify(districts), exp, price, unit, about, now, recheck ? 1 : 0, old.id);
+    }
     else {
       lim.hit("master-new:" + u.id, 3, 86400_000);
       db.run("INSERT INTO masters(id,user_id,name,specs,districts,exp,price,price_unit,about,phone,status,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,'pending',?,?)",
@@ -107,6 +118,7 @@ export function registerMasters({ r, db, cfg, ref, need, needAdmin, audit, lim, 
     const u = need(req), b = await readJson(req);
     const m = db.get("SELECT * FROM masters WHERE id=? AND status='active'", p.id);
     if (!m) throw new HttpError(404, "not_found", "Master not found");
+    if (m.busy) throw new HttpError(409, "master_busy", "This master is not taking requests right now");
     if (m.user_id === u.id) throw bad("own_profile", "You cannot send a request to yourself");
     lim.hit("mreq:" + u.id, 10, 86400_000);
     const text = str(b.text, 1000), when = str(b.when, 80) || "как можно скорее", district = D.has(b.district) ? b.district : null, street = str(b.street, 200);

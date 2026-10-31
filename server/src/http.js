@@ -33,7 +33,8 @@ export function readBody(req, limit) {
     const len = Number(req.headers["content-length"] || 0);
     if (len > limit) { req.resume(); return reject(new HttpError(413, "too_large", "Request body is too large")); }
     const chunks = []; let size = 0;
-    req.on("data", c => { size += c.length; if (size > limit) { reject(new HttpError(413, "too_large", "Request body is too large")); req.destroy(); } else chunks.push(c); });
+    let over = false;
+    req.on("data", c => { if (over) return; size += c.length; if (size > limit) { over = true; chunks.length = 0; req.resume(); reject(new HttpError(413, "too_large", "Request body is too large")); } else chunks.push(c); }); // drain instead of destroying, so the 413 reaches the client
     req.on("end", () => resolve(Buffer.concat(chunks)));
     req.on("error", reject);
   });
