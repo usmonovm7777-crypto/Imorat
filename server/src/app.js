@@ -135,7 +135,7 @@ export function createApp(cfg, log = console) {
     apple_redirect_uri: cfg.apple.redirectUri || null, ai: !!cfg.ai.key, yandex: !!cfg.yandex.token, vip_free: cfg.vipFree, pay_at_store: cfg.allowPayAtStore,
     payments: cfg.paymentsOnline, telegram_bot: tg.enabled ? tg.username || null : null, telegram_channel: /^@/.test(cfg.channel?.chat || "") ? cfg.channel.chat : null, push_key: push.publicKey,
     timers: cfg.timers, commission: cfg.commission, demo: cfg.demoStores,
-    ymaps_key: cfg.maps.jsKey || null, geo: geo.provider // the site draws a Yandex map with the key; address search goes through /api/geo
+    ymaps_key: cfg.maps.jsKey || null, geo: geo.provider, bonus: cfg.bonus.enabled // the site draws a Yandex map with the key; address search goes through /api/geo
   }));
   /* ---------- address search for the checkout map ---------- */
   const langOf = url => (["ru", "uz", "en"].includes(url.searchParams.get("lang")) ? url.searchParams.get("lang") : "ru");
@@ -282,7 +282,7 @@ export function createApp(cfg, log = console) {
     const form = cleanForm(b.form || {});
     const { lines, problems } = loadLines(db, ref, b.lines, user);
     const yp = await yandexPrices(db, ref, cfg.yandex, lines, form, log);
-    const q = quote(db, ref, { lines, services: b.services || [], bundles: b.bundles || [], form, promo: b.promo, user, yandexPrices: yp, points: b.points, maxShare: cfg.bonus.maxShare });
+    const q = quote(db, ref, { lines, services: b.services || [], bundles: b.bundles || [], form, promo: b.promo, user, yandexPrices: yp, points: cfg.bonus.enabled ? b.points : 0, maxShare: cfg.bonus.maxShare, bonusOn: cfg.bonus.enabled });
     return { q, form, lines, problems };
   }
   r.post("/api/quote", async req => { lim.hit("quote-ip:" + req.ip, 120, 60_000); const b = await readJson(req); const { q, problems } = await computeQuote(req, b); return { quote: q, problems }; });

@@ -27,6 +27,7 @@ export function createBonus({ db, cfg, log = console }) {
     add, codeFor, spendable,
     /* a shipment reached the buyer: cashback, then the referral reward on the friend's first delivery */
     shipDone(ship) {
+      if (!B.enabled) return; // programme off: nothing is earned (refunds of already spent points below still work)
       const o = db.get("SELECT * FROM orders WHERE id=?", ship.order_id); if (!o) return;
       const u = db.get("SELECT * FROM users WHERE id=?", o.user_id); if (!u) return;
       const ref = "ship:" + ship.id;
@@ -73,7 +74,7 @@ export function createBonus({ db, cfg, log = console }) {
         const u = need(req), code = codeFor(u);
         const fresh = db.get("SELECT points, ref_by FROM users WHERE id=?", u.id);
         return {
-          points: fresh.points, code, rate: B.rate, rate_pro: B.ratePro, referral: B.referral, welcome: B.welcome, max_share: B.maxShare,
+          enabled: B.enabled, points: fresh.points, code, rate: B.rate, rate_pro: B.ratePro, referral: B.referral, welcome: B.welcome, max_share: B.maxShare,
           invited: db.get("SELECT COUNT(*) n FROM users WHERE ref_by=?", u.id).n, invited_paid: db.get("SELECT COUNT(*) n FROM users WHERE ref_by=? AND ref_paid=1", u.id).n,
           has_ref: !!fresh.ref_by, can_enter: !fresh.ref_by && !db.get("SELECT 1 FROM orders WHERE user_id=?", u.id),
           log: db.all("SELECT delta, reason, ref, created_at FROM points_log WHERE user_id=? ORDER BY id DESC LIMIT 30", u.id)
@@ -81,6 +82,7 @@ export function createBonus({ db, cfg, log = console }) {
       });
       r.post("/api/me/bonus/referral", async req => {
         const u = need(req), b = await readJson(req);
+        if (!B.enabled) throw new HttpError(503, "bonus_off", "The points programme is not running yet");
         lim.hit("refcode:" + u.id, 10, 3600_000);
         const code = String(b.code || "").trim().toUpperCase();
         const owner = code && db.get("SELECT id FROM users WHERE ref_code=?", code);

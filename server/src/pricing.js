@@ -40,7 +40,7 @@ export function loadLines(db, ref, rawLines, user) {
 
 /* unloading help chosen at checkout: none (the buyer takes the goods at the car) or one (the courier/driver carries to the door and up the stairs) */
 export const helpers = f => f?.help === "one" || f?.help === "two" || (f?.help == null && f?.lift) ? 1 : 0;
-export function quote(db, ref, { lines, services = [], bundles = [], form = {}, promo = "", user = null, yandexPrices = null, points = 0, maxShare = 0.2 }) {
+export function quote(db, ref, { lines, services = [], bundles = [], form = {}, promo = "", user = null, yandexPrices = null, points = 0, maxShare = 0.2, bonusOn = true }) {
   const D = Object.fromEntries(ref.districts.map(d => [d.id, d]));
   const dest = D[form.district] || D[user?.district] || D.mirob;
   const vip = !!user?.vip;
@@ -101,7 +101,7 @@ export function quote(db, ref, { lines, services = [], bundles = [], form = {}, 
   const pts = user ? Math.max(0, Math.min(Math.floor(Number(points) || 0), user.points || 0, Math.floor(goods * maxShare))) : 0;
   const total = goods + del + svc - disc - pd - pts;
   return {
-    goods, del, svc, disc, pd, pts, total, cash: vip ? Math.round(goods * 0.03) : 0, promo: promoCode, bundles: bundlesApplied, services: svcLines,
+    goods, del, svc, disc, pd, pts, total, cash: vip && bonusOn ? Math.round(goods * 0.03) : 0, promo: promoCode, bundles: bundlesApplied, services: svcLines,
     ships: ships.map(s => ({
       store: s.g.store.id, store_name: s.g.store.name, tariff: s.t?.id || null, price: s.price, full: s.full, kg: Math.round(s.g.kg * 100) / 100,
       dist: Math.round(s.dist * 10) / 10, source: s.source || null,

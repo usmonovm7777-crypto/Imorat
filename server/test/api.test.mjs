@@ -78,7 +78,7 @@ before(async () => {
     JWT_SECRET: "test-secret", DB_PATH: join(dir, "t.db"), UPLOADS_DIR: join(dir, "up"), ADMIN_PHONES: "998901111111",
     GOOGLE_CLIENT_ID: "gid", GOOGLE_JWKS_URL: fakeBase + "/jwks", ANTHROPIC_API_KEY: "sk-test", ANTHROPIC_URL: fakeBase + "/ai", SMS_MODE: "dev",
     TELEGRAM_BOT_TOKEN: "TGTOKEN", TELEGRAM_API_URL: fakeBase + "/tg", TELEGRAM_POLL_TIMEOUT: "0", PAYME_MERCHANT_ID: "5e730e8e0b852a417aa49ceb", PAYME_KEY: "PAYME_SECRET", CLICK_SERVICE_ID: "12345", CLICK_MERCHANT_ID: "777", CLICK_SECRET_KEY: "CLICK_SECRET", PAY_TIMEOUT_MIN: "30", BACKUP_DIR: join(dir, "bk"), OTP_PER_IP_HOUR: "200", TELEGRAM_CHANNEL: "@imorat_test", CHANNEL_HOUR: "25",
-    ALLOW_PAY_AT_STORE: "1" // most scenarios below pay the store on pickup; the card-only default is covered by its own test
+    ALLOW_PAY_AT_STORE: "1", BONUS_ON: "1" // most scenarios below pay the store on pickup; the card-only default is covered by its own test
   });
   app = createApp(cfg, { info() {}, warn() {}, error: console.error });
   await new Promise(r => app.listen(0, "127.0.0.1", r));
@@ -990,6 +990,7 @@ test("Address search for the checkout map: Nominatim without a key, the Yandex g
   const run = async (a, fn) => { await new Promise(r => a.listen(0, "127.0.0.1", r)); const b4 = `http://127.0.0.1:${a.address().port}`; const g = async p => { const r = await fetch(b4 + p); return { status: r.status, data: await r.json() }; }; try { await fn(g); } finally { a.stopJobs(); a.close(); a.closeAllConnections(); a.db.raw.close(); } };
   await run(mk({}), async g => {
     assert.equal((await g("/api/config")).data.geo, "osm"); assert.equal((await g("/api/config")).data.ymaps_key, null);
+    assert.equal((await g("/api/config")).data.bonus, false, "the points programme is off until BONUS_ON=1");
     assert.deepEqual((await g("/api/geo/suggest?q=на")).data.items, [], "two letters: no request at all");
     const n0 = geoHits.length, r = await g("/api/geo/suggest?q=" + encodeURIComponent("Навои 10") + "&lang=ru");
     assert.equal(r.status, 200); assert.equal(r.data.items[0].street, "улица Навои, 10"); assert.equal(r.data.items[0].la, 41.3115); assert.equal(r.data.items[0].sub, "Шайхантахур, Шайхантахурский район"); assert.equal(r.data.items.length, 2);

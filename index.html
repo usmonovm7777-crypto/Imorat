@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
 <meta name="description" content="Imorat Go — маркетплейс строительных магазинов Ташкента: сравнение цен, Usta AI, калькуляторы ремонта и доставка Яндекс.">
 <style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.5 system-ui,-apple-system,'Segoe UI',Roboto,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
 <script src="config.js"></script>
@@ -768,6 +768,7 @@ html:not(.fx) .mq-track { padding-inline: 10px; }
 html:not(.fx) .collage .tile { animation: none; }
 }
 @media (max-width: 760px) {
+html { touch-action: pan-x pan-y; }
 input, select, textarea { font-size: 16px !important; }
 .cmp-bar { left: 12px; }
 }
@@ -2461,7 +2462,7 @@ function vipBlock() {
   const perks = [["clock", L("VIP-время", "VIP-vaqt"), L("Доставка в выбранный вами час, а не «в течение дня»", "Kun davomida emas, siz tanlagan soatda yetkazish")],
     ["bolt", L("Курьер в приоритете", "Ustuvor kuryer"), L("Ваш заказ Яндекс назначает первым", "Buyurtmangizga birinchi kuryer biriktiriladi")],
     ["truck", L("Доставка бесплатно", "Bepul yetkazish"), L(`Курьером от ${fmt(VIP_FREE_FROM)}, грузовой со скидкой 50%`, `${fmt(VIP_FREE_FROM)}dan kuryer bepul, yuk mashinasi 50% chegirma`, `Courier free from ${fmt(VIP_FREE_FROM)}, cargo 50% off`)],
-    ["percent", L("Кешбэк 3%", "3% keshbek"), L("Баллами на следующие покупки", "Keyingi xaridlar uchun ballar")]];
+    bonusOn() ? ["percent", L("Кешбэк 3%", "3% keshbek"), L("Баллами на следующие покупки", "Keyingi xaridlar uchun ballar")] : ["shield", L("Поддержка без очереди", "Navbatsiz yordam", "Priority support"), L("Вопросы по заказу решаем первыми", "Buyurtma bo‘yicha savollar birinchi hal qilinadi", "Your order questions come first")]];
   return `<div class="vip"><div>
     <span class="eyebrow">${ui("crown", 14)} Imorat Go VIP</span>
     <h2 class="h-l" style="margin-top:10px">${L("Привезём ровно к нужному часу", "Kerakli soatga aniq yetkazamiz")}</h2>
@@ -2816,8 +2817,8 @@ function quote(d) {
   });
   const goods = gs.reduce((a, g) => a + g.sum, 0), del = ships.reduce((a, s) => a + s.price, 0), svc = svcSum(), disc = bundleDisc();
   const pd = promoDisc(goods);
-  const pts = d.usePts ? Math.max(0, Math.min(bonusBalance(), Math.floor(goods * bonusCfg().maxShare))) : 0;
-  return { ships, goods, del, svc, disc, pd, pts, total: goods + del + svc - disc - pd - pts, cash: vip ? Math.round(goods * 0.03) : 0 };
+  const pts = d.usePts && bonusOn() ? Math.max(0, Math.min(bonusBalance(), Math.floor(goods * bonusCfg().maxShare))) : 0;
+  return { ships, goods, del, svc, disc, pd, pts, total: goods + del + svc - disc - pd - pts, cash: vip && bonusOn() ? Math.round(goods * 0.03) : 0 };
 }
 /* Payment rules: delivery → card on the site only (the courier takes no money); pickup → card or cash at the store */
 /* Every order is paid by card on the site — goods and delivery in one amount; neither the courier nor the store takes money.
@@ -2871,7 +2872,7 @@ function dCheckout() {
       <p class="mu" id="payRule" style="font-size:13px;margin:0">${L("Оплата картой на сайте одной суммой — товар и доставка. Курьеру и магазину ничего платить не нужно; при отмене деньги возвращаются на карту.", "Saytda karta bilan bitta summa to‘lanadi — mahsulot va yetkazish. Kuryer va do‘konga hech narsa to‘lash shart emas; bekor qilinsa pul kartaga qaytadi.", "Pay by card on the site in one amount — goods and delivery. Nothing to pay the courier or the store; if cancelled, the money returns to your card.")}</p>
       <div class="note" id="cardPayNote" hidden>${ui("wallet", 14)} ${L("Списываем всю сумму сразу — товары и доставку. Курьеру и магазину ничего доплачивать не нужно. Магазин получит заказ, как только пройдёт оплата; не оплаченный за 30 минут заказ отменится сам.", "Butun summani — mahsulot va yetkazishni — birdan yechamiz. Kuryerga va do‘konga qo‘shimcha to‘lash shart emas. To‘lov o‘tishi bilan do‘kon buyurtmani oladi; 30 daqiqada to‘lanmagan buyurtma o‘zi bekor bo‘ladi.", "The whole amount — goods and delivery — is charged at once. Nothing to pay the courier or the store. The store receives the order as soon as the payment goes through; an order unpaid for 30 minutes cancels itself.")}</div>
       <div class="note" id="storePayNote" hidden>${ui("store", 14)} ${L("Оплата наличными в магазине при получении. Магазин подтвердит заказ и соберёт его к вашему приходу; если не подтвердит вовремя — заказ отменится автоматически.", "Olganda do‘konda naqd to‘lov. Do‘kon buyurtmani tasdiqlab, kelishingizga yig‘ib qo‘yadi; o‘z vaqtida tasdiqlamasa — buyurtma avtomatik bekor bo‘ladi.", "Cash at the store on pickup. The store confirms the order and packs it for your arrival; if it does not confirm in time, the order cancels automatically.")}</div>
-      ${bonusBalance() > 0 ? `<label class="check"><input type="checkbox" id="fPts" name="usePts" ${d.usePts ? "checked" : ""}><span>${ui("gift", 15)} ${L(`Оплатить бонусами — у вас ${fmtN(bonusBalance())}`, `Bonus bilan to‘lash — sizda ${fmtN(bonusBalance())}`, `Pay with points — you have ${fmtN(bonusBalance())}`)} <small class="mu">${L(`(до ${Math.round(bonusCfg().maxShare * 100)}% стоимости товаров)`, `(mahsulotlar narxining ${Math.round(bonusCfg().maxShare * 100)}% gacha)`, `(up to ${Math.round(bonusCfg().maxShare * 100)}% of the product total)`)}</small></span></label>` : ""}
+      ${bonusOn() && bonusBalance() > 0 ? `<label class="check"><input type="checkbox" id="fPts" name="usePts" ${d.usePts ? "checked" : ""}><span>${ui("gift", 15)} ${L(`Оплатить бонусами — у вас ${fmtN(bonusBalance())}`, `Bonus bilan to‘lash — sizda ${fmtN(bonusBalance())}`, `Pay with points — you have ${fmtN(bonusBalance())}`)} <small class="mu">${L(`(до ${Math.round(bonusCfg().maxShare * 100)}% стоимости товаров)`, `(mahsulotlar narxining ${Math.round(bonusCfg().maxShare * 100)}% gacha)`, `(up to ${Math.round(bonusCfg().maxShare * 100)}% of the product total)`)}</small></span></label>` : ""}
       <div class="f"><label for="fPromo">${L("Промокод", "Promokod")}</label><div class="promo-row"><input id="fPromo" value="${esc(promo)}" placeholder="IMORAT5" autocomplete="off" autocapitalize="characters"><button class="btn btn-line" type="button" data-act="promo">${L("Применить", "Qo‘llash")}</button></div><span class="promo-msg" id="promoMsg"></span></div>
       <div class="f"><label for="fComment">${L("Комментарий курьеру", "Kuryerga izoh")}</label><textarea id="fComment" name="comment" rows="2" placeholder="${L("Позвоните за 10 минут", "10 daqiqa oldin qo‘ng‘iroq qiling")}">${esc(d.comment)}</textarea></div>
     </fieldset>
@@ -2922,7 +2923,7 @@ function updateQuote() {
   $("#totals").innerHTML = totalsHTML(qt.goods, qt.svc, qt.disc, `<div class="sumrow"><span class="mu">${L("Доставка", "Yetkazish")}</span><span class="num">${fmt(qt.del)}</span></div>`) +
     (qt.pd ? `<div class="sumrow disc"><span>${L("Промокод", "Promokod")} ${esc(promo)}</span><span class="num">−${fmt(qt.pd)}</span></div>` : "") +
     (qt.pts ? `<div class="sumrow disc"><span>${L("Бонусами", "Bonus bilan")}</span><span class="num">−${fmt(qt.pts)}</span></div>` : "") +
-    (API && !user || ["cash", "store"].includes(d.pay) ? "" : `<div class="sumrow cash"><span>${L("Начислим бонусов после получения", "Olgandan keyin bonus beriladi")}</span><span class="num">+${fmtN(Math.floor(qt.goods * bonusRate()))}</span></div>`) +
+    (!bonusOn() || API && !user || ["cash", "store"].includes(d.pay) ? "" : `<div class="sumrow cash"><span>${L("Начислим бонусов после получения", "Olgandan keyin bonus beriladi")}</span><span class="num">+${fmtN(Math.floor(qt.goods * bonusRate()))}</span></div>`) +
     (qt.cash ? `<div class="sumrow cash"><span>${L("Кешбэк VIP 3%", "VIP keshbek 3%")}</span><span class="num">+${fmt(qt.cash)}</span></div>` : "") +
     `<div class="sumrow total"><span>${L("Итого", "Jami")}</span><span class="num">${fmt(qt.total)}</span></div>`;
   const pb = $("#payBtn"); pb.textContent = d.pay === "cash" || d.pay === "store" ? L("Подтвердить заказ", "Buyurtmani tasdiqlash") : `${L("Оплатить картой", "Karta bilan to‘lash", "Pay by card")} ${fmt(qt.total)}`;
@@ -2954,8 +2955,8 @@ function submitOrder(e) {
   if (qt.pd) { LS.set("imorat.promoUsed", [...promoUsed(), user ? user.id : "guest"]); promo = ""; LS.set("imorat.promoCode", ""); }
   if (vip && qt.cash) toast(L(`Начислим ${fmt(qt.cash)} кешбэка`, `${fmt(qt.cash)} keshbek beriladi`, `You'll earn ${fmt(qt.cash)} cashback`));
   if (qt.pts) { bonusAdd(-qt.pts, "spent"); form.usePts = false; LS.set("imorat.form2", form); }
-  bonusAdd(Math.min(200000, Math.floor(qt.goods * bonusRate())), "cashback"); // the demo credits at once; the real site after the order arrives
-  { const bs = bonusDemoState(); if (bs.welcomePending) { bs.welcomePending = false; LS.set("imorat.bonus", bs); bonusAdd(BONUS.welcome, "welcome"); } }
+  if (bonusOn()) { bonusAdd(Math.min(200000, Math.floor(qt.goods * bonusRate())), "cashback"); // the demo credits at once; the real site after the order arrives
+    const bs = bonusDemoState(); if (bs.welcomePending) { bs.welcomePending = false; LS.set("imorat.bonus", bs); bonusAdd(BONUS.welcome, "welcome"); } }
   cart = {}; services = {}; bundlesOn = []; LS.set("imorat.svc", services); LS.set("imorat.bundles", bundlesOn); saveCart(); refreshCards();
   openDrawer("track", o.num);
 }
@@ -3059,11 +3060,11 @@ function dProfile() {
   $("#dBody").innerHTML = (user ? `<div class="acct"><span class="av">${esc(initial(user.name))}</span><span><b>${esc(user.name)}</b><small class="num">${esc(user.phone)}</small><small>${user.email ? esc(user.email) + " · " : ""}${L("вход через", "kirish:")} ${viaName(user.via)}${user.role === "pro" ? ` · <span class="ws">${L("цены для мастеров", "ustalar uchun narxlar")}</span>` : ""}</small></span><button class="ib" type="button" data-act="logout" aria-label="${L("Выйти", "Chiqish")}" title="${L("Выйти", "Chiqish")}">${ui("logout", 16)}</button></div>`
     : `<div class="acct" style="grid-template-columns:1fr"><span><b>${L("Войдите, чтобы сохранять заказы", "Buyurtmalarni saqlash uchun kiring")}</b><small>${L("Номер телефона или Telegram — займёт меньше минуты", "Telefon raqami yoki Telegram — bir daqiqadan kam", "Phone number or Telegram — takes under a minute")}</small></span><button class="btn btn-primary" type="button" data-act="login">${L("Войти или зарегистрироваться", "Kirish yoki ro‘yxatdan o‘tish")}</button></div>`) + `
     ${user ? `<div class="f" id="roleBox"><span>${L("Кто вы?", "Siz kimsiz?")} <small class="mu">${L("— от этого зависят цены и подсказки", "— narxlar va maslahatlar shunga bog‘liq", "— prices and tips depend on it")}</small></span>${rolesHTML(user.store_id || user.role === "seller" ? "store" : user.role === "pro" ? "pro" : "buyer", "prole")}</div>` : ""}
-    ${bonusCardHTML()}
+    ${bonusOn() ? bonusCardHTML() : ""}
     ${notifyRows()}
     <div class="vip-card"><span class="eyebrow" style="color:var(--signal)">${ui("crown", 14)} Imorat Go VIP</span>
       <b style="font-size:17px">${vip ? L("VIP подключён", "VIP ulangan") : L("Доставка в точный час и бесплатно", "Aniq soatda va bepul yetkazish")}</b>
-      <small>${vip ? L("Точный час без доплаты, курьер в приоритете, кешбэк 3%.", "Aniq soat bepul, ustuvor kuryer, 3% keshbek.") : L(`${fmt(VIP_FEE)} в месяц, первый месяц бесплатно.`, `Oyiga ${fmt(VIP_FEE)}, birinchi oy bepul.`, `${fmt(VIP_FEE)} per month, first month free.`)}</small>
+      <small>${vip ? (bonusOn() ? L("Точный час без доплаты, курьер в приоритете, кешбэк 3%.", "Aniq soat bepul, ustuvor kuryer, 3% keshbek.") : L("Точный час без доплаты, курьер в приоритете.", "Aniq soat bepul, ustuvor kuryer.", "Exact hour at no extra cost, priority courier.")) : L(`${fmt(VIP_FEE)} в месяц, первый месяц бесплатно.`, `Oyiga ${fmt(VIP_FEE)}, birinchi oy bepul.`, `${fmt(VIP_FEE)} per month, first month free.`)}</small>
       <button class="btn ${vip ? "btn-line" : "btn-primary"}" type="button" data-act="${vip ? "vip-off" : "vip-on"}" style="${vip ? "border-color:color-mix(in srgb,var(--vip-fg) 35%,transparent)" : "background:var(--signal);color:#fff"}">${vip ? L("Отключить", "O‘chirish") : L("Подключить VIP", "VIP ulash")}</button></div>
     <div class="f"><label for="pDist">${L("Район доставки по умолчанию", "Standart yetkazish tumani")}</label><select id="pDist" class="sel">${DISTRICTS.map(x => `<option value="${x.id}" ${x.id === district ? "selected" : ""}>${L(x.ru, x.uz)}</option>`).join("")}</select></div>
     <div class="f"><span>${L("Оформление", "Ko‘rinish")}</span><div class="seg" role="group" style="justify-self:start"><button type="button" data-look="on" aria-pressed="${fxPref === "on"}">${L("Яркое", "Yorqin")}</button><button type="button" data-look="off" aria-pressed="${fxPref === "off"}">${L("Простое", "Oddiy")}</button><button type="button" data-look="auto" aria-pressed="${fxPref === "auto"}">${L("Авто", "Avto")}</button></div><small style="color:var(--muted)">${L("Яркое — подсветка и анимации. Простое — спокойно и быстрее на слабом телефоне.", "Yorqin — yoritish va animatsiyalar. Oddiy — sokin va kuchsiz telefonda tezroq.")}</small></div>
@@ -3546,7 +3547,7 @@ function renderAuth() {
   if (st === "start") {
     h = `<span class="logo" aria-hidden="true"><span class="logo-mark"><i></i><i></i><i></i><i></i></span><b>imorat<em>go</em></b></span>
       <h2>${auth.then === "checkout" ? L("Войдите, чтобы оформить заказ", "Buyurtma berish uchun kiring") : auth.then === "store" ? L("Войдите, чтобы добавить магазин", "Do‘kon qo‘shish uchun kiring") : L("Вход или регистрация", "Kirish yoki ro‘yxatdan o‘tish")}</h2>
-      <p>${L("Один аккаунт для заказов, избранного, бонусов и Usta AI. Новый аккаунт создаётся автоматически — по номеру телефона или через Telegram.", "Buyurtmalar, saralanganlar, bonuslar va Usta AI uchun bitta akkaunt. Yangi akkaunt avtomatik yaratiladi — telefon raqami yoki Telegram orqali.", "One account for orders, favourites, points and Usta AI. A new account is created automatically — by phone number or through Telegram.")}</p>
+      <p>${L("Один аккаунт для заказов, избранного и Usta AI. Новый аккаунт создаётся автоматически — по номеру телефона или через Telegram.", "Buyurtmalar, saralanganlar va Usta AI uchun bitta akkaunt. Yangi akkaunt avtomatik yaratiladi — telefon raqami yoki Telegram orqali.", "One account for orders, favourites and Usta AI. A new account is created automatically — by phone number or through Telegram.")}</p>
       ${phoneForm("", "").replace("<h2></h2><p></p>", "")}
       <div class="or">${L("или", "yoki", "or")}</div>
       ${API && apiCfg?.telegram_bot ? `<button class="soc tg" type="button" data-act="tg-login">${ui("send", 20)} ${L("Войти через Telegram", "Telegram orqali kirish", "Sign in with Telegram")}</button>`
@@ -5777,6 +5778,8 @@ document.addEventListener("click", e => {
    1 bonus = 1 so'm. Cashback after the order arrives (more for masters and foremen), spend up to a share of the goods at checkout.
    Invite a friend with your code: the friend gets a welcome bonus, you get a bonus when the friend's first order arrives. */
 const BONUS = { rate: .01, ratePro: .02, maxShare: .2, referral: 30000, welcome: 30000 };
+/* the points programme is off until the owner starts it (BONUS_ON=1 on the server); the demo follows the same switch */
+const bonusOn = () => (API ? !!apiCfg?.bonus : false);
 let bonusApi = null; // GET /api/me/bonus
 let bonusDemo = LS.get("imorat.bonus", null);
 { const rc = (location.search.match(/[?&]ref=([A-Za-z0-9]{4,12})\b/) || [])[1]; if (rc) LS.set("imorat.refPending", rc.toUpperCase()); }
@@ -5812,7 +5815,7 @@ async function loadBonus() {
   if (drawerView === "profile") renderDrawer();
 }
 async function applyRefCode(code, silent) {
-  code = String(code || "").trim().toUpperCase(); if (!code) return;
+  code = String(code || "").trim().toUpperCase(); if (!code || !bonusOn()) return;
   if (API) {
     if (!user) { LS.set("imorat.refPending", code); return openAuth(); }
     try { const r = await api("POST", "/api/me/bonus/referral", { code }); toast(L(`Код друга принят: ${fmt(r.pending_welcome || bonusCfg().welcome)} бонусов придут после первого доставленного заказа`, `Do‘st kodi qabul qilindi: ${fmt(r.pending_welcome || bonusCfg().welcome)} bonus birinchi yetkazilgan buyurtmadan keyin keladi`, `Friend’s code accepted: ${fmt(r.pending_welcome || bonusCfg().welcome)} points arrive after your first delivered order`)); bonusApi = null; loadBonus(); }

@@ -75,7 +75,8 @@ export function loadConfig(env = process.env) {
     // the real protection is per phone number (5 codes an hour) and per account.
     otpPerIpHour: Number(env.OTP_PER_IP_HOUR || 150),
     ratePerIpMin: Number(env.RATE_PER_IP_MIN || 3000),
-    bonus: { rate: Number(env.BONUS_RATE ?? 0.01), ratePro: Number(env.BONUS_RATE_PRO ?? 0.02), maxShare: Number(env.BONUS_MAX_SHARE ?? 0.2), referral: Number(env.BONUS_REFERRAL ?? 30000), welcome: Number(env.BONUS_WELCOME ?? 30000), maxCashback: Number(env.BONUS_MAX_CASHBACK ?? 200000), maxInvites: Number(env.BONUS_MAX_INVITES ?? 20) },
+    /* the points programme is switched off until the owner turns it on (BONUS_ON=1): no cashback, no spending, no referral rewards */
+    bonus: { enabled: env.BONUS_ON === "1", rate: Number(env.BONUS_RATE ?? 0.01), ratePro: Number(env.BONUS_RATE_PRO ?? 0.02), maxShare: Number(env.BONUS_MAX_SHARE ?? 0.2), referral: Number(env.BONUS_REFERRAL ?? 30000), welcome: Number(env.BONUS_WELCOME ?? 30000), maxCashback: Number(env.BONUS_MAX_CASHBACK ?? 200000), maxInvites: Number(env.BONUS_MAX_INVITES ?? 20) },
     smsMasterTemplate: env.SMS_MASTER_TEMPLATE ?? "Imorat Go: sizga ustalik uchun yangi so‘rov keldi. Saytda qabul qiling.",
     // Online card payment: a provider is offered once its keys are set; PAYMENTS (e.g. "payme") can narrow the list
     payme: { id: env.PAYME_MERCHANT_ID || "", key: env.PAYME_KEY || "", testKey: env.PAYME_TEST_KEY || "", url: (env.PAYME_CHECKOUT_URL || "https://checkout.paycom.uz").replace(/\/$/, "") },
