@@ -38,8 +38,8 @@ export function loadLines(db, ref, rawLines, user) {
   return { lines: out, problems };
 }
 
-/* unloading help chosen at checkout: none (buyer takes the goods at the car), one (the courier/driver carries to the door), two (two loaders for heavy orders) */
-export const helpers = f => f?.help === "two" ? 2 : f?.help === "one" || (f?.help == null && f?.lift) ? 1 : 0;
+/* unloading help chosen at checkout: none (the buyer takes the goods at the car) or one (the courier/driver carries to the door and up the stairs) */
+export const helpers = f => f?.help === "one" || f?.help === "two" || (f?.help == null && f?.lift) ? 1 : 0;
 export function quote(db, ref, { lines, services = [], bundles = [], form = {}, promo = "", user = null, yandexPrices = null, points = 0, maxShare = 0.2 }) {
   const D = Object.fromEntries(ref.districts.map(d => [d.id, d]));
   const dest = D[form.district] || D[user?.district] || D.mirob;

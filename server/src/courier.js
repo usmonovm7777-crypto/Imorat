@@ -31,7 +31,7 @@ export function createCourier({ db, cfg, ref, log = console }) {
     if (!o || !s || !sh.tariff) return null;
     const f = JSON.parse(o.form), lines = JSON.parse(sh.lines), t = tariffOf(sh);
     if (!live) { db.run("UPDATE shipments SET claim_id=?, courier_at=? WHERE id=?", "sim-" + sh.id, Date.now(), sh.id); return { claim_id: "sim-" + sh.id, simulated: true }; }
-    const loaders = f.help === "two" ? 2 : f.help === "one" || (f.help == null && f.lift) ? 1 : 0; // unloading help chosen at checkout
+    const loaders = f.help === "one" || (f.help == null && f.lift) ? 1 : 0; // unloading help chosen at checkout
     const requirements = t.id === "courier" ? { taxi_class: "express" } : { taxi_class: "cargo", cargo_type: t.id === "cargo_s" ? "lcv_m" : "lcv_l", ...(loaders ? { cargo_loaders: loaders } : {}) };
     const sp = storePt(s), dp = destPt(f);
     const names = db.all(`SELECT id, ru FROM products WHERE id IN (${lines.map(() => "?").join(",") || "0"})`, ...lines.map(l => l.id));

@@ -171,6 +171,12 @@ export function registerBot({ db, cfg, ref, tg, bonus, masters, log = console })
       [[{ text: ch.L("📤 Отправить другу", "📤 Döstga yuboriş", "📤 Send to a friend"), url: share }]]);
   }
 
+  /* the site is waiting for this chat's account: hand the ticket over, the page picks the session up */
+  function loginDone(ch, ticket, u) {
+    db.run("UPDATE tg_logins SET user_id=? WHERE ticket=? AND user_id IS NULL", u.id, ticket);
+    setState(ch, null);
+    return menu(ch, ch.L(`✅ Вы вошли на сайт Imorat Go${u.name ? ", " + h(u.name.split(" ")[0]) : ""}. Вернитесь на страницу — она уже открыта под вашим аккаунтом.`, `✅ Imorat Go saytiga kirdingiz${u.name ? ", " + h(u.name.split(" ")[0]) : ""}. Sahifaga qayting — u akkauntingiz bilan oçiq.`, `✅ You are signed in on Imorat Go${u.name ? ", " + h(u.name.split(" ")[0]) : ""}. Go back to the page — it is already open under your account.`));
+  }
   /* ---------- sign in by sharing the phone number ---------- */
   function signIn(ch, msg) {
     const ct = msg.contact;
@@ -183,6 +189,7 @@ export function registerBot({ db, cfg, ref, tg, bonus, masters, log = console })
     db.run("UPDATE users SET tg_chat=?, lang=? WHERE id=?", ch.id, ch.lang, u.id);
     db.run("INSERT INTO audit(user_id,action,target,details,ip,created_at) VALUES(?,?,?,?,?,?)", u.id, "tg.contact_login", u.id, JSON.stringify({ isNew }), "telegram", Date.now());
     const ch2 = chatOf(ch.id), pend = ch.c.state === "pend_mq" ? ch.data.mid : null;
+    if (ch.c.state === "login" && ch.data.ticket) return loginDone(ch2, ch.data.ticket, u);
     const st = u.store_id && db.get("SELECT name FROM stores WHERE id=?", u.store_id);
     menu(ch2, ch.L(`✅ Вы вошли${u.name ? ", " + h(u.name.split(" ")[0]) : ""}. Статусы заказов, ответы мастеров${st ? ` и заказы магазина «${h(st.name)}»` : ""} будут приходить сюда.${isNew ? "\nНа сайте войдите по этому же номеру — увидите всё то же самое." : ""}`, `✅ Kirdingiz${u.name ? ", " + h(u.name.split(" ")[0]) : ""}. Buyurtma holati, ustalar javobi${st ? ` va «${h(st.name)}» dökoni buyurtmalari` : ""} şu yerga keladi.${isNew ? "\nSaytga şu raqam bilan kiring — hammasi bir xil körinadi." : ""}`, `✅ You are signed in${u.name ? ", " + h(u.name.split(" ")[0]) : ""}. Order statuses, replies from pros${st ? ` and orders for the store "${h(st.name)}"` : ""} will arrive here.${isNew ? "\nSign in on the website with the same number to see the same things there." : ""}`));
     if (pend) return startRequest(ch2, pend);
@@ -205,6 +212,13 @@ export function registerBot({ db, cfg, ref, tg, bonus, masters, log = console })
       const u = db.get("SELECT * FROM users WHERE id=?", l.user_id), st = u.store_id && db.get("SELECT name FROM stores WHERE id=?", u.store_id), ch = chatOf(chat, from);
       return menu(ch, st ? ch.L(`✅ Telegram подключён к магазину <b>${h(st.name)}</b>. Новые заказы будут приходить сюда с кнопками «Принять» и «Нет в наличии».`, `✅ Telegram <b>${h(st.name)}</b> dökoniga ulandi. Yangi buyurtmalar «Qabul qiliş» va «Mavjud emas» tugmalari bilan şu yerga keladi.`, `✅ Telegram is connected to the store <b>${h(st.name)}</b>. New orders will arrive here with "Accept" and "Out of stock" buttons.`)
         : ch.L(`✅ Telegram подключён, ${h(u.name || "")}. Сюда будут приходить статусы заказов и ответы мастеров.\n\nА ещё здесь можно искать товары — просто напишите название.`, `✅ Telegram ulandi, ${h(u.name || "")}. Bu yerga buyurtma holati va ustalar javobi keladi.\n\nBu yerda mahsulot ham qidiriş mumkin — nomini yozing.`, `✅ Telegram is connected, ${h(u.name || "")}. Order statuses and replies from pros will arrive here.\n\nYou can also search for products here — just type a name.`));
+    }
+    if (/^login_/.test(token || "")) { // «Войти через Telegram» on the site
+      const row = db.get("SELECT * FROM tg_logins WHERE ticket=? AND user_id IS NULL AND expires_at>?", token.slice(6), Date.now());
+      if (!row) return menu(ch0, ch0.L("Ссылка для входа устарела. Нажмите «Войти через Telegram» на сайте ещё раз.", "Kiriş havolasi eskirgan. Saytda «Telegram orqali kiriş»ni yana bosing.", "The sign-in link has expired. Tap “Sign in with Telegram” on the site again."));
+      if (ch0.user) return loginDone(ch0, row.ticket, ch0.user);
+      setState(ch0, "login", { ticket: row.ticket });
+      return menu(ch0, ch0.L("Чтобы войти на сайт, поделитесь номером телефона — кнопка «📱 Войти по номеру телефона» внизу. Номер нужен курьеру и магазину.", "Saytga kiriş uçun telefon raqamingizni yuboring — pastdagi «📱 Telefon raqam bilan kiriş» tugmasi. Raqam kuryer va dökonga kerak.", "To sign in on the site, share your phone number — the “📱 Sign in with my phone number” button below. Couriers and stores need it."));
     }
     if (/^q_/.test(token || "")) return doSearch(ch0, decodeURIComponent(token.slice(2)).replace(/_/g, " "));
     if (token === "masters") return specMenu(ch0);

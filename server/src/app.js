@@ -10,6 +10,7 @@ import { createSms } from "./sms.js";
 import { loadLines, quote, assertNoProblems } from "./pricing.js";
 import { yandexPrices } from "./delivery.js";
 import { createCourier } from "./courier.js";
+import { createGeo } from "./geo.js";
 import { buildRequest, streamChat } from "./ai.js";
 import { createTelegram } from "./telegram.js";
 import { createPush } from "./push.js";
@@ -53,6 +54,7 @@ export function createApp(cfg, log = console) {
   const notify = createNotify({ db, cfg, tg, push, sms, ref, log });
   const bonus = createBonus({ db, cfg, log });
   const courier = createCourier({ db, cfg, ref, log });
+  const geo = createGeo({ cfg, log });
   let bot = { callback: async () => false };
   const channel = createChannel({ db, cfg, tg, log });
   const PCAT = new Map(db.all("SELECT id, cat FROM products").map(p => [p.id, p.cat]));
@@ -132,8 +134,13 @@ export function createApp(cfg, log = console) {
     sms: sms.mode, google_client_id: cfg.google.clientId || null, apple_client_id: cfg.apple.clientId || null,
     apple_redirect_uri: cfg.apple.redirectUri || null, ai: !!cfg.ai.key, yandex: !!cfg.yandex.token, vip_free: cfg.vipFree, pay_at_store: cfg.allowPayAtStore,
     payments: cfg.paymentsOnline, telegram_bot: tg.enabled ? tg.username || null : null, telegram_channel: /^@/.test(cfg.channel?.chat || "") ? cfg.channel.chat : null, push_key: push.publicKey,
-    timers: cfg.timers, commission: cfg.commission, demo: cfg.demoStores
+    timers: cfg.timers, commission: cfg.commission, demo: cfg.demoStores,
+    ymaps_key: cfg.maps.jsKey || null, geo: geo.provider // the site draws a Yandex map with the key; address search goes through /api/geo
   }));
+  /* ---------- address search for the checkout map ---------- */
+  const langOf = url => (["ru", "uz", "en"].includes(url.searchParams.get("lang")) ? url.searchParams.get("lang") : "ru");
+  r.get("/api/geo/suggest", async (req, res, p, url) => { lim.hit("geo-ip:" + req.ip, 90, 60_000); return { items: await geo.suggest(url.searchParams.get("q"), langOf(url)) }; });
+  r.get("/api/geo/reverse", async (req, res, p, url) => { lim.hit("geo-ip:" + req.ip, 90, 60_000); return { item: await geo.reverse(url.searchParams.get("la"), url.searchParams.get("lo"), langOf(url)) }; });
 
   /* ---------- auth ---------- */
   r.post("/api/auth/otp/send", async req => {
@@ -185,6 +192,25 @@ export function createApp(cfg, log = console) {
     // A phone number is required for every account (couriers and stores call the customer).
     return { need_phone: true, ticket: signJwt({ typ: "link", prov, sub: c.sub, email: emailOk ? c.email : "", name }, cfg.jwtSecret, 900), name, email: emailOk ? c.email : "" };
   }
+  /* ---------- sign in with Telegram: the site opens the bot with a one-time ticket, the bot binds the chat's account
+     (asking for the phone number if the chat is new) and the site picks the session up by polling ---------- */
+  r.post("/api/auth/tg/start", req => {
+    lim.hit("tgstart-ip:" + req.ip, 30, 3600_000);
+    if (!tg.enabled || !tg.username) throw new HttpError(503, "telegram_off", "Telegram sign-in is not connected on the server yet");
+    const ticket = randomBytes(16).toString("hex");
+    db.run("INSERT INTO tg_logins(ticket,user_id,created_at,expires_at) VALUES(?,NULL,?,?)", ticket, Date.now(), Date.now() + 10 * 60000);
+    return { ticket, url: `https://t.me/${tg.username}?start=login_${ticket}`, bot: tg.username };
+  });
+  r.get("/api/auth/tg/poll", (req, res, p, url) => {
+    lim.hit("tgpoll-ip:" + req.ip, 600, 3600_000);
+    const row = db.get("SELECT * FROM tg_logins WHERE ticket=?", String(url.searchParams.get("ticket") || "").slice(0, 64));
+    if (!row || row.expires_at < Date.now()) throw new HttpError(410, "ticket_expired", "Sign-in took too long, start again");
+    if (!row.user_id) return { pending: true };
+    const u = db.get("SELECT * FROM users WHERE id=?", row.user_id); db.run("DELETE FROM tg_logins WHERE ticket=?", row.ticket);
+    if (!u) throw new HttpError(410, "ticket_expired", "Sign-in took too long, start again");
+    db.run("INSERT INTO audit(user_id,action,target,details,ip,created_at) VALUES(?,?,?,?,?,?)", u.id, "login.telegram", u.id, "{}", req.ip, Date.now());
+    return { ...session(u), is_new: !u.name };
+  });
   r.post("/api/auth/google", async req => { const b = await readJson(req); return social(req, "google", b.credential, b.name); });
   r.post("/api/auth/apple", async req => { const b = await readJson(req); return social(req, "apple", b.id_token, b.name); });
 
@@ -246,7 +272,7 @@ export function createApp(cfg, log = console) {
   const cleanForm = f => ({
     name: str(f?.name, 80), phone: str(f?.phone, 30), district: D[f?.district] ? f.district : "mirob", street: str(f?.street, 160), flat: str(f?.flat, 30),
     entrance: str(f?.entrance, 20), intercom: str(f?.intercom, 30), private: !!f?.private, // full address for the Yandex courier: porch, intercom code, or a private house
-    floor: String(int(f?.floor, 1, 60) || 1), help: ["none", "one", "two"].includes(f?.help) ? f.help : f?.lift ? "one" : "none", lift: f?.help ? f.help !== "none" : !!f?.lift, mode: f?.mode === "pickup" ? "pickup" : "yandex",
+    floor: String(int(f?.floor, 1, 60) || 1), help: f?.help === "none" ? "none" : f?.help || f?.lift ? "one" : "none", lift: f?.help ? f.help !== "none" : !!f?.lift, mode: f?.mode === "pickup" ? "pickup" : "yandex",
     when: ["asap", "slot", "vip"].includes(f?.when) ? f.when : "asap", hour: String(int(f?.hour, 8, 20) ?? 9).padStart(2, "0"),
     pay: ["click", "payme", "uzum", "nasiya", "cash", "store"].includes(f?.pay) ? f.pay : "store", comment: str(f?.comment, 300),
     la: Number.isFinite(Number(f?.la)) && f?.la !== null && f?.la !== "" ? Number(f.la) : null, lo: Number.isFinite(Number(f?.lo)) && f?.lo !== null && f?.lo !== "" ? Number(f.lo) : null
@@ -888,7 +914,7 @@ export function createApp(cfg, log = console) {
         bumpCatalog(); log.info(`[timer] shipment ${s.id} cancelled: not handed over`);
       }
     }
-    db.run("DELETE FROM tg_links WHERE expires_at<?", now);
+    db.run("DELETE FROM tg_links WHERE expires_at<?", now); db.run("DELETE FROM tg_logins WHERE expires_at<?", now);
     payments.sweep(now);
     courierSweep().catch(e => log.warn("[courier] sweep", e.message));
   }

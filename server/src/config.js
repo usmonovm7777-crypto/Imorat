@@ -57,6 +57,9 @@ export function loadConfig(env = process.env) {
       dailyGuest: Number(env.AI_GUEST_DAILY_LIMIT) || 15
     },
     yandex: { token: env.YANDEX_DELIVERY_TOKEN || "", url: (env.YANDEX_DELIVERY_URL || "https://b2b.taxi.yandex.net").replace(/\/$/, "") },
+    /* maps on the site: the Yandex "JavaScript API и HTTP Геокодер" key draws the real Yandex map and finds addresses;
+       without it the site shows OpenStreetMap tiles and asks Nominatim for addresses */
+    maps: { jsKey: env.YANDEX_MAPS_KEY || "", geocoderKey: env.YANDEX_GEOCODER_KEY || env.YANDEX_MAPS_KEY || "", geocoderUrl: (env.YANDEX_GEOCODER_URL || "https://geocode-maps.yandex.ru/1.x/").replace(/\/$/, "") + "/", nominatim: (env.NOMINATIM_URL || "https://nominatim.openstreetmap.org").replace(/\/$/, "") },
     telegram: { token: env.TELEGRAM_BOT_TOKEN || "", name: env.TELEGRAM_BOT_NAME || "imoratGo_bot", url: (env.TELEGRAM_API_URL || "https://api.telegram.org").replace(/\/$/, ""), pollTimeout: env.TELEGRAM_POLL_TIMEOUT != null ? Number(env.TELEGRAM_POLL_TIMEOUT) : 25 },
     pushSubject: env.VAPID_SUBJECT || "mailto:support@imorat.uz",
     siteUrl: (env.SITE_URL || "https://usmonovm7777-crypto.github.io/Imorat/").replace(/\/?$/, "/"),

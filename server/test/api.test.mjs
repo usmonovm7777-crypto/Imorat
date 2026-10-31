@@ -13,7 +13,7 @@ import { createECDH, createDecipheriv, hkdfSync } from "node:crypto";
 /* ---- fake external services: Eskiz, Yandex, Anthropic, Google JWKS ---- */
 const { privateKey, publicKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
 const jwk = { ...publicKey.export({ format: "jwk" }), kid: "k1", alg: "RS256", use: "sig" };
-const sms = [], tgSent = [], tgUpdates = [], pushes = [], yaClaims = [];
+const sms = [], tgSent = [], tgUpdates = [], pushes = [], yaClaims = [], geoHits = [];
 const fake = createServer(async (req, res) => {
   const chunks = []; for await (const c of req) chunks.push(c); const raw = Buffer.concat(chunks), body = raw.toString("utf8");
   const json = (s, o) => { res.writeHead(s, { "content-type": "application/json" }); res.end(JSON.stringify(o)); };
@@ -26,6 +26,10 @@ const fake = createServer(async (req, res) => {
   if (req.url.startsWith("/ya/b2b/cargo/integration/v2/claims/tracking-links")) return json(200, { route_points: [{ type: "destination", sharing_url: "https://taxi.yandex.ru/route/abc" }] });
   if (req.url.startsWith("/ya/b2b/cargo/integration/v2/claims/info")) { const c = yaClaims[Number(req.url.match(/claim-(\d+)/)[1]) - 1]; const seq = ["performer_found", "pickuped", "delivered_finish"]; const st = seq[Math.min(seq.length - 1, c.infos++)]; return json(200, { id: "x", status: st, performer_info: { courier_name: "Шерзод", car_model: "Chevrolet Labo", car_number: "01A123BC" } }); }
   if (req.url.startsWith("/ya/b2b/cargo/integration/v2/claims/performer-position")) return json(200, { position: { lat: 41.3, lon: 69.25, speed: 10, direction: 90, timestamp: Math.floor(Date.now() / 1000), dist_to_point: 1200 } });
+  // address search: a fake Nominatim and a fake Yandex geocoder (the geo module picks one by the key)
+  if (req.url.startsWith("/nom/search")) { geoHits.push(req.url + "|" + req.headers["user-agent"]); const q = decodeURIComponent(req.url.match(/[?&]q=([^&]*)/)[1]); return json(200, /навои/i.test(q) ? [{ lat: "41.3115", lon: "69.2401", display_name: "10, улица Навои, Шайхантахурский район, Ташкент", addresstype: "building", address: { road: "улица Навои", house_number: "10", suburb: "Шайхантахур", city_district: "Шайхантахурский район" } }, { lat: "41.33", lon: "69.26", display_name: "улица Навои, Ташкент", addresstype: "road", address: { road: "улица Навои" } }] : []); }
+  if (req.url.startsWith("/nom/reverse")) { geoHits.push(req.url); return json(200, { lat: "41.311", lon: "69.279", display_name: "15, проспект Амира Темура", address: { road: "проспект Амира Темура", house_number: "15", suburb: "Юнусабад" } }); }
+  if (req.url.startsWith("/geocode/1.x/")) { geoHits.push(req.url); const g = decodeURIComponent(req.url.match(/geocode=([^&]*)/)[1]); return json(200, { response: { GeoObjectCollection: { featureMember: [{ GeoObject: { name: /,/.test(g) && !/[а-я]/i.test(g) ? "проспект Амира Темура, 15" : "улица Навои, 10", description: "Ташкент", Point: { pos: "69.2401 41.3115" }, metaDataProperty: { GeocoderMetaData: { kind: "house", text: "Узбекистан, Ташкент, улица Навои, 10", Address: { formatted: "Ташкент, улица Навои, 10", Components: [{ kind: "locality", name: "Ташкент" }, { kind: "district", name: "Шайхантахурский район" }, { kind: "street", name: "улица Навои" }, { kind: "house", name: "10" }] } } } } }] } } }); }
   if (req.url === "/jwks") return json(200, { keys: [jwk] });
   if (req.url.startsWith("/tg/botTGTOKEN/")) {
     const m = req.url.split("/").pop(), b = body ? JSON.parse(body) : {};
@@ -920,7 +924,7 @@ test("Card only: no cash, the full address reaches the courier, the buyer watche
   const d3 = mkdtempSync(join(tmpdir(), "imorat-card-"));
   const mk = env => { const cfg = loadConfig({ JWT_SECRET: "x", DB_PATH: join(d3, (env.YANDEX_DELIVERY_TOKEN ? "y" : "n") + ".db"), UPLOADS_DIR: join(d3, "up"), ADMIN_PHONES: "998901111111", ADMIN_MFA: "0", SMS_MODE: "dev", OTP_PER_IP_HOUR: "500", TELEGRAM_BOT_TOKEN: "TGTOKEN", TELEGRAM_API_URL: fakeBase + "/tg", TELEGRAM_POLL_TIMEOUT: "0", ...env }); const a = createApp(cfg, { info() {}, warn() {}, error: console.error }); return a; };
   const run = async (a, fn) => { await new Promise(r => a.listen(0, "127.0.0.1", r)); const b3 = `http://127.0.0.1:${a.address().port}`; const c = async (m, p, body, tok) => { const r = await fetch(b3 + p, { method: m, headers: { "content-type": "application/json", ...(tok ? { authorization: "Bearer " + tok } : {}) }, body: body ? JSON.stringify(body) : undefined }); return { status: r.status, data: await r.json().catch(() => ({})) }; }; const lg = async ph => { const s = await c("POST", "/api/auth/otp/send", { phone: ph }); return (await c("POST", "/api/auth/otp/verify", { phone: ph, code: s.data.dev_code })).data.token; }; try { await fn(c, lg, a); } finally { a.stopJobs(); a.close(); a.closeAllConnections(); a.db.raw.close(); } };
-  const form = { name: "Карта", phone: "998901234567", mode: "yandex", district: "yunus", street: "ул. Амира Темура, 15", entrance: "3", floor: "4", flat: "27", intercom: "27К", comment: "Позвоните заранее", la: 41.311, lo: 69.279, pay: "payme", help: "two" };
+  const form = { name: "Карта", phone: "998901234567", mode: "yandex", district: "yunus", street: "ул. Амира Темура, 15", entrance: "3", floor: "4", flat: "27", intercom: "27К", comment: "Позвоните заранее", la: 41.311, lo: 69.279, pay: "payme", help: "one" };
   // 1) no payment keys yet: ordering is closed, not silently switched to cash
   await run(mk({}), async (c, lg) => {
     const t = await lg("998901234567");
@@ -935,11 +939,11 @@ test("Card only: no cash, the full address reaches the courier, the buyer watche
     assert.equal((await c("POST", "/api/orders", { lines: [{ id: 1, store: "usta", q: 1 }], form: { ...form, mode: "pickup", pay: "store" } }, t)).data.error, "card_required", "no cash even for pickup");
     const o = await c("POST", "/api/orders", { lines: [{ id: 1, store: "usta", q: 1 }], form }, t);
     assert.equal(o.status, 200, JSON.stringify(o.data)); const d = o.data.order.d;
-    assert.equal(d.entrance, "3"); assert.equal(d.flat, "27"); assert.equal(d.floor, "4"); assert.equal(d.intercom, "27К"); assert.equal(d.la, 41.311); assert.equal(d.help, "two");
-    { // unloading help is priced per loader and per floor (cargo tariff): none < one < two; a private house counts as one floor
+    assert.equal(d.entrance, "3"); assert.equal(d.flat, "27"); assert.equal(d.floor, "4"); assert.equal(d.intercom, "27К"); assert.equal(d.la, 41.311); assert.equal(d.help, "one");
+    { // unloading help is priced per floor (cargo tariff): none < one; a private house counts as one floor
       const q = async f => (await c("POST", "/api/quote", { lines: [{ id: 1, store: "usta", q: 1 }], form: { ...form, ...f } }, t)).data.quote.del;
-      const none = await q({ help: "none" }), one = await q({ help: "one" }), two = await q({ help: "two" }), priv = await q({ help: "one", private: true });
-      assert.ok(none < one && one < two, `${none} < ${one} < ${two}`); assert.equal(two - none, 2 * (one - none)); assert.equal(one - none, 3 * (priv - none), "floor 4 = 3 flights, a private house = 1");
+      const none = await q({ help: "none" }), one = await q({ help: "one" }), priv = await q({ help: "one", private: true });
+      assert.ok(none < one, `${none} < ${one}`); assert.equal(one - none, 3 * (priv - none), "floor 4 = 3 flights, a private house = 1");
       assert.equal(await q({ lift: true, help: undefined }), one, "old clients sending lift:true get one loader");
     }
     const rpc = (method, params) => fetch(`http://127.0.0.1:${a.address().port}/api/pay/payme`, { method: "POST", headers: { "content-type": "application/json", authorization: "Basic " + Buffer.from("Paycom:PK").toString("base64") }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }) }).then(r => r.json());
@@ -967,7 +971,7 @@ test("Card only: no cash, the full address reaches the courier, the buyer watche
     assert.equal(dest.address.porch, "3"); assert.equal(dest.address.sfloor, "4"); assert.equal(dest.address.sflat, "27"); assert.equal(dest.address.door_code, "27К");
     assert.deepEqual(dest.address.coordinates, [69.279, 41.311]); assert.equal(dest.contact.phone, "+998901234567"); assert.equal(dest.external_order_id, o.data.order.num);
     assert.ok(["express", "cargo"].includes(claim.client_requirements.taxi_class)); // a 50 kg bag of cement goes by cargo van
-    assert.equal(claim.client_requirements.cargo_loaders, 2); assert.equal(claim.skip_door_to_door, false); // two loaders were ordered at checkout
+    assert.equal(claim.client_requirements.cargo_loaders, 1); assert.equal(claim.skip_door_to_door, false); // help was ordered at checkout
     await until(async () => (await c("GET", `/api/orders/${o.data.order.num}`, null, t)).data.order.ships[0].tracking_url);
     // each sweep asks Yandex and moves the shipment: performer_found → to_store, pickuped → on_way, delivered_finish → delivered
     a.sweep(); await until(async () => (await c("GET", `/api/orders/${o.data.order.num}`, null, t)).data.order.ships[0].status === "to_store");
@@ -978,4 +982,58 @@ test("Card only: no cash, the full address reaches the courier, the buyer watche
     assert.equal((await c("GET", `/api/orders/${o.data.order.num}`, null, t)).data.order.status, "done");
   });
   rmSync(d3, { recursive: true, force: true });
+});
+
+test("Address search for the checkout map: Nominatim without a key, the Yandex geocoder with one, cached and polite", async () => {
+  const d4 = mkdtempSync(join(tmpdir(), "imorat-geo-"));
+  const mk = env => createApp(loadConfig({ JWT_SECRET: "x", DB_PATH: join(d4, (env.YANDEX_MAPS_KEY ? "y" : "n") + ".db"), UPLOADS_DIR: join(d4, "up"), ADMIN_PHONES: "998901111111", SMS_MODE: "dev", NOMINATIM_URL: fakeBase + "/nom", YANDEX_GEOCODER_URL: fakeBase + "/geocode/1.x/", ...env }), { info() {}, warn() {}, error: console.error });
+  const run = async (a, fn) => { await new Promise(r => a.listen(0, "127.0.0.1", r)); const b4 = `http://127.0.0.1:${a.address().port}`; const g = async p => { const r = await fetch(b4 + p); return { status: r.status, data: await r.json() }; }; try { await fn(g); } finally { a.stopJobs(); a.close(); a.closeAllConnections(); a.db.raw.close(); } };
+  await run(mk({}), async g => {
+    assert.equal((await g("/api/config")).data.geo, "osm"); assert.equal((await g("/api/config")).data.ymaps_key, null);
+    assert.deepEqual((await g("/api/geo/suggest?q=на")).data.items, [], "two letters: no request at all");
+    const n0 = geoHits.length, r = await g("/api/geo/suggest?q=" + encodeURIComponent("Навои 10") + "&lang=ru");
+    assert.equal(r.status, 200); assert.equal(r.data.items[0].street, "улица Навои, 10"); assert.equal(r.data.items[0].la, 41.3115); assert.equal(r.data.items[0].sub, "Шайхантахур, Шайхантахурский район"); assert.equal(r.data.items.length, 2);
+    assert.match(geoHits[n0], /countrycodes=uz/); assert.match(geoHits[n0], /ImoratGo/, "Nominatim gets a user agent");
+    await g("/api/geo/suggest?q=" + encodeURIComponent("Навои 10") + "&lang=ru"); assert.equal(geoHits.length, n0 + 1, "the same query is served from the cache");
+    const rv = (await g("/api/geo/reverse?la=41.311&lo=69.279")).data.item; assert.equal(rv.street, "проспект Амира Темура, 15"); assert.equal(rv.sub, "Юнусабад");
+    assert.equal((await g("/api/geo/reverse?la=abc&lo=1")).data.item, null);
+    assert.deepEqual((await g("/api/geo/suggest?q=" + encodeURIComponent("Чиланзар"))).data.items, [], "nothing found → empty list, not an error");
+  });
+  await run(mk({ YANDEX_MAPS_KEY: "ymkey" }), async g => {
+    assert.equal((await g("/api/config")).data.geo, "yandex"); assert.equal((await g("/api/config")).data.ymaps_key, "ymkey");
+    const n0 = geoHits.length, r = await g("/api/geo/suggest?q=" + encodeURIComponent("Навои 10") + "&lang=uz");
+    assert.equal(r.data.items[0].street, "улица Навои, 10"); assert.equal(r.data.items[0].sub, "Шайхантахурский район"); assert.equal(r.data.items[0].lo, 69.2401);
+    assert.match(geoHits[n0], /apikey=ymkey/); assert.match(geoHits[n0], /lang=uz_UZ/); assert.match(geoHits[n0], /rspn=1/, "results are limited to the Tashkent box");
+    const rv = (await g("/api/geo/reverse?la=41.311&lo=69.279")).data.item; assert.equal(rv.street, "улица Навои, 10"); assert.match(geoHits[geoHits.length - 1], /kind=house/);
+  });
+  rmSync(d4, { recursive: true, force: true });
+});
+
+test("Sign in with Telegram from the site: ticket → bot asks for the phone → the page gets the session; a known chat signs in at once", async () => {
+  let uid = 900;
+  const send = (chat, msg) => tgUpdates.push({ update_id: ++uid, message: { chat: { id: chat, type: "private" }, from: { id: chat }, ...msg } });
+  const sentTo = (chat, re) => tgSent.filter(x => String(x.chat_id) === String(chat) && re.test(x.text || ""));
+  const st = await call("POST", "/api/auth/tg/start", {});
+  assert.equal(st.status, 200); assert.match(st.data.url, /^https:\/\/t\.me\/imorat_test_bot\?start=login_[0-9a-f]{32}$/); assert.equal(st.data.bot, "imorat_test_bot");
+  assert.deepEqual((await call("GET", `/api/auth/tg/poll?ticket=${st.data.ticket}`)).data, { pending: true });
+  assert.equal((await call("GET", "/api/auth/tg/poll?ticket=nope")).status, 410, "unknown ticket");
+  // a brand-new chat opens the link: the bot asks for the phone number, then the contact signs the person in and completes the ticket
+  send(7801, { text: "/start login_" + st.data.ticket });
+  const ask = await until(() => sentTo(7801, /поделитесь номером/)[0]);
+  assert.ok(ask.reply_markup.keyboard.flat().some(b => b.request_contact), "contact button is offered");
+  assert.deepEqual((await call("GET", `/api/auth/tg/poll?ticket=${st.data.ticket}`)).data, { pending: true }, "still pending until the phone is shared");
+  send(7801, { contact: { phone_number: "+998933337788", user_id: 7801, first_name: "Телеграм", last_name: "Юзер" } });
+  await until(() => sentTo(7801, /вошли на сайт/).length);
+  const got = await call("GET", `/api/auth/tg/poll?ticket=${st.data.ticket}`);
+  assert.equal(got.status, 200); assert.ok(got.data.token); assert.equal(got.data.user.phone, "+998 93 333 77 88"); assert.equal(got.data.user.name, "Телеграм Юзер"); assert.equal(got.data.user.telegram, true);
+  assert.equal((await call("GET", "/api/me", null, got.data.token)).data.user.phone, "+998 93 333 77 88", "the token works");
+  assert.equal((await call("GET", `/api/auth/tg/poll?ticket=${st.data.ticket}`)).status, 410, "a ticket is used once");
+  // the same chat again: already known → signed in immediately, no phone asked
+  const st2 = await call("POST", "/api/auth/tg/start", {});
+  send(7801, { text: "/start login_" + st2.data.ticket });
+  await until(() => sentTo(7801, /вошли на сайт/).length >= 2);
+  assert.equal((await call("GET", `/api/auth/tg/poll?ticket=${st2.data.ticket}`)).data.user.phone, "+998 93 333 77 88");
+  // an expired or reused link gets a friendly message
+  send(7801, { text: "/start login_" + st2.data.ticket });
+  await until(() => sentTo(7801, /устарела/).length);
 });

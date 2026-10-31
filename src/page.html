@@ -819,6 +819,9 @@ html:not(.fx) .truckel { animation: none; }
 .soc { display: flex; align-items: center; justify-content: center; gap: 10px; border: 1.5px solid var(--line-strong); border-radius: 12px; padding: 13px; font-weight: 600; background: var(--surface); width: 100%; }
 .soc:hover { border-color: var(--ink); }
 .soc.dark { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.soc.tg { background: #2AABEE; color: #fff; border-color: #2AABEE; text-decoration: none; }
+.soc.tg:hover { background: #229ED9; border-color: #229ED9; }
+.soc.tg:disabled { opacity: .5; cursor: not-allowed; }
 .or { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 13px; }
 .or::before, .or::after { content: ""; flex: 1; height: 1px; background: var(--line); }
 .phone-in { display: flex; border: 1.5px solid var(--line); border-radius: 12px; background: var(--raised); overflow: hidden; }
@@ -915,6 +918,14 @@ html.ds-dragging, html.ds-dragging * { cursor: grabbing !important; user-select:
 .smap .pin { position: absolute; left: 50%; top: 50%; width: 36px; height: 36px; translate: -50% -100%; color: var(--signal); filter: drop-shadow(0 2px 3px rgba(0,0,0,.3)); }
 .smap .attr { position: absolute; right: 6px; bottom: 6px; font-size: 11px; background: color-mix(in srgb, var(--surface) 85%, transparent); padding: 2px 6px; border-radius: 6px; color: var(--muted); }
 /* live courier map in the order: real map tiles, store and home pins, the courier moves every refresh */
+/* ---------- Quick tools row on the home page ---------- */
+.tools-row { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin: 12px -16px 0; padding: 2px 16px 4px; scroll-snap-type: x proximity; }
+.tools-row::-webkit-scrollbar { display: none; }
+.tools-row button { flex: none; width: 86px; display: grid; justify-items: center; align-content: start; gap: 6px; font-size: 11.5px; line-height: 1.15; text-align: center; color: var(--ink); font-weight: 500; scroll-snap-align: start; }
+.tr-i { width: 58px; height: 58px; border-radius: 18px; display: grid; place-items: center; background: var(--surface); border: 1px solid var(--line); color: var(--accent); box-shadow: var(--shadow-sm); }
+.tr-i.tr-ai { background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 55%, var(--signal))); color: #fff; border-color: transparent; }
+.tr-i.more { background: var(--ink); color: var(--bg); border-color: transparent; }
+@media (min-width: 761px) { .tools-row { margin-inline: 0; padding-inline: 0; gap: 10px; } .tools-row button { width: 104px; font-size: 12.5px; } }
 /* ---------- Home widgets: customize drawer + the button under the home page ---------- */
 .home-setup { display: grid; justify-items: center; gap: 6px; padding: 10px 0 30px; text-align: center; }
 .home-setup small { color: var(--faint); font-size: 12px; }
@@ -952,7 +963,7 @@ html.fx .fx-btn.th-btn, .fx-btn.th-btn { background: var(--surface); color: var(
   .hero .eyebrow { font-size: 10.5px; letter-spacing: .06em; }
   .hero .h-xl { font-size: 27px; }
   .hero .lead { display: none; }
-  .hero-q button[data-ask] { display: none; }
+  .hero-q { display: none; } /* the tools row under the hero carries these */
   .hero .collage { display: none; }
   .stats { gap: 14px 18px; }
   .stats b { font-size: 19px; }
@@ -1191,14 +1202,35 @@ html.fx .fx-btn { color: #fff; border-color: transparent; background: linear-gra
 .loc-st.ok { color: var(--ink); } .loc-st.ok svg { color: var(--ok); vertical-align: -2px; }
 .loc-st.bad { color: var(--signal); }
 .loc-st a { color: var(--accent); font-weight: 600; }
-.pickmap { position: relative; aspect-ratio: 1; border-radius: 12px; overflow: hidden; border: 1.5px solid var(--line); background: var(--raised); cursor: crosshair; touch-action: manipulation; user-select: none; }
-.pickmap .tiles { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(4, 1fr); }
-.pickmap .tiles img { width: 100%; height: 100%; display: block; object-fit: cover; }
-.pickmap .scheme { position: absolute; inset: 0; width: 100%; height: 100%; display: none; }
-.pickmap.notiles .tiles { display: none; }
-.pickmap.notiles .scheme { display: block; }
-.pickmap .pin { width: 30px; height: 30px; transform: translate(-50%, -100%); color: var(--signal); pointer-events: none; filter: drop-shadow(0 2px 2px rgba(0,0,0,.35)); display: block; }
-.pickmap .attr { position: absolute; right: 4px; bottom: 3px; font-size: 10px; background: color-mix(in srgb, var(--surface) 85%, transparent); padding: 1px 5px; border-radius: 4px; color: var(--muted); }
+.pickmap { position: relative; aspect-ratio: 1; border-radius: 12px; overflow: hidden; border: 1.5px solid var(--line); background: var(--raised); cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; }
+.pickmap.moving { cursor: grabbing; }
+.pickmap .pm-tiles { position: absolute; inset: 0; }
+.pickmap .pm-tiles img { position: absolute; left: 0; top: 0; width: 256px; height: 256px; display: block; pointer-events: none; }
+html[data-theme="dark"] .pickmap .pm-tiles img { filter: brightness(.82) contrast(1.05) saturate(.85); }
+@media (prefers-color-scheme: dark) { html:not([data-theme="light"]) .pickmap .pm-tiles img { filter: brightness(.82) contrast(1.05) saturate(.85); } }
+.pickmap .pm-ya { position: absolute; inset: 0; }
+.pickmap.ya { cursor: auto; touch-action: auto; }
+.pickmap.ya .pm-tiles, .pickmap.ya .pm-zoom, .pickmap.ya .attr { display: none; }
+.pickmap .pm-pin { position: absolute; left: 50%; top: 50%; pointer-events: none; z-index: 3; }
+.pickmap .pm-pin::after { content: ""; position: absolute; left: -5px; top: -3px; width: 10px; height: 5px; border-radius: 50%; background: rgba(0,0,0,.28); }
+.pickmap .pin { width: 34px; height: 34px; transform: translate(-50%, -100%); color: var(--signal); pointer-events: none; filter: drop-shadow(0 2px 2px rgba(0,0,0,.35)); display: block; position: relative; z-index: 1; transition: transform .15s; }
+.pickmap.moving .pin { transform: translate(-50%, -118%); }
+.pickmap .pm-zoom { position: absolute; right: 8px; top: 8px; display: grid; gap: 4px; z-index: 3; }
+.pickmap .pm-zoom button { width: 32px; height: 32px; border-radius: 9px; background: color-mix(in srgb, var(--surface) 92%, transparent); border: 1px solid var(--line-strong); font-size: 18px; font-weight: 600; color: var(--ink); display: grid; place-items: center; box-shadow: var(--shadow-sm); }
+.pickmap .pm-hint { position: absolute; left: 8px; right: 48px; bottom: 8px; z-index: 3; font-size: 12px; line-height: 1.3; background: color-mix(in srgb, var(--surface) 92%, transparent); color: var(--ink); padding: 5px 9px; border-radius: 9px; display: inline-flex; gap: 5px; align-items: center; width: max-content; max-width: calc(100% - 56px); pointer-events: none; }
+.pickmap .pm-hint svg { color: var(--signal); flex: none; }
+.pickmap.ya .pm-hint { bottom: 30px; }
+.pickmap.notiles .pm-tiles { display: none; }
+.pickmap.notiles::before { content: attr(aria-label); position: absolute; inset: 0; display: grid; place-items: center; padding: 20px; text-align: center; color: var(--muted); font-size: 13px; }
+.addr-sugg { top: calc(100% + 4px); padding: 4px; }
+.addr-sugg button { display: flex; gap: 10px; align-items: center; width: 100%; text-align: left; padding: 9px 10px; border-radius: 10px; }
+.addr-sugg button:hover, .addr-sugg button:focus-visible { background: var(--raised); }
+.addr-sugg button svg { color: var(--signal); flex: none; }
+.addr-sugg button span { display: grid; gap: 1px; min-width: 0; }
+.addr-sugg button b { font-weight: 600; font-size: 14px; }
+.addr-sugg button small { color: var(--muted); font-size: 12px; }
+.f:has(> .addr-sugg) { position: relative; }
+.pickmap .attr { position: absolute; right: 4px; bottom: 3px; z-index: 3; font-size: 10px; background: color-mix(in srgb, var(--surface) 85%, transparent); padding: 1px 5px; border-radius: 4px; color: var(--muted); }
 .pickmap:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .hours { display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items: center; }
 .st-banner { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: 12px; background: var(--signal-soft); font-size: 14px; margin: 4px 0 12px; }
@@ -1506,6 +1538,7 @@ function apiErr(e) {
     rate_limited: L("Слишком много запросов. Подождите немного.", "So‘rovlar juda ko‘p. Biroz kuting."),
     sms_failed: L("SMS не отправилось. Попробуйте позже.", "SMS yuborilmadi. Keyinroq urinib ko‘ring."),
     already_linked: L("Этот аккаунт уже привязан к другому номеру", "Bu akkaunt boshqa raqamga bog‘langan"),
+    telegram_off: L("Вход через Telegram ещё не подключён на сервере", "Telegram orqali kirish serverda hali ulanmagan", "Telegram sign-in is not connected on the server yet"),
     ticket_expired: L("Вход занял слишком много времени — начните заново", "Kirish uzoq davom etdi — qaytadan boshlang"),
     provider_not_configured: L("Этот способ входа ещё не настроен. Войдите по номеру телефона.", "Bu kirish usuli hali sozlanmagan. Telefon raqami orqali kiring."),
     store_exists: L("У вас уже есть магазин — откройте кабинет продавца", "Sizda do‘kon bor — sotuvchi kabinetini oching"),
@@ -2030,6 +2063,7 @@ function setLook(fx, theme) {
    Phones start with a short home (the heavy blocks are off), computers show everything; each keeps its own setting. ---- */
 const HOME_W = [
   ["hero", "Главный экран и Usta AI", "Bosh ekran va Usta AI", "Hero and Usta AI", true],
+  ["tools", "Инструменты: калькуляторы, AI, дизайнер", "Asboblar: kalkulyatorlar, AI, dizayner", "Tools: calculators, AI, designer"],
   ["cats", "Категории", "Toifalar", "Categories"],
   ["hits", "Хиты недели", "Hafta xitlari", "Hits of the week"],
   ["bundles", "Комплекты под ключ", "Tayyor to‘plamlar", "Ready kits"],
@@ -2046,8 +2080,9 @@ const HOME_W = [
   ["vip", "Imorat Go VIP", "Imorat Go VIP", "Imorat Go VIP"],
   ["seller", "Для магазинов", "Do‘konlar uchun", "For stores"]
 ];
-const DESK_ORDER = ["hero", "trust", "marquee", "cats", "designer", "masters", "bundles", "recent", "hits", "delivery", "fresh", "winter", "calc", "vip", "stores", "seller"];
+const DESK_ORDER = ["hero", "tools", "trust", "marquee", "cats", "designer", "masters", "bundles", "recent", "hits", "delivery", "fresh", "winter", "calc", "vip", "stores", "seller"];
 const PHONE_OFF = ["trust", "marquee", "delivery", "fresh", "winter", "vip"];
+const DESK_OFF = ["tools"]; // computers have the header rail and the ☰ panel; phones get the row of tools under the hero
 const mqPhone = matchMedia("(max-width: 760px)");
 const isPhone = () => mqPhone.matches;
 const homeKey = () => isPhone() ? "imorat.home.m" : "imorat.home";
@@ -2056,7 +2091,7 @@ function homeLayout() {
   const ids = HOME_W.map(w => w[0]), pref = LS.get(homeKey(), null);
   const order = (pref?.order || (isPhone() ? ids : DESK_ORDER)).filter(id => ids.includes(id));
   for (const id of ids) if (!order.includes(id)) order.push(id);
-  const off = (pref ? pref.off || [] : isPhone() ? PHONE_OFF : []).filter(id => ids.includes(id) && !HOME_W.find(w => w[0] === id)[4]);
+  const off = (pref ? pref.off || [] : isPhone() ? PHONE_OFF : DESK_OFF).filter(id => ids.includes(id) && !HOME_W.find(w => w[0] === id)[4]);
   return { order, off, custom: !!pref };
 }
 function saveHome(order, off) { LS.set(homeKey(), { order, off }); applyHome(); }
@@ -2148,7 +2183,7 @@ function renderHeader() {
   const quick = ["build", "tools", "plumb", "heat", "elec", "light", "paint", "tile", "floor", "doors", "kitchen", "furn", "garden"];
   $("#hdr").innerHTML = `
   <div class="wrap hdr-row">
-    <button class="menu-btn" type="button" data-act="widgets" aria-label="${L("Виджеты и инструменты", "Vidjetlar va asboblar")}" title="${L("Виджеты", "Vidjetlar")}">${ui("menu", 22)}<span class="dot" aria-hidden="true"></span></button>
+    <button class="menu-btn" type="button" data-act="widgets" aria-label="${L("Инструменты: калькуляторы, Usta AI, дизайнер, доставка", "Asboblar: kalkulyatorlar, Usta AI, dizayner, yetkazish", "Tools: calculators, Usta AI, designer, delivery")}" title="${L("Инструменты", "Asboblar", "Tools")}">${ui("menu", 22)}<span class="dot" aria-hidden="true"></span></button>
     <button class="logo" type="button" data-go="home" aria-label="Imorat Go"><span class="logo-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span><b>imorat<em>go</em></b></button>
     <button class="cat-btn" type="button" data-act="mega">${ui("grid", 18)}${L("Каталог", "Katalog")}</button>
     <div class="search" role="search">${ui("search", 18)}<input id="q" type="search" enterkeyhint="search" role="combobox" aria-controls="sugg" aria-expanded="false" aria-autocomplete="list" value="${esc(f.q)}" placeholder="${L("Цемент, смеситель, ламинат…", "Sement, aralashtirgich, laminat…")}" aria-label="${L("Поиск по каталогу", "Katalog bo‘yicha qidiruv")}" autocomplete="off"><div class="sugg" id="sugg" role="listbox" aria-label="${L("Подсказки поиска", "Qidiruv takliflari")}" hidden></div><span class="s-tools"><button class="s-ic" type="button" data-act="voice" ${SRec ? "" : "hidden"} aria-label="${L("Поиск голосом", "Ovozli qidiruv")}" title="${L("Поиск голосом", "Ovozli qidiruv")}">${ui("mic", 18)}</button><button class="s-ic" type="button" data-act="photo-search" ${photoAIon() ? "" : "hidden"} aria-label="${L("Поиск по фото", "Rasm bo‘yicha qidiruv")}" title="${L("Поиск по фото", "Rasm bo‘yicha qidiruv")}">${ui("camera", 18)}</button><button class="ask" type="button" data-act="ask-search">${ui("spark", 14)}<span class="t">${L("Спросить AI", "AI dan so‘rash")}</span></button></span><input type="file" id="psFile" accept="image/*" hidden></div>
@@ -2187,8 +2222,8 @@ function renderFooter() {
   </div>`;
 }
 function renderTabbar() {
-  const cur = drawerView === "favs" ? "favs" : drawerView === "profile" || drawerView === "orders" ? "profile" : drawerView ? "cart" : route.view === "catalog" ? "catalog" : "home";
-  const items = [["home", "home", L("Главная", "Asosiy"), "go"], ["catalog", "grid", L("Каталог", "Katalog"), "mega"], ["favs", "heart", L("Избранное", "Saralanganlar"), "favs"], ["cart", "cart", L("Корзина", "Savat"), "cart"], ["profile", "user", L("Профиль", "Profil"), "profile"]];
+  const cur = (typeof widOpen !== "undefined" && widOpen) ? "tools" : drawerView === "profile" || drawerView === "orders" ? "profile" : drawerView ? "cart" : route.view === "catalog" ? "catalog" : "home";
+  const items = [["home", "home", L("Главная", "Asosiy"), "go"], ["catalog", "grid", L("Каталог", "Katalog"), "mega"], ["tools", "calc", L("Инструменты", "Asboblar", "Tools"), "widgets"], ["cart", "cart", L("Корзина", "Savat"), "cart"], ["profile", "user", L("Профиль", "Profil"), "profile"]];
   $("#tabbar").innerHTML = items.map(([id, icn, lbl, act]) => `<button type="button" ${act === "go" ? 'data-go="home"' : `data-act="${act}"`} aria-current="${cur === id}">${ui(icn, 22)}<span>${lbl}</span>${id === "cart" ? `<span class="dot" id="tabCart" ${cartCount() ? "" : "hidden"}>${cartCount()}</span>` : ""}</button>`).join("");
 }
 function counts() {
@@ -2332,6 +2367,15 @@ function renderHome() {
       </div>
       <div class="collage" aria-hidden="false">${collage.map(p => `<button class="tile studio" type="button" data-open="${p.id}" style="--h:${hueOf(p)}">${art(p, "", true)}<span>${esc(pName(p))}</span></button>`).join("")}</div>
     </section>
+    <nav class="tools-row" data-w="tools" aria-label="${L("Инструменты", "Asboblar", "Tools")}">
+      <button type="button" data-act="w-calc"><span class="tr-i">${ui("calc", 24)}</span><span>${L("Калькуляторы", "Kalkulyatorlar", "Calculators")}</span></button>
+      <button type="button" data-act="ai"><span class="tr-i tr-ai">${ui("spark", 24)}</span><span>Usta AI</span></button>
+      <button type="button" data-go="design"><span class="tr-i">${ui("home", 24)}</span><span>${L("3D-дизайнер", "3D dizayner", "3D designer")}</span></button>
+      <button type="button" data-go="masters"><span class="tr-i">${ui("wrench", 24)}</span><span>${L("Мастера", "Ustalar", "Pros")}</span></button>
+      <button type="button" data-go="list"><span class="tr-i">${ui("camera", 24)}</span><span>${L("Список по фото", "Rasmdagi ro‘yxat", "List from a photo")}</span></button>
+      <button type="button" data-act="w-deliv"><span class="tr-i">${ui("truck", 24)}</span><span>${L("Доставка", "Yetkazish", "Delivery")}</span></button>
+      <button type="button" data-act="widgets"><span class="tr-i more">${ui("grid", 24)}</span><span>${L("Все", "Hammasi", "All")}</span></button>
+    </nav>
     <div class="trust" data-w="trust">
       <div><span class="ti">${ui("truck", 20)}</span><span><b>${L("Яндекс Доставка", "Yandex Yetkazish")}</b><small>${L("Курьер от 40 минут", "Kuryer 40 daqiqadan")}</small></span></div>
       <div><span class="ti">${ui("store", 20)}</span><span><b>${storesTxt()}</b><small>${L("Сравнение в карточке", "Kartochkada solishtirish")}</small></span></div>
@@ -2793,12 +2837,12 @@ function dCart() {
 }
 function readForm() {
   const el = $("#orderForm"); if (!el) return form;
-  const d = Object.fromEntries(new FormData(el).entries()); d.help = ["none", "one", "two"].includes(d.help) ? d.help : "none"; d.lift = d.help !== "none"; d.usePts = el.usePts?.checked || false; d.private = el.private?.checked || false;
+  const d = Object.fromEntries(new FormData(el).entries()); d.help = d.help === "none" ? "none" : "one"; d.lift = d.help !== "none"; d.usePts = el.usePts?.checked || false; d.private = el.private?.checked || false;
   d.la = d.la === "" || d.la == null ? null : +d.la; d.lo = d.lo === "" || d.lo == null ? null : +d.lo; return d;
 }
-/* unloading help chosen at checkout: none — the buyer takes the goods at the car; one — the courier/driver carries to the door; two — two loaders for heavy orders */
-const helpers = d => d?.help === "two" ? 2 : d?.help === "one" || (d?.help == null && d?.lift) ? 1 : 0;
-const HELP_TXT = () => ({ none: L("Без разгрузки — заберёте у машины", "Tushirishsiz — mashina oldidan olasiz", "No unloading — you take it at the car"), one: L("Курьер донесёт до двери", "Kuryer eshikkacha olib keladi", "The courier carries it to the door"), two: L("Два грузчика", "Ikki yuk tashuvchi", "Two loaders") });
+/* unloading help chosen at checkout: none — the buyer takes the goods at the car; one — the courier/driver helps unload and carries to the door (old orders may say "two") */
+const helpers = d => d?.help === "one" || d?.help === "two" || (d?.help == null && d?.lift) ? 1 : 0;
+const HELP_TXT = () => ({ none: L("Без разгрузки — заберёте у машины", "Tushirishsiz — mashina oldidan olasiz", "No unloading — you take it at the car"), one: L("Курьер донесёт до двери", "Kuryer eshikkacha olib keladi", "The courier carries it to the door"), two: L("Курьер донесёт до двери", "Kuryer eshikkacha olib keladi", "The courier carries it to the door") });
 function quote(d) {
   const gs = groups();
   const ships = gs.map(g => {
@@ -2831,7 +2875,7 @@ const paymentsOff = () => API && !payOptions({ mode: "yandex" }).length; // serv
 function dCheckout() {
   $("#dTitle").textContent = L("Оформление", "Rasmiylashtirish");
   const d = Object.assign({ name: user?.name || "", phone: user?.phone || "+998 ", district, street: "", flat: "", floor: "1", mode: "yandex", when: "asap", hour: "09", pay: "", help: "one", lift: true, comment: "" }, form);
-  if (!["none", "one", "two"].includes(d.help)) d.help = d.lift ? "one" : "none";
+  if (d.help !== "none" && d.help !== "one") d.help = d.help === "two" || d.lift ? "one" : "none";
   { const ok = payOptions(d).map(x => x[0]); if (!ok.includes(d.pay)) d.pay = ok[0] || ""; }
   if (d.la != null && d.lo != null && !inUz(+d.la, +d.lo)) { d.la = null; d.lo = null; }
   const hours = []; for (let h = 8; h <= 20; h++) hours.push(String(h).padStart(2, "0"));
@@ -2850,13 +2894,12 @@ function dCheckout() {
       <label class="check"><input type="checkbox" id="fPrivate" name="private" ${d.private ? "checked" : ""}><span>${L("Частный дом — без подъезда и этажа", "Xususiy uy — kirish va qavat yo‘q", "Private house — no entrance or floor")}</span></label>
       <div class="three" id="aptRow" ${d.private ? "hidden" : ""}><div class="f"><label for="fEntrance">${L("Подъезд", "Kirish (podyezd)", "Entrance")}</label><input id="fEntrance" name="entrance" value="${esc(d.entrance || "")}" inputmode="numeric" autocomplete="off"></div><div class="f"><label for="fFloor">${L("Этаж", "Qavat")}</label><input id="fFloor" name="floor" value="${esc(d.floor)}" inputmode="numeric"></div><div class="f"><label for="fFlat">${L("Квартира / офис", "Xonadon / ofis")}</label><input id="fFlat" name="flat" value="${esc(d.flat)}" autocomplete="off"></div></div>
       <div class="two" id="aptRow2" ${d.private ? "hidden" : ""}><div class="f"><label for="fIntercom">${L("Домофон", "Domofon", "Intercom code")}</label><input id="fIntercom" name="intercom" value="${esc(d.intercom || "")}" autocomplete="off" placeholder="${L("код или «не работает»", "kod yoki «ishlamaydi»", "code or “broken”")}"></div><div class="f"><span class="err" id="flatErr" hidden>${L("Укажите квартиру и этаж — курьер поднимется к двери", "Xonadon va qavatni kiriting — kuryer eshikkacha olib keladi", "Enter the flat and floor so the courier can come to your door")}</span></div></div>
-      <div class="f"><span style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><label>${L("Точка на карте", "Xaritadagi nuqta", "Point on the map")} <small class="mu">${L("— курьер приедет точно к дому", "— kuryer aynan uyga keladi", "— the courier comes right to the house")}</small></label><button type="button" class="btn btn-line" data-act="my-loc" style="padding:6px 10px">${ui("pin", 14)} ${L("Где я", "Men qayerdaman", "Locate me")}</button></span>
-        ${pickMapHTML("addr")}<p class="loc-st ${d.la != null ? "ok" : ""}" id="addrLocSt" aria-live="polite">${d.la != null ? `${ui("check", 14)} ${L("Точка выбрана", "Nuqta tanlandi", "Point set")}` : L("Нажмите на карту там, где вас ждать курьеру, или нажмите «Где я».", "Kuryer kutishi kerak bo‘lgan joyni xaritada bosing yoki «Men qayerdaman» ni bosing.", "Tap the map where the courier should come, or tap “Locate me”.")}</p>
+      <div class="f"><span style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><label>${L("Дом на карте", "Uy xaritada", "Your house on the map")} <small class="mu">${L("— курьер приедет точно к метке", "— kuryer aynan belgiga keladi", "— the courier comes right to the pin")}</small></label><button type="button" class="btn btn-line" data-act="my-loc" style="padding:6px 10px">${ui("pin", 14)} ${L("Где я", "Men qayerdaman", "Locate me")}</button></span>
+        ${pickMapHTML("addr")}<p class="loc-st ${d.la != null ? "ok" : ""}" id="addrLocSt" aria-live="polite">${d.la != null ? `${ui("check", 14)} ${L("Метка стоит", "Belgi qo‘yilgan", "Pin set")}` : L("Введите адрес выше и выберите из подсказок — или передвиньте карту так, чтобы метка встала на ваш дом. Адрес подставится сам.", "Yuqorida manzilni yozib, taklifdan tanlang — yoki xaritani belgi uyingizga tushguncha suring. Manzil o‘zi to‘ladi.", "Type the address above and pick a suggestion — or move the map until the pin stands on your house. The address fills in by itself.")}</p>
         <input type="hidden" name="la" id="fLa" value="${d.la ?? ""}"><input type="hidden" name="lo" id="fLo" value="${d.lo ?? ""}"></div>
       <div class="f" id="helpSet"><label>${L("Разгрузка", "Tushirish", "Unloading")} <small class="mu">${L("— нужна ли помощь курьера", "— kuryer yordami kerakmi", "— do you need the courier’s help")}</small></label><div class="opts">
         <label class="opt"><input type="radio" name="help" value="none" ${d.help === "none" ? "checked" : ""}><span><b>${L("Не нужна", "Kerak emas", "Not needed")}</b><small>${L("Заберёте заказ у машины или у подъезда", "Buyurtmani mashina yoki kirish oldidan olasiz", "You take the order at the car or the entrance")}</small></span><span class="tag" data-help-tag="none">0 ${L("сум", "so‘m", "UZS")}</span></label>
-        <label class="opt"><input type="radio" name="help" value="one" ${d.help === "one" ? "checked" : ""}><span><b>${L("Курьер поможет", "Kuryer yordam beradi", "The courier helps")}</b><small>${L("Донесёт до двери и поднимет на этаж", "Eshikkacha olib keladi va qavatga ko‘taradi", "Carries it to the door and up the stairs")}</small></span><span class="tag" data-help-tag="one"></span></label>
-        <label class="opt" id="helpTwo"><input type="radio" name="help" value="two" ${d.help === "two" ? "checked" : ""}><span><b>${L("Два грузчика", "Ikki yuk tashuvchi", "Two loaders")}</b><small>${L("Для тяжёлого заказа: кирпич, цемент, плитка", "Og‘ir buyurtma uchun: g‘isht, sement, kafel", "For a heavy order: brick, cement, tiles")}</small></span><span class="tag" data-help-tag="two"></span></label>
+        <label class="opt"><input type="radio" name="help" value="one" ${d.help === "one" ? "checked" : ""}><span><b>${L("Курьер поможет спустить и занести", "Kuryer tushirib, olib kirishga yordam beradi", "The courier helps unload and carry it in")}</b><small>${L("Донесёт до двери и поднимет на этаж", "Eshikkacha olib keladi va qavatga ko‘taradi", "Carries it to the door and up the stairs")}</small></span><span class="tag" data-help-tag="one"></span></label>
       </div></div>
       <div class="opts">
         <label class="opt"><input type="radio" name="when" value="asap" ${d.when === "asap" ? "checked" : ""}><span><b>${L("Как можно скорее", "Imkon qadar tez")}</b><small>${L("Ищем исполнителя сразу после оплаты", "To‘lovdan so‘ng darhol ijrochi qidiramiz")}</small></span><span></span></label>
@@ -2891,7 +2934,16 @@ function dCheckout() {
     }
     if (e.target.id === "fPrivate") { $("#aptRow").hidden = e.target.checked; $("#aptRow2").hidden = e.target.checked; }
     if (e.target.id === "fHour") el.querySelector('[name=when][value=vip]').checked = true; updateQuote(); });
-  initPickMap("addr", form.la != null && form.lo != null ? { la: +form.la, lo: +form.lo } : null, (la, lo) => { $("#fLa").value = la.toFixed(6); $("#fLo").value = lo.toFixed(6); const st = $("#addrLocSt"); if (st) { st.className = "loc-st ok"; st.innerHTML = `${ui("check", 14)} ${L("Точка выбрана", "Nuqta tanlandi", "Point set")} · ${L(DIST[nearestDistrict(la, lo)]?.ru || "", DIST[nearestDistrict(la, lo)]?.uz || "")}`; } const ds = $("#fDistrict"); if (ds) ds.value = nearestDistrict(la, lo); updateQuote(); });
+  initPickMap("addr", form.la != null && form.lo != null ? { la: +form.la, lo: +form.lo } : null, (la, lo, item) => {
+    $("#fLa").value = la.toFixed(6); $("#fLo").value = lo.toFixed(6);
+    const ds = $("#fDistrict"); if (ds) ds.value = nearestDistrict(la, lo);
+    const inp = $("#fStreet"), st = $("#addrLocSt");
+    // the address found under the pin goes into the street field (unless the person is typing there right now)
+    if (item && item.street && inp && document.activeElement !== inp) { inp.value = item.street; inp.dataset.auto = "1"; const se = $("#streetErr"); if (se) se.hidden = true; }
+    if (st) { st.className = "loc-st ok"; st.innerHTML = `${ui("check", 14)} ${item ? `${L("Курьер приедет:", "Kuryer keladi:", "The courier comes to:")} ${esc(geoLabel(item))}` : `${L("Метка стоит", "Belgi qo‘yilgan", "Pin set")} · ${L(DIST[nearestDistrict(la, lo)]?.ru || "", DIST[nearestDistrict(la, lo)]?.uz || "")}`}`; }
+    updateQuote();
+  });
+  bindAddrSuggest($("#fStreet"), "addr");
   el.addEventListener("submit", submitOrder);
   updateQuote();
 }
@@ -2903,12 +2955,9 @@ function updateQuote() {
     <div class="t"><b>${esc(s.g.store.name)}</b><span class="num" style="font-weight:700">${s.t ? (s.full > s.price ? `<s>${fmt(s.full)}</s>` : "") + (s.price ? fmt(s.price) : L("Бесплатно", "Bepul")) : L("Самовывоз", "Olib ketish")}</span></div>
     <small>${s.t ? `${tName(s.t)} · ${s.t.veh} · ${fmtKg(s.g.kg)} · ~${s.dist.toFixed(1).replace(".", DEC)} ${L("км", "km")} · ${d.when === "slot" ? L("завтра 10–14", "ertaga 10–14") : d.when === "vip" ? `${L("завтра", "ertaga")} ${d.hour}:00–${String(+d.hour + 1).padStart(2, "0")}:00` : etaStr(s.t)}` : `${esc(L(s.g.store.addr, s.g.store.addrUz))} · ${esc(s.g.store.hours || "")}`}</small></div>`).join("") +
     (d.mode === "yandex" ? `<div class="note">${L("Цена доставки — оценка прототипа. В рабочей версии цену и время вернёт API Яндекс Доставки по точным координатам.", "Yetkazish narxi taxminiy. Ishchi versiyada narx va vaqtni Yandex API aniq koordinatalar bo‘yicha qaytaradi.")}</div>` : "");
-  { // unloading help: price tags follow the floor and the tariff; two loaders only make sense for a cargo tariff
-    const cargo = qt.ships.some(s => s.t && s.t.id !== "courier"), floors = d.private ? 0 : Math.max(0, (parseInt(d.floor, 10) || 1) - 1), per = LOADER * Math.max(1, floors);
-    const tag = n => cargo ? "+" + fmt(per * n) : L("входит", "kiradi", "included");
-    const t1 = $('[data-help-tag="one"]'), t2 = $('[data-help-tag="two"]'), two = $("#helpTwo");
-    if (t1) t1.textContent = tag(1); if (t2) t2.textContent = tag(2);
-    if (two) { two.hidden = !cargo; if (!cargo && d.help === "two") { const r = $('[name=help][value=one]'); if (r) { r.checked = true; d.help = "one"; form = d; LS.set("imorat.form2", d); } } }
+  { // unloading help: the price tag follows the floor and the tariff (free with a courier, LOADER per floor with a cargo van)
+    const cargo = qt.ships.some(s => s.t && s.t.id !== "courier"), floors = d.private ? 0 : Math.max(0, (parseInt(d.floor, 10) || 1) - 1);
+    const t1 = $('[data-help-tag="one"]'); if (t1) t1.textContent = cargo ? "+" + fmt(LOADER * Math.max(1, floors)) : L("входит", "kiradi", "included");
   }
   const spn = $("#storePayNote"); if (spn) spn.hidden = d.pay !== "store";
   const fe = $("#flatErr"); if (fe && !fe.hidden && (d.private || (String(d.flat || "").trim() && String(d.floor || "").trim()))) fe.hidden = true;
@@ -3051,7 +3100,8 @@ function dProfile() {
   $("#dTitle").textContent = L("Профиль", "Profil");
   const last = orders[0];
   $("#dBody").innerHTML = (user ? `<div class="acct"><span class="av">${esc(initial(user.name))}</span><span><b>${esc(user.name)}</b><small class="num">${esc(user.phone)}</small><small>${user.email ? esc(user.email) + " · " : ""}${L("вход через", "kirish:")} ${viaName(user.via)}${user.role === "pro" ? ` · <span class="ws">${L("цены для мастеров", "ustalar uchun narxlar")}</span>` : ""}</small></span><button class="ib" type="button" data-act="logout" aria-label="${L("Выйти", "Chiqish")}" title="${L("Выйти", "Chiqish")}">${ui("logout", 16)}</button></div>`
-    : `<div class="acct" style="grid-template-columns:1fr"><span><b>${L("Войдите, чтобы сохранять заказы", "Buyurtmalarni saqlash uchun kiring")}</b><small>${L("Google, Apple или номер телефона — займёт меньше минуты", "Google, Apple yoki telefon raqami — bir daqiqadan kam")}</small></span><button class="btn btn-primary" type="button" data-act="login">${L("Войти или зарегистрироваться", "Kirish yoki ro‘yxatdan o‘tish")}</button></div>`) + `
+    : `<div class="acct" style="grid-template-columns:1fr"><span><b>${L("Войдите, чтобы сохранять заказы", "Buyurtmalarni saqlash uchun kiring")}</b><small>${L("Номер телефона или Telegram — займёт меньше минуты", "Telefon raqami yoki Telegram — bir daqiqadan kam", "Phone number or Telegram — takes under a minute")}</small></span><button class="btn btn-primary" type="button" data-act="login">${L("Войти или зарегистрироваться", "Kirish yoki ro‘yxatdan o‘tish")}</button></div>`) + `
+    ${user ? `<div class="f" id="roleBox"><span>${L("Кто вы?", "Siz kimsiz?")} <small class="mu">${L("— от этого зависят цены и подсказки", "— narxlar va maslahatlar shunga bog‘liq", "— prices and tips depend on it")}</small></span>${rolesHTML(user.store_id || user.role === "seller" ? "store" : user.role === "pro" ? "pro" : "buyer", "prole")}</div>` : ""}
     ${bonusCardHTML()}
     ${notifyRows()}
     <div class="vip-card"><span class="eyebrow" style="color:var(--signal)">${ui("crown", 14)} Imorat Go VIP</span>
@@ -3075,15 +3125,24 @@ function dProfile() {
     </div>`;
   $("#dFoot").innerHTML = `${API && user ? `<button class="lnk" type="button" data-act="logout-all" style="font-size:12px;color:var(--muted);justify-self:start">${L("Выйти на всех устройствах", "Barcha qurilmalardan chiqish")}</button>` : ""}<span style="font-size:12px;color:var(--muted)">${(API ? L("Аккаунт, заказы и магазин хранятся на сервере Imorat Go.", "Akkaunt, buyurtmalar va do‘kon Imorat Go serverida saqlanadi.") : L("Данные этого прототипа хранятся только в вашем браузере.", "Prototip ma’lumotlari faqat brauzeringizda saqlanadi."))}</span>`;
   $("#pDist").addEventListener("change", e => { setDistrict(e.target.value); renderHeader(); });
+  $("#roleBox")?.addEventListener("change", async e => {
+    if (e.target.name !== "prole") return; const v = e.target.value;
+    if (v === "store") { if (user.store_id) return go("seller"); return openStoreReg(); }
+    try {
+      if (API) { const r = await api("PATCH", "/api/me", { role: v }); user = fromApiUser(r.user); } else { user.role = v; accounts[digitsOf(user.phone).slice(-9)] = user; LS.set("imorat.accounts", accounts); }
+      LS.set("imorat.user", user); renderMain(); dProfile();
+      toast(v === "pro" ? L("Включены цены для мастеров: −3% с первой штуки", "Ustalar narxi yoqildi: birinchi donadan −3%", "Pro prices on: −3% from the first unit") : L("Вы — покупатель", "Siz — xaridorsiz", "You are a buyer"));
+    } catch (e2) { toast(apiErr(e2)); dProfile(); }
+  });
 }
 
 /* ================= Widgets panel (left, opened by the ☰ button) ================= */
 let widOpen = false, wView = "menu", wCalc = "basement", wScrollCalc = false;
-function openWidgets(view = "menu", calc) { if (drawerView) closeDrawer(); if (aiOpen) closeAI(); closeModal(); closeMega(); wView = view; if (calc) wCalc = calc; widOpen = true; setPanel($("#wid"), true); renderWidgets(); showScrim(); syncLock(); }
-function closeWidgets() { widOpen = false; setPanel($("#wid"), false); showScrim(); syncLock(); }
+function openWidgets(view = "menu", calc) { if (drawerView) closeDrawer(); if (aiOpen) closeAI(); closeModal(); closeMega(); wView = view; if (calc) wCalc = calc; widOpen = true; setPanel($("#wid"), true); renderWidgets(); showScrim(); syncLock(); renderTabbar(); }
+function closeWidgets() { widOpen = false; setPanel($("#wid"), false); showScrim(); syncLock(); renderTabbar(); }
 function renderWidgets() {
   const back = wView !== "menu" ? `<button class="ib" type="button" data-wview="menu" aria-label="${L("Назад", "Orqaga")}">${ui("back", 16)}</button>` : "";
-  const title = { menu: L("Виджеты", "Vidjetlar"), calc: L("Калькуляторы ремонта", "Ta’mir kalkulyatorlari"), deliv: L("Калькулятор доставки", "Yetkazish kalkulyatori") }[wView];
+  const title = { menu: L("Инструменты", "Asboblar", "Tools"), calc: L("Калькуляторы ремонта", "Ta’mir kalkulyatorlari"), deliv: L("Калькулятор доставки", "Yetkazish kalkulyatori") }[wView];
   $("#wHead").innerHTML = `${back}<h2>${title}</h2><button class="ib" type="button" data-act="close-wid" aria-label="${L("Закрыть", "Yopish")}">${ui("close", 16)}</button>`;
   const body = $("#wBody");
   if (wView === "menu") {
@@ -3142,7 +3201,7 @@ const digitsOf = s => String(s || "").replace(/\D/g, "");
 const fmtPhone = d => { d = d.slice(0, 9); return [d.slice(0, 2), d.slice(2, 5), d.slice(5, 7), d.slice(7, 9)].filter(Boolean).join(" "); };
 const fullPhone = d => "+998 " + fmtPhone(d);
 const initial = n => (String(n || "?").trim()[0] || "?").toUpperCase();
-const viaName = v => ({ google: "Google", apple: "Apple", phone: L("номер телефона", "telefon raqami") }[v] || v);
+const viaName = v => ({ google: "Google", apple: "Apple", telegram: "Telegram", phone: L("номер телефона", "telefon raqami") }[v] || v);
 function openAuth(then, step = "start") {
   if (widOpen) closeWidgets();
   const edit = step === "store" && then === "seller-edit";
@@ -3154,7 +3213,7 @@ function openAuth(then, step = "start") {
   setPanel($("#authM"), true); renderAuth(); syncLock();
 }
 const openStoreReg = () => (user ? openAuth("store", "store") : openAuth("store"));
-function closeAuth() { setPanel($("#authM"), false); clearInterval(authTimer); syncLock(); }
+function closeAuth() { setPanel($("#authM"), false); clearInterval(authTimer); clearInterval(tgLoginTimer); syncLock(); }
 const loadScript = src => new Promise((res, rej) => { if (document.querySelector(`script[src="${src}"]`)) return res(); const s = document.createElement("script"); s.src = src; s.async = true; s.onload = res; s.onerror = rej; document.head.appendChild(s); });
 function authBusy() { document.querySelectorAll("#authBox button[type=submit]").forEach(b => { b.disabled = true; b.textContent = L("Подождите…", "Kuting…"); }); }
 async function sendCode() {
@@ -3197,6 +3256,27 @@ async function socialDone(prov, body) {
   } catch (e) { auth.step = "start"; auth.err = apiErr(e); renderAuth(); }
 }
 /* After the server confirmed the person: new accounts fill in the profile, store owners go to the store form */
+/* «Войти через Telegram»: a one-time ticket opens the bot; the page polls until the bot has bound an account */
+let tgLoginTimer = 0;
+async function tgLoginStart() {
+  if (auth.busy) return; auth.busy = true;
+  // the window is opened inside the tap (browsers block popups after an await); it gets the bot link once the ticket is here
+  let w = null; try { w = window.open("", "_blank"); } catch {}
+  try {
+    const r = await api("POST", "/api/auth/tg/start", {}); auth.busy = false;
+    auth.tgTicket = r.ticket; auth.tgUrl = r.url; auth.step = "tg"; auth.tgSince = Date.now(); renderAuth();
+    if (w) { try { w.opener = null; w.location.replace(r.url); } catch { try { w.close(); } catch {} } }
+    clearInterval(tgLoginTimer);
+    tgLoginTimer = setInterval(async () => {
+      if (auth.step !== "tg" || !$("#authM").classList.contains("on")) return clearInterval(tgLoginTimer);
+      try {
+        const p = await api("GET", `/api/auth/tg/poll?ticket=${encodeURIComponent(auth.tgTicket)}`);
+        if (p.token) { clearInterval(tgLoginTimer); auth.via = "telegram"; afterLogin({ ...p, user: { ...p.user, via: "telegram" } }); }
+        else if (Date.now() - auth.tgSince > 9 * 60000) { clearInterval(tgLoginTimer); const er = $("#tgErr"); if (er) { er.textContent = L("Время вышло — нажмите «Назад» и попробуйте снова.", "Vaqt tugadi — «Orqaga»ni bosib, qayta urinib ko‘ring.", "Time is up — go back and try again."); er.hidden = false; } }
+      } catch (e) { clearInterval(tgLoginTimer); const er = $("#tgErr"); if (er) { er.textContent = apiErr(e); er.hidden = false; } }
+    }, 2000);
+  } catch (e) { auth.busy = false; try { w?.close(); } catch {} toast(apiErr(e)); }
+}
 function afterLogin(r) {
   apiToken = r.token; LS.set("imorat.token", r.token);
   const u = fromApiUser(r.user);
@@ -3230,18 +3310,57 @@ const nearestDistrict = (la, lo) => DISTRICTS.reduce((b, d) => ((d.la - la) ** 2
 const inUz = (la, lo) => la > 37 && la < 46 && lo > 55 && lo < 74;
 const yaLink = (la, lo) => `https://yandex.uz/maps/?pt=${lo.toFixed(6)},${la.toFixed(6)}&z=17&l=map`;
 const PIN = `<svg class="pin" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12z" fill="currentColor" stroke="#fff" stroke-width="1.5"/><circle cx="12" cy="10" r="2.6" fill="#fff"/></svg>`;
+/* ---- Address map. A real street map with the pin fixed in the centre: move the map so the pin stands on your door,
+   or type the address and pick it from the suggestions — the map jumps there. Yandex Maps when the site has a key
+   (IMORAT_YMAPS_KEY in config.js or YANDEX_MAPS_KEY on the server), OpenStreetMap tiles otherwise; address search goes
+   through the Yandex geocoder, /api/geo on our server, or Nominatim straight from the browser in the demo. ---- */
+const GEO_HOME = { la: 41.311, lo: 69.24 }, GEO_BOX = [[41.1, 68.95], [41.52, 69.55]];
+const pickMaps = {};
+const ymapsKey = () => String(window.IMORAT_YMAPS_KEY || apiCfg?.ymaps_key || "");
+const ymLocale = () => (lang === "uz" ? "uz_UZ" : lang === "en" ? "en_US" : "ru_RU");
+let ymapsLoad = null;
+function loadYmaps() {
+  if (!ymapsKey()) return Promise.resolve(null);
+  if (window.ymaps?.Map) return Promise.resolve(window.ymaps);
+  return ymapsLoad ||= new Promise(res => {
+    const done = () => { if (window.ymaps) window.ymaps.ready(() => res(window.ymaps)); else res(null); };
+    const sc = document.createElement("script"); sc.src = `https://api-maps.yandex.ru/2.1/?apikey=${encodeURIComponent(ymapsKey())}&lang=${ymLocale()}`; sc.async = true;
+    sc.onload = done; sc.onerror = () => { ymapsLoad = null; res(null); }; document.head.appendChild(sc); setTimeout(() => res(window.ymaps?.Map ? window.ymaps : null), 9000);
+  });
+}
+const geoLabel = it => it ? [it.label, it.sub].filter(Boolean).join(", ") : "";
+/* address suggestions for a typed query → [{label, sub, street, la, lo}] */
+async function geoSuggest(q) {
+  q = String(q || "").trim(); if (q.length < 3) return [];
+  try {
+    if (API) { const r = await fetch(`${API}/api/geo/suggest?q=${encodeURIComponent(q)}&lang=${lang}`, { signal: AbortSignal.timeout(7000) }); return r.ok ? (await r.json()).items || [] : []; }
+    const box = `${GEO_BOX[0][1]},${GEO_BOX[1][0]},${GEO_BOX[1][1]},${GEO_BOX[0][0]}`;
+    const r = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=6&countrycodes=uz&viewbox=${box}&bounded=1&accept-language=${lang === "uz" ? "uz,ru" : lang}&q=${encodeURIComponent(q)}`, { signal: AbortSignal.timeout(7000) });
+    return r.ok ? (await r.json()).map(osmGeoItem) : [];
+  } catch { return []; }
+}
+/* the address at a point (street and house) → item or null */
+async function geoReverse(la, lo) {
+  try {
+    if (API) { const r = await fetch(`${API}/api/geo/reverse?la=${la.toFixed(6)}&lo=${lo.toFixed(6)}&lang=${lang}`, { signal: AbortSignal.timeout(7000) }); return r.ok ? (await r.json()).item : null; }
+    const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&addressdetails=1&zoom=18&accept-language=${lang === "uz" ? "uz,ru" : lang}&lat=${la.toFixed(6)}&lon=${lo.toFixed(6)}`, { signal: AbortSignal.timeout(7000) });
+    const j = r.ok ? await r.json() : null; return j && !j.error ? osmGeoItem(j) : null;
+  } catch { return null; }
+}
+function osmGeoItem(x) {
+  const a = x.address || {}, road = a.road || a.pedestrian || a.residential || a.neighbourhood || a.suburb || "", house = a.house_number || "";
+  const line = road ? `${road}${house ? ", " + house : ""}` : String(x.display_name || "").split(",").slice(0, 2).join(",").trim();
+  return { label: line, sub: [a.suburb && a.suburb !== road ? a.suburb : "", a.city_district || ""].filter(Boolean).join(", "), street: line, la: +(+x.lat).toFixed(6), lo: +(+x.lon).toFixed(6) };
+}
 function pickMapHTML(key = "") {
-  let tiles = "";
-  for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) tiles += `<img src="https://tile.openstreetmap.org/12/${MAPZ.x0 + c}/${MAPZ.y0 + r}.png" alt="" draggable="false" decoding="async">`;
-  const pts = DISTRICTS.map(d => ({ d, ...toFrac(d.la, d.lo) }));
-  const cx = pts.reduce((a, p) => a + p.fx, 0) / pts.length, cy = pts.reduce((a, p) => a + p.fy, 0) / pts.length;
-  const rx = Math.max(...pts.map(p => Math.abs(p.fx - cx))) * 1.3 + .03, ry = Math.max(...pts.map(p => Math.abs(p.fy - cy))) * 1.3 + .03;
-  const scheme = `<svg class="scheme" viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" fill="var(--raised)"/>
-    <ellipse cx="${(cx * 100).toFixed(1)}" cy="${(cy * 100).toFixed(1)}" rx="${(rx * 100).toFixed(1)}" ry="${(ry * 100).toFixed(1)}" fill="color-mix(in srgb,var(--accent) 9%,transparent)" stroke="var(--line-strong)" stroke-width=".5" stroke-dasharray="1.5 1"/>
-    ${pts.map(p => `<circle cx="${(p.fx * 100).toFixed(1)}" cy="${(p.fy * 100).toFixed(1)}" r="1" fill="var(--muted)"/><text x="${(p.fx * 100).toFixed(1)}" y="${(p.fy * 100 - 2).toFixed(1)}" text-anchor="middle" font-size="3.2" fill="var(--muted)">${esc(L(p.d.ru, p.d.uz).replace(/ский$|ский район$/, ""))}</text>`).join("")}</svg>`;
-  return `<div class="pickmap" id="pickMap${key}" tabindex="0" role="application" aria-label="${key ? L("Карта Ташкента. Нажмите туда, куда приехать курьеру, или двигайте точку стрелками.", "Toshkent xaritasi. Kuryer kelishi kerak bo‘lgan joyni bosing yoki nuqtani strelkalar bilan suring.", "Map of Tashkent. Tap where the courier should come, or move the point with the arrow keys.") : L("Карта Ташкента. Нажмите на место магазина или двигайте точку стрелками.", "Toshkent xaritasi. Do‘kon joyini bosing yoki nuqtani strelkalar bilan suring.")}">
-    <div class="tiles">${tiles}</div>${scheme}<span id="mapPin${key}" hidden>${PIN}</span><span class="attr">© OpenStreetMap</span></div>${key ? "" : `
-    <small class="loc-st">${L("Нажмите на карту там, где находится магазин. Приблизить точнее можно в Яндекс Картах по ссылке выше.", "Do‘kon joylashgan joyni xaritada bosing. Aniqroq ko‘rish uchun yuqoridagi Yandex Xaritalar havolasidan foydalaning.")}</small>`}`;
+  return `<div class="pickmap" id="pickMap${key}" tabindex="0" role="application" aria-label="${key ? L("Карта. Передвиньте её так, чтобы метка встала на ваш дом; масштаб — колёсиком, кнопками или двумя пальцами.", "Xarita. Belgi uyingiz ustiga tushadigan qilib suring; masshtab — g‘ildirak, tugmalar yoki ikki barmoq bilan.", "Map. Move it so the pin stands on your house; zoom with the wheel, the buttons or two fingers.") : L("Карта. Передвиньте её так, чтобы метка встала на магазин.", "Xarita. Belgi do‘kon ustiga tushadigan qilib suring.", "Map. Move it so the pin stands on the store.")}">
+    <div class="pm-tiles" id="pmTiles${key}" aria-hidden="true"></div>
+    <div class="pm-ya" id="pmYa${key}" hidden></div>
+    <span class="pm-pin" aria-hidden="true">${PIN}</span>
+    <div class="pm-zoom"><button type="button" data-pmz="1" aria-label="${L("Приблизить", "Yaqinlashtirish", "Zoom in")}">+</button><button type="button" data-pmz="-1" aria-label="${L("Отдалить", "Uzoqlashtirish", "Zoom out")}">−</button></div>
+    <span class="pm-hint" id="pmHint${key}">${L("Передвиньте карту — метка остаётся в центре", "Xaritani suring — belgi markazda qoladi", "Move the map — the pin stays in the centre")}</span>
+    <span class="attr">© OpenStreetMap</span></div>${key ? "" : `
+    <small class="loc-st">${L("Поставьте метку на вход магазина, куда приедет курьер.", "Belgini kuryer keladigan do‘kon kirishiga qo‘ying.", "Put the pin on the store entrance where the courier will come.")}</small>`}`;
 }
 function locStatus() {
   const l = auth.loc;
@@ -3254,46 +3373,103 @@ function setLoc(la, lo, src, acc) {
   $("#locSt").outerHTML = locStatus();
   placePin();
 }
-function placePin() {
-  const pin = $("#mapPin"); if (!pin || !auth.loc) return;
-  const { fx, fy } = toFrac(auth.loc.la, auth.loc.lo);
-  pin.hidden = !(fx >= 0 && fx <= 1 && fy >= 0 && fy <= 1);
-  pin.style.cssText = `position:absolute;left:${fx * 100}%;top:${fy * 100}%`;
-}
-function bindPickMap() {
-  const pm = $("#pickMap"); if (!pm) return;
-  pm.querySelectorAll(".tiles img").forEach(i => i.addEventListener("error", () => pm.classList.add("notiles"), { once: true }));
-  pm.addEventListener("click", e => { const r = pm.getBoundingClientRect(); const p = fromFrac((e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height); setLoc(p.la, p.lo, "map"); });
-  pm.addEventListener("keydown", e => {
-    const k = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key]; if (!k) return;
-    e.preventDefault();
-    const cur = auth.loc ? toFrac(auth.loc.la, auth.loc.lo) : toFrac(DIST[$("#sDist").value].la, DIST[$("#sDist").value].lo);
-    const p = fromFrac(Math.min(1, Math.max(0, cur.fx + k[0] * .006)), Math.min(1, Math.max(0, cur.fy + k[1] * .006)));
-    setLoc(p.la, p.lo, "map");
-  });
-  placePin();
-}
-/* A reusable map picker: key = element suffix, initial = {la, lo} or null, onPick(la, lo) on every change */
+function placePin() { if (auth.loc) pickMaps[""]?.set(auth.loc.la, auth.loc.lo, { quiet: true }); }
+function bindPickMap() { if ($("#pickMap")) initPickMap("", auth.loc ? { la: auth.loc.la, lo: auth.loc.lo } : null, (la, lo, item) => { if (item) { const a = $("#sAddr"); if (a && (!a.value.trim() || a.dataset.auto === "1")) { a.value = item.street || item.label; a.dataset.auto = "1"; } return; } setLoc(la, lo, "map"); }); }
+/* key = element suffix, initial = {la, lo} or null, onPick(la, lo, item) on every change (item = the address found at the point, when known) */
 function initPickMap(key, initial, onPick) {
-  const pm = $("#pickMap" + key), pin = $("#mapPin" + key); if (!pm) return;
-  let cur = initial;
-  const place = () => { if (!cur) return; const { fx, fy } = toFrac(cur.la, cur.lo); pin.hidden = !(fx >= 0 && fx <= 1 && fy >= 0 && fy <= 1); pin.style.cssText = `position:absolute;left:${fx * 100}%;top:${fy * 100}%`; };
-  const set = (la, lo) => { cur = { la, lo }; place(); onPick(la, lo); };
-  pm.querySelectorAll(".tiles img").forEach(im => im.addEventListener("error", () => pm.classList.add("notiles"), { once: true }));
-  pm.addEventListener("click", e => { const r = pm.getBoundingClientRect(); const p = fromFrac((e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height); set(p.la, p.lo); });
+  const pm = $("#pickMap" + key), tilesEl = $("#pmTiles" + key), yaEl = $("#pmYa" + key); if (!pm) return;
+  const home = DIST[district] ? { la: DIST[district].la, lo: DIST[district].lo } : GEO_HOME;
+  let la = initial?.la ?? home.la, lo = initial?.lo ?? home.lo, z = initial ? 16 : 13, ya = null, ym = null, revT = 0, quietSet = false;
+  const T = 256, pool = new Map();
+  const proj = zz => lmProj(zz), unproj = (zz, x, y) => { const n = 2 ** zz; return { lo: x / n * 360 - 180, la: Math.atan(Math.sinh(Math.PI * (1 - 2 * y / n))) * 180 / Math.PI }; };
+  const clampZ = v => Math.max(11, Math.min(18, v));
+  /* draw the OpenStreetMap tiles around the centre; tiles are reused while the zoom stays */
+  let errs = 0;
+  function render() {
+    if (ya) return;
+    const w = pm.clientWidth || 320, h = pm.clientHeight || 240, c = proj(z)(la, lo), n = 2 ** z;
+    const x0 = Math.floor(c.x - w / T / 2) - 1, x1 = Math.ceil(c.x + w / T / 2), y0 = Math.floor(c.y - h / T / 2) - 1, y1 = Math.ceil(c.y + h / T / 2), keep = new Set();
+    for (let x = x0; x <= x1; x++) for (let y = y0; y <= y1; y++) {
+      if (y < 0 || y >= n) continue; const xx = ((x % n) + n) % n, k = `${z}/${xx}/${y}`; keep.add(k);
+      let im = pool.get(k);
+      if (!im) { im = document.createElement("img"); im.alt = ""; im.draggable = false; im.decoding = "async"; im.loading = "lazy"; im.src = `https://tile.openstreetmap.org/${z}/${xx}/${y}.png`; im.addEventListener("error", () => { if (++errs >= 3 && !pool.size) pm.classList.add("notiles"); }, { once: true }); pool.set(k, im); tilesEl.appendChild(im); }
+      im.style.transform = `translate(${Math.round((x - c.x) * T + w / 2)}px, ${Math.round((y - c.y) * T + h / 2)}px)`;
+    }
+    for (const [k, im] of pool) if (!keep.has(k)) { im.remove(); pool.delete(k); }
+    tilesEl.style.transform = "";
+  }
+  /* the centre moved (by hand, by a suggestion, by GPS): tell the form and look the address up */
+  function changed(src) {
+    if (quietSet) return;
+    onPick(la, lo, null);
+    clearTimeout(revT);
+    revT = setTimeout(async () => {
+      const hint = $("#pmHint" + key); if (hint) hint.textContent = L("Ищем адрес…", "Manzil qidirilmoqda…", "Finding the address…");
+      const it = ya && ym ? await yaReverse() : await geoReverse(la, lo);
+      if (hint) { if (it) hint.innerHTML = `${ui("pin", 12)} ${esc(geoLabel(it))}`; else hint.textContent = L("Передвиньте карту — метка остаётся в центре", "Xaritani suring — belgi markazda qoladi", "Move the map — the pin stays in the centre"); }
+      if (it) onPick(la, lo, it);
+    }, src === "pick" ? 0 : 650);
+  }
+  const yaReverse = () => ym.geocode([la, lo], { kind: "house", results: 1 }).then(r => { const g = r.geoObjects.get(0); if (!g) return null; const st = g.getThoroughfare() || g.getPremise() || "", hn = g.getPremiseNumber() || ""; const line = st ? `${st}${hn ? ", " + hn : ""}` : g.getAddressLine(); return { label: line, sub: g.getLocalities?.()?.[0] || "", street: line, la, lo }; }).catch(() => null);
+  function set(nla, nlo, o = {}) {
+    la = nla; lo = nlo; if (o.zoom) z = clampZ(o.zoom);
+    if (ya) { quietSet = !!o.quiet; ya.setCenter([la, lo], z, { duration: 0 }); quietSet = false; } else render();
+    if (!o.quiet) changed("pick");
+  }
+  pickMaps[key] = { set, get: () => ({ la, lo, z }) };
+  /* --- dragging, wheel, pinch, keyboard (OpenStreetMap mode) --- */
+  const ptrs = new Map(); let dragging = false, sx = 0, sy = 0, dx = 0, dy = 0, pinch0 = 0, pinchZ = 0;
+  const commitDrag = () => { if (!dx && !dy) return; const c = proj(z)(la, lo), p = unproj(z, c.x - dx / T, c.y - dy / T); la = Math.max(-85, Math.min(85, p.la)); lo = p.lo; dx = dy = 0; render(); changed("drag"); };
+  pm.addEventListener("pointerdown", e => { if (ya || e.button) return; ptrs.set(e.pointerId, e); pm.setPointerCapture(e.pointerId); if (ptrs.size === 1) { dragging = true; sx = e.clientX; sy = e.clientY; } if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; pinch0 = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY); pinchZ = z; } });
+  pm.addEventListener("pointermove", e => {
+    if (ya || !ptrs.has(e.pointerId)) return; ptrs.set(e.pointerId, e);
+    if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; const d = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY), nz = clampZ(Math.round(pinchZ + Math.log2(d / pinch0))); if (nz !== z) { z = nz; render(); } return; }
+    if (!dragging) return; dx = e.clientX - sx; dy = e.clientY - sy; tilesEl.style.transform = `translate(${dx}px, ${dy}px)`; pm.classList.add("moving");
+  });
+  const up = e => { if (!ptrs.has(e.pointerId)) return; ptrs.delete(e.pointerId); if (!ptrs.size) { dragging = false; pm.classList.remove("moving"); commitDrag(); } else if (ptrs.size === 1) { const r = [...ptrs.values()][0]; sx = r.clientX - dx; sy = r.clientY - dy; } };
+  pm.addEventListener("pointerup", up); pm.addEventListener("pointercancel", up);
+  pm.addEventListener("wheel", e => { if (ya) return; e.preventDefault(); const nz = clampZ(z + (e.deltaY < 0 ? 1 : -1)); if (nz !== z) { z = nz; render(); } }, { passive: false });
+  pm.addEventListener("dblclick", e => { if (ya) return; e.preventDefault(); const r = pm.getBoundingClientRect(), c = proj(z)(la, lo), p = unproj(z, c.x + (e.clientX - r.left - r.width / 2) / T, c.y + (e.clientY - r.top - r.height / 2) / T); z = clampZ(z + 1); la = p.la; lo = p.lo; render(); changed("drag"); });
+  pm.addEventListener("click", e => { const b = e.target.closest("[data-pmz]"); if (!b) return; e.preventDefault(); const nz = clampZ(z + (+b.dataset.pmz)); if (ya) ya.setZoom(nz); else if (nz !== z) { z = nz; render(); } });
   pm.addEventListener("keydown", e => {
-    const k = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key]; if (!k) return; e.preventDefault();
-    const c = cur ? toFrac(cur.la, cur.lo) : toFrac(DIST[district]?.la || 41.3, DIST[district]?.lo || 69.25);
-    const p = fromFrac(Math.min(1, Math.max(0, c.fx + k[0] * .006)), Math.min(1, Math.max(0, c.fy + k[1] * .006))); set(p.la, p.lo);
+    const k = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key]; const zk = e.key === "+" || e.key === "=" ? 1 : e.key === "-" ? -1 : 0;
+    if (!k && !zk) return; if (e.target.closest("button")) return; e.preventDefault();
+    if (zk) { const nz = clampZ(z + zk); if (ya) ya.setZoom(nz); else if (nz !== z) { z = nz; render(); } return; }
+    if (ya) { const c = ya.getCenter(); ya.setCenter([c[0] - k[1] * 0.0006 * 2 ** (16 - z), c[1] + k[0] * 0.0008 * 2 ** (16 - z)]); return; }
+    const c = proj(z)(la, lo), p = unproj(z, c.x + k[0] * 48 / T, c.y + k[1] * 48 / T); la = p.la; lo = p.lo; render(); changed("drag");
   });
-  pm.closest("form, .d-body, body")?.querySelector("[data-act='my-loc']")?.addEventListener("click", () => {
+  pm.closest("form, .d-body, .acc-body, body")?.querySelector("[data-act='my-loc']")?.addEventListener("click", () => {
     const st = $("#addrLocSt");
-    if (!navigator.geolocation) { if (st) { st.className = "loc-st bad"; st.textContent = L("Браузер не умеет определять местоположение — укажите точку на карте.", "Brauzer joylashuvni aniqlay olmaydi — xaritada nuqtani belgilang.", "The browser cannot locate you — tap the point on the map."); } return; }
+    if (!navigator.geolocation) { if (st) { st.className = "loc-st bad"; st.textContent = L("Браузер не умеет определять местоположение — передвиньте карту вручную.", "Brauzer joylashuvni aniqlay olmaydi — xaritani qo‘lda suring.", "The browser cannot locate you — move the map by hand."); } return; }
     if (st) { st.className = "loc-st"; st.textContent = L("Определяем местоположение…", "Joylashuv aniqlanmoqda…", "Locating…"); }
-    navigator.geolocation.getCurrentPosition(pos => { const la = pos.coords.latitude, lo = pos.coords.longitude; if (!inUz(la, lo)) { if (st) { st.className = "loc-st bad"; st.textContent = L("Похоже, вы не в Узбекистане — укажите точку на карте.", "Siz O‘zbekistonda emassiz shekilli — xaritada nuqtani belgilang.", "You seem to be outside Uzbekistan — tap the point on the map."); } return; } set(la, lo); },
-      () => { if (st) { st.className = "loc-st bad"; st.textContent = L("Не удалось определить местоположение — укажите точку на карте.", "Joylashuvni aniqlab bo‘lmadi — xaritada belgilang.", "Could not locate you — tap the point on the map."); } }, { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 });
+    navigator.geolocation.getCurrentPosition(pos => { const gla = pos.coords.latitude, glo = pos.coords.longitude; if (!inUz(gla, glo)) { if (st) { st.className = "loc-st bad"; st.textContent = L("Похоже, вы не в Узбекистане — передвиньте карту вручную.", "Siz O‘zbekistonda emassiz shekilli — xaritani qo‘lda suring.", "You seem to be outside Uzbekistan — move the map by hand."); } return; } set(gla, glo, { zoom: 17 }); },
+      () => { if (st) { st.className = "loc-st bad"; st.textContent = L("Не удалось определить местоположение — передвиньте карту вручную.", "Joylashuvni aniqlab bo‘lmadi — xaritani qo‘lda suring.", "Could not locate you — move the map by hand."); } }, { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 });
   });
-  place();
+  render();
+  new ResizeObserver(() => { if (!ya) render(); }).observe(pm);
+  /* --- Yandex Maps, when the site has a key: the same behaviour on the real Yandex map --- */
+  loadYmaps().then(Y => {
+    if (!Y || !pm.isConnected) return; ym = Y; yaEl.hidden = false; pm.classList.add("ya");
+    try {
+      ya = new Y.Map(yaEl, { center: [la, lo], zoom: z, controls: ["zoomControl"] }, { suppressMapOpenBlock: true, yandexMapDisablePoiInteractivity: true });
+      ya.events.add("actionend", () => { if (quietSet) return; const c = ya.getCenter(); if (Math.abs(c[0] - la) < 1e-7 && Math.abs(c[1] - lo) < 1e-7) { z = ya.getZoom(); return; } la = c[0]; lo = c[1]; z = ya.getZoom(); changed("drag"); });
+      const inp = pm.closest("form, .acc-body, .d-body")?.querySelector(key ? "#fStreet" : "#sAddr");
+      if (inp && Y.SuggestView) { inp.dataset.ymSugg = "1"; const sv = new Y.SuggestView(inp, { boundedBy: GEO_BOX, strictBounds: true, results: 6 }); sv.events.add("select", e => { const v = e.get("item").value; Y.geocode(v, { results: 1, boundedBy: GEO_BOX }).then(r => { const g = r.geoObjects.get(0); if (!g) return; const [gla, glo] = g.geometry.getCoordinates(); set(gla, glo, { zoom: 17 }); }); }); }
+    } catch (e) { ya = null; yaEl.hidden = true; pm.classList.remove("ya"); render(); }
+  });
+}
+/* address suggestions under an input (OpenStreetMap / our server mode; with Yandex Maps the SuggestView takes over): pick one → the map jumps there */
+function bindAddrSuggest(inp, key) {
+  if (!inp || inp.dataset.suggBound) return; inp.dataset.suggBound = "1";
+  const box = document.createElement("div"); box.className = "sugg addr-sugg"; box.hidden = true; box.setAttribute("role", "listbox"); inp.insertAdjacentElement("afterend", box);
+  inp.setAttribute("autocomplete", "off"); let t = 0, seq = 0, items = [];
+  const close = () => { box.hidden = true; box.innerHTML = ""; items = []; };
+  const show = list => { items = list; if (!list.length) return close(); box.innerHTML = list.map((it, i) => `<button type="button" role="option" data-gi="${i}">${ui("pin", 14)}<span><b>${esc(it.label)}</b>${it.sub ? `<small>${esc(it.sub)}</small>` : ""}</span></button>`).join(""); box.hidden = false; };
+  inp.addEventListener("input", () => { if (inp.dataset.ymSugg) return; inp.dataset.auto = ""; clearTimeout(t); const q = inp.value.trim(); if (q.length < 3) return close(); const my = ++seq; t = setTimeout(async () => { const list = await geoSuggest(q); if (my === seq && document.activeElement === inp) show(list); }, 380); });
+  inp.addEventListener("keydown", e => { if (e.key === "Escape") close(); if (e.key === "Enter" && !box.hidden && items.length) { e.preventDefault(); pick(0); } });
+  inp.addEventListener("blur", () => setTimeout(close, 180));
+  const pick = i => { const it = items[i]; if (!it) return; inp.value = it.street || it.label; inp.dataset.auto = "1"; close(); pickMaps[key]?.set(it.la, it.lo, { zoom: 17 }); inp.dispatchEvent(new Event("input", { bubbles: true })); };
+  box.addEventListener("pointerdown", e => { const b = e.target.closest("[data-gi]"); if (b) { e.preventDefault(); pick(+b.dataset.gi); } });
 }
 function gpsLocate() {
   const st = $("#locSt");
@@ -3318,7 +3494,7 @@ function toggleMap(on) {
   auth.mapOpen = on ?? !auth.mapOpen;
   const box = $("#mapBox"); box.innerHTML = auth.mapOpen ? pickMapHTML() : ""; box.hidden = !auth.mapOpen;
   $("#locMap").setAttribute("aria-expanded", auth.mapOpen);
-  if (auth.mapOpen) { bindPickMap(); $("#pickMap").focus({ preventScroll: true }); }
+  if (auth.mapOpen) { bindPickMap(); bindAddrSuggest($("#sAddr"), ""); $("#pickMap").focus({ preventScroll: true }); }
 }
 function readStoreForm() {
   const f = $("#storeForm"), v = n => (f.elements[n]?.value || "").trim();
@@ -3391,6 +3567,12 @@ function bindStoreForm() {
   });
 }
 
+/* the three kinds of people on Imorat Go — asked once after sign-up and changeable in the profile */
+const rolesHTML = (role, name = "role") => `<div class="roles opts">
+  <label class="opt"><input type="radio" name="${name}" value="buyer" ${role === "buyer" ? "checked" : ""}><span><b>${L("Покупатель", "Xaridor")}</b><small>${L("Ремонт дома или квартиры", "Uy yoki kvartira ta’miri")}</small></span><span></span></label>
+  <label class="opt"><input type="radio" name="${name}" value="pro" ${role === "pro" ? "checked" : ""}><span><b>${L("Мастер или прораб", "Usta yoki prorab")}</b><small>${L("Оптовая цена −3% на материалы с первой штуки", "Materiallarga birinchi donadan −3% ulgurji narx")}</small></span><span class="tag">−3%</span></label>
+  <label class="opt"><input type="radio" name="${name}" value="store" ${role === "store" ? "checked" : ""}><span><b>${L("Хочу добавить свой магазин", "Do‘konimni qo‘shmoqchiman")}</b><small>${L("Продавайте на Imorat Go: витрина, заказы и доставка Яндекс", "Imorat Go’da soting: vitrina, buyurtmalar va Yandex yetkazish")}</small></span><span class="tag">${ui("store", 14)}</span></label>
+</div>`;
 function renderAuth() {
   const b = $("#authBox"), st = auth.step;
   b.classList.toggle("wide", st === "store");
@@ -3407,13 +3589,19 @@ function renderAuth() {
   if (st === "start") {
     h = `<span class="logo" aria-hidden="true"><span class="logo-mark"><i></i><i></i><i></i><i></i></span><b>imorat<em>go</em></b></span>
       <h2>${auth.then === "checkout" ? L("Войдите, чтобы оформить заказ", "Buyurtma berish uchun kiring") : auth.then === "store" ? L("Войдите, чтобы добавить магазин", "Do‘kon qo‘shish uchun kiring") : L("Вход или регистрация", "Kirish yoki ro‘yxatdan o‘tish")}</h2>
-      <p>${L("Один аккаунт для заказов, избранного, VIP и Usta AI. Новый аккаунт создаётся автоматически.", "Buyurtmalar, saralanganlar, VIP va Usta AI uchun bitta akkaunt. Yangi akkaunt avtomatik yaratiladi.")}</p>
-      <button class="soc" type="button" data-oauth="google">${ui("mail", 20)} ${L("Продолжить с Google", "Google bilan davom etish")}</button>
-      <button class="soc dark" type="button" data-oauth="apple">${ui("idcard", 20)} ${L("Продолжить с Apple", "Apple bilan davom etish")}</button>
-      <div class="or">${L("или по номеру телефона", "yoki telefon raqami orqali")}</div>
+      <p>${L("Один аккаунт для заказов, избранного, бонусов и Usta AI. Новый аккаунт создаётся автоматически — по номеру телефона или через Telegram.", "Buyurtmalar, saralanganlar, bonuslar va Usta AI uchun bitta akkaunt. Yangi akkaunt avtomatik yaratiladi — telefon raqami yoki Telegram orqali.", "One account for orders, favourites, points and Usta AI. A new account is created automatically — by phone number or through Telegram.")}</p>
       ${phoneForm("", "").replace("<h2></h2><p></p>", "")}
+      <div class="or">${L("или", "yoki", "or")}</div>
+      ${API && apiCfg?.telegram_bot ? `<button class="soc tg" type="button" data-act="tg-login">${ui("send", 20)} ${L("Войти через Telegram", "Telegram orqali kirish", "Sign in with Telegram")}</button>`
+        : `<button class="soc tg" type="button" disabled title="${L("Заработает после подключения сервера", "Server ulangandan keyin ishlaydi", "Works once the server is connected")}">${ui("send", 20)} ${L("Войти через Telegram", "Telegram orqali kirish", "Sign in with Telegram")}</button>`}
       <p class="fine">${L("Продолжая, вы соглашаетесь с условиями сервиса и политикой конфиденциальности.", "Davom etib, siz xizmat shartlari va maxfiylik siyosatiga rozilik bildirasiz.")}</p>
-      ${API ? "" : `<p class="demo">${L("Демо-режим: окна Google и Apple и отправка SMS заработают после подключения сервера.", "Demo rejim: Google va Apple oynalari hamda SMS server ulangandan keyin ishlaydi.")}</p>`}`;
+      ${API ? "" : `<p class="demo">${L("Демо-режим: отправка SMS и вход через Telegram заработают после подключения сервера.", "Demo rejim: SMS yuborish va Telegram orqali kirish server ulangandan keyin ishlaydi.", "Demo mode: SMS and Telegram sign-in work once the server is connected.")}</p>`}`;
+  } else if (st === "tg") {
+    h = `${back("start")}<h2>${L("Вход через Telegram", "Telegram orqali kirish", "Sign in with Telegram")}</h2>
+      <p>${L("Мы открыли Telegram. Нажмите в боте «Start» и, если он попросит, поделитесь номером телефона — страница войдёт сама.", "Telegramni ochdik. Botda «Start»ni bosing va so‘rasa telefon raqamingizni yuboring — sahifa o‘zi kiradi.", "We opened Telegram. Tap “Start” in the bot and share your phone number if asked — this page signs in by itself.")}</p>
+      <a class="soc tg" href="${esc(auth.tgUrl || "#")}" target="_blank" rel="noopener">${ui("send", 20)} ${L("Открыть Telegram ещё раз", "Telegramni yana ochish", "Open Telegram again")}</a>
+      <p class="demo" id="tgWait" aria-live="polite">${L("Ждём подтверждения в Telegram…", "Telegramda tasdiqlash kutilmoqda…", "Waiting for Telegram…")}</p>
+      <span class="err" id="tgErr" role="alert" hidden></span>`;
   } else if (st === "google") {
     h = `${back("start")}<h2>${L("Вход через Google", "Google orqali kirish")}</h2><p>${L("Нажмите кнопку и выберите аккаунт Google. Затем подтвердим номер телефона — он нужен курьеру и магазину.", "Tugmani bosing va Google akkauntini tanlang. Keyin telefon raqamini tasdiqlaymiz — u kuryer va do‘konga kerak.")}</p><div id="gBtn" style="min-height:44px;display:grid;justify-content:center"></div>`;
   } else if (st === "oauth") {
@@ -3448,12 +3636,7 @@ function renderAuth() {
     h = `<h2>${L("Почти готово", "Deyarli tayyor")}</h2><p>${L("Расскажите немного о себе, чтобы мы показывали правильные цены и доставку.", "To‘g‘ri narx va yetkazishni ko‘rsatishimiz uchun o‘zingiz haqingizda ayting.")}</p>
       <form id="authProfile" novalidate style="display:grid;gap:12px">
         <div class="f"><label for="pName">${L("Как к вам обращаться", "Sizga qanday murojaat qilaylik")}</label><input id="pName" autocomplete="name" value="${esc(auth.name)}" placeholder="${L("Азиз", "Aziz")}"></div>
-        <div class="f"><label for="pDistA">${L("Ваш район", "Tumaningiz")}</label><select id="pDistA">${DISTRICTS.map(x => `<option value="${x.id}" ${x.id === auth.dist ? "selected" : ""}>${L(x.ru, x.uz)}</option>`).join("")}</select></div>
-        <fieldset><legend>${L("Кто вы?", "Siz kimsiz?")}</legend><div class="roles opts">
-          <label class="opt"><input type="radio" name="role" value="buyer" ${role === "buyer" ? "checked" : ""}><span><b>${L("Покупатель", "Xaridor")}</b><small>${L("Ремонт дома или квартиры", "Uy yoki kvartira ta’miri")}</small></span><span></span></label>
-          <label class="opt"><input type="radio" name="role" value="pro" ${role === "pro" ? "checked" : ""}><span><b>${L("Мастер или прораб", "Usta yoki prorab")}</b><small>${L("Оптовая цена −3% на материалы с первой штуки", "Materiallarga birinchi donadan −3% ulgurji narx")}</small></span><span class="tag">−3%</span></label>
-          <label class="opt"><input type="radio" name="role" value="store" ${role === "store" ? "checked" : ""}><span><b>${L("Хочу добавить свой магазин", "Do‘konimni qo‘shmoqchiman")}</b><small>${L("Продавайте на Imorat Go: витрина, заказы и доставка Яндекс", "Imorat Go’da soting: vitrina, buyurtmalar va Yandex yetkazish")}</small></span><span class="tag">${ui("store", 14)}</span></label>
-        </div></fieldset>
+        <fieldset><legend>${L("Кто вы?", "Siz kimsiz?")}</legend>${rolesHTML(role, "role")}</fieldset>
         <span class="err" id="pErr" role="alert" hidden>${L("Укажите имя", "Ismni kiriting")}</span>
         <button class="btn btn-primary" type="submit" id="pGo">${role === "store" ? L("Дальше: данные магазина", "Keyingisi: do‘kon ma’lumotlari") : L("Готово", "Tayyor")}</button>
       </form>`;
@@ -3511,7 +3694,7 @@ function renderAuth() {
     pf.addEventListener("change", e => { if (e.target.name === "role") { auth.role = e.target.value; $("#pGo").textContent = auth.role === "store" ? L("Дальше: данные магазина", "Keyingisi: do‘kon ma’lumotlari") : L("Готово", "Tayyor"); } });
     pf.addEventListener("submit", async e => {
       e.preventDefault(); const nm = $("#pName").value.trim(); if (nm.length < 2) { $("#pErr").hidden = false; return; }
-      const role = pf.querySelector("[name=role]:checked").value, dist = $("#pDistA").value;
+      const role = pf.querySelector("[name=role]:checked").value, dist = auth.dist || auth.pending?.district || district; // the district is asked at checkout
       auth.name = nm; auth.dist = dist; auth.role = role;
       if (role === "store") { auth.st = { ...auth.st, district: auth.st?.district || dist }; auth.fromProfile = true; auth.step = "store"; return renderAuth(); }
       if (API) {
@@ -3956,7 +4139,7 @@ function renderSellerApi() {
     </div>
     <div class="panel" style="margin-top:12px"><div class="panel-h"><h2 class="h-m">${L("Заказы", "Buyurtmalar")}</h2><button class="btn btn-line" type="button" data-act="seller-reload">${ui("repeat", 16)} ${L("Обновить", "Yangilash")}</button></div>
       ${ords.length ? `<div class="tbl-wrap"><table><thead><tr><th>${L("Заказ", "Buyurtma")}</th><th>${L("Состав", "Tarkibi")}</th><th class="r">${L("Сумма", "Summa")}</th><th>${L("Статус", "Holat")}</th><th></th></tr></thead><tbody>
-      ${ords.map(o => { const [lb, c] = lab[o.status] || [o.status, "mute"]; return `<tr><td><b class="mono">${esc(o.num)}</b><br><small style="color:var(--muted)">${esc(o.buyer || "")} · ${esc(o.phone || "")}<br>${o.tariff ? `${L(DIST[o.district]?.ru || "", DIST[o.district]?.uz || "")}, ${esc(o.street)}${o.private ? ", " + L("частный дом", "xususiy uy", "private house") : `${o.entrance ? ", " + L("подъезд", "kirish", "entrance") + " " + esc(o.entrance) : ""}${+o.floor > 1 ? ", " + L("этаж", "qavat", "floor") + " " + esc(o.floor) : ""}`}${o.help === "two" ? ` · <b style="color:var(--signal)">${L("2 грузчика — заказ тяжёлый", "2 yuk tashuvchi — og‘ir buyurtma", "2 loaders — heavy order")}</b>` : o.help === "one" ? ` · ${L("курьер донесёт до двери", "kuryer eshikkacha olib keladi", "courier carries to the door")}` : o.help === "none" ? ` · ${L("покупатель заберёт у машины", "xaridor mashina oldidan oladi", "buyer takes it at the car")}` : ""}` : L("Самовывоз", "Olib ketish")}${o.when === "vip" ? ` · ${L("завтра", "ertaga")} ${o.hour}:00` : o.when === "slot" ? ` · ${L("завтра 10–14", "ertaga 10–14")}` : ""}</small>${o.comment ? `<br><small>«${esc(o.comment)}»</small>` : ""}</td>
+      ${ords.map(o => { const [lb, c] = lab[o.status] || [o.status, "mute"]; return `<tr><td><b class="mono">${esc(o.num)}</b><br><small style="color:var(--muted)">${esc(o.buyer || "")} · ${esc(o.phone || "")}<br>${o.tariff ? `${L(DIST[o.district]?.ru || "", DIST[o.district]?.uz || "")}, ${esc(o.street)}${o.private ? ", " + L("частный дом", "xususiy uy", "private house") : `${o.entrance ? ", " + L("подъезд", "kirish", "entrance") + " " + esc(o.entrance) : ""}${+o.floor > 1 ? ", " + L("этаж", "qavat", "floor") + " " + esc(o.floor) : ""}`}${o.help === "one" || o.help === "two" ? ` · <b>${L("курьер поможет спустить и занести", "kuryer tushirib, olib kirishga yordam beradi", "courier helps unload and carry in")}</b>` : o.help === "none" ? ` · ${L("покупатель заберёт у машины", "xaridor mashina oldidan oladi", "buyer takes it at the car")}` : ""}` : L("Самовывоз", "Olib ketish")}${o.when === "vip" ? ` · ${L("завтра", "ertaga")} ${o.hour}:00` : o.when === "slot" ? ` · ${L("завтра 10–14", "ertaga 10–14")}` : ""}</small>${o.comment ? `<br><small>«${esc(o.comment)}»</small>` : ""}</td>
         <td style="min-width:180px;font-size:13px">${o.lines.map(l => `${esc(PROD[l.id] ? pName(PROD[l.id]) : l.name)} × ${l.q}`).join("<br>")}<br><small style="color:var(--muted)">${o.tariff ? `${tName(TARIFFS.find(t => t.id === o.tariff) || TARIFFS[0])} · ${fmtKg(o.kg)}` : ""}</small></td>
         <td class="r">${fmt(o.lines.reduce((a, l) => a + l.price * l.q, 0))}<br><small style="color:var(--muted)">${["cash", "store"].includes(o.pay) ? L("оплата при получении", "olganda to‘lov", "paid on receipt") : o.pay_status === "paid" ? L("оплачен картой — выдавайте без оплаты", "karta bilan to‘langan — to‘lovsiz bering", "paid by card — hand over without payment") : L("ждёт оплаты", "to‘lov kutilmoqda")}</small></td>
         <td><span class="pill ${c}">${lb}</span>${o.status === "new" && o.accept_by ? `<br><small data-until="${o.accept_by}"></small>` : ""}${o.status === "cancelled" && o.cancel_reason ? `<br><small style="color:var(--muted)">${CANCEL_TXT()[o.cancel_reason] || ""}</small>` : ""}</td><td style="white-space:nowrap">${o.next.map(n => `<button class="btn ${n === "cancelled" ? "btn-line" : "btn-primary"}" type="button" data-shipst="${o.ship_id}|${n}" style="margin:2px 0">${nx[n]}</button>`).join(" ")}</td></tr>`; }).join("")}
@@ -6814,7 +6997,9 @@ document.addEventListener("click", e => {
     case "widgets": return widOpen ? closeWidgets() : openWidgets();
     case "close-wid": return closeWidgets();
     case "w-calc": return openWidgets("calc", b.dataset.calc);
+    case "w-deliv": return openWidgets("deliv");
     case "home-setup": return openDrawer("homeSetup");
+    case "tg-login": return tgLoginStart();
     case "home-reset": resetHome(); if (drawerView === "homeSetup") dHomeSetup(); return toast(L("Главная как по умолчанию", "Bosh sahifa standart holatda", "Home reset to default"));
     case "stores-all": { const st = $(".stores"); if (st) st.classList.add("all"); b.closest(".stores-more")?.remove(); return; }
     case "theme-toggle": return setLook(null, effTheme() === "dark" ? "light" : "dark");

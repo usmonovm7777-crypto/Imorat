@@ -42,7 +42,8 @@ curl https://api.<домен>/api/health      # {"ok":true}
 | Канал с товаром дня | `TELEGRAM_CHANNEL=@imoratgo` + бот админ канала | Telegram | постов нет |
 | Usta AI, фото-поиск, AI-дизайнер | `ANTHROPIC_API_KEY` | console.anthropic.com | кнопки AI скрыты |
 | Яндекс Доставка: точные цены, автоматический вызов курьера, статусы и курьер на карте у покупателя | `YANDEX_DELIVERY_TOKEN` | бизнес-кабинет Яндекс Доставки (Claims API) | цена по тарифной формуле, статусы ставит магазин, курьер на карте симулируется |
-| Вход через Google / Apple | `GOOGLE_CLIENT_ID`, `APPLE_CLIENT_ID`, `APPLE_REDIRECT_URI` | Google Cloud Console / Apple Developer | только вход по SMS |
+| Вход через Telegram (кнопка на сайте) | тот же `TELEGRAM_BOT_TOKEN` | @BotFather | только вход по SMS |
+| Яндекс Карта при оформлении: настоящая карта, подсказки адресов, адрес под меткой | `YANDEX_MAPS_KEY` на сервере и `IMORAT_YMAPS_KEY` в `config.js` (ключ «JavaScript API и HTTP Геокодер», developer.tech.yandex.ru; стартовый тариф бесплатный, лимиты — в кабинете) | Яндекс | карта OpenStreetMap, адреса через Nominatim (медленнее и менее точно по номерам домов) |
 | Оплата картой на сайте (вся сумма с доставкой списывается сразу) | `PAYME_MERCHANT_ID`, `PAYME_KEY` / `CLICK_SERVICE_ID`, `CLICK_MERCHANT_ID`, `CLICK_SECRET_KEY` | договоры с Payme / Click (нужно юрлицо); в их кабинетах указать адреса callback: `/api/pay/payme`, `/api/pay/click` | **оформление заказов закрыто** («Оплата скоро»): наличных на Imorat Go нет, все заказы — картой. Ключи Payme/Click — первое, что нужно для запуска |
 
 ## 4. Первый день
