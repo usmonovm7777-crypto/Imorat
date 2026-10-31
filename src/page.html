@@ -3563,10 +3563,11 @@ async function submitOrderApi(d, qt) {
     else toast(apiErr(e));
   }
 }
-let ordersFetched = false;
+let ordersFetched = false, ordersFetchedAt = 0;
+/* The order list is loaded once per sign-in and refreshed when it is opened again after a minute (statuses in between come from the poll). */
 function fetchOrders() {
-  if (!API || !apiToken || ordersFetched) return;
-  ordersFetched = true;
+  if (!API || !apiToken || (ordersFetched && Date.now() - ordersFetchedAt < 60000)) return;
+  ordersFetched = true; ordersFetchedAt = Date.now();
   return api("GET", "/api/orders").then(r => {
     const srv = r.orders.map(mapOrder), nums = new Set(srv.map(o => o.num));
     orders = [...srv, ...orders.filter(o => !o.api && !nums.has(o.num))].sort((a, b) => b.t - a.t);
