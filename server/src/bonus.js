@@ -30,12 +30,16 @@ export function createBonus({ db, cfg, log = console }) {
       const o = db.get("SELECT * FROM orders WHERE id=?", ship.order_id); if (!o) return;
       const u = db.get("SELECT * FROM users WHERE id=?", o.user_id); if (!u) return;
       const ref = "ship:" + ship.id;
-      if (!has(u.id, ref)) {
+      // No cashback on a store's own orders (the owner cannot "sell to himself" for points), and never more than the cap per shipment
+      const own = db.get("SELECT owner_id FROM stores WHERE id=?", ship.store_id)?.owner_id === u.id;
+      if (!has(u.id, ref) && !own) {
         const goods = JSON.parse(ship.lines).reduce((a, l) => a + l.price * l.q, 0);
-        add(u.id, Math.floor(goods * (u.role === "pro" ? B.ratePro : B.rate)), "cashback", ref);
+        add(u.id, Math.min(B.maxCashback, Math.floor(goods * (u.role === "pro" ? B.ratePro : B.rate))), "cashback", ref);
       }
-      if (u.ref_by && !u.ref_paid) {
+      // Referral: the friend's welcome bonus and the inviter's reward arrive with the friend's first real delivery
+      if (u.ref_by && !u.ref_paid && !own) {
         db.run("UPDATE users SET ref_paid=1 WHERE id=?", u.id);
+        add(u.id, B.welcome, "welcome", "welcome:" + u.ref_by);
         add(u.ref_by, B.referral, "referral", "ref:" + u.id);
       }
     },
@@ -66,8 +70,10 @@ export function createBonus({ db, cfg, log = console }) {
         if (owner.id === u.id) throw bad("own_code", "This is your own code");
         if (u.ref_by) throw new HttpError(409, "already_used", "A friend's code is already applied");
         if (db.get("SELECT 1 FROM orders WHERE user_id=?", u.id)) throw new HttpError(409, "not_new", "The code works only before the first order");
-        db.tx(() => { db.run("UPDATE users SET ref_by=? WHERE id=?", owner.id, u.id); add(u.id, B.welcome, "welcome", "welcome:" + owner.id); });
-        return { points: db.get("SELECT points FROM users WHERE id=?", u.id).points };
+        if (db.get("SELECT COUNT(*) n FROM users WHERE ref_by=? AND created_at>?", owner.id, Date.now() - 30 * 86400_000).n >= B.maxInvites) throw new HttpError(409, "code_limit", "This code has reached its monthly limit");
+        // The welcome bonus is credited when the friend's first order is delivered (see shipDone), not on entering the code
+        db.run("UPDATE users SET ref_by=? WHERE id=?", owner.id, u.id);
+        return { points: db.get("SELECT points FROM users WHERE id=?", u.id).points, pending_welcome: B.welcome };
       });
     }
   };

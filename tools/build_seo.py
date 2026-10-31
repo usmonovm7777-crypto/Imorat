@@ -49,7 +49,7 @@ def purl(p, lang): return f"{prefix(lang)}p/{p['id']}-{slug(p['ru'])}.html"
 def curl(c, lang): return f"{prefix(lang)}c/{c['id']}.html"
 def app_link(lang, h, depth): return "../" * depth + f"index.html?lang={lang}#{h}"
 def min_price(p): return min(o["price"] for o in p["offers"])
-def from_price(lang, v): return f"от {fmt(v)} сум" if lang == "ru" else f"{fmt(v)} so‘mdan"
+def from_price(lang, v): return f"от {fmt(v)} сум" if lang == "ru" else uz_new(f"{fmt(v)} so‘mdan")
 
 CSS = """:root{--bg:#F6F7F5;--sf:#fff;--ink:#131B1A;--mu:#5d6b67;--ln:#E0E5DF;--ac:#0B6E69;--ai:#fff;color-scheme:light dark}
 @media (prefers-color-scheme:dark){:root{--bg:#0E1312;--sf:#171E1D;--ink:#E9EEEC;--mu:#9CA7A3;--ln:#28312F;--ac:#3DB3AA;--ai:#06201E}}
@@ -103,9 +103,10 @@ def product_page(p, lang, by_sub):
     nm, mp = name(p, lang), min_price(p)
     offers = sorted(p["offers"], key=lambda o: o["price"])
     unit = UNITS.get(p["unit"], UNITS["pcs"])[1 if lang == "uz" else 0]
+    if lang == "uz": unit = uz_new(unit)
     d = DESC.get(p["sub"])
     desc_txt = uz_new(d[1]) if (d and lang == "uz") else (d[0] if d else "")
-    title = f"{nm} — купить в Ташкенте {from_price(lang, mp)} | Imorat Go" if lang == "ru" else f"{nm} — Toshkentda {from_price(lang, mp)} sotib olish | Imorat Go"
+    title = f"{nm} — купить в Ташкенте {from_price(lang, mp)} | Imorat Go" if lang == "ru" else uz_new(f"{nm} — Toshkentda {from_price(lang, mp)} sotib olish | Imorat Go")
     meta = f"{nm}: {fmt(mp)} {tr(lang, 'sum')}/{unit}. " + tr(lang, "desc_tail").format(n=len(offers))
     rows = "".join(f"<tr><td>{E(STORES[o['store']]['name'])}<br><small class=mu>{E(uz_new(DIST[STORES[o['store']]['d']]['uz']) if lang == 'uz' else DIST[STORES[o['store']]['d']]['ru'])}</small></td><td class=r><b>{fmt(o['price'])}</b> {tr(lang, 'sum')}</td><td>{tr(lang, 'yes') if o.get('stock', 0) > 0 else tr(lang, 'no')}</td></tr>" for o in offers if o["store"] in STORES)
     sim = [x for x in by_sub.get(p["sub"], []) if x["id"] != p["id"]][:8]

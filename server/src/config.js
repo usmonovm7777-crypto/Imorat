@@ -20,6 +20,8 @@ export function loadConfig(env = process.env) {
   const prod = env.NODE_ENV === "production";
   if (prod && !env.JWT_SECRET) throw new Error("JWT_SECRET is required in production (any long random string)");
   const smsMode = env.SMS_MODE || (env.ESKIZ_EMAIL ? "eskiz" : "dev");
+  // In production a forgotten ESKIZ_* would hand out sign-in codes in API responses; refuse to start unless this is a declared test server
+  if (prod && smsMode === "dev" && env.ALLOW_DEV_SMS !== "1") throw new Error("SMS is in dev mode: set ESKIZ_EMAIL/ESKIZ_PASSWORD, or ALLOW_DEV_SMS=1 on a test server only");
   return {
     prod,
     port: Number(env.PORT) || 8787,
@@ -68,7 +70,7 @@ export function loadConfig(env = process.env) {
     // the real protection is per phone number (5 codes an hour) and per account.
     otpPerIpHour: Number(env.OTP_PER_IP_HOUR || 150),
     ratePerIpMin: Number(env.RATE_PER_IP_MIN || 3000),
-    bonus: { rate: Number(env.BONUS_RATE ?? 0.01), ratePro: Number(env.BONUS_RATE_PRO ?? 0.02), maxShare: Number(env.BONUS_MAX_SHARE ?? 0.2), referral: Number(env.BONUS_REFERRAL ?? 30000), welcome: Number(env.BONUS_WELCOME ?? 30000) },
+    bonus: { rate: Number(env.BONUS_RATE ?? 0.01), ratePro: Number(env.BONUS_RATE_PRO ?? 0.02), maxShare: Number(env.BONUS_MAX_SHARE ?? 0.2), referral: Number(env.BONUS_REFERRAL ?? 30000), welcome: Number(env.BONUS_WELCOME ?? 30000), maxCashback: Number(env.BONUS_MAX_CASHBACK ?? 200000), maxInvites: Number(env.BONUS_MAX_INVITES ?? 20) },
     smsMasterTemplate: env.SMS_MASTER_TEMPLATE ?? "Imorat Go: sizga ustalik uchun yangi so‘rov keldi. Saytda qabul qiling.",
     paymentsOnline: list(env.PAYMENTS) // e.g. "click,payme" once the company and contracts exist
   };

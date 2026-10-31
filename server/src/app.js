@@ -37,6 +37,8 @@ const MIME = { ".webp": "image/webp", ".jpg": "image/jpeg", ".png": "image/png" 
 export function createApp(cfg, log = console) {
   const db = openDb(cfg.dbPath, cfg.catalogPath, { demoStores: cfg.demoStores });
   const ref = db.ref;
+  const subIcon = (cat, sub) => { const m = new Map(); for (const p of ref.products) if (p.cat === cat && p.sub === sub && p.icon) m.set(p.icon, (m.get(p.icon) || 0) + 1); return [...m].sort((x, y) => y[1] - x[1])[0]?.[0] || ref.cats.find(c => c.id === cat)?.icon || "box"; };
+  const subUnit = (cat, sub, want) => { if (want && ref.units[want]) return want; const m = new Map(); for (const p of ref.products) if (p.cat === cat && p.sub === sub) m.set(p.unit, (m.get(p.unit) || 0) + 1); return [...m].sort((x, y) => y[1] - x[1])[0]?.[0] || "pcs"; };
   const sms = createSms(cfg.sms, log);
   const lim = new Limiter();
   const r = new Router();
@@ -88,6 +90,7 @@ export function createApp(cfg, log = console) {
   };
   const need = req => { if (!req.user) throw new HttpError(401, "auth_required", "Sign in first"); return req.user; };
   const isAdmin = u => !!u?.phone && cfg.admins.includes(u.phone);
+  const adminOk = req => { try { needAdmin(req); return true; } catch { return false; } };
   const needAdmin = (req, { mfa = true } = {}) => {
     const u = need(req); if (!isAdmin(u)) throw new HttpError(403, "forbidden", "Admins only");
     if (mfa && cfg.adminMfa) {
@@ -100,6 +103,8 @@ export function createApp(cfg, log = console) {
     const u = need(req);
     const s = u.store_id && db.get("SELECT * FROM stores WHERE id=?", u.store_id);
     if (!s) throw new HttpError(403, "no_store", "Register your store first");
+    // A pending store may prepare its goods (they stay hidden until approval); a blocked or rejected one only sees its own page
+    if ((s.status === "blocked" || s.status === "rejected") && !/^\/api\/seller\/(store|summary)(\?|$)/.test(req.url) && !isAdmin(u)) throw new HttpError(403, "store_" + s.status, "The store is " + s.status + "; contact Imorat Go support");
     return { u, s };
   };
   const session = (u, extra = {}) => ({ token: signJwt({ sub: u.id, typ: "session", v: u.token_ver || 0, ...extra }, cfg.jwtSecret, extra.mfa ? 12 * 3600 : SESSION_TTL), user: { ...publicUser(u, cfg.admins), telegram: !!u.tg_chat, mfa: !!u.totp_on } });
@@ -139,7 +144,8 @@ export function createApp(cfg, log = console) {
   r.post("/api/auth/otp/verify", async req => {
     const b = await readJson(req);
     const phone = parsePhone(b.phone);
-    lim.hit("otpv-ip:" + req.ip, 40, 3600_000);
+    lim.hit("otpv-ip:" + req.ip, cfg.otpPerIpHour * 3, 3600_000);
+    lim.hit("otpv-ph:" + phone, 15, 3600_000);
     checkOtp(db, cfg.jwtSecret, phone, b.code);
     let link = null;
     if (b.ticket) { link = verifyJwt(b.ticket, cfg.jwtSecret); if (!link || link.typ !== "link") throw bad("ticket_expired", "Sign-in took too long, start again"); }
@@ -168,11 +174,8 @@ export function createApp(cfg, log = console) {
       : await verifyIdToken(token, { jwksUrl: cfg.apple.jwksUrl, issuers: ["https://appleid.apple.com"], audience: cfg.apple.clientId });
     const col = prov === "google" ? "google_sub" : "apple_sub";
     const emailOk = c.email && (c.email_verified === true || c.email_verified === "true");
-    let u = db.get(`SELECT * FROM users WHERE ${col}=?`, c.sub);
-    if (!u && emailOk) {
-      u = db.get(`SELECT * FROM users WHERE email=? AND ${col} IS NULL`, c.email);
-      if (u) { db.run(`UPDATE users SET ${col}=? WHERE id=?`, c.sub, u.id); u = db.get("SELECT * FROM users WHERE id=?", u.id); }
-    }
+    // Only the provider's own subject identifies an account: an e-mail can be typed into any profile, so it never links accounts.
+    const u = db.get(`SELECT * FROM users WHERE ${col}=?`, c.sub);
     if (u) return { ...session(u), is_new: !u.name };
     const name = str(nameHint, 80) || str(c.name, 80);
     // A phone number is required for every account (couriers and stores call the customer).
@@ -213,7 +216,7 @@ export function createApp(cfg, log = console) {
     const rev = db.meta("catalog_rev"), now = Date.now();
     if (catCache && catCache.rev === rev && now - catCache.at < 60_000) return catCache;
     const stats = storeStats();
-    const stores = db.all("SELECT * FROM stores WHERE status='active' ORDER BY created_at, id").map(s => ({ ...publicStore(s), rating: stats[s.id] || { done: 0, fail: 0, reliability: null, stars: null, reviews: 0, accept_min: null } }));
+    const stores = db.all("SELECT * FROM stores WHERE status='active' ORDER BY created_at, id").map(s => ({ ...publicStore(s), note: undefined, loc_src: undefined, rating: stats[s.id] || { done: 0, fail: 0, reliability: null, stars: null, reviews: 0, accept_min: null } }));
     const offers = db.all("SELECT o.product_id, o.store_id, o.price, o.stock FROM offers o JOIN stores s ON s.id=o.store_id AND s.status='active' ORDER BY o.product_id, o.price");
     const by = new Map();
     for (const o of offers) { const a = by.get(o.product_id) || []; a.push({ store: o.store_id, price: o.price, stock: o.stock }); by.set(o.product_id, a); }
@@ -251,7 +254,7 @@ export function createApp(cfg, log = console) {
     const q = quote(db, ref, { lines, services: b.services || [], bundles: b.bundles || [], form, promo: b.promo, user, yandexPrices: yp, points: b.points, maxShare: cfg.bonus.maxShare });
     return { q, form, lines, problems };
   }
-  r.post("/api/quote", async req => { const b = await readJson(req); const { q, problems } = await computeQuote(req, b); return { quote: q, problems }; });
+  r.post("/api/quote", async req => { lim.hit("quote-ip:" + req.ip, 120, 60_000); const b = await readJson(req); const { q, problems } = await computeQuote(req, b); return { quote: q, problems }; });
 
   r.post("/api/orders", async req => {
     const u = need(req), b = await readJson(req);
@@ -297,7 +300,7 @@ export function createApp(cfg, log = console) {
     const ships = db.all("SELECT * FROM shipments WHERE order_id=? ORDER BY id", o.id).filter(s => !forStore || s.store_id === forStore);
     return {
       num: o.num, t: o.created_at, status: o.status, pay: o.pay, pay_status: o.pay_status, d: JSON.parse(o.form),
-      goods: o.goods, del: o.del, svc: o.svc, disc: o.disc + o.promo_disc, pts: o.points_used || 0, total: o.total, cash: o.cash, promo: o.promo,
+      goods: o.goods, del: o.del, svc: o.svc, disc: o.disc + o.promo_disc, bdisc: o.disc, pd: o.promo_disc, pts: o.points_used || 0, total: o.total, cash: o.cash, promo: o.promo,
       ships: ships.map(s => ({ id: s.id, store: s.store_id, tariff: s.tariff, price: s.price, kg: s.kg, dist: s.dist, status: s.status, status_at: s.status_at,
         step: (STEPS[s.tariff ? "yandex" : "pickup"].indexOf(s.status)), history: JSON.parse(s.history), lines: JSON.parse(s.lines), courier: s.courier,
         cancel_reason: s.cancel_reason, accept_by: s.status === "new" ? (s.start_at || s.status_at) + cfg.timers.cancel * 60000 : null,
@@ -311,7 +314,7 @@ export function createApp(cfg, log = console) {
   r.get("/api/orders/:num", (req, res, p) => {
     const u = need(req);
     const o = db.get("SELECT * FROM orders WHERE num=?", p.num);
-    if (!o || (o.user_id !== u.id && !isAdmin(u))) throw new HttpError(404, "not_found", "Order not found");
+    if (!o || (o.user_id !== u.id && !adminOk(req))) throw new HttpError(404, "not_found", "Order not found");
     return { order: orderOut(o) };
   });
   r.post("/api/orders/:num/cancel", (req, res, p) => {
@@ -449,7 +452,7 @@ export function createApp(cfg, log = console) {
     const { s } = needSeller(req), b = await readJson(req);
     const o = db.get("SELECT * FROM offers WHERE product_id=? AND store_id=?", Number(p.pid), s.id);
     if (!o) throw new HttpError(404, "not_found", "This store does not sell the product");
-    const price = b.price !== undefined ? int(b.price, 100, 1e10) : o.price, stock = b.stock !== undefined ? int(b.stock, 0, 1e7) : o.stock;
+    const price = b.price !== undefined ? int(b.price, 100, 1e8) : o.price, stock = b.stock !== undefined ? int(b.stock, 0, 1e7) : o.stock;
     if (price === null || stock === null) throw bad("bad_offer", "Price must be ≥ 100 so'm, stock ≥ 0");
     db.run("UPDATE offers SET price=?, stock=?, updated_at=? WHERE product_id=? AND store_id=?", price, stock, Date.now(), o.product_id, s.id);
     bumpCatalog();
@@ -458,7 +461,7 @@ export function createApp(cfg, log = console) {
   r.post("/api/seller/offers", async req => {
     // Start selling an existing catalog product (e.g. the same cement another store has)
     const { s } = needSeller(req), b = await readJson(req);
-    const pid = int(b.product_id, 1, 1e9), price = int(b.price, 100, 1e10), stock = int(b.stock ?? 0, 0, 1e7);
+    const pid = int(b.product_id, 1, 1e9), price = int(b.price, 100, 1e8), stock = int(b.stock ?? 0, 0, 1e7);
     if (!pid || !price || stock === null) throw bad("bad_offer", "product_id, price and stock are required");
     if (!db.get("SELECT 1 FROM products WHERE id=? AND active=1", pid)) throw new HttpError(404, "not_found", "Product not found");
     db.run("INSERT INTO offers(product_id,store_id,price,stock,updated_at) VALUES(?,?,?,?,?) ON CONFLICT(product_id,store_id) DO UPDATE SET price=excluded.price, stock=excluded.stock, updated_at=excluded.updated_at", pid, s.id, price, stock, Date.now());
@@ -468,13 +471,15 @@ export function createApp(cfg, log = console) {
   r.post("/api/seller/import", async req => {
     // Price list import: many offers at once (matched in the browser) and new own products
     const { s } = needSeller(req), b = await readJson(req, 1024 * 1024);
+    lim.hit("import:" + s.id, 20, 86400_000);
     const rows = Array.isArray(b.offers) ? b.offers.slice(0, 2000) : [], create = Array.isArray(b.create) ? b.create.slice(0, 300) : [];
+    if (create.length) lim.hit("prod-new:" + s.id, 500, 86400_000, create.length);
     const bad1 = [];
-    const ok = rows.map((x, i) => ({ i, pid: int(x.product_id, 1, 1e9), price: int(x.price, 100, 1e10), stock: x.stock === undefined || x.stock === null || x.stock === "" ? null : int(x.stock, 0, 1e7) }))
+    const ok = rows.map((x, i) => ({ i, pid: int(x.product_id, 1, 1e9), price: int(x.price, 100, 1e8), stock: x.stock === undefined || x.stock === null || x.stock === "" ? null : int(x.stock, 0, 1e7) }))
       .filter(x => { const good = x.pid && x.price && db.get("SELECT 1 FROM products WHERE id=? AND active=1", x.pid); if (!good) bad1.push(x.i); return good; });
     const mk = create.map((x, i) => {
-      const ru = str(x.ru, 140), c = ref.cats.find(k => k.id === x.cat), price = int(x.price, 100, 1e10), kg = Number(x.kg) > 0 && Number(x.kg) <= 5000 ? Number(x.kg) : 1;
-      return ru.length >= 3 && c && c.subs.some(k => k[0] === x.sub) && price ? { ru, uz: str(x.uz, 140) || ru, c, sub: x.sub, unit: ref.units[x.unit] ? x.unit : "pcs", price, kg, stock: int(x.stock ?? 0, 0, 1e7) ?? 0 } : (bad1.push("n" + i), null);
+      const ru = str(x.ru, 140), c = ref.cats.find(k => k.id === x.cat), price = int(x.price, 100, 1e8), kg = Number(x.kg) > 0 && Number(x.kg) <= 5000 ? Number(x.kg) : 1;
+      return ru.length >= 3 && c && c.subs.some(k => k[0] === x.sub) && price ? { ru, uz: str(x.uz, 140) || ru, c, sub: x.sub, unit: subUnit(c.id, x.sub, x.unit), price, kg, stock: int(x.stock ?? 0, 0, 1e7) ?? 0 } : (bad1.push("n" + i), null);
     }).filter(Boolean);
     let updated = 0, added = 0, created = 0;
     db.tx(() => {
@@ -487,7 +492,7 @@ export function createApp(cfg, log = console) {
       for (const x of mk) {
         const nid = Math.max(10000, (db.get("SELECT MAX(id) m FROM products")?.m || 0) + 1);
         db.run(`INSERT INTO products(id,cat,sub,icon,ru,uz,unit,kg,img,hit,is_new,rating,reviews,country,warranty,descr,store_id,active,created_at)
-          VALUES(?,?,?,?,?,?,?,?,'',0,1,0,0,?,0,'',?,1,?)`, nid, x.c.id, x.sub, x.c.icon, x.ru, x.uz, x.unit, x.kg, JSON.stringify(["Узбекистан", "O‘zbekiston"]), s.id, now);
+          VALUES(?,?,?,?,?,?,?,?,'',0,1,0,0,?,0,'',?,1,?)`, nid, x.c.id, x.sub, subIcon(x.c.id, x.sub), x.ru, x.uz, x.unit, x.kg, JSON.stringify(["Узбекистан", "O‘zbekiston"]), s.id, now);
         db.run("INSERT INTO offers(product_id,store_id,price,stock,updated_at) VALUES(?,?,?,?,?)", nid, s.id, x.price, x.stock, now);
         created++;
       }
@@ -498,19 +503,20 @@ export function createApp(cfg, log = console) {
   });
   r.post("/api/seller/products", async req => {
     const { s } = needSeller(req), b = await readJson(req);
+    lim.hit("prod-new:" + s.id, 500, 86400_000);
     const ru = str(b.ru, 140), uz = str(b.uz, 140) || ru, cat = String(b.cat || ""), sub = String(b.sub || "");
     const c = ref.cats.find(x => x.id === cat);
     if (ru.length < 3) throw bad("bad_name", "Product name is required");
     if (!c || !c.subs.some(x => x[0] === sub)) throw bad("bad_category", "Choose a category and subcategory");
-    const unit = ref.units[b.unit] ? b.unit : "pcs";
-    const price = int(b.price, 100, 1e10), stock = int(b.stock ?? 0, 0, 1e7), kg = Number(b.kg);
+    const unit = subUnit(cat, sub, b.unit);
+    const price = int(b.price, 100, 1e8), stock = int(b.stock ?? 0, 0, 1e7), kg = Number(b.kg);
     if (!price) throw bad("bad_price", "Price must be at least 100 so'm");
     if (stock === null) throw bad("bad_stock", "Stock must be 0 or more");
     if (!(kg > 0 && kg <= 5000)) throw bad("bad_weight", "Weight per unit (kg) is needed for delivery");
     const id = db.tx(() => {
       const nid = Math.max(10000, (db.get("SELECT MAX(id) m FROM products")?.m || 0) + 1);
       db.run(`INSERT INTO products(id,cat,sub,icon,ru,uz,unit,kg,img,hit,is_new,rating,reviews,country,warranty,descr,store_id,active,created_at)
-        VALUES(?,?,?,?,?,?,?,?,'',0,1,0,0,?,?,?,?,1,?)`, nid, cat, sub, c.icon, ru, uz, unit, kg, JSON.stringify(["Узбекистан", "O‘zbekiston"]), int(b.warranty, 0, 120) || 0, str(b.desc, 1000), s.id, Date.now());
+        VALUES(?,?,?,?,?,?,?,?,'',0,1,0,0,?,?,?,?,1,?)`, nid, cat, sub, subIcon(cat, sub), ru, uz, unit, kg, JSON.stringify(["Узбекистан", "O‘zbekiston"]), int(b.warranty, 0, 120) || 0, str(b.desc, 1000), s.id, Date.now());
       db.run("INSERT INTO offers(product_id,store_id,price,stock,updated_at) VALUES(?,?,?,?,?)", nid, s.id, price, stock, Date.now());
       return nid;
     });
@@ -521,11 +527,13 @@ export function createApp(cfg, log = console) {
     const { s } = needSeller(req);
     const prod = db.get("SELECT * FROM products WHERE id=?", Number(p.pid));
     if (!prod || prod.store_id !== s.id) throw new HttpError(403, "forbidden", "You can change photos only of your own products");
+    lim.hit("photo:" + s.id, 100, 86400_000);
     const buf = await readBody(req, 5 * 1024 * 1024);
     const ext = buf[0] === 0xff && buf[1] === 0xd8 ? ".jpg" : buf.slice(0, 4).toString("hex") === "89504e47" ? ".png" : buf.slice(0, 4).toString() === "RIFF" && buf.slice(8, 12).toString() === "WEBP" ? ".webp" : null;
     if (!ext) throw bad("bad_image", "Upload a JPEG, PNG or WEBP image up to 5 MB");
     const name = `p${prod.id}-${randomBytes(4).toString("hex")}${ext}`;
     writeFileSync(join(cfg.uploadsDir, name), buf);
+    if (prod.img && prod.img.startsWith("/uploads/")) { try { unlinkSync(join(cfg.uploadsDir, prod.img.slice("/uploads/".length).replace(/[^\w.-]/g, ""))); } catch {} }
     db.run("UPDATE products SET img=? WHERE id=?", "/uploads/" + name, prod.id);
     bumpCatalog();
     return { img: mediaUrl("/uploads/" + name) };
@@ -533,7 +541,7 @@ export function createApp(cfg, log = console) {
   r.patch("/api/seller/shipments/:id", async (req, res, p) => {
     const { u, s } = needSeller(req), b = await readJson(req);
     const sh = db.get("SELECT * FROM shipments WHERE id=?", Number(p.id));
-    if (!sh || (sh.store_id !== s.id && !isAdmin(u))) throw new HttpError(404, "not_found", "Shipment not found");
+    if (!sh || (sh.store_id !== s.id && !adminOk(req))) throw new HttpError(404, "not_found", "Shipment not found");
     if (!(SELLER_MOVES[sh.status] || []).includes(b.status) || (b.status === "ready" && sh.tariff) || (b.status === "searching" && !sh.tariff)) throw bad("bad_status", `Cannot move from ${sh.status} to ${b.status}`);
     moveShipment(sh, b.status, req);
     return { ok: true, status: b.status };
@@ -638,6 +646,8 @@ export function createApp(cfg, log = console) {
     const u = needAdmin(req, { mfa: false }), b = await readJson(req);
     lim.hit("mfa:" + u.id, 10, 15 * 60000);
     if (!u.totp_secret || !checkTotp(u.totp_secret, b.code)) { audit(req, "mfa.fail", u.id); throw bad("mfa_wrong", "Wrong code"); }
+    const step = String(Math.floor(Date.now() / 30000)) + ":" + String(b.code).replace(/\D/g, "");
+    if (!db.run("UPDATE users SET totp_last=? WHERE id=? AND (totp_last IS NULL OR totp_last<>?)", step, u.id, step).changes) throw bad("mfa_reused", "This code was already used, wait for the next one");
     if (!u.totp_on) { db.run("UPDATE users SET totp_on=1 WHERE id=?", u.id); audit(req, "mfa.enabled", u.id); }
     return session(db.get("SELECT * FROM users WHERE id=?", u.id), { mfa: true });
   });
@@ -663,13 +673,14 @@ export function createApp(cfg, log = console) {
     const s = db.get("SELECT * FROM stores WHERE id=?", p.id); if (!s) throw new HttpError(404, "not_found", "Store not found");
     if (b.status && !["active", "pending", "rejected", "blocked"].includes(b.status)) throw bad("bad_status", "Unknown status");
     db.run("UPDATE stores SET status=COALESCE(?,status), review_note=COALESCE(?,review_note), verified=COALESCE(?,verified) WHERE id=?", b.status || null, b.note != null ? str(b.note, 300) : null, b.verified == null ? null : b.verified ? 1 : 0, s.id);
-    audit(req, "store." + (b.status || "edit"), s.id, { note: b.note, owner_phone: b.owner_phone });
+    audit(req, "store." + (b.status || "edit"), s.id, { note: str(b.note, 300), owner_phone: str(b.owner_phone, 20) });
     if (b.status === "active" && s.status !== "active") channel.storeApproved(s).catch(e => log.warn("[channel]", e.message));
     if (b.status && s.owner_id) { const ow = db.get("SELECT tg_chat FROM users WHERE id=?", s.owner_id); if (ow?.tg_chat) tg.send(ow.tg_chat, b.status === "active" ? `🎉 Магазин «${s.name.replace(/[<>&]/g, "")}» одобрен и виден покупателям на Imorat Go.` : `Статус магазина «${s.name.replace(/[<>&]/g, "")}»: ${b.status}.${b.note ? " " + str(b.note, 300).replace(/[<>&]/g, "") : ""}`); }
     if (b.owner_phone) {
       const ph = parsePhone(b.owner_phone), ou = db.get("SELECT * FROM users WHERE phone=?", ph);
       if (!ou) throw new HttpError(404, "user_not_found", "The owner must sign in once first");
       db.run("UPDATE stores SET owner_id=? WHERE id=?", ou.id, s.id); db.run("UPDATE users SET role='seller', store_id=? WHERE id=?", s.id, ou.id);
+      db.run("UPDATE users SET store_id=NULL, role='buyer' WHERE store_id=? AND id<>?", s.id, ou.id);
     }
     bumpCatalog();
     return { store: publicStore(db.get("SELECT * FROM stores WHERE id=?", s.id)) };
@@ -711,6 +722,8 @@ export function createApp(cfg, log = console) {
     req.ip = clientIp(req);
     res.setHeader("X-Content-Type-Options", "nosniff");
     res.setHeader("Referrer-Policy", "no-referrer");
+    res.setHeader("X-Frame-Options", "DENY");
+    res.setHeader("Content-Security-Policy", "default-src 'none'; img-src 'self' data:; frame-ancestors 'none'");
     cors(req, res, cfg.origins);
     try {
       if (req.method === "OPTIONS") { res.writeHead(204); return res.end(); }

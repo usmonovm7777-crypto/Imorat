@@ -20,7 +20,8 @@ export class Router {
     for (const r of this.routes) {
       const m = path.match(r.re); if (!m) continue;
       if (r.method !== method) { allowed = true; continue; }
-      const params = {}; r.keys.forEach((k, i) => (params[k] = decodeURIComponent(m[i + 1])));
+      const params = {};
+      try { r.keys.forEach((k, i) => (params[k] = decodeURIComponent(m[i + 1]))); } catch { return null; }
       return { route: r, params };
     }
     return allowed ? "method" : null;
@@ -64,10 +65,10 @@ export function cors(req, res, origins) {
 /* Fixed-window counters kept in memory: enough for one server process. */
 export class Limiter {
   constructor() { this.m = new Map(); setInterval(() => { const t = Date.now(); for (const [k, v] of this.m) if (v.reset < t) this.m.delete(k); }, 60_000).unref(); }
-  hit(key, max, windowMs) {
+  hit(key, max, windowMs, weight = 1) {
     const t = Date.now(); let v = this.m.get(key);
     if (!v || v.reset < t) { v = { n: 0, reset: t + windowMs }; this.m.set(key, v); }
-    v.n++;
+    v.n += weight;
     if (v.n > max) throw new HttpError(429, "rate_limited", "Too many requests, try again later", { retry_in: Math.ceil((v.reset - t) / 1000) });
     return max - v.n;
   }

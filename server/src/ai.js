@@ -4,7 +4,7 @@ import { HttpError, bad } from "./http.js";
    The API key stays on the server; the browser receives plain text chunks as they are generated. */
 const RULES = `Ты — Usta AI, консультант-мастер маркетплейса стройматериалов Imorat Go в Ташкенте (Узбекистан). Помогаешь покупателю понять, что купить для ремонта, сравнить варианты и посчитать количество.
 
-Язык: отвечай на том языке, на котором пишет пользователь (русский или узбекский). Узбекский пиши новой латиницей (закон 2026 г.): ö, ğ, ş, ç вместо oʻ, gʻ, sh, ch — например «Özbekiston», «şpaklyovka».
+Язык: отвечай на том языке, на котором пишет пользователь (русский, узбекский или английский). Узбекский пиши новой латиницей (закон 2026 г.): ö, ğ, ş, ç вместо oʻ, gʻ, sh, ch — например «Özbekiston», «şpaklyovka».
 
 Правила:
 - Рекомендуй ТОЛЬКО товары из каталога ниже. Ссылайся на товар токеном [[ID]] или [[ID:количество]], например [[1:10]]. Страница превратит токен в карточку с ценой и кнопкой «В корзину». Не выдумывай товары, цены и магазины.
@@ -62,7 +62,7 @@ export function buildRequest(db, ref, cfg, body, user) {
     model: cfg.model, max_tokens: cfg.maxTokens, stream: true,
     system: [
       { type: "text", text: RULES + "\n\nКаталог (ID | название | категория | цена | вес | магазины | рейтинг):\n" + catalogText(db, ref), cache_control: { type: "ephemeral" } },
-      { type: "text", text: `Контекст покупателя: ${who}район доставки — ${district}; VIP — ${user?.vip ? "да" : "нет"}; в корзине: ${cart}. Интерфейс: ${body.lang === "uz" ? "узбекский" : "русский"}.` }
+      { type: "text", text: `Контекст покупателя: ${who}район доставки — ${district}; VIP — ${user?.vip ? "да" : "нет"}; в корзине: ${cart}. Интерфейс: ${body.lang === "uz" ? "узбекский" : body.lang === "en" ? "английский (отвечай по-английски)" : "русский"}.` }
     ],
     messages: clean
   };
@@ -74,7 +74,7 @@ export async function streamChat(cfg, payload, res, log = console) {
   const ctl = new AbortController();
   res.on("close", () => ctl.abort());
   const r = await fetch(cfg.url + "/v1/messages", {
-    method: "POST", signal: ctl.signal,
+    method: "POST", signal: AbortSignal.any([ctl.signal, AbortSignal.timeout(120_000)]),
     headers: { "x-api-key": cfg.key, "anthropic-version": "2023-06-01", "content-type": "application/json" },
     body: JSON.stringify(payload)
   });

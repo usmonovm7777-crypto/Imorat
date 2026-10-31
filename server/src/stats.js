@@ -16,7 +16,7 @@ export function registerStats({ r, db, lim, needSeller }) {
         const kind = e?.t === "cart" ? "cart" : e?.t === "view" ? "view" : null, pid = int(e?.id, 1, 1e9);
         if (!kind || !pid) continue;
         const store = kind === "cart" && typeof e.store === "string" ? e.store.slice(0, 40) : "";
-        if (!db.get("SELECT 1 FROM products WHERE id=?", pid)) continue;
+        if (store ? !db.get("SELECT 1 FROM offers WHERE product_id=? AND store_id=?", pid, store) : !db.get("SELECT 1 FROM products WHERE id=?", pid)) continue;
         bump.run(d, pid, store, kind); n++;
       }
     });

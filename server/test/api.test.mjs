@@ -394,7 +394,7 @@ test("Masters: profile → moderation → request → accept shows phone → don
   assert.equal(one.reviews[0].text, "Аккуратно и быстро");
 });
 
-test("Bonus points: referral welcome, spend at checkout, cashback on delivery, referral reward, refund on cancel", async () => {
+test("Bonus points: referral code, welcome after the first delivery, capped cashback, no cashback on own store, refund on cancel", async () => {
   const seller = (await login("996660011")).data.token;
   const st = await call("POST", "/api/seller/store", { name: "Bonus Qurilish", descr: "Магазин для проверки бонусов и кешбэка", cats: ["build"], phone: "712001122", addr: "ул. Бонусная, 3", hours: "00:00–00:00", district: "yunus" }, seller);
   const sid = st.data.store.id;
@@ -406,26 +406,39 @@ test("Bonus points: referral welcome, spend at checkout, cashback on delivery, r
   assert.equal((await call("POST", "/api/me/bonus/referral", { code: ab.code }, a)).status, 400, "own code");
   assert.equal((await call("POST", "/api/me/bonus/referral", { code: "IMNOPE1" }, b)).status, 400);
   const w = await call("POST", "/api/me/bonus/referral", { code: ab.code.toLowerCase() }, b);
-  assert.equal(w.status, 200, JSON.stringify(w.data)); assert.equal(w.data.points, 30000);
+  assert.equal(w.status, 200, JSON.stringify(w.data)); assert.equal(w.data.points, 0, "nothing is credited for entering a code"); assert.equal(w.data.pending_welcome, 30000);
   assert.equal((await call("POST", "/api/me/bonus/referral", { code: ab.code }, b)).status, 409);
   const form = { name: "Бобур", phone: "998996660033", mode: "pickup", pay: "store" };
   const q = await call("POST", "/api/quote", { lines: [{ id: 1, store: sid, q: 5 }], form, points: 999999 }, b);
-  assert.equal(q.data.quote.pts, 30000); assert.equal(q.data.quote.total, 295000 - 30000);
-  const o = await call("POST", "/api/orders", { lines: [{ id: 1, store: sid, q: 5 }], form, points: 999999, expected_total: 265000 }, b);
-  assert.equal(o.status, 200, JSON.stringify(o.data)); assert.equal(o.data.order.pts, 30000);
-  assert.equal((await call("GET", "/api/me/bonus", null, b)).data.points, 0);
+  assert.equal(q.data.quote.pts, 0); assert.equal(q.data.quote.total, 295000);
+  const o = await call("POST", "/api/orders", { lines: [{ id: 1, store: sid, q: 5 }], form, points: 0, expected_total: 295000 }, b);
+  assert.equal(o.status, 200, JSON.stringify(o.data)); assert.equal(o.data.order.pts, 0);
   const sh = (await call("GET", "/api/seller/summary", null, seller)).data.orders[0].ship_id;
   for (const s of ["assembling", "ready", "picked"]) assert.equal((await call("PATCH", `/api/seller/shipments/${sh}`, { status: s }, seller)).status, 200);
   const bb = (await call("GET", "/api/me/bonus", null, b)).data;
-  assert.equal(bb.points, 2950, "1% cashback of 295 000");
+  assert.equal(bb.points, 30000 + 2950, "welcome bonus + 1% cashback of 295 000, both on the first delivery");
   assert.equal((await call("GET", "/api/me/bonus", null, a)).data.points, 30000, "referral reward after the friend's first delivery");
   assert.equal((await call("GET", "/api/me/bonus", null, a)).data.invited_paid, 1);
-  // spend part of the cashback, cancel, points come back
+  // spend part of the points, cancel, points come back
   const o2 = await call("POST", "/api/orders", { lines: [{ id: 1, store: sid, q: 1 }], form, points: 2000 }, b);
   assert.equal(o2.data.order.pts, 2000);
-  assert.equal((await call("GET", "/api/me/bonus", null, b)).data.points, 950);
+  assert.equal((await call("GET", "/api/me/bonus", null, b)).data.points, 30950);
   assert.equal((await call("POST", `/api/orders/${o2.data.order.num}/cancel`, null, b)).status, 200);
-  assert.equal((await call("GET", "/api/me/bonus", null, b)).data.points, 2950);
+  assert.equal((await call("GET", "/api/me/bonus", null, b)).data.points, 32950);
+  // the store owner buying from his own store earns nothing; a huge order is capped at 200 000 points
+  assert.equal((await call("PATCH", "/api/seller/offers/1", { price: 9999999999 }, seller)).status, 400, "price above 100 000 000 so'm is rejected");
+  await call("PATCH", "/api/seller/offers/1", { price: 50000000, stock: 500 }, seller);
+  const own = await call("POST", "/api/orders", { lines: [{ id: 1, store: sid, q: 1 }], form: { ...form, name: "Владелец", phone: "998996660011" } }, seller);
+  assert.equal(own.status, 200, JSON.stringify(own.data));
+  const sh2 = (await call("GET", "/api/seller/summary", null, seller)).data.orders.find(x => x.num === own.data.order.num).ship_id;
+  for (const s of ["assembling", "ready", "picked"]) await call("PATCH", `/api/seller/shipments/${sh2}`, { status: s }, seller);
+  assert.equal((await call("GET", "/api/me/bonus", null, seller)).data.points, 0, "no cashback on the owner's own store");
+  const c = (await login("996660044")).data.token;
+  const big = await call("POST", "/api/orders", { lines: [{ id: 1, store: sid, q: 2 }], form: { ...form, name: "Крупный", phone: "998996660044" } }, c);
+  assert.equal(big.status, 200, JSON.stringify(big.data));
+  const sh3 = (await call("GET", "/api/seller/summary", null, seller)).data.orders.find(x => x.num === big.data.order.num).ship_id;
+  for (const s of ["assembling", "ready", "picked"]) await call("PATCH", `/api/seller/shipments/${sh3}`, { status: s }, seller);
+  assert.equal((await call("GET", "/api/me/bonus", null, c)).data.points, 200000, "cashback capped at 200 000 per shipment");
 });
 
 test("Seller statistics: anonymous views and cart adds, orders, price position", async () => {
@@ -656,8 +669,8 @@ test("Telegram bot: search, sign-in by contact, request to a master with buttons
   await until(() => sentTo(7001, /Заказов пока нет/).length);
   send(7001, { text: "/bonus" });
   await until(() => sentTo(7001, /Ваш код для друзей/).length);
-  send(7001, { text: "🌐 O‘zbekcha" });
-  const uzm = await until(() => sentTo(7001, /Til: o‘zbekça/)[0]);
+  send(7001, { text: "🌐 Özbekça" });
+  const uzm = await until(() => sentTo(7001, /Til: özbekça/)[0]);
   assert.ok(uzm.reply_markup.keyboard.flat().some(b => b.text === "🔎 Mahsulot qidiriş"));
   send(7001, { text: "laminat" });
   await until(() => sentTo(7001, /Topildi[\s\S]*Laminat/).length);

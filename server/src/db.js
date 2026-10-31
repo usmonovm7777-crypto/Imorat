@@ -78,7 +78,7 @@ export function openDb(path, catalogPath, opts = {}) {
   addCol("stores", "verified", "INTEGER NOT NULL DEFAULT 0");
   addCol("masters", "busy", "INTEGER NOT NULL DEFAULT 0"); addCol("users", "lang", "TEXT NOT NULL DEFAULT 'ru'");
   addCol("orders", "points_used", "INTEGER NOT NULL DEFAULT 0");
-  addCol("users", "totp_secret", "TEXT"); addCol("users", "totp_on", "INTEGER NOT NULL DEFAULT 0");
+  addCol("users", "totp_secret", "TEXT"); addCol("users", "totp_on", "INTEGER NOT NULL DEFAULT 0"); addCol("users", "totp_last", "TEXT");
   addCol("shipments", "accepted_at", "INTEGER"); addCol("shipments", "start_at", "INTEGER"); addCol("shipments", "reminded", "INTEGER NOT NULL DEFAULT 0");
   addCol("shipments", "sms_sent", "INTEGER NOT NULL DEFAULT 0"); addCol("shipments", "cancel_reason", "TEXT"); addCol("shipments", "tg_msg", "TEXT");
   addCol("shipments", "goods", "INTEGER NOT NULL DEFAULT 0"); addCol("shipments", "commission", "INTEGER NOT NULL DEFAULT 0");
