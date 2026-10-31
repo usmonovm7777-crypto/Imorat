@@ -246,7 +246,7 @@ export function createApp(cfg, log = console) {
   const cleanForm = f => ({
     name: str(f?.name, 80), phone: str(f?.phone, 30), district: D[f?.district] ? f.district : "mirob", street: str(f?.street, 160), flat: str(f?.flat, 30),
     entrance: str(f?.entrance, 20), intercom: str(f?.intercom, 30), private: !!f?.private, // full address for the Yandex courier: porch, intercom code, or a private house
-    floor: String(int(f?.floor, 1, 60) || 1), lift: !!f?.lift, mode: f?.mode === "pickup" ? "pickup" : "yandex",
+    floor: String(int(f?.floor, 1, 60) || 1), help: ["none", "one", "two"].includes(f?.help) ? f.help : f?.lift ? "one" : "none", lift: f?.help ? f.help !== "none" : !!f?.lift, mode: f?.mode === "pickup" ? "pickup" : "yandex",
     when: ["asap", "slot", "vip"].includes(f?.when) ? f.when : "asap", hour: String(int(f?.hour, 8, 20) ?? 9).padStart(2, "0"),
     pay: ["click", "payme", "uzum", "nasiya", "cash", "store"].includes(f?.pay) ? f.pay : "store", comment: str(f?.comment, 300),
     la: Number.isFinite(Number(f?.la)) && f?.la !== null && f?.la !== "" ? Number(f.la) : null, lo: Number.isFinite(Number(f?.lo)) && f?.lo !== null && f?.lo !== "" ? Number(f.lo) : null
@@ -494,7 +494,7 @@ export function createApp(cfg, log = console) {
       orders: ships.map(x => {
         const f = JSON.parse(x.form);
         return { ship_id: x.id, num: x.num, t: x.oc, status: x.status, tariff: x.tariff, price: x.price, kg: x.kg, pay: x.pay, pay_status: x.pay_status,
-          buyer: f.name, phone: f.phone, district: f.district, street: f.mode === "pickup" ? "" : f.street, when: f.when, hour: f.hour, comment: f.comment, lines: JSON.parse(x.lines),
+          buyer: f.name, phone: f.phone, district: f.district, street: f.mode === "pickup" ? "" : f.street, floor: f.private ? null : f.floor, entrance: f.entrance || "", private: !!f.private, help: f.help || (f.lift ? "one" : "none"), when: f.when, hour: f.hour, comment: f.comment, lines: JSON.parse(x.lines),
           cancel_reason: x.cancel_reason, accept_by: x.status === "new" ? (x.start_at || x.status_at) + cfg.timers.cancel * 60000 : null, commission: x.commission,
           next: SELLER_MOVES[x.status]?.filter(n => (x.tariff ? n !== "ready" : !["searching"].includes(n))) || [] };
       }),

@@ -219,6 +219,7 @@ linear-gradient(180deg, hsl(var(--h) var(--tile-s) var(--tile-l)) 0 70%, hsl(var
 .logo { margin-right: auto; }
 .search { order: 5; flex-basis: 100%; }
 .cat-btn, .hb, .cart-btn, .rail-nav { display: none; }
+.hdr-row .fx-btn:not(.th-btn) { display: none; }
 .search .ask .t { display: none; }
 .search input { padding-right: 124px; }
 }
@@ -884,6 +885,82 @@ html.ds-dragging, html.ds-dragging * { cursor: grabbing !important; user-select:
 .smap-t img { width: 256px; height: 256px; display: block; }
 .smap .pin { position: absolute; left: 50%; top: 50%; width: 36px; height: 36px; translate: -50% -100%; color: var(--signal); filter: drop-shadow(0 2px 3px rgba(0,0,0,.3)); }
 .smap .attr { position: absolute; right: 6px; bottom: 6px; font-size: 11px; background: color-mix(in srgb, var(--surface) 85%, transparent); padding: 2px 6px; border-radius: 6px; color: var(--muted); }
+.home-setup { display: grid; justify-items: center; gap: 6px; padding: 10px 0 30px; text-align: center; }
+.home-setup small { color: var(--faint); font-size: 12px; }
+.hw-list { display: grid; gap: 6px; margin-top: 14px; }
+.hw { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 8px 10px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); transition: opacity .2s, background .3s; }
+.hw.off { opacity: .55; }
+.hw.moved { background: var(--accent-soft); }
+.hw-n { font-weight: 600; font-size: 14px; display: grid; gap: 2px; min-width: 0; }
+.hw-n small { font-weight: 400; color: var(--faint); font-size: 12px; }
+.hw-c { display: flex; align-items: center; gap: 2px; flex: none; }
+.hw-c .ib { width: 32px; height: 32px; }
+.hw-c .ib:disabled { opacity: .3; }
+.hw-sw { position: relative; width: 44px; height: 26px; margin-left: 8px; flex: none; cursor: pointer; }
+.hw-sw input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+.hw-sw i { position: absolute; inset: 0; border-radius: 13px; background: var(--line-strong); transition: background .2s; }
+.hw-sw i::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.25); transition: transform .2s; }
+.hw-sw input:checked + i { background: var(--accent); }
+.hw-sw input:checked + i::after { transform: translateX(18px); }
+.hw-sw input:disabled + i { opacity: .5; }
+.hw-sw input:focus-visible + i { outline: 2px solid var(--accent); outline-offset: 2px; }
+html.fx .fx-btn.th-btn, .fx-btn.th-btn { background: var(--surface); color: var(--ink); border-color: var(--line-strong); box-shadow: none; }
+.th-btn:hover { background: var(--raised); }
+.th-btn svg { transition: transform .3s; }
+.th-btn:hover svg { transform: rotate(20deg); }
+.calc-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.calc-chips .chip { display: inline-flex; align-items: center; gap: 6px; padding: 9px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); font-size: 13px; font-weight: 500; color: var(--ink); }
+.calc-chips .chip svg { color: var(--accent); }
+.calc-chips .chip.more { color: var(--accent); font-weight: 600; border-style: dashed; }
+.stores-more { display: none; margin-top: 10px; }
+@media (max-width: 760px) {
+.hero { margin-top: 6px; padding: 20px 18px 18px; gap: 14px; border-radius: 22px; }
+.hero-l { gap: 14px; }
+.hero .eyebrow { font-size: 10.5px; letter-spacing: .06em; }
+.hero .h-xl { font-size: 27px; }
+.hero .lead { display: none; }
+.hero-q button[data-ask] { display: none; }
+.hero .collage { display: none; }
+.stats { gap: 14px 18px; }
+.stats b { font-size: 19px; }
+.stats span { font-size: 11px; }
+.trust { display: flex; overflow-x: auto; scrollbar-width: none; gap: 8px; margin: 10px -16px 0; padding: 0 16px 2px; scroll-snap-type: x proximity; }
+.trust::-webkit-scrollbar { display: none; }
+.trust div { flex: none; width: 196px; padding: 10px 12px; grid-template-columns: 32px 1fr; gap: 10px; scroll-snap-align: start; }
+.trust .ti { width: 32px; height: 32px; }
+.trust b { font-size: 13px; }
+.trust small { font-size: 11.5px; }
+.sec { padding-block: 18px; }
+.sec-head { margin-bottom: 10px; }
+.sec-head p { display: none; }
+.cat-grid { grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.cat-tile { padding: 8px 6px 9px; gap: 6px; grid-template-rows: auto auto; justify-items: center; text-align: center; border-radius: 14px; }
+.cat-tile > span:first-child { order: 2; }
+.cat-tile .cat-img { order: 1; width: 100%; aspect-ratio: 1; border-radius: 10px; }
+.cat-tile b { font-size: 10.5px; line-height: 1.15; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; hyphens: auto; }
+.cat-tile small, .cat-tile br { display: none; }
+.cat-tile:not(.all):nth-child(n+8) { display: none; }
+.cat-tile.all { align-content: start; gap: 6px; }
+.cat-tile.all .ico { margin: 0; width: 100%; aspect-ratio: 1; height: auto; border-radius: 10px; }
+.bundles { display: grid; grid-auto-flow: column; grid-auto-columns: 80%; gap: 10px; overflow-x: auto; scrollbar-width: none; margin-inline: -16px; padding: 2px 16px 6px; scroll-snap-type: x mandatory; scroll-padding-inline: 16px; }
+.bundles::-webkit-scrollbar { display: none; }
+.bundles > * { scroll-snap-align: start; }
+.bundle .bimg { height: 110px; }
+.mgrid { display: grid; grid-auto-flow: column; grid-auto-columns: 82%; gap: 10px; overflow-x: auto; scrollbar-width: none; margin-inline: -16px; padding: 2px 16px 6px; scroll-snap-type: x mandatory; scroll-padding-inline: 16px; }
+.mgrid::-webkit-scrollbar { display: none; }
+.mgrid > * { scroll-snap-align: start; }
+.stores { gap: 8px; }
+.store { padding: 12px; grid-template-columns: 40px 1fr; gap: 10px; }
+.store .av { width: 40px; height: 40px; font-size: 14px; }
+.store .m { font-size: 12.5px; }
+.store .r { margin-top: 6px; }
+.stores:not(.all) .store:nth-child(n+6) { display: none; }
+.stores-more { display: block; }
+.stores-more .btn { width: 100%; }
+.seller-band { padding: 20px; }
+.ds-teaser { padding: 16px; gap: 12px; }
+.ds-teaser-v svg { max-height: 200px; }
+}
 .livemap { position: relative; aspect-ratio: 4 / 3; max-height: 320px; border-radius: 14px; overflow: hidden; border: 1px solid var(--line); background: var(--raised); }
 .livemap .lm-t { position: absolute; display: grid; grid-template-columns: repeat(3, 256px); width: 768px; height: 768px; }
 .livemap .lm-t img { width: 256px; height: 256px; display: block; }
@@ -898,6 +975,9 @@ html.ds-dragging, html.ds-dragging * { cursor: grabbing !important; user-select:
 .livemap .attr { position: absolute; right: 6px; bottom: 6px; font-size: 11px; background: color-mix(in srgb, var(--surface) 85%, transparent); padding: 2px 6px; border-radius: 6px; color: var(--muted); }
 .lm-bar { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; font-size: 13px; margin-top: 8px; }
 .lm-bar b { font-size: 15px; }
+.addr-line { display: flex; gap: 8px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; font-size: 14px; background: var(--bg); }
+.addr-line svg { flex: none; margin-top: 3px; color: var(--brand); }
+.addr-line small { display: block; color: var(--muted); margin-top: 2px; }
 .payout-box { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); display: grid; gap: 8px; }
 @media (prefers-reduced-motion: reduce) { .livemap .lm-m.car span::before { animation: none; } }
 .sp-qa { display: grid; gap: 10px; margin-top: 12px; }
@@ -1322,6 +1402,8 @@ const UI = {
   store: '<path d="M3 9l2-5h14l2 5"/><path d="M3 9h18v2a3 3 0 0 1-6 0 3 3 0 0 1-6 0 3 3 0 0 1-6 0zM5 13v8h14v-8"/>',
   check: '<path d="M5 12l5 5 9-10"/>',
   filter: '<path d="M3 5h18l-7 8v6l-4 2v-8z"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+  moon: '<path d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a8.5 8.5 0 1 0 11 11z"/>',
   spark: '<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 15l.7 1.8 1.8.7-1.8.7L19 20l-.7-1.8-1.8-.7 1.8-.7z"/>',
   send: '<path d="M5 12h13M13 6l6 6-6 6"/>',
   stop: '<rect x="7" y="7" width="10" height="10" rx="2"/>',
@@ -1889,13 +1971,63 @@ function applyLook() {
   document.documentElement.classList.toggle("fx", fx);
   if (themePref === "light" || themePref === "dark") { document.documentElement.setAttribute("data-theme", themePref); themeSet = true; }
   else if (themeSet) { document.documentElement.removeAttribute("data-theme"); themeSet = false; }
+  const dark = themePref === "dark" || (themePref === "auto" && matchMedia("(prefers-color-scheme: dark)").matches);
+  let m = document.querySelector('meta[name="theme-color"]:not([media])'); if (!m) { m = document.createElement("meta"); m.name = "theme-color"; document.head.appendChild(m); }
+  m.content = dark ? "#171E1D" : "#FFFFFF"; // same as the header surface
 }
 applyLook();
 const motionOK = () => document.documentElement.classList.contains("fx");
+const mqDark = matchMedia("(prefers-color-scheme: dark)");
+const effTheme = () => themePref === "light" || themePref === "dark" ? themePref : mqDark.matches ? "dark" : "light";
 function setLook(fx, theme) {
   if (fx) { fxPref = fx; LS.set("imorat.fx", fx); }
   if (theme) { themePref = theme; LS.set("imorat.theme", theme); }
   applyLook(); renderAll();
+}
+/* ---- Home widgets. Every block of the home page is a widget: the person hides or reorders them in «Настроить главную».
+   Phones start with a short home (the heavy blocks are off), computers show everything; each keeps its own setting. ---- */
+const HOME_W = [
+  ["hero", "Главный экран и Usta AI", "Bosh ekran va Usta AI", "Hero and Usta AI", true],
+  ["cats", "Категории", "Toifalar", "Categories"],
+  ["hits", "Хиты недели", "Hafta xitlari", "Hits of the week"],
+  ["bundles", "Комплекты под ключ", "Tayyor to‘plamlar", "Ready kits"],
+  ["recent", "Вы смотрели", "Siz ko‘rganlar", "Recently viewed"],
+  ["designer", "AI-дизайнер комнаты", "AI xona dizayneri", "AI room designer"],
+  ["masters", "Мастера и спецтехника", "Ustalar va maxsus texnika", "Pros and machinery"],
+  ["calc", "Калькуляторы ремонта", "Ta’mir kalkulyatorlari", "Renovation calculators"],
+  ["stores", "Магазины-партнёры", "Hamkor do‘konlar", "Partner stores"],
+  ["trust", "Преимущества", "Afzalliklar", "Benefits"],
+  ["marquee", "Популярное сейчас", "Hozir ommabop", "Popular now"],
+  ["delivery", "Как работает доставка", "Yetkazish qanday ishlaydi", "How delivery works"],
+  ["fresh", "Новые цвета и модели", "Yangi ranglar va modellar", "New colours and models"],
+  ["winter", "Готовимся к зиме", "Qishga tayyorgarlik", "Winter prep"],
+  ["vip", "Imorat Go VIP", "Imorat Go VIP", "Imorat Go VIP"],
+  ["seller", "Для магазинов", "Do‘konlar uchun", "For stores"]
+];
+const DESK_ORDER = ["hero", "trust", "marquee", "cats", "designer", "masters", "bundles", "recent", "hits", "delivery", "fresh", "winter", "calc", "vip", "stores", "seller"];
+const PHONE_OFF = ["trust", "marquee", "delivery", "fresh", "winter", "vip"];
+const mqPhone = matchMedia("(max-width: 760px)");
+const isPhone = () => mqPhone.matches;
+const homeKey = () => isPhone() ? "imorat.home.m" : "imorat.home";
+const homeName = id => { const w = HOME_W.find(x => x[0] === id); return w ? L(w[1], w[2], w[3]) : id; };
+function homeLayout() {
+  const ids = HOME_W.map(w => w[0]), pref = LS.get(homeKey(), null);
+  const order = (pref?.order || (isPhone() ? ids : DESK_ORDER)).filter(id => ids.includes(id));
+  for (const id of ids) if (!order.includes(id)) order.push(id);
+  const off = (pref ? pref.off || [] : isPhone() ? PHONE_OFF : []).filter(id => ids.includes(id) && !HOME_W.find(w => w[0] === id)[4]);
+  return { order, off, custom: !!pref };
+}
+function saveHome(order, off) { LS.set(homeKey(), { order, off }); applyHome(); }
+function resetHome() { try { localStorage.removeItem(homeKey()); } catch {} applyHome(); }
+/* puts the rendered home blocks in the saved order and hides the ones switched off */
+function applyHome() {
+  const wrap = $("#app > .wrap"); if (!wrap || route.view !== "home") return;
+  const { order, off } = homeLayout(), nodes = {};
+  wrap.querySelectorAll(":scope > [data-w]").forEach(n => { (nodes[n.dataset.w] ||= []).push(n); });
+  let anchor = wrap.querySelector(":scope > .qcats");
+  for (const id of order) for (const n of nodes[id] || []) { n.hidden = off.includes(id); if (anchor) anchor.after(n); else wrap.prepend(n); anchor = n; }
+  const q = wrap.querySelector(":scope > .qcats"); if (q) q.hidden = !off.includes("cats"); // the quick category row only when the category grid is off
+  const setup = wrap.querySelector(".home-setup"); if (setup) wrap.append(setup);
 }
 /* Panels (drawer, product modal) take keyboard focus when they open and hand it back to the element that opened them. */
 const panelFocus = new WeakMap();
@@ -1980,6 +2112,7 @@ function renderHeader() {
     <div class="search" role="search">${ui("search", 18)}<input id="q" type="search" enterkeyhint="search" role="combobox" aria-controls="sugg" aria-expanded="false" aria-autocomplete="list" value="${esc(f.q)}" placeholder="${L("Цемент, смеситель, ламинат…", "Sement, aralashtirgich, laminat…")}" aria-label="${L("Поиск по каталогу", "Katalog bo‘yicha qidiruv")}" autocomplete="off"><div class="sugg" id="sugg" role="listbox" aria-label="${L("Подсказки поиска", "Qidiruv takliflari")}" hidden></div><span class="s-tools"><button class="s-ic" type="button" data-act="voice" ${SRec ? "" : "hidden"} aria-label="${L("Поиск голосом", "Ovozli qidiruv")}" title="${L("Поиск голосом", "Ovozli qidiruv")}">${ui("mic", 18)}</button><button class="s-ic" type="button" data-act="photo-search" ${photoAIon() ? "" : "hidden"} aria-label="${L("Поиск по фото", "Rasm bo‘yicha qidiruv")}" title="${L("Поиск по фото", "Rasm bo‘yicha qidiruv")}">${ui("camera", 18)}</button><button class="ask" type="button" data-act="ask-search">${ui("spark", 14)}<span class="t">${L("Спросить AI", "AI dan so‘rash")}</span></button></span><input type="file" id="psFile" accept="image/*" hidden></div>
     <label class="where" title="${L("Район доставки", "Yetkazish tumani")}">${ui("pin", 16)}<span class="visually-hidden">${L("Район доставки", "Yetkazish tumani")}</span><select id="distSel">${DISTRICTS.map(d => `<option value="${d.id}" ${d.id === district ? "selected" : ""}>${L(d.ru, d.uz)}</option>`).join("")}</select></label>
     <button class="fx-btn" type="button" data-act="fx-toggle" aria-pressed="${motionOK()}" aria-label="${motionOK() ? L("Яркий режим включён — переключить на простой", "Yorqin rejim yoqilgan — oddiyga o‘tish") : L("Простой режим — включить яркий", "Oddiy rejim — yorqinni yoqish")}" title="${motionOK() ? L("Яркий режим", "Yorqin rejim") : L("Простой режим", "Oddiy rejim")}">${ui("spark", 18)}</button>
+    <button class="fx-btn th-btn" type="button" data-act="theme-toggle" aria-label="${effTheme() === "dark" ? L("Тёмная тема — включить светлую", "Qorong‘i mavzu — yorug‘ini yoqish", "Dark theme — switch to light") : L("Светлая тема — включить тёмную", "Yorug‘ mavzu — qorong‘isini yoqish", "Light theme — switch to dark")}" title="${effTheme() === "dark" ? L("Тёмная тема", "Qorong‘i mavzu", "Dark theme") : L("Светлая тема", "Yorug‘ mavzu", "Light theme")}">${effTheme() === "dark" ? ui("moon", 18) : ui("sun", 18)}</button>
     <div class="seg" role="group" aria-label="Язык / Til / Language"><button type="button" data-lang="ru" aria-pressed="${lang === "ru"}">RU</button><button type="button" data-lang="uz" aria-pressed="${lang === "uz"}">UZ</button><button type="button" data-lang="en" aria-pressed="${lang === "en"}">EN</button></div>
     <button class="hb" type="button" data-act="favs" aria-label="${L("Избранное", "Saralanganlar")}">${ui("heart", 22)}<span class="dot" id="favDot" hidden></span></button>
     <button class="hb" type="button" data-act="${user ? "profile" : "login"}" aria-label="${user ? L("Профиль", "Profil") : L("Войти", "Kirish")}">${user ? `<span class="av">${esc(initial(user.name))}</span>` : ui("user", 22)}</button>
@@ -2093,7 +2226,7 @@ function renderHomeLaunch() {
     ${designTeaser()}
     ${mastersTeaser()}
 
-    <section class="sec" id="delivery">
+    <section class="sec" id="delivery" data-w="delivery">
       <div class="deliv-band rv">
         <div class="how"><span class="eyebrow">${L("Как работает доставка", "Yetkazish qanday ishlaydi")}</span><h2 class="h-l">${L("Из магазина к вам — без вашего участия", "Do‘kondan sizga — ishtirokingizsiz")}</h2>
           ${routeMap()}
@@ -2146,7 +2279,7 @@ function renderHome() {
   $("#app").innerHTML = `
   <div class="wrap">
     <nav class="qcats" aria-label="${L("Разделы каталога", "Katalog bo‘limlari")}">${CATS.map(c => `<button type="button" data-go="cat-${c.id}"><span class="qc-i">${ic(c.icon)}</span><span>${L(c.ru, c.uz)}</span></button>`).join("")}<button type="button" data-go="catalog"><span class="qc-i all">${ui("grid", 22)}</span><span>${L("Весь каталог", "Butun katalog")}</span></button></nav>
-    <section class="hero"><i class="hero-glow" aria-hidden="true"></i>
+    <section class="hero" data-w="hero"><i class="hero-glow" aria-hidden="true"></i>
       <div class="hero-l">
         <span class="eyebrow">${ui("spark", 14)} ${L("Строительные магазины Ташкента + AI-помощник", "Toshkent qurilish do‘konlari + AI yordamchi")}</span>
         <h1 class="h-xl">${L("Ремонт без лишних поездок. <em>Подберём, сравним, привезём.</em>", "Ortiqcha qatnovsiz ta’mir. <em>Tanlaymiz, solishtiramiz, yetkazamiz.</em>")}</h1>
@@ -2157,15 +2290,15 @@ function renderHome() {
       </div>
       <div class="collage" aria-hidden="false">${collage.map(p => `<button class="tile studio" type="button" data-open="${p.id}" style="--h:${hueOf(p)}">${art(p, "", true)}<span>${esc(pName(p))}</span></button>`).join("")}</div>
     </section>
-    <div class="trust">
+    <div class="trust" data-w="trust">
       <div><span class="ti">${ui("truck", 20)}</span><span><b>${L("Яндекс Доставка", "Yandex Yetkazish")}</b><small>${L("Курьер от 40 минут", "Kuryer 40 daqiqadan")}</small></span></div>
       <div><span class="ti">${ui("store", 20)}</span><span><b>${storesTxt()}</b><small>${L("Сравнение в карточке", "Kartochkada solishtirish")}</small></span></div>
       <div><span class="ti">${ui("wallet", 20)}</span><span><b>${L("Оплата картой", "Karta bilan to‘lov", "Card payment")}</b><small>${L("Товар и доставка одним платежом", "Mahsulot va yetkazish bir to‘lovda", "Goods and delivery in one payment")}</small></span></div>
       <div><span class="ti">${ui("wrench", 20)}</span><span><b>${L("Установка мастером", "Usta o‘rnatadi")}</b><small>${L("Добавьте в корзину вместе с товаром", "Mahsulot bilan savatga qo‘shing")}</small></span></div>
     </div>
-    <div class="marquee" aria-label="${L("Популярное сейчас", "Hozir ommabop")}"><div class="mq-track">${[0, 1].map(k => PRODUCTS.filter(p => p.hit || p.isNew).concat(PRODUCTS.filter(p => p.key && !p.hit).slice(0, 8)).map(p => `<button class="mq-item" type="button" data-open="${p.id}" ${k ? 'tabindex="-1" aria-hidden="true"' : ""}>${mini(p)}${esc(pName(p))} <b>${fmt(minPrice(p))}</b></button>`).join("")).join("")}</div></div>
+    <div class="marquee" data-w="marquee" aria-label="${L("Популярное сейчас", "Hozir ommabop")}"><div class="mq-track">${[0, 1].map(k => PRODUCTS.filter(p => p.hit || p.isNew).concat(PRODUCTS.filter(p => p.key && !p.hit).slice(0, 8)).map(p => `<button class="mq-item" type="button" data-open="${p.id}" ${k ? 'tabindex="-1" aria-hidden="true"' : ""}>${mini(p)}${esc(pName(p))} <b>${fmt(minPrice(p))}</b></button>`).join("")).join("")}</div></div>
 
-    <section class="sec" id="cats">
+    <section class="sec" id="cats" data-w="cats">
       <div class="sec-head"><div><h2 class="h-l">${L("Категории", "Toifalar")}</h2><p>${L("От цемента до кухонь и мангалов", "Sementdan oshxona va mangallargacha")}</p></div><button class="link" type="button" data-act="mega">${L("Все подкатегории", "Barcha bo‘limlar")} ${ui("chev", 16)}</button></div>
       <div class="cat-grid rv">${CATS.map(c => { const rp = PRODUCTS.find(p => p.cat === c.id && p.hit) || PRODUCTS.find(p => p.cat === c.id); return `<button class="cat-tile" type="button" data-go="cat-${c.id}" style="--h:${c.h}"><span><b>${L(c.ru, c.uz)}</b><br><small>${cnt(c.id)} ${L(plural(cnt(c.id), ["товар", "товара", "товаров"]), "mahsulot", cnt(c.id) === 1 ? "product" : "products")}</small></span><span class="cat-img studio${rp ? "" : " lt"}" style="--h:${rp ? hueOf(rp) : c.h}">${rp ? art(rp, L(c.ru, c.uz)) : `<span class="ico">${ic(c.icon)}</span>`}</span></button>`; }).join("")}
         <button class="cat-tile all" type="button" data-go="catalog"><span class="ico">${ui("grid", 26)}</span><span><b>${L("Весь каталог", "Butun katalog")}</b><br><small>${PRODUCTS.length} ${L("товаров", "mahsulot")}</small></span></button></div>
@@ -2174,19 +2307,19 @@ function renderHome() {
     ${designTeaser()}
     ${mastersTeaser()}
 
-    <section class="sec" id="bundles">
+    <section class="sec" id="bundles" data-w="bundles">
       <div class="sec-head"><div><h2 class="h-l">${L("Комплекты под ключ", "Tayyor to‘plamlar")}</h2><p>${L("Всё для типовой задачи одной кнопкой, на 5% дешевле", "Oddiy vazifa uchun hammasi bir tugmada, 5% arzonroq")}</p></div></div>
       <div class="bundles rv">${BUNDLES.filter(b => bundleItems(b).length === b.items.length).map(bundleCard).join("")}</div>
     </section>
 
-    ${recent.length ? `<section class="sec"><div class="sec-head"><div><h2 class="h-l">${L("Вы смотрели", "Siz ko‘rganlar")}</h2></div></div><div class="rail">${recent.map(card).join("")}</div></section>` : ""}
+    ${recent.length ? `<section class="sec" data-w="recent"><div class="sec-head"><div><h2 class="h-l">${L("Вы смотрели", "Siz ko‘rganlar")}</h2></div></div><div class="rail">${recent.map(card).join("")}</div></section>` : ""}
 
-    <section class="sec">
+    <section class="sec" data-w="hits">
       <div class="sec-head"><div><h2 class="h-l">${L("Хиты недели", "Hafta xitlari")}</h2><p>${L("Чаще всего заказывают в Ташкенте", "Toshkentda eng ko‘p buyurtma qilinadi")}</p></div><button class="link" type="button" data-go="catalog">${L("Смотреть все", "Hammasini ko‘rish")} ${ui("chev", 16)}</button></div>
       <div class="rail rv-x">${hits.map(card).join("")}</div>
     </section>
 
-    <section class="sec" id="delivery">
+    <section class="sec" id="delivery" data-w="delivery">
       <div class="deliv-band rv">
         <div class="how"><span class="eyebrow">${L("Как работает доставка", "Yetkazish qanday ishlaydi")}</span><h2 class="h-l">${L("Из магазина к вам — без вашего участия", "Do‘kondan sizgacha — ishtirokingizsiz")}</h2>
           ${routeMap()}
@@ -2206,38 +2339,42 @@ function renderHome() {
       </div>
     </section>
 
-    <section class="sec">
+    <section class="sec" data-w="fresh">
       <div class="sec-head"><div><h2 class="h-l">${L("Новые цвета и модели", "Yangi ranglar va modellar")}</h2><p>${L(`Ассортимент вырос до ${PRODUCTS.length} товаров`, `Assortiment ${PRODUCTS.length} ta mahsulotgacha oshdi`, `The range has grown to ${PRODUCTS.length} products`)}</p></div><button class="link" type="button" data-go="catalog">${L("Весь каталог", "Butun katalog")} ${ui("chev", 16)}</button></div>
       <div class="rail rv-x">${fresh.map(card).join("")}</div>
     </section>
 
-    <section class="sec">
+    <section class="sec" data-w="winter">
       <div class="sec-head"><div><h2 class="h-l">${L("Готовимся к зиме", "Qishga tayyorgarlik")}</h2><p>${L("Котлы, радиаторы, утеплители и окна", "Qozonlar, radiatorlar, izolyatsiya va derazalar")}</p></div><button class="link" type="button" data-go="cat-heat">${L("Отопление", "Isitish")} ${ui("chev", 16)}</button></div>
       <div class="rail rv-x">${winter.map(card).join("")}</div>
     </section>
 
-    <section class="sec" id="calc">
+    <section class="sec" id="calc" data-w="calc">
       <div class="sec-head"><div><h2 class="h-l">${L("Калькуляторы ремонта", "Ta’mir kalkulyatorlari")}</h2><p>${L("Посчитайте материалы и сразу добавьте в корзину", "Materiallarni hisoblang va darhol savatga qo‘shing")}</p></div></div>
-      <div class="calcs rv">${["basement", "tile", "paint"].map(id => calcCard(CALCS.find(c => c.id === id), "h")).join("")}</div>
-      <div class="calc-more"><button class="btn btn-line" type="button" data-act="w-calc">${ui("calc", 18)} ${L(`Все ${CALCS.length} калькуляторов в виджете`, `Vidjetda barcha ${CALCS.length} ta kalkulyator`, `All ${CALCS.length} calculators in the widget`)}</button></div>
+      ${isPhone() ? `<div class="calc-chips rv">${CALCS.slice(0, 8).map(c => `<button type="button" class="chip" data-act="w-calc" data-calc="${c.id}">${ui(c.icon || "calc", 16)} ${esc(L(c.ru, c.uz, c.en))}</button>`).join("")}<button type="button" class="chip more" data-act="w-calc">${L(`Все ${CALCS.length}`, `Barcha ${CALCS.length}`, `All ${CALCS.length}`)} ${ui("chev", 14)}</button></div>`
+      : `<div class="calcs rv">${["basement", "tile", "paint"].map(id => calcCard(CALCS.find(c => c.id === id), "h")).join("")}</div>
+      <div class="calc-more"><button class="btn btn-line" type="button" data-act="w-calc">${ui("calc", 18)} ${L(`Все ${CALCS.length} калькуляторов в виджете`, `Vidjetda barcha ${CALCS.length} ta kalkulyator`, `All ${CALCS.length} calculators in the widget`)}</button></div>`}
     </section>
 
-    <section class="sec rv" id="vip">${vipBlock()}</section>
+    <section class="sec rv" id="vip" data-w="vip">${vipBlock()}</section>
 
-    <section class="sec" id="stores">
+    <section class="sec" id="stores" data-w="stores">
       <div class="sec-head"><div><h2 class="h-l">${L("Магазины-партнёры", "Hamkor do‘konlar")}</h2><p>${L("Курьер забирает заказ прямо со склада магазина", "Kuryer buyurtmani do‘kon omboridan oladi")}</p></div></div>
       <div class="stores rv">${STORES.map(s => { const n = PRODUCTS.filter(p => p.offers.some(o => o.store === s.id)).length; if (!n) return ""; return `<div class="store"><span class="av">${esc(s.name.slice(0, 1))}</span><div><button type="button" class="slink" data-go="store-${s.id}"><b>${esc(s.name)}${isVerified(s) ? ` <span class="vmini">${ui("shield", 12)}</span>` : ""}</b></button><span class="m">${dName(s.d)}, ${esc(L(s.addr, s.addrUz))}</span><br><span class="m">${L(s.ru, s.uz)}</span>${ratingHTML(s, true)}<div class="r"><span class="pill ${openState(s).open ? "ok" : "closed"}">${openState(s).text}</span><button class="link" type="button" data-store="${s.id}">${n} ${L(plural(n, ["товар", "товара", "товаров"]), "mahsulot", n === 1 ? "product" : "products")} ${ui("chev", 14)}</button></div></div></div>`; }).join("")}</div>
+      ${STORES.length > 5 ? `<div class="stores-more"><button class="btn btn-line" type="button" data-act="stores-all">${L(`Все ${STORES.length} магазинов`, `Barcha ${STORES.length} do‘kon`, `All ${STORES.length} stores`)}</button></div>` : ""}
     </section>
 
-    <section class="sec">
+    <section class="sec" data-w="seller">
       <div class="seller-band"><div><h2 class="h-l">${L("У вас строительный магазин?", "Qurilish do‘koningiz bormi?")}</h2><p>${L("Загружайте товары с фото и остатки, принимайте заказы в кабинете, а доставку до клиента возьмёт на себя Яндекс. Комиссия только с проданных товаров.", "Mahsulotlarni rasm va qoldiqlar bilan yuklang, buyurtmalarni kabinetda qabul qiling, mijozga yetkazishni Yandex o‘z zimmasiga oladi. Komissiya faqat sotilgan mahsulotdan.")}</p></div>
       <button class="btn" type="button" data-go="seller">${ui("store", 18)} ${L("Открыть кабинет продавца", "Sotuvchi kabinetini ochish")}</button></div>
     </section>
+    <div class="home-setup"><button type="button" class="btn btn-line" data-act="home-setup">${ui("grid", 16)} ${L("Настроить главную", "Bosh sahifani sozlash", "Customize home")}</button><small>${L("Выберите, какие блоки показывать и в каком порядке", "Qaysi bloklar va qanday tartibda ko‘rinishini tanlang", "Choose which blocks to show and in what order")}</small></div>
   </div>`;
+  applyHome();
   $("#estRange").addEventListener("input", () => updateEstimator());
   $("#heroAsk").addEventListener("submit", e => { e.preventDefault(); const v = $("#heroQ").value.trim(); if (v) { openAI(v); $("#heroQ").value = ""; } else $("#heroQ").focus(); });
   updateEstimator();
-  bindCalcs("h");
+  if (!isPhone()) bindCalcs("h");
   // the strip moves at a calm reading speed (px per second), whatever its length or the screen
   requestAnimationFrame(() => { const t = $(".mq-track"); if (t) t.style.setProperty("--mq-dur", Math.round(t.scrollWidth / 2 / (innerWidth < 761 ? 28 : 38)) + "s"); });
 }
@@ -2582,7 +2719,7 @@ function closeDrawer() { drawerView = null; setPanel($("#drawer"), false); showS
 function renderDrawer() {
   $("#dBack").innerHTML = ui("back", 16); $("#dClose").innerHTML = ui("close", 16);
   $("#dBack").hidden = !["checkout", "track", "orders", "watch", "projects"].includes(drawerView);
-  ({ cart: dCart, checkout: dCheckout, track: dTrack, profile: dProfile, favs: dFavs, orders: dOrders, compare: dCompare, watch: dWatch, projects: dProjects })[drawerView]?.();
+  ({ cart: dCart, checkout: dCheckout, track: dTrack, profile: dProfile, favs: dFavs, orders: dOrders, compare: dCompare, watch: dWatch, projects: dProjects, homeSetup: dHomeSetup })[drawerView]?.();
 }
 function totalsHTML(goods, svc, disc, extra = "") {
   return `<div class="sumrow"><span class="mu">${L("Товары", "Mahsulotlar")}</span><span class="num">${fmt(goods)}</span></div>
@@ -2614,17 +2751,20 @@ function dCart() {
 }
 function readForm() {
   const el = $("#orderForm"); if (!el) return form;
-  const d = Object.fromEntries(new FormData(el).entries()); d.lift = el.lift?.checked || false; d.usePts = el.usePts?.checked || false; d.private = el.private?.checked || false;
+  const d = Object.fromEntries(new FormData(el).entries()); d.help = ["none", "one", "two"].includes(d.help) ? d.help : "none"; d.lift = d.help !== "none"; d.usePts = el.usePts?.checked || false; d.private = el.private?.checked || false;
   d.la = d.la === "" || d.la == null ? null : +d.la; d.lo = d.lo === "" || d.lo == null ? null : +d.lo; return d;
 }
+/* unloading help chosen at checkout: none — the buyer takes the goods at the car; one — the courier/driver carries to the door; two — two loaders for heavy orders */
+const helpers = d => d?.help === "two" ? 2 : d?.help === "one" || (d?.help == null && d?.lift) ? 1 : 0;
+const HELP_TXT = () => ({ none: L("Без разгрузки — заберёте у машины", "Tushirishsiz — mashina oldidan olasiz", "No unloading — you take it at the car"), one: L("Курьер донесёт до двери", "Kuryer eshikkacha olib keladi", "The courier carries it to the door"), two: L("Два грузчика", "Ikki yuk tashuvchi", "Two loaders") });
 function quote(d) {
   const gs = groups();
   const ships = gs.map(g => {
     if (d.mode === "pickup") return { g, t: null, dist: 0, price: 0, full: 0 };
     const t = pickTariff(g.kg), dist = km(g.store.d, d.district || district);
     let p = t.base + t.perKm * dist;
-    const floors = Math.max(0, (parseInt(d.floor, 10) || 1) - 1);
-    if (d.lift && t.id !== "courier") p += LOADER * floors;
+    const floors = d.private ? 0 : Math.max(0, (parseInt(d.floor, 10) || 1) - 1), loaders = helpers(d);
+    if (loaders && t.id !== "courier") p += LOADER * loaders * Math.max(1, floors); // a loader costs LOADER per floor, at least one (truck → door)
     if (d.when === "slot") p *= 0.9;
     const full = round(p) + (d.when === "vip" ? VIP_HOUR_FEE : 0);
     if (vip) { if (t.id === "courier" && g.sum >= VIP_FREE_FROM) p = 0; else if (t.id !== "courier") p *= 0.5; }
@@ -2648,7 +2788,8 @@ function payOptions(d) {
 const paymentsOff = () => API && !payOptions({ mode: "yandex" }).length; // server connected, no card provider yet
 function dCheckout() {
   $("#dTitle").textContent = L("Оформление", "Rasmiylashtirish");
-  const d = Object.assign({ name: user?.name || "", phone: user?.phone || "+998 ", district, street: "", flat: "", floor: "1", mode: "yandex", when: "asap", hour: "09", pay: "", lift: false, comment: "" }, form);
+  const d = Object.assign({ name: user?.name || "", phone: user?.phone || "+998 ", district, street: "", flat: "", floor: "1", mode: "yandex", when: "asap", hour: "09", pay: "", help: "one", lift: true, comment: "" }, form);
+  if (!["none", "one", "two"].includes(d.help)) d.help = d.lift ? "one" : "none";
   { const ok = payOptions(d).map(x => x[0]); if (!ok.includes(d.pay)) d.pay = ok[0] || ""; }
   if (d.la != null && d.lo != null && !inUz(+d.la, +d.lo)) { d.la = null; d.lo = null; }
   const hours = []; for (let h = 8; h <= 20; h++) hours.push(String(h).padStart(2, "0"));
@@ -2670,7 +2811,11 @@ function dCheckout() {
       <div class="f"><span style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><label>${L("Точка на карте", "Xaritadagi nuqta", "Point on the map")} <small class="mu">${L("— курьер приедет точно к дому", "— kuryer aynan uyga keladi", "— the courier comes right to the house")}</small></label><button type="button" class="btn btn-line" data-act="my-loc" style="padding:6px 10px">${ui("pin", 14)} ${L("Где я", "Men qayerdaman", "Locate me")}</button></span>
         ${pickMapHTML("addr")}<p class="loc-st ${d.la != null ? "ok" : ""}" id="addrLocSt" aria-live="polite">${d.la != null ? `${ui("check", 14)} ${L("Точка выбрана", "Nuqta tanlandi", "Point set")}` : L("Нажмите на карту там, где вас ждать курьеру, или нажмите «Где я».", "Kuryer kutishi kerak bo‘lgan joyni xaritada bosing yoki «Men qayerdaman» ni bosing.", "Tap the map where the courier should come, or tap “Locate me”.")}</p>
         <input type="hidden" name="la" id="fLa" value="${d.la ?? ""}"><input type="hidden" name="lo" id="fLo" value="${d.lo ?? ""}"></div>
-      <label class="check"><input type="checkbox" id="fLift" name="lift" ${d.lift ? "checked" : ""}><span>${L(`Подъём на этаж грузчиком (грузовой тариф, ${fmt(LOADER)} за этаж)`, `Yuk tashuvchi qavatga ko‘taradi (yuk tarifi, har qavat ${fmt(LOADER)})`, `Carry-up by a loader (cargo rate, ${fmt(LOADER)} per floor)`)}</span></label>
+      <div class="f" id="helpSet"><label>${L("Разгрузка", "Tushirish", "Unloading")} <small class="mu">${L("— нужна ли помощь курьера", "— kuryer yordami kerakmi", "— do you need the courier’s help")}</small></label><div class="opts">
+        <label class="opt"><input type="radio" name="help" value="none" ${d.help === "none" ? "checked" : ""}><span><b>${L("Не нужна", "Kerak emas", "Not needed")}</b><small>${L("Заберёте заказ у машины или у подъезда", "Buyurtmani mashina yoki kirish oldidan olasiz", "You take the order at the car or the entrance")}</small></span><span class="tag" data-help-tag="none">0 ${L("сум", "so‘m", "UZS")}</span></label>
+        <label class="opt"><input type="radio" name="help" value="one" ${d.help === "one" ? "checked" : ""}><span><b>${L("Курьер поможет", "Kuryer yordam beradi", "The courier helps")}</b><small>${L("Донесёт до двери и поднимет на этаж", "Eshikkacha olib keladi va qavatga ko‘taradi", "Carries it to the door and up the stairs")}</small></span><span class="tag" data-help-tag="one"></span></label>
+        <label class="opt" id="helpTwo"><input type="radio" name="help" value="two" ${d.help === "two" ? "checked" : ""}><span><b>${L("Два грузчика", "Ikki yuk tashuvchi", "Two loaders")}</b><small>${L("Для тяжёлого заказа: кирпич, цемент, плитка", "Og‘ir buyurtma uchun: g‘isht, sement, kafel", "For a heavy order: brick, cement, tiles")}</small></span><span class="tag" data-help-tag="two"></span></label>
+      </div></div>
       <div class="opts">
         <label class="opt"><input type="radio" name="when" value="asap" ${d.when === "asap" ? "checked" : ""}><span><b>${L("Как можно скорее", "Imkon qadar tez")}</b><small>${L("Ищем исполнителя сразу после оплаты", "To‘lovdan so‘ng darhol ijrochi qidiramiz")}</small></span><span></span></label>
         <label class="opt"><input type="radio" name="when" value="slot" ${d.when === "slot" ? "checked" : ""}><span><b>${L("Завтра, 10:00–14:00", "Ertaga, 10:00–14:00")}</b><small>${L("Скидка 10% на доставку", "Yetkazishga 10% chegirma")}</small></span><span class="tag">−10%</span></label>
@@ -2716,6 +2861,13 @@ function updateQuote() {
     <div class="t"><b>${esc(s.g.store.name)}</b><span class="num" style="font-weight:700">${s.t ? (s.full > s.price ? `<s>${fmt(s.full)}</s>` : "") + (s.price ? fmt(s.price) : L("Бесплатно", "Bepul")) : L("Самовывоз", "Olib ketish")}</span></div>
     <small>${s.t ? `${tName(s.t)} · ${s.t.veh} · ${fmtKg(s.g.kg)} · ~${s.dist.toFixed(1).replace(".", DEC)} ${L("км", "km")} · ${d.when === "slot" ? L("завтра 10–14", "ertaga 10–14") : d.when === "vip" ? `${L("завтра", "ertaga")} ${d.hour}:00–${String(+d.hour + 1).padStart(2, "0")}:00` : etaStr(s.t)}` : `${esc(L(s.g.store.addr, s.g.store.addrUz))} · ${esc(s.g.store.hours || "")}`}</small></div>`).join("") +
     (d.mode === "yandex" ? `<div class="note">${L("Цена доставки — оценка прототипа. В рабочей версии цену и время вернёт API Яндекс Доставки по точным координатам.", "Yetkazish narxi taxminiy. Ishchi versiyada narx va vaqtni Yandex API aniq koordinatalar bo‘yicha qaytaradi.")}</div>` : "");
+  { // unloading help: price tags follow the floor and the tariff; two loaders only make sense for a cargo tariff
+    const cargo = qt.ships.some(s => s.t && s.t.id !== "courier"), floors = d.private ? 0 : Math.max(0, (parseInt(d.floor, 10) || 1) - 1), per = LOADER * Math.max(1, floors);
+    const tag = n => cargo ? "+" + fmt(per * n) : L("входит", "kiradi", "included");
+    const t1 = $('[data-help-tag="one"]'), t2 = $('[data-help-tag="two"]'), two = $("#helpTwo");
+    if (t1) t1.textContent = tag(1); if (t2) t2.textContent = tag(2);
+    if (two) { two.hidden = !cargo; if (!cargo && d.help === "two") { const r = $('[name=help][value=one]'); if (r) { r.checked = true; d.help = "one"; form = d; LS.set("imorat.form2", d); } } }
+  }
   const spn = $("#storePayNote"); if (spn) spn.hidden = d.pay !== "store";
   const fe = $("#flatErr"); if (fe && !fe.hidden && (d.private || (String(d.flat || "").trim() && String(d.floor || "").trim()))) fe.hidden = true;
   const cpn = $("#cardPayNote"); if (cpn) cpn.hidden = !(API && (apiCfg?.payments || []).includes(d.pay));
@@ -2771,6 +2923,7 @@ function dTrack() {
   $("#dBody").innerHTML = `${o.api ? `<div class="note">${o.status === "cancelled" ? L("Заказ отменён.", "Buyurtma bekor qilindi.") : L("Статусы обновляют магазин и Яндекс Доставка — страница обновляется сама.", "Holatlarni do‘kon va Yandex yangilaydi — sahifa o‘zi yangilanadi.")}</div>` : `<div class="note">${L("Демо: статусы меняются каждые несколько секунд. В рабочей версии их присылает Яндекс Доставка, а клиент получает SMS или уведомление в Yandex Go.", "Demo: holatlar har necha soniyada o‘zgaradi. Ishchi versiyada ularni Yandex yuboradi, mijoz SMS yoki Yandex Go xabarini oladi.")}</div>`}
     ${payExtra(o)}
     ${sched ? `<div class="note vipn">${ui("clock", 14)} ${sched}. ${L("Поиск курьера начнётся за 90 минут до интервала.", "Kuryer qidiruvi oraliqdan 90 daqiqa oldin boshlanadi.")}</div>` : ""}
+    ${o.d?.mode !== "pickup" && o.d?.street ? `<div class="addr-line">${ui("pin", 14)} <span>${esc(o.d.street)}${o.d.private ? ", " + L("частный дом", "xususiy uy", "private house") : [o.d.entrance ? L("подъезд ", "kirish ", "entrance ") + esc(o.d.entrance) : "", o.d.flat ? L("кв. ", "xonadon ", "flat ") + esc(o.d.flat) : "", +o.d.floor > 1 ? L("этаж ", "qavat ", "floor ") + esc(o.d.floor) : ""].filter(Boolean).map(x => ", " + x).join("")}<small>${HELP_TXT()[o.d.help || (o.d.lift ? "one" : "none")]}</small></span></div>` : ""}
     ${o.ships.map((s, i) => {
       const st = STORE[s.store] || { id: s.store, name: s.store_name || L("Магазин", "Do‘kon", "Store"), d: "chil", addr: s.store_addr || "", addrUz: s.store_addr || "", hours: s.store_hours || "" }, t = TARIFFS.find(x => x.id === s.tariff), steps = t ? STEPS_Y(o) : STEPS_P(o), cur = stepOf(o, i, steps.length);
       return `<div class="track"><div class="track-h"><b>${esc(st.name)}</b><span class="pill ${s.status === "cancelled" ? "closed" : cur === steps.length - 1 ? "ok" : "acc"}">${s.status === "cancelled" ? L("Отменён", "Bekor qilindi") : t ? tName(t) : L("Самовывоз", "Olib ketish")}</span></div>
@@ -2838,6 +2991,19 @@ function dCompare() {
   </tbody></table></div>`;
   $("#dFoot").innerHTML = `<div style="display:grid;grid-template-columns:1fr auto;gap:8px">${ps.length > 1 ? `<button class="btn btn-ai" type="button" data-act="ai-cmp">${ui("spark", 18)} ${L("Что выбрать? Спросить AI", "Qaysi birini tanlash? AI dan so‘rash")}</button>` : `<span></span>`}<button class="btn btn-line" type="button" data-act="cmp-clear">${L("Очистить", "Tozalash")}</button></div>`;
 }
+/* «Настроить главную»: switches and ▲▼ for every home widget; changes apply at once behind the drawer */
+function dHomeSetup() {
+  $("#dTitle").textContent = L("Настроить главную", "Bosh sahifani sozlash", "Customize home");
+  const { order, off, custom } = homeLayout();
+  $("#dBody").innerHTML = `<p class="mu" style="margin:0;font-size:14px">${isPhone() ? L("На телефоне главная короче: часть блоков выключена. Включите нужные и расставьте по порядку — настройка сохранится в этом браузере.", "Telefonda bosh sahifa qisqaroq: ba’zi bloklar o‘chirilgan. Keraklilarini yoqing va tartiblang — sozlama shu brauzerda saqlanadi.", "On a phone the home page is shorter: some blocks are off. Turn on the ones you need and set the order — saved in this browser.") : L("Включайте и выключайте блоки главной и меняйте их порядок — настройка сохранится в этом браузере.", "Bosh sahifa bloklarini yoqing, o‘chiring va tartibini o‘zgartiring — sozlama shu brauzerda saqlanadi.", "Turn home blocks on and off and change their order — saved in this browser.")}</p>
+    <div class="hw-list" role="list">${order.map((id, i) => { const w = HOME_W.find(x => x[0] === id), on = !off.includes(id); return `<div class="hw ${on ? "" : "off"}" role="listitem" data-hw="${id}">
+      <span class="hw-n">${homeName(id)}${w[4] ? `<small>${L("всегда показывается", "doim ko‘rinadi", "always shown")}</small>` : ""}</span>
+      <span class="hw-c"><button class="ib" type="button" data-hw-move="${id}|-1" ${i === 0 ? "disabled" : ""} aria-label="${L("Выше", "Yuqoriga", "Move up")}">${ui("chev", 14).replace("<svg", '<svg style="transform:rotate(-90deg)"')}</button><button class="ib" type="button" data-hw-move="${id}|1" ${i === order.length - 1 ? "disabled" : ""} aria-label="${L("Ниже", "Pastga", "Move down")}">${ui("chev", 14).replace("<svg", '<svg style="transform:rotate(90deg)"')}</button>
+      <label class="hw-sw" title="${on ? L("Скрыть", "Yashirish", "Hide") : L("Показать", "Ko‘rsatish", "Show")}"><input type="checkbox" data-hw-on="${id}" ${on ? "checked" : ""} ${w[4] ? "disabled" : ""}><i></i><span class="visually-hidden">${homeName(id)}</span></label></span></div>`; }).join("")}</div>`;
+  $("#dFoot").innerHTML = `<div style="display:grid;grid-template-columns:auto 1fr;gap:8px"><button class="btn btn-line" type="button" data-act="home-reset" ${custom ? "" : "disabled"}>${L("Сбросить", "Tiklash", "Reset")}</button><button class="btn btn-dark" type="button" data-act="close-drawer">${L("Готово", "Tayyor", "Done")}</button></div>`;
+  $("#dBody").addEventListener("change", e => { const t = e.target.closest("[data-hw-on]"); if (!t) return; const { order, off } = homeLayout(); const id = t.dataset.hwOn, nOff = t.checked ? off.filter(x => x !== id) : [...new Set([...off, id])]; saveHome(order, nOff); dHomeSetup(); });
+  $("#dBody").addEventListener("click", e => { const t = e.target.closest("[data-hw-move]"); if (!t) return; const [id, d] = t.dataset.hwMove.split("|"), { order, off } = homeLayout(), i = order.indexOf(id), j = i + (+d); if (i < 0 || j < 0 || j >= order.length) return; order.splice(i, 1); order.splice(j, 0, id); saveHome(order, off); dHomeSetup(); const row = $(`.hw[data-hw="${id}"]`); row?.classList.add("moved"); row?.querySelector(`[data-hw-move="${id}|${d}"]`)?.focus(); });
+}
 function dProfile() {
   fetchOrders();
   $("#dTitle").textContent = L("Профиль", "Profil");
@@ -2862,6 +3028,7 @@ function dProfile() {
       ${user?.admin ? `<button class="order-row" type="button" data-go="admin"><b>${L("Панель Imorat Go", "Imorat Go paneli")}</b>${ui("calc", 18)}<small>${L("Оборот, заказы, магазины, модерация", "Aylanma, buyurtmalar, do‘konlar, moderatsiya")}</small></button>` : ""}
       <button class="order-row" type="button" data-go="masters" data-mtabgo="mine"><b>${L("Заявки мастерам", "Ustalarga so‘rovlar")}</b>${ui("wrench", 18)}<small>${L("Плиточники, электрики, сантехники", "Kafelchi, elektrik, santexnik")}</small></button>
       <button class="order-row" type="button" data-act="ai"><b>Usta AI</b>${ui("spark", 18)}<small>${L("Подбор материалов и советы", "Material tanlash va maslahatlar")}</small></button>
+      <button class="order-row" type="button" data-act="home-setup"><b>${L("Настроить главную", "Bosh sahifani sozlash", "Customize home")}</b>${ui("grid", 18)}<small>${L("Какие блоки показывать и в каком порядке", "Qaysi bloklar va qanday tartibda", "Which blocks to show and in what order")}</small></button>
       ${user && user.store_id && myStore ? `<button class="order-row" type="button" data-go="seller"><b>${esc(myStore.name)}</b>${ui("store", 18)}<small>${L("Кабинет продавца", "Sotuvchi kabineti")} · ${(ST_STATUS()[myStore.status] || ST_STATUS().pending)[0]}</small></button>` : `<button class="order-row" type="button" data-act="store-reg"><b>${L("Добавить свой магазин", "Do‘konimni qo‘shish")}</b>${ui("store", 18)}<small>${L("Продавайте на Imorat Go: витрина, заказы, доставка Яндекс", "Imorat Go’da soting: vitrina, buyurtmalar, Yandex yetkazish")}</small></button>`}${API ? "" : `<button class="order-row" type="button" data-go="seller"><b>${L("Кабинет продавца", "Sotuvchi kabineti")}</b>${ui("chev", 18)}<small>${L("Для магазинов-партнёров", "Hamkor do‘konlar uchun")}</small></button>`}
     </div>`;
   $("#dFoot").innerHTML = `${API && user ? `<button class="lnk" type="button" data-act="logout-all" style="font-size:12px;color:var(--muted);justify-self:start">${L("Выйти на всех устройствах", "Barcha qurilmalardan chiqish")}</button>` : ""}<span style="font-size:12px;color:var(--muted)">${(API ? L("Аккаунт, заказы и магазин хранятся на сервере Imorat Go.", "Akkaunt, buyurtmalar va do‘kon Imorat Go serverida saqlanadi.") : L("Данные этого прототипа хранятся только в вашем браузере.", "Prototip ma’lumotlari faqat brauzeringizda saqlanadi."))}</span>`;
@@ -3747,7 +3914,7 @@ function renderSellerApi() {
     </div>
     <div class="panel" style="margin-top:12px"><div class="panel-h"><h2 class="h-m">${L("Заказы", "Buyurtmalar")}</h2><button class="btn btn-line" type="button" data-act="seller-reload">${ui("repeat", 16)} ${L("Обновить", "Yangilash")}</button></div>
       ${ords.length ? `<div class="tbl-wrap"><table><thead><tr><th>${L("Заказ", "Buyurtma")}</th><th>${L("Состав", "Tarkibi")}</th><th class="r">${L("Сумма", "Summa")}</th><th>${L("Статус", "Holat")}</th><th></th></tr></thead><tbody>
-      ${ords.map(o => { const [lb, c] = lab[o.status] || [o.status, "mute"]; return `<tr><td><b class="mono">${esc(o.num)}</b><br><small style="color:var(--muted)">${esc(o.buyer || "")} · ${esc(o.phone || "")}<br>${o.tariff ? `${L(DIST[o.district]?.ru || "", DIST[o.district]?.uz || "")}, ${esc(o.street)}` : L("Самовывоз", "Olib ketish")}${o.when === "vip" ? ` · ${L("завтра", "ertaga")} ${o.hour}:00` : o.when === "slot" ? ` · ${L("завтра 10–14", "ertaga 10–14")}` : ""}</small>${o.comment ? `<br><small>«${esc(o.comment)}»</small>` : ""}</td>
+      ${ords.map(o => { const [lb, c] = lab[o.status] || [o.status, "mute"]; return `<tr><td><b class="mono">${esc(o.num)}</b><br><small style="color:var(--muted)">${esc(o.buyer || "")} · ${esc(o.phone || "")}<br>${o.tariff ? `${L(DIST[o.district]?.ru || "", DIST[o.district]?.uz || "")}, ${esc(o.street)}${o.private ? ", " + L("частный дом", "xususiy uy", "private house") : `${o.entrance ? ", " + L("подъезд", "kirish", "entrance") + " " + esc(o.entrance) : ""}${+o.floor > 1 ? ", " + L("этаж", "qavat", "floor") + " " + esc(o.floor) : ""}`}${o.help === "two" ? ` · <b style="color:var(--signal)">${L("2 грузчика — заказ тяжёлый", "2 yuk tashuvchi — og‘ir buyurtma", "2 loaders — heavy order")}</b>` : o.help === "one" ? ` · ${L("курьер донесёт до двери", "kuryer eshikkacha olib keladi", "courier carries to the door")}` : o.help === "none" ? ` · ${L("покупатель заберёт у машины", "xaridor mashina oldidan oladi", "buyer takes it at the car")}` : ""}` : L("Самовывоз", "Olib ketish")}${o.when === "vip" ? ` · ${L("завтра", "ertaga")} ${o.hour}:00` : o.when === "slot" ? ` · ${L("завтра 10–14", "ertaga 10–14")}` : ""}</small>${o.comment ? `<br><small>«${esc(o.comment)}»</small>` : ""}</td>
         <td style="min-width:180px;font-size:13px">${o.lines.map(l => `${esc(PROD[l.id] ? pName(PROD[l.id]) : l.name)} × ${l.q}`).join("<br>")}<br><small style="color:var(--muted)">${o.tariff ? `${tName(TARIFFS.find(t => t.id === o.tariff) || TARIFFS[0])} · ${fmtKg(o.kg)}` : ""}</small></td>
         <td class="r">${fmt(o.lines.reduce((a, l) => a + l.price * l.q, 0))}<br><small style="color:var(--muted)">${["cash", "store"].includes(o.pay) ? L("оплата при получении", "olganda to‘lov", "paid on receipt") : o.pay_status === "paid" ? L("оплачен картой — выдавайте без оплаты", "karta bilan to‘langan — to‘lovsiz bering", "paid by card — hand over without payment") : L("ждёт оплаты", "to‘lov kutilmoqda")}</small></td>
         <td><span class="pill ${c}">${lb}</span>${o.status === "new" && o.accept_by ? `<br><small data-until="${o.accept_by}"></small>` : ""}${o.status === "cancelled" && o.cancel_reason ? `<br><small style="color:var(--muted)">${CANCEL_TXT()[o.cancel_reason] || ""}</small>` : ""}</td><td style="white-space:nowrap">${o.next.map(n => `<button class="btn ${n === "cancelled" ? "btn-line" : "btn-primary"}" type="button" data-shipst="${o.ship_id}|${n}" style="margin:2px 0">${nx[n]}</button>`).join(" ")}</td></tr>`; }).join("")}
@@ -4816,7 +4983,7 @@ document.addEventListener("click", e => {
 function designTeaser() {
   const demo = { ...dsNew(), type: "kids", W: 3.4, L: 4, H: 2.7, items: [] };
   const keep = DS, saved = LS.get(DS_KEY, null); DS = demo; demo.q.who = "girl"; demo.q.age = "4-7"; dsApplyTemplate(); const svg = roomSVG(demo); DS = keep; LS.set(DS_KEY, saved);
-  return `<section class="sec rv" id="designer"><div class="ds-teaser"><div><span class="eyebrow">${ui("spark", 14)} ${L("Новое", "Yangi")}</span><h2 class="h-l">${L("AI-дизайнер комнаты", "AI xona dizayneri")}</h2>
+  return `<section class="sec rv" id="designer" data-w="designer"><div class="ds-teaser"><div><span class="eyebrow">${ui("spark", 14)} ${L("Новое", "Yangi")}</span><h2 class="h-l">${L("AI-дизайнер комнаты", "AI xona dizayneri")}</h2>
     <p>${L("Сфотографируйте комнату, введите размеры и ответьте на пару вопросов — получите готовую комнату в 3D с мебелью, цветом стен, полом и точной сметой. Не нравится — уберите, замените или напишите AI, что поменять.", "Xonani suratga oling, o‘lchamlarini kiriting va bir nechta savolga javob bering — mebel, devor rangi, pol va aniq smetali tayyor 3D xonani oling. Yoqmasa — olib tashlang, almashtiring yoki AI ga nimani o‘zgartirishni yozing.")}</p>
     <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-primary" type="button" data-go="design">${ui("spark", 16)} ${L("Спроектировать комнату", "Xonani loyihalash")}</button></div></div>
     <button type="button" class="ds-teaser-v" data-go="design" aria-label="${L("Открыть дизайнер", "Dizaynerni ochish")}">${svg}</button></div></section>`;
@@ -5341,8 +5508,8 @@ document.addEventListener("click", async e => {
 /* Home teaser: top masters */
 function mastersTeaser() {
   const top = [...mastersAll()].filter(m => !m.mine).sort((a, b) => (b.stars || 0) - (a.stars || 0) || b.reviews - a.reviews).slice(0, 4);
-  if (!top.length) return `<section class="sec rv" id="masters"><div class="sec-head"><div><h2 class="h-l">${L("Мастера и спецтехника", "Ustalar va maxsus texnika", "Pros and machinery")}</h2><p>${L("Плиточники, электрики, бригады, экскаватор и самосвал — с отзывами заказчиков", "Kafelchi, elektrik, brigadalar, ekskavator va samosval — buyurtmachilar sharhlari bilan", "Tilers, electricians, crews, excavator and dump truck — with customer reviews")}</p></div><button class="link" type="button" data-go="masters">${L("Стать мастером", "Usta bo‘lish")} ${ui("chev", 16)}</button></div></section>`;
-  return `<section class="sec rv" id="masters"><div class="sec-head"><div><h2 class="h-l">${L("Мастера и спецтехника", "Ustalar va maxsus texnika", "Pros and machinery")}</h2><p>${L("Купили материалы — позовите мастера здесь же", "Material oldingizmi — ustani shu yerda chaqiring")}</p></div><button class="link" type="button" data-go="masters">${L("Все мастера", "Barcha ustalar")} ${ui("chev", 16)}</button></div>
+  if (!top.length) return `<section class="sec rv" id="masters" data-w="masters"><div class="sec-head"><div><h2 class="h-l">${L("Мастера и спецтехника", "Ustalar va maxsus texnika", "Pros and machinery")}</h2><p>${L("Плиточники, электрики, бригады, экскаватор и самосвал — с отзывами заказчиков", "Kafelchi, elektrik, brigadalar, ekskavator va samosval — buyurtmachilar sharhlari bilan", "Tilers, electricians, crews, excavator and dump truck — with customer reviews")}</p></div><button class="link" type="button" data-go="masters">${L("Стать мастером", "Usta bo‘lish")} ${ui("chev", 16)}</button></div></section>`;
+  return `<section class="sec rv" id="masters" data-w="masters"><div class="sec-head"><div><h2 class="h-l">${L("Мастера и спецтехника", "Ustalar va maxsus texnika", "Pros and machinery")}</h2><p>${L("Купили материалы — позовите мастера здесь же", "Material oldingizmi — ustani shu yerda chaqiring")}</p></div><button class="link" type="button" data-go="masters">${L("Все мастера", "Barcha ustalar")} ${ui("chev", 16)}</button></div>
     <div class="mgrid">${top.map(masterCard).join("")}</div></section>`;
 }
 
@@ -6604,7 +6771,11 @@ document.addEventListener("click", e => {
       LS.set("imorat.promoCode", promo); return updateQuote(); }
     case "widgets": return widOpen ? closeWidgets() : openWidgets();
     case "close-wid": return closeWidgets();
-    case "w-calc": return openWidgets("calc");
+    case "w-calc": return openWidgets("calc", b.dataset.calc);
+    case "home-setup": return openDrawer("homeSetup");
+    case "home-reset": resetHome(); if (drawerView === "homeSetup") dHomeSetup(); return toast(L("Главная как по умолчанию", "Bosh sahifa standart holatda", "Home reset to default"));
+    case "stores-all": { const st = $(".stores"); if (st) st.classList.add("all"); b.closest(".stores-more")?.remove(); return; }
+    case "theme-toggle": return setLook(null, effTheme() === "dark" ? "light" : "dark");
     case "ai-calc": { const c = CALCS.find(x => x.id === wCalc), items = calcOut["w:" + wCalc] || []; const rows = [...document.querySelectorAll("#w-" + wCalc + "-res > div")].map(d => d.innerText.replace(/\s+/g, " ")).join("; "); return openAI(L(`Проверь мой расчёт «${c.ru}»: ${rows}. Материалы: ${items.map(([p, q]) => `[[${p.id}:${q}]]`).join(", ")}. Всё ли учтено и что ещё понадобится?`, `«${c.uz}» hisobimni tekshir: ${rows}. Materiallar: ${items.map(([p, q]) => `[[${p.id}:${q}]]`).join(", ")}. Hammasi hisobga olinganmi, yana nima kerak?`, `Check my “${L(c.ru, c.uz)}” estimate: ${rows}. Materials: ${items.map(([p, q]) => `[[${p.id}:${q}]]`).join(", ")}. Is everything accounted for, and what else will I need?`)); }
     case "close-modal": return closeModal();
     case "d-back": return openDrawer(drawerView === "track" ? "orders" : ["orders", "watch", "projects"].includes(drawerView) ? "profile" : "cart");
@@ -6643,6 +6814,8 @@ apiBoot();
 if (location.hash === "#orders") setTimeout(() => openDrawer("orders"), 300);
 ["#drawer", "#ai", "#modal", "#mega", "#authM", "#wid"].forEach(s => $(s).setAttribute("inert", ""));
 mqFine.addEventListener?.("change", () => { applyLook(); if (route.view === "home") renderMain(); });
+mqDark.addEventListener?.("change", () => { if (themePref === "auto") renderHeader(); });
+mqPhone.addEventListener?.("change", () => { if (route.view === "home") renderMain(); });
 })();
 </script>
 </body>

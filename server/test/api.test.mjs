@@ -920,7 +920,7 @@ test("Card only: no cash, the full address reaches the courier, the buyer watche
   const d3 = mkdtempSync(join(tmpdir(), "imorat-card-"));
   const mk = env => { const cfg = loadConfig({ JWT_SECRET: "x", DB_PATH: join(d3, (env.YANDEX_DELIVERY_TOKEN ? "y" : "n") + ".db"), UPLOADS_DIR: join(d3, "up"), ADMIN_PHONES: "998901111111", ADMIN_MFA: "0", SMS_MODE: "dev", OTP_PER_IP_HOUR: "500", TELEGRAM_BOT_TOKEN: "TGTOKEN", TELEGRAM_API_URL: fakeBase + "/tg", TELEGRAM_POLL_TIMEOUT: "0", ...env }); const a = createApp(cfg, { info() {}, warn() {}, error: console.error }); return a; };
   const run = async (a, fn) => { await new Promise(r => a.listen(0, "127.0.0.1", r)); const b3 = `http://127.0.0.1:${a.address().port}`; const c = async (m, p, body, tok) => { const r = await fetch(b3 + p, { method: m, headers: { "content-type": "application/json", ...(tok ? { authorization: "Bearer " + tok } : {}) }, body: body ? JSON.stringify(body) : undefined }); return { status: r.status, data: await r.json().catch(() => ({})) }; }; const lg = async ph => { const s = await c("POST", "/api/auth/otp/send", { phone: ph }); return (await c("POST", "/api/auth/otp/verify", { phone: ph, code: s.data.dev_code })).data.token; }; try { await fn(c, lg, a); } finally { a.stopJobs(); a.close(); a.closeAllConnections(); a.db.raw.close(); } };
-  const form = { name: "Карта", phone: "998901234567", mode: "yandex", district: "yunus", street: "ул. Амира Темура, 15", entrance: "3", floor: "4", flat: "27", intercom: "27К", comment: "Позвоните заранее", la: 41.311, lo: 69.279, pay: "payme" };
+  const form = { name: "Карта", phone: "998901234567", mode: "yandex", district: "yunus", street: "ул. Амира Темура, 15", entrance: "3", floor: "4", flat: "27", intercom: "27К", comment: "Позвоните заранее", la: 41.311, lo: 69.279, pay: "payme", help: "two" };
   // 1) no payment keys yet: ordering is closed, not silently switched to cash
   await run(mk({}), async (c, lg) => {
     const t = await lg("998901234567");
@@ -935,7 +935,13 @@ test("Card only: no cash, the full address reaches the courier, the buyer watche
     assert.equal((await c("POST", "/api/orders", { lines: [{ id: 1, store: "usta", q: 1 }], form: { ...form, mode: "pickup", pay: "store" } }, t)).data.error, "card_required", "no cash even for pickup");
     const o = await c("POST", "/api/orders", { lines: [{ id: 1, store: "usta", q: 1 }], form }, t);
     assert.equal(o.status, 200, JSON.stringify(o.data)); const d = o.data.order.d;
-    assert.equal(d.entrance, "3"); assert.equal(d.flat, "27"); assert.equal(d.floor, "4"); assert.equal(d.intercom, "27К"); assert.equal(d.la, 41.311);
+    assert.equal(d.entrance, "3"); assert.equal(d.flat, "27"); assert.equal(d.floor, "4"); assert.equal(d.intercom, "27К"); assert.equal(d.la, 41.311); assert.equal(d.help, "two");
+    { // unloading help is priced per loader and per floor (cargo tariff): none < one < two; a private house counts as one floor
+      const q = async f => (await c("POST", "/api/quote", { lines: [{ id: 1, store: "usta", q: 1 }], form: { ...form, ...f } }, t)).data.quote.del;
+      const none = await q({ help: "none" }), one = await q({ help: "one" }), two = await q({ help: "two" }), priv = await q({ help: "one", private: true });
+      assert.ok(none < one && one < two, `${none} < ${one} < ${two}`); assert.equal(two - none, 2 * (one - none)); assert.equal(one - none, 3 * (priv - none), "floor 4 = 3 flights, a private house = 1");
+      assert.equal(await q({ lift: true, help: undefined }), one, "old clients sending lift:true get one loader");
+    }
     const rpc = (method, params) => fetch(`http://127.0.0.1:${a.address().port}/api/pay/payme`, { method: "POST", headers: { "content-type": "application/json", authorization: "Basic " + Buffer.from("Paycom:PK").toString("base64") }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }) }).then(r => r.json());
     await rpc("CreateTransaction", { id: "c1", time: Date.now(), amount: o.data.order.total * 100, account: { order: o.data.order.num } }); assert.equal((await rpc("PerformTransaction", { id: "c1" })).result.state, 2);
     // the demo store "usta" belongs to nobody: move the shipment as admin
@@ -961,6 +967,7 @@ test("Card only: no cash, the full address reaches the courier, the buyer watche
     assert.equal(dest.address.porch, "3"); assert.equal(dest.address.sfloor, "4"); assert.equal(dest.address.sflat, "27"); assert.equal(dest.address.door_code, "27К");
     assert.deepEqual(dest.address.coordinates, [69.279, 41.311]); assert.equal(dest.contact.phone, "+998901234567"); assert.equal(dest.external_order_id, o.data.order.num);
     assert.ok(["express", "cargo"].includes(claim.client_requirements.taxi_class)); // a 50 kg bag of cement goes by cargo van
+    assert.equal(claim.client_requirements.cargo_loaders, 2); assert.equal(claim.skip_door_to_door, false); // two loaders were ordered at checkout
     await until(async () => (await c("GET", `/api/orders/${o.data.order.num}`, null, t)).data.order.ships[0].tracking_url);
     // each sweep asks Yandex and moves the shipment: performer_found → to_store, pickuped → on_way, delivered_finish → delivered
     a.sweep(); await until(async () => (await c("GET", `/api/orders/${o.data.order.num}`, null, t)).data.order.ships[0].status === "to_store");

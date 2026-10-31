@@ -38,6 +38,8 @@ export function loadLines(db, ref, rawLines, user) {
   return { lines: out, problems };
 }
 
+/* unloading help chosen at checkout: none (buyer takes the goods at the car), one (the courier/driver carries to the door), two (two loaders for heavy orders) */
+export const helpers = f => f?.help === "two" ? 2 : f?.help === "one" || (f?.help == null && f?.lift) ? 1 : 0;
 export function quote(db, ref, { lines, services = [], bundles = [], form = {}, promo = "", user = null, yandexPrices = null, points = 0, maxShare = 0.2 }) {
   const D = Object.fromEntries(ref.districts.map(d => [d.id, d]));
   const dest = D[form.district] || D[user?.district] || D.mirob;
@@ -51,7 +53,8 @@ export function quote(db, ref, { lines, services = [], bundles = [], form = {}, 
     }
     g.lines.push(l); g.sum += l.price * l.q; g.kg += l.p.kg * l.q;
   }
-  const floors = Math.max(0, (parseInt(form.floor, 10) || 1) - 1);
+  const floors = form.private ? 0 : Math.max(0, (parseInt(form.floor, 10) || 1) - 1);
+  const loaders = helpers(form);
   const ships = [...groups.values()].map(g => {
     if (form.mode === "pickup") return { g, t: null, dist: 0, price: 0, full: 0 };
     const t = ref.tariffs.find(x => g.kg <= x.maxKg) || ref.tariffs[ref.tariffs.length - 1];
@@ -60,7 +63,7 @@ export function quote(db, ref, { lines, services = [], bundles = [], form = {}, 
     const dist = distanceKm(from, to);
     const yp = yandexPrices?.[g.store.id];
     let p = yp != null ? yp : t.base + t.perKm * dist;
-    if (form.lift && t.id !== "courier") p += ref.fees.LOADER * floors;
+    if (loaders && t.id !== "courier") p += ref.fees.LOADER * loaders * Math.max(1, floors); // a loader costs LOADER per floor, at least one (truck → door)
     if (form.when === "slot") p *= 0.9;
     const full = round(p) + (form.when === "vip" ? ref.fees.VIP_HOUR_FEE : 0);
     if (vip) { if (t.id === "courier" && g.sum >= ref.fees.VIP_FREE_FROM) p = 0; else if (t.id !== "courier") p *= 0.5; }

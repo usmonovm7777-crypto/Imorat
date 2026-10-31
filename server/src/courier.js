@@ -31,7 +31,8 @@ export function createCourier({ db, cfg, ref, log = console }) {
     if (!o || !s || !sh.tariff) return null;
     const f = JSON.parse(o.form), lines = JSON.parse(sh.lines), t = tariffOf(sh);
     if (!live) { db.run("UPDATE shipments SET claim_id=?, courier_at=? WHERE id=?", "sim-" + sh.id, Date.now(), sh.id); return { claim_id: "sim-" + sh.id, simulated: true }; }
-    const requirements = t.id === "courier" ? { taxi_class: "express" } : { taxi_class: "cargo", cargo_type: t.id === "cargo_s" ? "lcv_m" : "lcv_l", ...(f.lift ? { cargo_loaders: 1 } : {}) };
+    const loaders = f.help === "two" ? 2 : f.help === "one" || (f.help == null && f.lift) ? 1 : 0; // unloading help chosen at checkout
+    const requirements = t.id === "courier" ? { taxi_class: "express" } : { taxi_class: "cargo", cargo_type: t.id === "cargo_s" ? "lcv_m" : "lcv_l", ...(loaders ? { cargo_loaders: loaders } : {}) };
     const sp = storePt(s), dp = destPt(f);
     const names = db.all(`SELECT id, ru FROM products WHERE id IN (${lines.map(() => "?").join(",") || "0"})`, ...lines.map(l => l.id));
     const body = {
@@ -42,7 +43,8 @@ export function createCourier({ db, cfg, ref, log = console }) {
         { point_id: 1, visit_order: 1, type: "source", address: { fullname: `Ташкент, ${s.addr || D[s.district]?.ru || ""}`, coordinates: [sp.lo, sp.la], comment: s.landmark || "" }, contact: { name: s.name, phone: "+" + s.phone }, skip_confirmation: true },
         { point_id: 2, visit_order: 2, type: "destination", address: { fullname: ["Ташкент", f.street].filter(Boolean).join(", "), coordinates: [dp.lo, dp.la], porch: f.entrance || undefined, sfloor: f.private ? undefined : String(f.floor || ""), sflat: f.private ? undefined : (f.flat || undefined), door_code: f.intercom || undefined, comment: f.comment || "" }, contact: { name: f.name, phone: "+" + f.phone.replace(/\D/g, "") }, external_order_id: o.num }
       ],
-      client_requirements: requirements, skip_door_to_door: false, skip_client_notify: false, optional_return: false
+      // no help → the buyer meets the courier at the car / entrance
+      client_requirements: requirements, skip_door_to_door: !loaders, skip_client_notify: false, optional_return: false
     };
     const c = await api(`claims/create?request_id=${encodeURIComponent(`imorat-${sh.id}-${Date.now()}`)}`, body);
     db.run("UPDATE shipments SET claim_id=?, courier_at=? WHERE id=?", c.id, Date.now(), sh.id);
