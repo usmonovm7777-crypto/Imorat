@@ -32,6 +32,9 @@ export function createBonus({ db, cfg, log = console }) {
       const ref = "ship:" + ship.id;
       // No cashback on a store's own orders (the owner cannot "sell to himself" for points), and never more than the cap per shipment
       const own = db.get("SELECT owner_id FROM stores WHERE id=?", ship.store_id)?.owner_id === u.id;
+      // Only orders paid through the platform earn points: a reservation paid at the store brings Imorat Go nothing to share
+      const paidHere = !["store", "cash"].includes(o.pay);
+      if (!paidHere) return;
       if (!has(u.id, ref) && !own) {
         const goods = JSON.parse(ship.lines).reduce((a, l) => a + l.price * l.q, 0);
         add(u.id, Math.min(B.maxCashback, Math.floor(goods * (u.role === "pro" ? B.ratePro : B.rate))), "cashback", ref);

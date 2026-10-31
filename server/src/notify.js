@@ -43,7 +43,7 @@ export function createNotify({ db, cfg, tg, push, sms, ref, log = console }) {
   function sellerText({ s, o, st, f }) {
     const lines = JSON.parse(s.lines).map(l => `• ${h(l.name)} × ${l.q} — ${money(l.price * l.q)}`).join("\n");
     const goods = JSON.parse(s.lines).reduce((a, l) => a + l.price * l.q, 0);
-    const where = s.tariff ? `Яндекс Доставка → ${h(D[f.district]?.ru || "")} р-н, ${h(f.street)}${f.flat ? ", кв. " + h(f.flat) : ""}${f.floor > 1 ? `, этаж ${f.floor}` : ""}` : "Самовывоз из магазина";
+    const where = s.tariff ? `Яндекс Доставка → ${h(D[f.district]?.ru || "")} р-н, ${h(f.street)}${f.private ? ", частный дом" : `${f.entrance ? ", подъезд " + h(f.entrance) : ""}${f.flat ? ", кв. " + h(f.flat) : ""}${f.floor > 1 ? `, этаж ${f.floor}` : ""}${f.intercom ? ", домофон " + h(f.intercom) : ""}`}` : "Самовывоз из магазина";
     const deadline = s.status === "new" ? `\n⏱ Примите в течение ${cfg.timers.cancel} минут${s.start_at > Date.now() + 60000 ? ` (отсчёт с ${new Date(s.start_at + 5 * 3600000).toISOString().slice(11, 16)}, когда магазин откроется)` : ""}, иначе заказ отменится.` : "";
     return `<b>${STATUS_RU[s.status] || s.status} заказ ${h(o.num)}</b> · ${h(st.name)}\n\n${lines}\n<b>Итого: ${money(goods)}</b>\n\n${where}\nКогда: ${WHEN[f.when] || f.when}${f.when === "vip" ? ` (${f.hour}:00)` : ""}\nПокупатель: ${h(f.name)}, +${h(String(f.phone).replace(/\D/g, ""))}${f.comment ? `\nКомментарий: «${h(f.comment)}»` : ""}\nОплата: ${o.pay === "store" || o.pay === "cash" ? "покупатель платит магазину при получении" : o.pay_status === "paid" ? "💳 оплачен картой полностью, включая доставку — выдавайте без оплаты" : "ожидает оплаты"}${deadline}`;
   }

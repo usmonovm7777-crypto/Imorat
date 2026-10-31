@@ -9,6 +9,7 @@ import { signJwt, verifyJwt, parsePhone, issueOtp, checkOtp, verifyIdToken, newU
 import { createSms } from "./sms.js";
 import { loadLines, quote, assertNoProblems } from "./pricing.js";
 import { yandexPrices } from "./delivery.js";
+import { createCourier } from "./courier.js";
 import { buildRequest, streamChat } from "./ai.js";
 import { createTelegram } from "./telegram.js";
 import { createPush } from "./push.js";
@@ -51,6 +52,7 @@ export function createApp(cfg, log = console) {
   const push = createPush(db, cfg.pushSubject, log);
   const notify = createNotify({ db, cfg, tg, push, sms, ref, log });
   const bonus = createBonus({ db, cfg, log });
+  const courier = createCourier({ db, cfg, ref, log });
   let bot = { callback: async () => false };
   const channel = createChannel({ db, cfg, tg, log });
   const PCAT = new Map(db.all("SELECT id, cat FROM products").map(p => [p.id, p.cat]));
@@ -122,12 +124,13 @@ export function createApp(cfg, log = console) {
     id: s.id, name: s.name, d: s.district, addr: s.addr, addrUz: s.addr_uz || s.addr, hours: s.hours, ru: s.ru || s.descr.slice(0, 80), uz: s.uz || s.ru || s.descr.slice(0, 80),
     descr: s.descr, cats: JSON.parse(s.cats || "[]"), phone: s.phone, telegram: s.telegram, verified: !!s.verified, landmark: s.landmark, la: s.la, lo: s.lo, status: s.status, loc_src: s.loc_src, note: s.review_note, created: s.created_at
   });
+  const ownerStore = s => ({ ...publicStore(s), payout_to: s.payout_to || "" }); // the store's own view adds its payout details
 
   /* ---------- meta ---------- */
   r.get("/api/health", () => ({ ok: true, time: Date.now() }));
   r.get("/api/config", () => ({
     sms: sms.mode, google_client_id: cfg.google.clientId || null, apple_client_id: cfg.apple.clientId || null,
-    apple_redirect_uri: cfg.apple.redirectUri || null, ai: !!cfg.ai.key, yandex: !!cfg.yandex.token, vip_free: cfg.vipFree,
+    apple_redirect_uri: cfg.apple.redirectUri || null, ai: !!cfg.ai.key, yandex: !!cfg.yandex.token, vip_free: cfg.vipFree, pay_at_store: cfg.allowPayAtStore,
     payments: cfg.paymentsOnline, telegram_bot: tg.enabled ? tg.username || null : null, telegram_channel: /^@/.test(cfg.channel?.chat || "") ? cfg.channel.chat : null, push_key: push.publicKey,
     timers: cfg.timers, commission: cfg.commission, demo: cfg.demoStores
   }));
@@ -242,6 +245,7 @@ export function createApp(cfg, log = console) {
   /* ---------- quote & orders ---------- */
   const cleanForm = f => ({
     name: str(f?.name, 80), phone: str(f?.phone, 30), district: D[f?.district] ? f.district : "mirob", street: str(f?.street, 160), flat: str(f?.flat, 30),
+    entrance: str(f?.entrance, 20), intercom: str(f?.intercom, 30), private: !!f?.private, // full address for the Yandex courier: porch, intercom code, or a private house
     floor: String(int(f?.floor, 1, 60) || 1), lift: !!f?.lift, mode: f?.mode === "pickup" ? "pickup" : "yandex",
     when: ["asap", "slot", "vip"].includes(f?.when) ? f.when : "asap", hour: String(int(f?.hour, 8, 20) ?? 9).padStart(2, "0"),
     pay: ["click", "payme", "uzum", "nasiya", "cash", "store"].includes(f?.pay) ? f.pay : "store", comment: str(f?.comment, 300),
@@ -265,9 +269,11 @@ export function createApp(cfg, log = console) {
     const phone = form.phone.replace(/\D/g, "");
     if (!/^998\d{9}$/.test(phone)) throw bad("bad_phone", "Recipient phone must be +998 XX XXX XX XX");
     if (form.mode !== "pickup" && form.street.length < 4) throw bad("bad_address", "Street and house are required for delivery");
-    if (!["store", "cash"].includes(form.pay) && !cfg.paymentsOnline.includes(form.pay)) throw bad("payment_unavailable", "Online payment is not connected yet; pay the store directly");
-    // Delivery is paid by card on the site (the courier takes no money); cash only when the buyer collects the order at the store
-    if (["store", "cash"].includes(form.pay) && form.mode !== "pickup" && cfg.paymentsOnline.length) throw bad("card_required", "Delivery orders are paid by card on the site; cash is for pickup only");
+    // Every order is paid by card on the site (one amount for goods and delivery; the courier and the store take no money).
+    if (["store", "cash"].includes(form.pay)) {
+      if (!cfg.allowPayAtStore) throw cfg.paymentsOnline.length ? bad("card_required", "Orders are paid by card on the site") : new HttpError(503, "payments_off", "Online payment is not connected yet — ordering opens in a few days");
+      if (form.mode !== "pickup" && cfg.paymentsOnline.length) throw bad("card_required", "Delivery orders are paid by card on the site; cash is for pickup only");
+    } else if (!cfg.paymentsOnline.includes(form.pay)) throw cfg.paymentsOnline.length ? bad("payment_unavailable", "This payment method is not available") : new HttpError(503, "payments_off", "Online payment is not connected yet — ordering opens in a few days");
     if (b.expected_total != null && Number(b.expected_total) !== q.total) throw new HttpError(409, "total_changed", "Prices or delivery changed, check the new total", { quote: q });
     const now = Date.now(), online = !["store", "cash"].includes(form.pay);
     const order = db.tx(() => {
@@ -285,7 +291,8 @@ export function createApp(cfg, log = console) {
       db.run("UPDATE orders SET num=? WHERE id=?", num, id);
       for (const s of q.ships) {
         const goods = s.lines.reduce((a, l) => a + l.price * l.q, 0);
-        const commission = s.lines.reduce((a, l) => a + Math.round(l.price * l.q * rateOf(PCAT.get(l.id) || db.get("SELECT cat FROM products WHERE id=?", l.id)?.cat)), 0);
+        // commission only on orders paid through the platform; a reservation paid at the store is free for the store
+        const commission = online ? s.lines.reduce((a, l) => a + Math.round(l.price * l.q * rateOf(PCAT.get(l.id) || db.get("SELECT cat FROM products WHERE id=?", l.id)?.cat)), 0) : 0;
         const start = storeStartAt(db.get("SELECT hours FROM stores WHERE id=?", s.store), now);
         const st0 = online ? "unpaid" : "new";
         db.run("INSERT INTO shipments(order_id,store_id,tariff,price,kg,dist,lines,status,status_at,history,goods,commission,start_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
@@ -314,7 +321,7 @@ export function createApp(cfg, log = console) {
       goods: o.goods, del: o.del, svc: o.svc, disc: o.disc + o.promo_disc, bdisc: o.disc, pd: o.promo_disc, pts: o.points_used || 0, total: o.total, cash: o.cash, promo: o.promo,
       paid_at: o.paid_at || null, pay_url: o.pay_status === "pending" && !["store", "cash"].includes(o.pay) && o.status !== "cancelled" ? payments.payUrl(o) : null,
       pay_deadline: o.pay_status === "pending" && !["store", "cash"].includes(o.pay) ? o.created_at + cfg.payTimeoutMin * 60000 : null,
-      ships: ships.map(s => ({ id: s.id, store: s.store_id, store_name: s.store_name, store_addr: s.store_addr, store_hours: s.store_hours, tariff: s.tariff, price: s.price, kg: s.kg, dist: s.dist, status: s.status, status_at: s.status_at,
+      ships: ships.map(s => ({ id: s.id, store: s.store_id, store_name: s.store_name, store_addr: s.store_addr, store_hours: s.store_hours, tariff: s.tariff, tracking_url: s.tracking_url || null, live: !!(s.claim_id && !String(s.claim_id).startsWith("sim-")), price: s.price, kg: s.kg, dist: s.dist, status: s.status, status_at: s.status_at,
         step: (STEPS[s.tariff ? "yandex" : "pickup"].indexOf(s.status)), history: JSON.parse(s.history), lines: JSON.parse(s.lines), courier: s.courier,
         cancel_reason: s.cancel_reason, accept_by: s.status === "new" ? (s.start_at || s.status_at) + cfg.timers.cancel * 60000 : null,
         review: db.get("SELECT stars, text, reply FROM reviews WHERE ship_id=?", s.id) || null }))
@@ -420,6 +427,7 @@ export function createApp(cfg, log = console) {
     if (has("telegram") || !partial) out.telegram = str(b.telegram, 64).replace(/^https?:\/\/t\.me\//, "").replace(/^@/, "");
     if (has("hours") || !partial) out.hours = str(b.hours, 40) || "09:00–19:00";
     if (has("landmark") || !partial) out.landmark = str(b.landmark, 160);
+    if (has("payout_to")) out.payout_to = str(b.payout_to, 120); // card number or bank account for payouts
     if (!partial || has("addr")) { out.addr = str(b.addr, 200); if (out.addr.length < 3) throw bad("bad_addr", "Address is required"); }
     if (has("la") || has("lo") || !partial) {
       const la = b.la === null || b.la === undefined || b.la === "" ? null : Number(b.la), lo = b.lo === null || b.lo === undefined || b.lo === "" ? null : Number(b.lo);
@@ -465,7 +473,7 @@ export function createApp(cfg, log = console) {
     if (x.descr) db.run("UPDATE stores SET ru=?, uz=? WHERE id=?", x.descr.slice(0, 80), x.descr.slice(0, 80), s.id);
     if (x.addr) db.run("UPDATE stores SET addr_uz=? WHERE id=?", x.addr, s.id);
     bumpCatalog();
-    return { store: publicStore(db.get("SELECT * FROM stores WHERE id=?", s.id)) };
+    return { store: ownerStore(db.get("SELECT * FROM stores WHERE id=?", s.id)) };
   });
 
   r.get("/api/seller/summary", req => {
@@ -476,7 +484,7 @@ export function createApp(cfg, log = console) {
     const products = db.all(`SELECT p.id,p.ru,p.uz,p.cat,p.sub,p.unit,p.kg,p.img,p.active,p.store_id, o.price,o.stock FROM offers o JOIN products p ON p.id=o.product_id WHERE o.store_id=? ORDER BY p.id`, s.id)
       .map(p => ({ ...p, img: mediaUrl(p.img), own: p.store_id === s.id }));
     return {
-      store: publicStore(s),
+      store: ownerStore(s),
       kpi: { revenue30: revenue, orders30: ships.filter(x => x.oc >= since).length, open: ships.filter(x => !["delivered", "picked", "cancelled"].includes(x.status)).length, products: products.length, out_of_stock: products.filter(p => p.stock <= 0).length },
       finance: storeFinance(s.id),
       rates: cfg.commission,
@@ -602,8 +610,17 @@ export function createApp(cfg, log = console) {
       } else setShipStatus(sh, status);
     });
     if (status === "cancelled") bumpCatalog();
+    if (status === "searching" && sh.tariff) courier.order(db.get("SELECT * FROM shipments WHERE id=?", sh.id)).catch(e => { log.warn("[courier] order", e.message); notify.admins(`🚚 Не удалось вызвать курьера Яндекса для отправления #${sh.id}: ${String(e.message).slice(0, 160).replace(/[<>&]/g, "")}`); });
     audit(req, "ship." + status, sh.id);
   }
+  /* the buyer watches the courier: live position from Yandex or the simulation */
+  r.get("/api/orders/:num/courier", async (req, res, p, url) => {
+    const u = need(req), o = db.get("SELECT * FROM orders WHERE num=? AND user_id=?", p.num, u.id);
+    if (!o) throw new HttpError(404, "not_found", "Order not found");
+    const sh = db.get("SELECT * FROM shipments WHERE order_id=? AND id=?", o.id, Number(url.searchParams.get("ship")) || db.get("SELECT id FROM shipments WHERE order_id=? AND tariff IS NOT NULL ORDER BY id LIMIT 1", o.id)?.id);
+    if (!sh) throw new HttpError(404, "not_found", "Shipment not found");
+    return { courier: await courier.position(sh) };
+  });
 
   /* ---------- reviews ---------- */
   r.post("/api/orders/:num/review", async (req, res, p) => {
@@ -684,9 +701,11 @@ export function createApp(cfg, log = console) {
         COALESCE(SUM(CASE WHEN o.pay NOT IN ('store','cash') AND o.pay_status IN ('paid','refund_due','refunded') AND sh.status_at>=? AND sh.status_at<? THEN sh.goods ELSE 0 END),0) online_month
         FROM shipments sh JOIN orders o ON o.id=sh.order_id WHERE sh.store_id=? AND sh.status IN ('delivered','picked')`, a, b, storeId);
     const paid = db.get("SELECT COALESCE(SUM(amount),0) s FROM settlements WHERE store_id=?", storeId).s;
+    const po = db.get("SELECT COALESCE(SUM(CASE WHEN status='paid' THEN amount ELSE 0 END),0) paid, COALESCE(SUM(CASE WHEN status='requested' THEN amount ELSE 0 END),0) pending FROM payouts WHERE store_id=?", storeId);
     // balance > 0: the store owes Imorat Go; < 0: Imorat Go owes the store. Commission on card-paid orders is already inside
-    // the goods money Imorat Go holds, so it is counted once: all commissions + delivery fees handed to the store − goods money held.
-    return { month, goods: mon.goods, commission: mon.commission, orders: mon.n, online_month: flow.online_month, commission_total: all, delivery_due: flow.delivery_due, payout_due: flow.payout_due, settled: paid, balance: all + flow.delivery_due - flow.online_held - paid };
+    // the goods money Imorat Go holds, so it is counted once: all commissions + delivery fees handed to the store − goods money held + what was paid out.
+    return { month, goods: mon.goods, commission: mon.commission, orders: mon.n, online_month: flow.online_month, commission_total: all, delivery_due: flow.delivery_due, payout_due: flow.payout_due,
+      payout_paid: po.paid, payout_pending: po.pending, payout_available: Math.max(0, flow.payout_due - po.paid - po.pending), settled: paid, balance: all + flow.delivery_due - flow.online_held - paid + po.paid };
   }
 
   /* ---------- admin ---------- */
@@ -711,7 +730,33 @@ export function createApp(cfg, log = console) {
     const m = url.searchParams.get("month");
     const rows = db.all("SELECT id, name, status FROM stores ORDER BY name").map(s => ({ id: s.id, name: s.name, status: s.status, ...storeFinance(s.id, m) })).filter(x => x.orders || x.balance || x.commission_total);
     const t = rows.reduce((a, x) => ({ goods: a.goods + x.goods, commission: a.commission + x.commission, balance: a.balance + x.balance }), { goods: 0, commission: 0, balance: 0 });
-    return { month: monthRange(m)[2], rates: cfg.commission, stores: rows, totals: t, settlements: db.all("SELECT st.*, s.name FROM settlements st LEFT JOIN stores s ON s.id=st.store_id ORDER BY st.created_at DESC LIMIT 30") };
+    return { month: monthRange(m)[2], rates: cfg.commission, stores: rows, totals: t, settlements: db.all("SELECT st.*, s.name FROM settlements st LEFT JOIN stores s ON s.id=st.store_id ORDER BY st.created_at DESC LIMIT 30"),
+      payouts: db.all("SELECT p.*, s.name FROM payouts p LEFT JOIN stores s ON s.id=p.store_id ORDER BY p.status='requested' DESC, p.requested_at DESC LIMIT 60") };
+  });
+  /* the store asks for its money from card-paid orders; an admin transfers it and marks the request paid */
+  r.post("/api/seller/payout", async req => {
+    const { s, u } = needSeller(req), b = await readJson(req);
+    const f = storeFinance(s.id), amount = b.amount == null || b.amount === "" ? f.payout_available : int(b.amount, 1, 1e12);
+    if (!amount || amount > f.payout_available) throw bad("bad_amount", "Nothing to pay out yet");
+    const to = str(b.payout_to, 120) || s.payout_to || ""; if (to.length < 8) throw bad("payout_to", "Add a card number or bank account for the transfer");
+    if (to !== s.payout_to) db.run("UPDATE stores SET payout_to=? WHERE id=?", to, s.id);
+    if (db.get("SELECT 1 FROM payouts WHERE store_id=? AND status='requested'", s.id)) throw new HttpError(409, "payout_pending", "The previous request is still being processed");
+    const id = Number(db.run("INSERT INTO payouts(store_id,amount,payout_to,requested_at) VALUES(?,?,?,?)", s.id, amount, to, Date.now()).lastInsertRowid);
+    audit(req, "payout.request", s.id, { amount });
+    notify.admins(`💸 Запрос выплаты #${id}: ${s.name.replace(/[<>&]/g, "")} — ${amount.toLocaleString("ru-RU")} сум на ${to.replace(/[<>&]/g, "")}. Отметьте «Выплачено» в админке после перевода.`);
+    return { ok: true, finance: storeFinance(s.id), payout: db.get("SELECT * FROM payouts WHERE id=?", id) };
+  });
+  r.get("/api/seller/payouts", req => { const { s } = needSeller(req); return { payouts: db.all("SELECT * FROM payouts WHERE store_id=? ORDER BY requested_at DESC LIMIT 30", s.id) }; });
+  r.patch("/api/admin/payouts/:id", async (req, res, p) => {
+    const a = needAdmin(req), b = await readJson(req);
+    const po = db.get("SELECT * FROM payouts WHERE id=?", Number(p.id)); if (!po) throw new HttpError(404, "not_found", "Request not found");
+    if (po.status !== "requested") throw bad("done", "This request is already closed");
+    if (!["paid", "rejected"].includes(b.status)) throw bad("bad_status", "paid or rejected");
+    db.run("UPDATE payouts SET status=?, note=?, admin_id=?, done_at=? WHERE id=?", b.status, str(b.note, 200), a.id, Date.now(), po.id);
+    audit(req, "payout." + b.status, po.store_id, { id: po.id, amount: po.amount });
+    const st = db.get("SELECT * FROM stores WHERE id=?", po.store_id), ow = st?.owner_id && db.get("SELECT tg_chat FROM users WHERE id=?", st.owner_id);
+    if (ow?.tg_chat) tg.send(ow.tg_chat, b.status === "paid" ? `💸 Выплата ${po.amount.toLocaleString("ru-RU")} сум отправлена на ${po.payout_to.replace(/[<>&]/g, "")}.` : `Выплата ${po.amount.toLocaleString("ru-RU")} сум не проведена${b.note ? ": " + str(b.note, 200).replace(/[<>&]/g, "") : ""}. Проверьте реквизиты в кабинете.`);
+    return { ok: true, finance: storeFinance(po.store_id) };
   });
   r.post("/api/admin/settlements", async req => {
     const u = needAdmin(req), b = await readJson(req);
@@ -761,6 +806,7 @@ export function createApp(cfg, log = console) {
       setShipStatus(sh, b.status, b.status === "cancelled" ? "admin" : null);
     });
     if (b.status === "cancelled") bumpCatalog();
+    if (b.status === "searching" && sh.tariff) courier.order(db.get("SELECT * FROM shipments WHERE id=?", sh.id)).catch(e => log.warn("[courier] order", e.message));
     audit(req, "admin.ship." + b.status, sh.id);
     return { ok: true };
   });
@@ -844,6 +890,22 @@ export function createApp(cfg, log = console) {
     }
     db.run("DELETE FROM tg_links WHERE expires_at<?", now);
     payments.sweep(now);
+    courierSweep().catch(e => log.warn("[courier] sweep", e.message));
+  }
+  /* Yandex drives the courier statuses once a claim exists; a failed search returns the shipment to the store */
+  async function courierSweep() {
+    if (!courier.live) return;
+    for (const s of db.all("SELECT * FROM shipments WHERE claim_id IS NOT NULL AND status IN ('searching','to_store','on_way')")) {
+      let r; try { r = await courier.poll(s); } catch (e) { log.warn("[courier] poll", s.id, e.message); continue; }
+      if (!r || !r.status || r.status === s.status) continue;
+      const order = ["searching", "to_store", "on_way", "delivered"];
+      if (r.status === "failed") {
+        db.run("UPDATE shipments SET claim_id=NULL, tracking_url=NULL WHERE id=?", s.id); setShipStatus(s, "assembling", "courier_failed");
+        notify.admins(`🚚 Яндекс не выполнил доставку отправления #${s.id} (${r.raw}). Магазину нужно вызвать курьера снова.`);
+        const st = db.get("SELECT owner_id FROM stores WHERE id=?", s.store_id), ow = st?.owner_id && db.get("SELECT tg_chat FROM users WHERE id=?", st.owner_id);
+        if (ow?.tg_chat) tg.send(ow.tg_chat, `🚚 Яндекс не нашёл курьера для отправления #${s.id}. Нажмите «Вызвать курьера» ещё раз в кабинете.`);
+      } else if (order.indexOf(r.status) > order.indexOf(s.status)) setShipStatus(db.get("SELECT * FROM shipments WHERE id=?", s.id), r.status);
+    }
   }
   function backup() {
     if (!cfg.backupDir || cfg.dbPath === ":memory:") return;

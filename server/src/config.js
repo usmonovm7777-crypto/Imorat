@@ -30,6 +30,8 @@ export function loadConfig(env = process.env) {
     catalogPath: env.CATALOG_PATH || new URL("../data/catalog.json", import.meta.url).pathname,
     // DEMO_STORES=0 on the real site: the 9 sample stores and their prices are not seeded (and are removed if they were); only real stores sell
     demoStores: env.DEMO_STORES !== "0",
+    // orders are paid by card on the site; ALLOW_PAY_AT_STORE=1 re-enables "pay the store on pickup" (tests, special launches)
+    allowPayAtStore: env.ALLOW_PAY_AT_STORE === "1",
     uploadsDir: env.UPLOADS_DIR || "uploads",
     publicUrl: (env.PUBLIC_URL || "").replace(/\/$/, ""),
     origins: list(env.ALLOWED_ORIGINS || "https://usmonovm7777-crypto.github.io,http://localhost:8080,http://127.0.0.1:8080"),

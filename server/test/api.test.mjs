@@ -13,13 +13,19 @@ import { createECDH, createDecipheriv, hkdfSync } from "node:crypto";
 /* ---- fake external services: Eskiz, Yandex, Anthropic, Google JWKS ---- */
 const { privateKey, publicKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
 const jwk = { ...publicKey.export({ format: "jwk" }), kid: "k1", alg: "RS256", use: "sig" };
-const sms = [], tgSent = [], tgUpdates = [], pushes = [];
+const sms = [], tgSent = [], tgUpdates = [], pushes = [], yaClaims = [];
 const fake = createServer(async (req, res) => {
   const chunks = []; for await (const c of req) chunks.push(c); const raw = Buffer.concat(chunks), body = raw.toString("utf8");
   const json = (s, o) => { res.writeHead(s, { "content-type": "application/json" }); res.end(JSON.stringify(o)); };
   if (req.url === "/eskiz/auth/login") return json(200, { data: { token: "T" } });
   if (req.url === "/eskiz/message/sms/send") { sms.push(body); return json(200, { id: "1", status: "waiting" }); }
   if (req.url === "/ya/b2b/cargo/integration/v2/check-price") { const b = JSON.parse(body); return json(200, { price: b.requirements.taxi_class === "express" ? "21000.00" : "99000.00", eta: 30 }); }
+  // Yandex claims: create → accept → info (status advances on every call) → tracking link → performer position
+  if (req.url.startsWith("/ya/b2b/cargo/integration/v2/claims/create")) { yaClaims.push({ body: JSON.parse(body), infos: 0 }); return json(200, { id: "claim-" + yaClaims.length, version: 1, status: "new" }); }
+  if (req.url.startsWith("/ya/b2b/cargo/integration/v2/claims/accept")) return json(200, { id: "x", status: "ready_for_approval" });
+  if (req.url.startsWith("/ya/b2b/cargo/integration/v2/claims/tracking-links")) return json(200, { route_points: [{ type: "destination", sharing_url: "https://taxi.yandex.ru/route/abc" }] });
+  if (req.url.startsWith("/ya/b2b/cargo/integration/v2/claims/info")) { const c = yaClaims[Number(req.url.match(/claim-(\d+)/)[1]) - 1]; const seq = ["performer_found", "pickuped", "delivered_finish"]; const st = seq[Math.min(seq.length - 1, c.infos++)]; return json(200, { id: "x", status: st, performer_info: { courier_name: "Шерзод", car_model: "Chevrolet Labo", car_number: "01A123BC" } }); }
+  if (req.url.startsWith("/ya/b2b/cargo/integration/v2/claims/performer-position")) return json(200, { position: { lat: 41.3, lon: 69.25, speed: 10, direction: 90, timestamp: Math.floor(Date.now() / 1000), dist_to_point: 1200 } });
   if (req.url === "/jwks") return json(200, { keys: [jwk] });
   if (req.url.startsWith("/tg/botTGTOKEN/")) {
     const m = req.url.split("/").pop(), b = body ? JSON.parse(body) : {};
@@ -67,7 +73,8 @@ before(async () => {
   const cfg = loadConfig({
     JWT_SECRET: "test-secret", DB_PATH: join(dir, "t.db"), UPLOADS_DIR: join(dir, "up"), ADMIN_PHONES: "998901111111",
     GOOGLE_CLIENT_ID: "gid", GOOGLE_JWKS_URL: fakeBase + "/jwks", ANTHROPIC_API_KEY: "sk-test", ANTHROPIC_URL: fakeBase + "/ai", SMS_MODE: "dev",
-    TELEGRAM_BOT_TOKEN: "TGTOKEN", TELEGRAM_API_URL: fakeBase + "/tg", TELEGRAM_POLL_TIMEOUT: "0", PAYME_MERCHANT_ID: "5e730e8e0b852a417aa49ceb", PAYME_KEY: "PAYME_SECRET", CLICK_SERVICE_ID: "12345", CLICK_MERCHANT_ID: "777", CLICK_SECRET_KEY: "CLICK_SECRET", PAY_TIMEOUT_MIN: "30", BACKUP_DIR: join(dir, "bk"), OTP_PER_IP_HOUR: "200", TELEGRAM_CHANNEL: "@imorat_test", CHANNEL_HOUR: "25"
+    TELEGRAM_BOT_TOKEN: "TGTOKEN", TELEGRAM_API_URL: fakeBase + "/tg", TELEGRAM_POLL_TIMEOUT: "0", PAYME_MERCHANT_ID: "5e730e8e0b852a417aa49ceb", PAYME_KEY: "PAYME_SECRET", CLICK_SERVICE_ID: "12345", CLICK_MERCHANT_ID: "777", CLICK_SECRET_KEY: "CLICK_SECRET", PAY_TIMEOUT_MIN: "30", BACKUP_DIR: join(dir, "bk"), OTP_PER_IP_HOUR: "200", TELEGRAM_CHANNEL: "@imorat_test", CHANNEL_HOUR: "25",
+    ALLOW_PAY_AT_STORE: "1" // most scenarios below pay the store on pickup; the card-only default is covered by its own test
   });
   app = createApp(cfg, { info() {}, warn() {}, error: console.error });
   await new Promise(r => app.listen(0, "127.0.0.1", r));
@@ -266,13 +273,13 @@ test("Telegram: link seller, order arrives with buttons, accept from Telegram", 
   const cat = await call("GET", "/api/catalog");
   const sr = cat.data.stores.find(s => s.id === sid).rating;
   assert.equal(sr.stars, 5); assert.equal(sr.done, 1);
-  // finance: build category → 4% commission
+  // finance: a reservation paid at the store is free for the store — no commission, nothing owed either way
   const fin = (await call("GET", "/api/seller/summary", null, seller)).data.finance;
-  assert.equal(fin.goods, 57000 * 3); assert.equal(fin.commission, Math.round(57000 * 3 * 0.04)); assert.equal(fin.balance, fin.commission);
+  assert.equal(fin.goods, 57000 * 3); assert.equal(fin.commission, 0); assert.equal(fin.balance, 0); assert.equal(fin.payout_available, 0);
   const af = await call("GET", "/api/admin/finance", null, globalThis.ADMIN);
-  assert.ok(af.data.stores.some(x => x.id === sid && x.commission === fin.commission));
-  await call("POST", "/api/admin/settlements", { store_id: sid, amount: fin.commission, note: "Наличными" }, globalThis.ADMIN);
-  assert.equal((await call("GET", "/api/seller/summary", null, seller)).data.finance.balance, 0);
+  assert.ok(af.data.stores.some(x => x.id === sid && x.goods === fin.goods && x.commission === 0));
+  await call("POST", "/api/admin/settlements", { store_id: sid, amount: 1000, note: "Корректировка" }, globalThis.ADMIN);
+  assert.equal((await call("GET", "/api/seller/summary", null, seller)).data.finance.balance, -1000);
   assert.ok((await call("GET", "/api/admin/audit", null, globalThis.ADMIN)).data.log.some(x => x.action === "settlement"));
 });
 
@@ -408,12 +415,21 @@ test("Bonus points: referral code, welcome after the first delivery, capped cash
   const w = await call("POST", "/api/me/bonus/referral", { code: ab.code.toLowerCase() }, b);
   assert.equal(w.status, 200, JSON.stringify(w.data)); assert.equal(w.data.points, 0, "nothing is credited for entering a code"); assert.equal(w.data.pending_welcome, 30000);
   assert.equal((await call("POST", "/api/me/bonus/referral", { code: ab.code }, b)).status, 409);
-  const form = { name: "Бобур", phone: "998996660033", mode: "pickup", pay: "store" };
+  // points are earned on orders paid through the platform, so these orders are paid by card (Payme test keys)
+  const form = { name: "Бобур", phone: "998996660033", mode: "pickup", pay: "payme" };
+  const rpcB = (method, params) => fetch(base + "/api/pay/payme", { method: "POST", headers: { "content-type": "application/json", authorization: "Basic " + Buffer.from("Paycom:PAYME_SECRET").toString("base64") }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }) }).then(r => r.json());
+  let payN = 0; const payNow = async o => { const id = "bonus-" + (++payN); await rpcB("CreateTransaction", { id, time: Date.now(), amount: o.total * 100, account: { order: o.num } }); const r = await rpcB("PerformTransaction", { id }); assert.equal(r.result?.state, 2, JSON.stringify(r)); };
+  // a reservation paid at the store earns nothing — the platform earns nothing on it either
+  const res0 = await call("POST", "/api/orders", { lines: [{ id: 1, store: sid, q: 1 }], form: { ...form, pay: "store" } }, b);
+  assert.equal(res0.status, 200, JSON.stringify(res0.data));
+  const sh0 = (await call("GET", "/api/seller/summary", null, seller)).data.orders[0].ship_id;
+  for (const st of ["assembling", "ready", "picked"]) assert.equal((await call("PATCH", `/api/seller/shipments/${sh0}`, { status: st }, seller)).status, 200);
+  assert.equal((await call("GET", "/api/me/bonus", null, b)).data.points, 0, "no cashback and no welcome bonus on a reservation paid at the store");
   const q = await call("POST", "/api/quote", { lines: [{ id: 1, store: sid, q: 5 }], form, points: 999999 }, b);
   assert.equal(q.data.quote.pts, 0); assert.equal(q.data.quote.total, 295000);
   const o = await call("POST", "/api/orders", { lines: [{ id: 1, store: sid, q: 5 }], form, points: 0, expected_total: 295000 }, b);
-  assert.equal(o.status, 200, JSON.stringify(o.data)); assert.equal(o.data.order.pts, 0);
-  const sh = (await call("GET", "/api/seller/summary", null, seller)).data.orders[0].ship_id;
+  assert.equal(o.status, 200, JSON.stringify(o.data)); assert.equal(o.data.order.pts, 0); await payNow(o.data.order);
+  const sh = (await call("GET", "/api/seller/summary", null, seller)).data.orders.find(x => x.num === o.data.order.num).ship_id;
   for (const s of ["assembling", "ready", "picked"]) assert.equal((await call("PATCH", `/api/seller/shipments/${sh}`, { status: s }, seller)).status, 200);
   const bb = (await call("GET", "/api/me/bonus", null, b)).data;
   assert.equal(bb.points, 30000 + 2950, "welcome bonus + 1% cashback of 295 000, both on the first delivery");
@@ -429,13 +445,13 @@ test("Bonus points: referral code, welcome after the first delivery, capped cash
   assert.equal((await call("PATCH", "/api/seller/offers/1", { price: 9999999999 }, seller)).status, 400, "price above 100 000 000 so'm is rejected");
   await call("PATCH", "/api/seller/offers/1", { price: 50000000, stock: 500 }, seller);
   const own = await call("POST", "/api/orders", { lines: [{ id: 1, store: sid, q: 1 }], form: { ...form, name: "Владелец", phone: "998996660011" } }, seller);
-  assert.equal(own.status, 200, JSON.stringify(own.data));
+  assert.equal(own.status, 200, JSON.stringify(own.data)); await payNow(own.data.order);
   const sh2 = (await call("GET", "/api/seller/summary", null, seller)).data.orders.find(x => x.num === own.data.order.num).ship_id;
   for (const s of ["assembling", "ready", "picked"]) await call("PATCH", `/api/seller/shipments/${sh2}`, { status: s }, seller);
   assert.equal((await call("GET", "/api/me/bonus", null, seller)).data.points, 0, "no cashback on the owner's own store");
   const c = (await login("996660044")).data.token;
   const big = await call("POST", "/api/orders", { lines: [{ id: 1, store: sid, q: 2 }], form: { ...form, name: "Крупный", phone: "998996660044" } }, c);
-  assert.equal(big.status, 200, JSON.stringify(big.data));
+  assert.equal(big.status, 200, JSON.stringify(big.data)); await payNow(big.data.order);
   const sh3 = (await call("GET", "/api/seller/summary", null, seller)).data.orders.find(x => x.num === big.data.order.num).ship_id;
   for (const s of ["assembling", "ready", "picked"]) await call("PATCH", `/api/seller/shipments/${sh3}`, { status: s }, seller);
   assert.equal((await call("GET", "/api/me/bonus", null, c)).data.points, 200000, "cashback capped at 200 000 per shipment");
@@ -795,13 +811,28 @@ test("Finance with card payments: money held once, a partner's share survives an
   await pay(o1, "fin-1"); await advance(sellerA, o1.num, ["assembling", "ready", "picked"]);
   let f = await fin(sellerA);
   assert.equal(f.payout_due, 96000); assert.equal(f.commission_total, 4000); assert.equal(f.balance, -96000, "card money is counted once");
+  // the store takes its money out whenever it likes after the handover: request → admin transfers → marked paid
+  assert.equal((await call("POST", "/api/seller/payout", { amount: 96000 }, sellerA)).data.error, "payout_to", "needs a card or account first");
+  const pr = await call("POST", "/api/seller/payout", { amount: 50000, payout_to: "8600 1234 5678 9012" }, sellerA);
+  assert.equal(pr.status, 200, JSON.stringify(pr.data)); assert.equal(pr.data.finance.payout_available, 46000); assert.equal(pr.data.finance.payout_pending, 50000);
+  assert.equal((await call("POST", "/api/seller/payout", {}, sellerA)).status, 409, "one open request at a time");
+  const adminFin = (await call("GET", "/api/admin/finance", null, globalThis.ADMIN)).data;
+  const req1 = adminFin.payouts.find(x => x.id === pr.data.payout.id); assert.equal(req1.status, "requested"); assert.equal(req1.payout_to, "8600 1234 5678 9012");
+  assert.equal((await call("PATCH", `/api/admin/payouts/${req1.id}`, { status: "paid" }, globalThis.ADMIN)).status, 200);
+  f = await fin(sellerA); assert.equal(f.payout_paid, 50000); assert.equal(f.payout_available, 46000); assert.equal(f.balance, -46000, "after the transfer Imorat Go owes the rest");
+  assert.equal((await call("POST", "/api/seller/payout", { amount: 99999999 }, sellerA)).data.error, "bad_amount");
+  const pr2 = await call("POST", "/api/seller/payout", {}, sellerA); assert.equal(pr2.data.payout.amount, 46000, "no amount = everything available");
+  assert.equal((await call("PATCH", `/api/admin/payouts/${pr2.data.payout.id}`, { status: "rejected", note: "неверная карта" }, globalThis.ADMIN)).status, 200);
+  assert.equal((await fin(sellerA)).payout_available, 46000, "a rejected request frees the money again");
+  assert.equal((await call("GET", "/api/seller/payouts", null, sellerA)).data.payouts.length, 2);
+  assert.equal((await call("GET", "/api/seller/summary", null, sellerA)).data.store.payout_to, "8600 1234 5678 9012");
   // 2) two stores in one order; A hands over, B cancels: A's share stays, the order is flagged for a partial refund
   const o2 = (await call("POST", "/api/orders", { lines: [{ id: 1, store: A, q: 1 }, { id: 2, store: B, q: 1 }], form }, buyer)).data.order;
   await pay(o2, "fin-2"); await advance(sellerA, o2.num, ["assembling", "ready", "picked"]);
   assert.equal((await fin(sellerA)).payout_due, 192000);
   const sb = await ship(sellerB, o2.num); assert.equal((await call("PATCH", `/api/seller/shipments/${sb.ship_id}`, { status: "cancelled", reason: "out_of_stock" }, sellerB)).status, 200);
   assert.equal((await call("GET", `/api/orders/${o2.num}`, null, buyer)).data.order.pay_status, "refund_due");
-  f = await fin(sellerA); assert.equal(f.payout_due, 192000, "A keeps its share after B's cancellation"); assert.equal(f.balance, -192000);
+  f = await fin(sellerA); assert.equal(f.payout_due, 192000, "A keeps its share after B's cancellation"); assert.equal(f.balance, -142000, "192 000 due minus the 50 000 already paid out");
   assert.equal((await fin(sellerB)).payout_due, 0);
   // 3) the admin marks an order paid by hand: the store gets it like after a bank callback
   const o3 = (await call("POST", "/api/orders", { lines: [{ id: 1, store: A, q: 1 }], form }, buyer)).data.order;
@@ -883,4 +914,61 @@ test("Guard rails: admin shipment moves, partial cancellation refunds points, co
   // 6) odd shapes in valid JSON are answered, not crashed on
   assert.notEqual((await call("POST", "/api/quote", { lines: [{ id: 1, store: A, q: 1 }], form, services: "x", bundles: 5 }, buyer)).status, 500);
   assert.notEqual((await call("POST", "/api/seller/import", { offers: [null], create: [null] }, seller)).status, 500);
+});
+
+test("Card only: no cash, the full address reaches the courier, the buyer watches the courier (simulated and via Yandex)", async () => {
+  const d3 = mkdtempSync(join(tmpdir(), "imorat-card-"));
+  const mk = env => { const cfg = loadConfig({ JWT_SECRET: "x", DB_PATH: join(d3, (env.YANDEX_DELIVERY_TOKEN ? "y" : "n") + ".db"), UPLOADS_DIR: join(d3, "up"), ADMIN_PHONES: "998901111111", ADMIN_MFA: "0", SMS_MODE: "dev", OTP_PER_IP_HOUR: "500", TELEGRAM_BOT_TOKEN: "TGTOKEN", TELEGRAM_API_URL: fakeBase + "/tg", TELEGRAM_POLL_TIMEOUT: "0", ...env }); const a = createApp(cfg, { info() {}, warn() {}, error: console.error }); return a; };
+  const run = async (a, fn) => { await new Promise(r => a.listen(0, "127.0.0.1", r)); const b3 = `http://127.0.0.1:${a.address().port}`; const c = async (m, p, body, tok) => { const r = await fetch(b3 + p, { method: m, headers: { "content-type": "application/json", ...(tok ? { authorization: "Bearer " + tok } : {}) }, body: body ? JSON.stringify(body) : undefined }); return { status: r.status, data: await r.json().catch(() => ({})) }; }; const lg = async ph => { const s = await c("POST", "/api/auth/otp/send", { phone: ph }); return (await c("POST", "/api/auth/otp/verify", { phone: ph, code: s.data.dev_code })).data.token; }; try { await fn(c, lg, a); } finally { a.stopJobs(); a.close(); a.closeAllConnections(); a.db.raw.close(); } };
+  const form = { name: "Карта", phone: "998901234567", mode: "yandex", district: "yunus", street: "ул. Амира Темура, 15", entrance: "3", floor: "4", flat: "27", intercom: "27К", comment: "Позвоните заранее", la: 41.311, lo: 69.279, pay: "payme" };
+  // 1) no payment keys yet: ordering is closed, not silently switched to cash
+  await run(mk({}), async (c, lg) => {
+    const t = await lg("998901234567");
+    assert.equal((await c("GET", "/api/config")).data.pay_at_store, false);
+    const r1 = await c("POST", "/api/orders", { lines: [{ id: 1, store: "usta", q: 1 }], form: { ...form, pay: "store", mode: "pickup" } }, t);
+    assert.equal(r1.status, 503); assert.equal(r1.data.error, "payments_off");
+    assert.equal((await c("POST", "/api/orders", { lines: [{ id: 1, store: "usta", q: 1 }], form }, t)).data.error, "payments_off");
+  });
+  // 2) with Payme keys and no Yandex token: card is the only way, the address is stored whole, the courier is simulated
+  await run(mk({ PAYME_MERCHANT_ID: "5e730e8e0b852a417aa49ceb", PAYME_KEY: "PK" }), async (c, lg, a) => {
+    const t = await lg("998901234567"), seller = await lg("998901234568");
+    assert.equal((await c("POST", "/api/orders", { lines: [{ id: 1, store: "usta", q: 1 }], form: { ...form, mode: "pickup", pay: "store" } }, t)).data.error, "card_required", "no cash even for pickup");
+    const o = await c("POST", "/api/orders", { lines: [{ id: 1, store: "usta", q: 1 }], form }, t);
+    assert.equal(o.status, 200, JSON.stringify(o.data)); const d = o.data.order.d;
+    assert.equal(d.entrance, "3"); assert.equal(d.flat, "27"); assert.equal(d.floor, "4"); assert.equal(d.intercom, "27К"); assert.equal(d.la, 41.311);
+    const rpc = (method, params) => fetch(`http://127.0.0.1:${a.address().port}/api/pay/payme`, { method: "POST", headers: { "content-type": "application/json", authorization: "Basic " + Buffer.from("Paycom:PK").toString("base64") }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }) }).then(r => r.json());
+    await rpc("CreateTransaction", { id: "c1", time: Date.now(), amount: o.data.order.total * 100, account: { order: o.data.order.num } }); assert.equal((await rpc("PerformTransaction", { id: "c1" })).result.state, 2);
+    // the demo store "usta" belongs to nobody: move the shipment as admin
+    const admin = await lg("998901111111"); const sh = o.data.order.ships[0].id;
+    for (const st of ["assembling", "searching"]) assert.equal((await c("PATCH", `/api/admin/shipments/${sh}`, { status: st }, admin)).status, 200, st);
+    let cr = (await c("GET", `/api/orders/${o.data.order.num}/courier?ship=${sh}`, null, t)).data.courier;
+    assert.equal(cr.status, "searching"); assert.equal(cr.pos, null); assert.ok(cr.simulated); assert.equal(cr.to.la, 41.311);
+    assert.equal((await c("PATCH", `/api/admin/shipments/${sh}`, { status: "to_store" }, admin)).status, 200);
+    cr = (await c("GET", `/api/orders/${o.data.order.num}/courier?ship=${sh}`, null, t)).data.courier;
+    assert.ok(cr.pos && cr.pos.la > 41 && cr.eta_min >= 1, "a simulated courier is on the way to the store");
+    assert.equal((await c("GET", `/api/orders/${o.data.order.num}/courier`, null, seller)).status, 404, "only the buyer sees the courier");
+  });
+  // 3) with a Yandex token: the claim is created with porch/floor/flat/door code, statuses follow Yandex, position is live
+  await run(mk({ PAYME_MERCHANT_ID: "5e730e8e0b852a417aa49ceb", PAYME_KEY: "PK", YANDEX_DELIVERY_TOKEN: "y", YANDEX_DELIVERY_URL: fakeBase + "/ya" }), async (c, lg, a) => {
+    const t = await lg("998901234567"), admin = await lg("998901111111");
+    const o = await c("POST", "/api/orders", { lines: [{ id: 1, store: "usta", q: 1 }], form }, t); assert.equal(o.status, 200, JSON.stringify(o.data));
+    const rpc = (method, params) => fetch(`http://127.0.0.1:${a.address().port}/api/pay/payme`, { method: "POST", headers: { "content-type": "application/json", authorization: "Basic " + Buffer.from("Paycom:PK").toString("base64") }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }) }).then(r => r.json());
+    await rpc("CreateTransaction", { id: "c2", time: Date.now(), amount: o.data.order.total * 100, account: { order: o.data.order.num } }); await rpc("PerformTransaction", { id: "c2" });
+    const sh = o.data.order.ships[0].id, n0 = yaClaims.length;
+    for (const st of ["assembling", "searching"]) await c("PATCH", `/api/admin/shipments/${sh}`, { status: st }, admin);
+    await until(() => yaClaims.length > n0);
+    const claim = yaClaims[yaClaims.length - 1].body, dest = claim.route_points.find(p => p.type === "destination");
+    assert.equal(dest.address.porch, "3"); assert.equal(dest.address.sfloor, "4"); assert.equal(dest.address.sflat, "27"); assert.equal(dest.address.door_code, "27К");
+    assert.deepEqual(dest.address.coordinates, [69.279, 41.311]); assert.equal(dest.contact.phone, "+998901234567"); assert.equal(dest.external_order_id, o.data.order.num);
+    assert.ok(["express", "cargo"].includes(claim.client_requirements.taxi_class)); // a 50 kg bag of cement goes by cargo van
+    await until(async () => (await c("GET", `/api/orders/${o.data.order.num}`, null, t)).data.order.ships[0].tracking_url);
+    // each sweep asks Yandex and moves the shipment: performer_found → to_store, pickuped → on_way, delivered_finish → delivered
+    a.sweep(); await until(async () => (await c("GET", `/api/orders/${o.data.order.num}`, null, t)).data.order.ships[0].status === "to_store");
+    const cr = (await c("GET", `/api/orders/${o.data.order.num}/courier?ship=${sh}`, null, t)).data.courier;
+    assert.ok(cr.live); assert.equal(cr.pos.la, 41.3); assert.equal(cr.tracking_url, "https://taxi.yandex.ru/route/abc"); assert.match(cr.courier, /Шерзод/);
+    a.sweep(); await until(async () => (await c("GET", `/api/orders/${o.data.order.num}`, null, t)).data.order.ships[0].status === "on_way");
+    a.sweep(); await until(async () => (await c("GET", `/api/orders/${o.data.order.num}`, null, t)).data.order.ships[0].status === "delivered");
+    assert.equal((await c("GET", `/api/orders/${o.data.order.num}`, null, t)).data.order.status, "done");
+  });
+  rmSync(d3, { recursive: true, force: true });
 });

@@ -520,6 +520,8 @@ legend { font-family: var(--f-display); font-size: 15px; font-weight: 600; margi
 .f input[aria-invalid="true"] { border-color: var(--signal); }
 .err { color: var(--signal); font-size: 12px; }
 .two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.three { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+#orderForm .pickmap { aspect-ratio: 4 / 3; margin-top: 6px; }
 .opts { display: grid; gap: 8px; }
 .opt { display: grid; grid-template-columns: 20px 1fr auto; gap: 10px; align-items: start; border: 1.5px solid var(--line); border-radius: 12px; padding: 12px; cursor: pointer; }
 .opt:has(input:checked) { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 6%, transparent); }
@@ -911,6 +913,23 @@ html.ds-dragging, html.ds-dragging * { cursor: grabbing !important; user-select:
 .smap-t img { width: 256px; height: 256px; display: block; }
 .smap .pin { position: absolute; left: 50%; top: 50%; width: 36px; height: 36px; translate: -50% -100%; color: var(--signal); filter: drop-shadow(0 2px 3px rgba(0,0,0,.3)); }
 .smap .attr { position: absolute; right: 6px; bottom: 6px; font-size: 11px; background: color-mix(in srgb, var(--surface) 85%, transparent); padding: 2px 6px; border-radius: 6px; color: var(--muted); }
+/* live courier map in the order: real map tiles, store and home pins, the courier moves every refresh */
+.livemap { position: relative; aspect-ratio: 4 / 3; max-height: 320px; border-radius: 14px; overflow: hidden; border: 1px solid var(--line); background: var(--raised); }
+.livemap .lm-t { position: absolute; display: grid; grid-template-columns: repeat(3, 256px); width: 768px; height: 768px; }
+.livemap .lm-t img { width: 256px; height: 256px; display: block; }
+.livemap .lm-m { position: absolute; width: 0; height: 0; }
+.livemap .lm-m.store::after { content: ""; position: absolute; left: -9px; top: -9px; width: 18px; height: 18px; border-radius: 5px; background: var(--accent); border: 2px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,.3); }
+.livemap .lm-m.home .pin { position: absolute; left: 0; top: 0; width: 34px; height: 34px; transform: translate(-50%, -100%); color: var(--signal); filter: drop-shadow(0 2px 3px rgba(0,0,0,.3)); }
+.livemap .lm-m.car { transition: left 1.2s linear, top 1.2s linear; }
+.livemap .lm-m.car span { position: absolute; left: -17px; top: -17px; width: 34px; height: 34px; border-radius: 50%; background: var(--ink); color: var(--bg); display: grid; place-items: center; border: 2px solid #fff; box-shadow: 0 3px 10px rgba(0,0,0,.35); }
+.livemap .lm-m.car span::before { content: ""; position: absolute; inset: -6px; border-radius: 50%; border: 2px solid color-mix(in srgb, var(--accent) 60%, transparent); animation: lmpulse 1.6s ease-out infinite; }
+@keyframes lmpulse { from { transform: scale(.7); opacity: .9; } to { transform: scale(1.5); opacity: 0; } }
+.livemap .lm-line { position: absolute; left: 0; top: 0; width: 768px; height: 768px; pointer-events: none; }
+.livemap .attr { position: absolute; right: 6px; bottom: 6px; font-size: 11px; background: color-mix(in srgb, var(--surface) 85%, transparent); padding: 2px 6px; border-radius: 6px; color: var(--muted); }
+.lm-bar { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; font-size: 13px; margin-top: 8px; }
+.lm-bar b { font-size: 15px; }
+.payout-box { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); display: grid; gap: 8px; }
+@media (prefers-reduced-motion: reduce) { .livemap .lm-m.car span::before { animation: none; } }
 .sp-qa { display: grid; gap: 10px; margin-top: 12px; }
 .sp-ask { display: grid; grid-template-columns: 1fr minmax(0, 220px) auto; gap: 8px; }
 .sp-ask input { font: inherit; font-size: 14px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); min-width: 0; }
@@ -1384,6 +1403,12 @@ async function api(method, path, body, opts = {}) {
 function apiErr(e) {
   const m = {
     offline: L("Нет связи с сервером. Проверьте интернет и попробуйте ещё раз.", "Server bilan aloqa yo‘q. Internetni tekshirib, qayta urinib ko‘ring."),
+    payments_off: L("Онлайн-оплата ещё не подключена — заказы откроются через несколько дней", "Onlayn to‘lov hali ulanmagan — buyurtmalar bir necha kundan keyin ochiladi", "Online payment is not connected yet — ordering opens in a few days"),
+    card_required: L("Заказ оплачивается картой на сайте", "Buyurtma saytda karta bilan to‘lanadi", "Orders are paid by card on the site"),
+    payment_unavailable: L("Этот способ оплаты сейчас недоступен — выберите другой", "Bu to‘lov usuli hozir mavjud emas — boshqasini tanlang", "This payment method is unavailable — choose another"),
+    payout_pending: L("Предыдущий запрос на выплату ещё в обработке", "Oldingi to‘lov so‘rovi hali qayta ishlanmoqda", "Your previous payout request is still being processed"),
+    bad_amount: L("Сумма больше доступной", "Summa mavjud summadan katta", "The amount exceeds what is available"),
+    payout_to: L("Укажите номер карты или счёта для перевода", "O‘tkazma uchun karta yoki hisob raqamini kiriting", "Enter a card number or account for the transfer"),
     bad_phone: L("Проверьте номер: нужен мобильный номер Узбекистана", "Raqamni tekshiring: O‘zbekiston mobil raqami kerak"),
     otp_wrong: L(`Код не подходит${e.data?.left != null ? `, осталось попыток: ${e.data.left}` : ""}`, `Kod mos kelmadi${e.data?.left != null ? `, qolgan urinishlar: ${e.data.left}` : ""}`, `The code doesn't match${e.data?.left != null ? `, attempts left: ${e.data.left}` : ""}`),
     otp_expired: L("Код устарел — отправьте новый", "Kod eskirdi — yangisini yuboring"),
@@ -2625,7 +2650,8 @@ function dCart() {
 }
 function readForm() {
   const el = $("#orderForm"); if (!el) return form;
-  const d = Object.fromEntries(new FormData(el).entries()); d.lift = el.lift?.checked || false; d.usePts = el.usePts?.checked || false; return d;
+  const d = Object.fromEntries(new FormData(el).entries()); d.lift = el.lift?.checked || false; d.usePts = el.usePts?.checked || false; d.private = el.private?.checked || false;
+  d.la = d.la === "" || d.la == null ? null : +d.la; d.lo = d.lo === "" || d.lo == null ? null : +d.lo; return d;
 }
 function quote(d) {
   const gs = groups();
@@ -2647,17 +2673,20 @@ function quote(d) {
   return { ships, goods, del, svc, disc, pd, pts, total: goods + del + svc - disc - pd - pts, cash: vip ? Math.round(goods * 0.03) : 0 };
 }
 /* Payment rules: delivery → card on the site only (the courier takes no money); pickup → card or cash at the store */
+/* Every order is paid by card on the site — goods and delivery in one amount; neither the courier nor the store takes money.
+   ALLOW_PAY_AT_STORE on the server (apiCfg.pay_at_store) re-enables "pay the store on pickup" for special cases. */
 function payOptions(d) {
   const cardNames = { click: L("Картой · Click", "Karta · Click", "Card · Click"), payme: L("Картой · Payme", "Karta · Payme", "Card · Payme"), uzum: L("Картой · Uzum", "Karta · Uzum", "Card · Uzum") };
   const cards = (API ? (apiCfg?.payments || []) : ["click", "payme", "uzum"]).map(x => [x, cardNames[x] || x]);
-  const cash = API ? ["store", L("Наличными в магазине", "Do‘konda naqd", "Cash at the store")] : ["cash", L("Наличными в магазине", "Do‘konda naqd", "Cash at the store")];
-  if (d.mode === "pickup") return [...cards, cash];
-  return cards.length ? cards : [cash]; // no card provider connected yet: the store takes the money on delivery
+  if (API && apiCfg?.pay_at_store && d.mode === "pickup") cards.push(["store", L("Наличными в магазине", "Do‘konda naqd", "Cash at the store")]);
+  return cards;
 }
+const paymentsOff = () => API && !payOptions({ mode: "yandex" }).length; // server connected, no card provider yet
 function dCheckout() {
   $("#dTitle").textContent = L("Оформление", "Rasmiylashtirish");
   const d = Object.assign({ name: user?.name || "", phone: user?.phone || "+998 ", district, street: "", flat: "", floor: "1", mode: "yandex", when: "asap", hour: "09", pay: "", lift: false, comment: "" }, form);
-  { const ok = payOptions(d).map(x => x[0]); if (!ok.includes(d.pay)) d.pay = ok[0]; }
+  { const ok = payOptions(d).map(x => x[0]); if (!ok.includes(d.pay)) d.pay = ok[0] || ""; }
+  if (d.la != null && d.lo != null && !inUz(+d.la, +d.lo)) { d.la = null; d.lo = null; }
   const hours = []; for (let h = 8; h <= 20; h++) hours.push(String(h).padStart(2, "0"));
   $("#dBody").innerHTML = `<form id="orderForm" novalidate style="display:grid;gap:22px">
     <fieldset><legend>${L("Получатель", "Qabul qiluvchi")}</legend>
@@ -2671,7 +2700,12 @@ function dCheckout() {
     <fieldset id="addrSet" ${d.mode === "pickup" ? "hidden" : ""}><legend>${L("Адрес и время", "Manzil va vaqt")}</legend>
       <div class="f"><label for="fDistrict">${L("Район Ташкента", "Toshkent tumani")}</label><select id="fDistrict" name="district">${DISTRICTS.map(x => `<option value="${x.id}" ${x.id === d.district ? "selected" : ""}>${L(x.ru, x.uz)}</option>`).join("")}</select></div>
       <div class="f"><label for="fStreet">${L("Улица, дом", "Ko‘cha, uy")}</label><input id="fStreet" name="street" value="${esc(d.street)}" placeholder="${L("ул. Шота Руставели, 41", "Shota Rustaveli ko‘ch., 41")}"><span class="err" id="streetErr" hidden>${L("Укажите улицу и дом, чтобы курьер нашёл адрес", "Kuryer topishi uchun ko‘cha va uyni kiriting")}</span></div>
-      <div class="two"><div class="f"><label for="fFlat">${L("Квартира / офис", "Xonadon / ofis")}</label><input id="fFlat" name="flat" value="${esc(d.flat)}"></div><div class="f"><label for="fFloor">${L("Этаж", "Qavat")}</label><input id="fFloor" name="floor" value="${esc(d.floor)}" inputmode="numeric"></div></div>
+      <label class="check"><input type="checkbox" id="fPrivate" name="private" ${d.private ? "checked" : ""}><span>${L("Частный дом — без подъезда и этажа", "Xususiy uy — kirish va qavat yo‘q", "Private house — no entrance or floor")}</span></label>
+      <div class="three" id="aptRow" ${d.private ? "hidden" : ""}><div class="f"><label for="fEntrance">${L("Подъезд", "Kirish (podyezd)", "Entrance")}</label><input id="fEntrance" name="entrance" value="${esc(d.entrance || "")}" inputmode="numeric" autocomplete="off"></div><div class="f"><label for="fFloor">${L("Этаж", "Qavat")}</label><input id="fFloor" name="floor" value="${esc(d.floor)}" inputmode="numeric"></div><div class="f"><label for="fFlat">${L("Квартира / офис", "Xonadon / ofis")}</label><input id="fFlat" name="flat" value="${esc(d.flat)}" autocomplete="off"></div></div>
+      <div class="two" id="aptRow2" ${d.private ? "hidden" : ""}><div class="f"><label for="fIntercom">${L("Домофон", "Domofon", "Intercom code")}</label><input id="fIntercom" name="intercom" value="${esc(d.intercom || "")}" autocomplete="off" placeholder="${L("код или «не работает»", "kod yoki «ishlamaydi»", "code or “broken”")}"></div><div class="f"><span class="err" id="flatErr" hidden>${L("Укажите квартиру и этаж — курьер поднимется к двери", "Xonadon va qavatni kiriting — kuryer eshikkacha olib keladi", "Enter the flat and floor so the courier can come to your door")}</span></div></div>
+      <div class="f"><span style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><label>${L("Точка на карте", "Xaritadagi nuqta", "Point on the map")} <small class="mu">${L("— курьер приедет точно к дому", "— kuryer aynan uyga keladi", "— the courier comes right to the house")}</small></label><button type="button" class="btn btn-line" data-act="my-loc" style="padding:6px 10px">${ui("pin", 14)} ${L("Где я", "Men qayerdaman", "Locate me")}</button></span>
+        ${pickMapHTML("addr")}<p class="loc-st ${d.la != null ? "ok" : ""}" id="addrLocSt" aria-live="polite">${d.la != null ? `${ui("check", 14)} ${L("Точка выбрана", "Nuqta tanlandi", "Point set")}` : L("Нажмите на карту там, где вас ждать курьеру, или нажмите «Где я».", "Kuryer kutishi kerak bo‘lgan joyni xaritada bosing yoki «Men qayerdaman» ni bosing.", "Tap the map where the courier should come, or tap “Locate me”.")}</p>
+        <input type="hidden" name="la" id="fLa" value="${d.la ?? ""}"><input type="hidden" name="lo" id="fLo" value="${d.lo ?? ""}"></div>
       <label class="check"><input type="checkbox" id="fLift" name="lift" ${d.lift ? "checked" : ""}><span>${L(`Подъём на этаж грузчиком (грузовой тариф, ${fmt(LOADER)} за этаж)`, `Yuk tashuvchi qavatga ko‘taradi (yuk tarifi, har qavat ${fmt(LOADER)})`, `Carry-up by a loader (cargo rate, ${fmt(LOADER)} per floor)`)}</span></label>
       <div class="opts">
         <label class="opt"><input type="radio" name="when" value="asap" ${d.when === "asap" ? "checked" : ""}><span><b>${L("Как можно скорее", "Imkon qadar tez")}</b><small>${L("Ищем исполнителя сразу после оплаты", "To‘lovdan so‘ng darhol ijrochi qidiramiz")}</small></span><span></span></label>
@@ -2681,8 +2715,9 @@ function dCheckout() {
       </div>
     </fieldset>
     <fieldset><legend>${L("Оплата", "To‘lov")}</legend>
+      ${paymentsOff() ? `<div class="note warnn" id="payOff">${ui("wallet", 14)} ${L("Онлайн-оплата подключается. Оформить заказ можно будет через несколько дней — следите за новостями в Telegram @imoratgo.", "Onlayn to‘lov ulanmoqda. Buyurtma berish bir necha kundan keyin ochiladi — Telegram @imoratgo kanalini kuzating.", "Online payment is being connected. Ordering opens in a few days — follow @imoratgo on Telegram.")}</div>` : ""}
       <div class="pay" id="payOpts">${payOptions(d).map(([val, n]) => `<label><input type="radio" name="pay" value="${val}" ${d.pay === val ? "checked" : ""}>${n}</label>`).join("")}</div>
-      <p class="mu" id="payRule" style="font-size:13px;margin:0">${d.mode === "pickup" ? L("При самовывозе можно оплатить картой на сайте или наличными в магазине.", "Olib ketishda saytda karta bilan yoki do‘konda naqd to‘lash mumkin.", "For pickup you can pay by card on the site or in cash at the store.") : L("Доставка оплачивается картой на сайте: одна сумма за товар и доставку, курьеру платить не нужно.", "Yetkazish saytda karta bilan to‘lanadi: mahsulot va yetkazish uchun bitta summa, kuryerga to‘lash shart emas.", "Delivery orders are paid by card on the site: one amount for goods and delivery, nothing to pay the courier.")}</p>
+      <p class="mu" id="payRule" style="font-size:13px;margin:0">${L("Оплата картой на сайте одной суммой — товар и доставка. Курьеру и магазину ничего платить не нужно; при отмене деньги возвращаются на карту.", "Saytda karta bilan bitta summa to‘lanadi — mahsulot va yetkazish. Kuryer va do‘konga hech narsa to‘lash shart emas; bekor qilinsa pul kartaga qaytadi.", "Pay by card on the site in one amount — goods and delivery. Nothing to pay the courier or the store; if cancelled, the money returns to your card.")}</p>
       <div class="note" id="cardPayNote" hidden>${ui("wallet", 14)} ${L("Списываем всю сумму сразу — товары и доставку. Курьеру и магазину ничего доплачивать не нужно. Магазин получит заказ, как только пройдёт оплата; не оплаченный за 30 минут заказ отменится сам.", "Butun summani — mahsulot va yetkazishni — birdan yechamiz. Kuryerga va do‘konga qo‘shimcha to‘lash shart emas. To‘lov o‘tishi bilan do‘kon buyurtmani oladi; 30 daqiqada to‘lanmagan buyurtma o‘zi bekor bo‘ladi.", "The whole amount — goods and delivery — is charged at once. Nothing to pay the courier or the store. The store receives the order as soon as the payment goes through; an order unpaid for 30 minutes cancels itself.")}</div>
       <div class="note" id="storePayNote" hidden>${ui("store", 14)} ${L("Оплата наличными в магазине при получении. Магазин подтвердит заказ и соберёт его к вашему приходу; если не подтвердит вовремя — заказ отменится автоматически.", "Olganda do‘konda naqd to‘lov. Do‘kon buyurtmani tasdiqlab, kelishingizga yig‘ib qo‘yadi; o‘z vaqtida tasdiqlamasa — buyurtma avtomatik bekor bo‘ladi.", "Cash at the store on pickup. The store confirms the order and packs it for your arrival; if it does not confirm in time, the order cancels automatically.")}</div>
       ${bonusBalance() > 0 ? `<label class="check"><input type="checkbox" id="fPts" name="usePts" ${d.usePts ? "checked" : ""}><span>${ui("gift", 15)} ${L(`Оплатить бонусами — у вас ${fmtN(bonusBalance())}`, `Bonus bilan to‘lash — sizda ${fmtN(bonusBalance())}`, `Pay with points — you have ${fmtN(bonusBalance())}`)} <small class="mu">${L(`(до ${Math.round(bonusCfg().maxShare * 100)}% стоимости товаров)`, `(mahsulotlar narxining ${Math.round(bonusCfg().maxShare * 100)}% gacha)`, `(up to ${Math.round(bonusCfg().maxShare * 100)}% of the product total)`)}</small></span></label>` : ""}
@@ -2699,11 +2734,13 @@ function dCheckout() {
     if (e.target.name === "mode") {
       $("#addrSet").hidden = e.target.value === "pickup";
       // payment options follow the delivery mode: card only for delivery, card or cash for pickup
-      const d0 = readForm(), opts = payOptions(d0), cur = opts.some(x => x[0] === d0.pay) ? d0.pay : opts[0][0];
+      const d0 = readForm(), opts = payOptions(d0), cur = opts.some(x => x[0] === d0.pay) ? d0.pay : opts[0]?.[0];
       $("#payOpts").innerHTML = opts.map(([val, n]) => `<label><input type="radio" name="pay" value="${val}" ${cur === val ? "checked" : ""}>${n}</label>`).join("");
-      const pr = $("#payRule"); if (pr) pr.textContent = d0.mode === "pickup" ? L("При самовывозе можно оплатить картой на сайте или наличными в магазине.", "Olib ketishda saytda karta bilan yoki do‘konda naqd to‘lash mumkin.", "For pickup you can pay by card on the site or in cash at the store.") : L("Доставка оплачивается картой на сайте: одна сумма за товар и доставку, курьеру платить не нужно.", "Yetkazish saytda karta bilan to‘lanadi: mahsulot va yetkazish uchun bitta summa, kuryerga to‘lash shart emas.", "Delivery orders are paid by card on the site: one amount for goods and delivery, nothing to pay the courier.");
+
     }
+    if (e.target.id === "fPrivate") { $("#aptRow").hidden = e.target.checked; $("#aptRow2").hidden = e.target.checked; }
     if (e.target.id === "fHour") el.querySelector('[name=when][value=vip]').checked = true; updateQuote(); });
+  initPickMap("addr", form.la != null && form.lo != null ? { la: +form.la, lo: +form.lo } : null, (la, lo) => { $("#fLa").value = la.toFixed(6); $("#fLo").value = lo.toFixed(6); const st = $("#addrLocSt"); if (st) { st.className = "loc-st ok"; st.innerHTML = `${ui("check", 14)} ${L("Точка выбрана", "Nuqta tanlandi", "Point set")} · ${L(DIST[nearestDistrict(la, lo)]?.ru || "", DIST[nearestDistrict(la, lo)]?.uz || "")}`; } const ds = $("#fDistrict"); if (ds) ds.value = nearestDistrict(la, lo); updateQuote(); });
   el.addEventListener("submit", submitOrder);
   updateQuote();
 }
@@ -2716,14 +2753,16 @@ function updateQuote() {
     <small>${s.t ? `${tName(s.t)} · ${s.t.veh} · ${fmtKg(s.g.kg)} · ~${s.dist.toFixed(1).replace(".", DEC)} ${L("км", "km")} · ${d.when === "slot" ? L("завтра 10–14", "ertaga 10–14") : d.when === "vip" ? `${L("завтра", "ertaga")} ${d.hour}:00–${String(+d.hour + 1).padStart(2, "0")}:00` : etaStr(s.t)}` : `${esc(L(s.g.store.addr, s.g.store.addrUz))} · ${esc(s.g.store.hours || "")}`}</small></div>`).join("") +
     (d.mode === "yandex" ? `<div class="note">${L("Цена доставки — оценка прототипа. В рабочей версии цену и время вернёт API Яндекс Доставки по точным координатам.", "Yetkazish narxi taxminiy. Ishchi versiyada narx va vaqtni Yandex API aniq koordinatalar bo‘yicha qaytaradi.")}</div>` : "");
   const spn = $("#storePayNote"); if (spn) spn.hidden = d.pay !== "store";
+  const fe = $("#flatErr"); if (fe && !fe.hidden && (d.private || (String(d.flat || "").trim() && String(d.floor || "").trim()))) fe.hidden = true;
   const cpn = $("#cardPayNote"); if (cpn) cpn.hidden = !(API && (apiCfg?.payments || []).includes(d.pay));
   $("#totals").innerHTML = totalsHTML(qt.goods, qt.svc, qt.disc, `<div class="sumrow"><span class="mu">${L("Доставка", "Yetkazish")}</span><span class="num">${fmt(qt.del)}</span></div>`) +
     (qt.pd ? `<div class="sumrow disc"><span>${L("Промокод", "Promokod")} ${esc(promo)}</span><span class="num">−${fmt(qt.pd)}</span></div>` : "") +
     (qt.pts ? `<div class="sumrow disc"><span>${L("Бонусами", "Bonus bilan")}</span><span class="num">−${fmt(qt.pts)}</span></div>` : "") +
-    (API && !user ? "" : `<div class="sumrow cash"><span>${L("Начислим бонусов после получения", "Olgandan keyin bonus beriladi")}</span><span class="num">+${fmtN(Math.floor(qt.goods * bonusRate()))}</span></div>`) +
+    (API && !user || ["cash", "store"].includes(d.pay) ? "" : `<div class="sumrow cash"><span>${L("Начислим бонусов после получения", "Olgandan keyin bonus beriladi")}</span><span class="num">+${fmtN(Math.floor(qt.goods * bonusRate()))}</span></div>`) +
     (qt.cash ? `<div class="sumrow cash"><span>${L("Кешбэк VIP 3%", "VIP keshbek 3%")}</span><span class="num">+${fmt(qt.cash)}</span></div>` : "") +
     `<div class="sumrow total"><span>${L("Итого", "Jami")}</span><span class="num">${fmt(qt.total)}</span></div>`;
-  $("#payBtn").textContent = d.pay === "cash" || d.pay === "store" ? L("Подтвердить заказ", "Buyurtmani tasdiqlash") : `${L("Оплатить картой", "Karta bilan to‘lash", "Pay by card")} ${fmt(qt.total)}`;
+  const pb = $("#payBtn"); pb.textContent = d.pay === "cash" || d.pay === "store" ? L("Подтвердить заказ", "Buyurtmani tasdiqlash") : `${L("Оплатить картой", "Karta bilan to‘lash", "Pay by card")} ${fmt(qt.total)}`;
+  pb.disabled = paymentsOff(); if (pb.disabled) pb.textContent = L("Оплата скоро", "To‘lov tez orada", "Payment coming soon");
 }
 const NAMES = ["Шерзод", "Бобур", "Жасур", "Отабек", "Дилшод", "Сардор"];
 const LET = "ABCDEFHKMOPTXYZ";
@@ -2732,8 +2771,12 @@ function submitOrder(e) {
   const d = readForm(), digits = d.phone.replace(/\D/g, ""), okP = /^998\d{9}$/.test(digits), okS = d.mode === "pickup" || d.street.trim().length > 3;
   $("#phoneErr").hidden = okP; $("#fPhone").setAttribute("aria-invalid", !okP);
   $("#streetErr").hidden = okS; $("#fStreet").setAttribute("aria-invalid", !okS);
+  const okA = d.mode === "pickup" || d.private || (String(d.flat || "").trim() && String(d.floor || "").trim());
+  const fe = $("#flatErr"); if (fe) fe.hidden = okA;
   if (!okP) return $("#fPhone").focus();
   if (!okS) return $("#fStreet").focus();
+  if (!okA) return (String(d.flat || "").trim() ? $("#fFloor") : $("#fFlat")).focus();
+  if (paymentsOff()) return toast(L("Онлайн-оплата ещё не подключена", "Onlayn to‘lov hali ulanmagan", "Online payment is not connected yet"));
   if (API) return submitOrderApi(d, quote(d));
   const qt = quote(d), now = Date.now();
   const o = {
@@ -2770,13 +2813,14 @@ function dTrack() {
         <ol class="steps">${steps.map((n, k) => `<li class="${k < cur || (k === cur && k === steps.length - 1) ? "done" : k === cur ? "now" : ""}"><span class="d"></span><span>${n}</span><time class="mono">${k <= cur ? hm(o.api ? ((s.history || []).find(h => h.s === (s.tariff ? ["new", "assembling", "searching", "to_store", "on_way", "delivered"] : ["new", "assembling", "ready"])[k])?.t || s.status_at) : o.t + i * 1200 + k * STEP_MS) : ""}</time></li>`).join("")}</ol>
         ${o.api ? shipExtra(o, s) : ""}
         ${problemHTML(o, s, i)}
-        ${t && cur >= 3 && cur < steps.length - 1 && s.status !== "cancelled" ? routeMap(st.name, st.d, o.d.district || district, etaStr(t)) : ""}
+        ${t && cur >= 2 && cur < steps.length - 1 && s.status !== "cancelled" ? liveMapHTML(o, s, st, t) : ""}
         ${t && cur >= 3 && s.plate ? `<div class="courier"><span>${lang === "ru" ? s.courier : ({ "Шерзод": "Sherzod", "Бобур": "Bobur", "Жасур": "Jasur", "Отабек": "Otabek", "Дилшод": "Dilshod", "Сардор": "Sardor" }[s.courier] || s.courier)} · ${t.veh}<small>${L("Телефон курьера придёт в SMS", "Kuryer telefoni SMSda keladi")}</small></span><span class="plate"><i>${s.plate[0]}</i>${s.plate[1]} ${s.plate[2]} ${s.plate[3]}</span></div>` : ""}
         ${!t ? `<div class="courier"><span>${esc(L(st.addr, st.addrUz))}<small>${esc(st.hours || "")} · ${L("назовите номер", "raqamni ayting")} ${o.num}</small></span></div>` : ""}</div>`;
     }).join("")}
     <div style="display:grid;gap:6px">${totalsHTML(o.goods, o.svc || 0, o.bdisc != null ? o.bdisc : (o.disc || 0), `<div class="sumrow"><span class="mu">${L("Доставка", "Yetkazish")}</span><span class="num">${fmt(o.del)}</span></div>` + (o.bdisc != null && o.pd ? `<div class="sumrow disc"><span>${L("Промокод", "Promokod")} ${esc(o.promo || o.d?.promo || "")}</span><span class="num">−${fmt(o.pd)}</span></div>` : "") + (o.bdisc != null && o.pts ? `<div class="sumrow disc"><span>${L("Бонусами", "Bonus bilan")}</span><span class="num">−${fmt(o.pts)}</span></div>` : ""))}${o.cash ? `<div class="sumrow cash"><span>${L("Кешбэк", "Keshbek")}</span><span>+${fmt(o.cash)}</span></div>` : ""}<div class="sumrow total"><span>${o.d.pay === "store" || o.d.pay === "cash" ? L("К оплате в магазине", "Do‘konda to‘lanadi", "To pay at the store") : o.api && o.pay_status !== "paid" ? L("К оплате картой", "Karta bilan to‘lanadi", "To pay by card") : L("Оплачено", "To‘langan")}</span><span class="num">${fmt(o.total)}</span></div></div>`;
   if (o.api && o.status === "active" && o.ships.every(s => ["unpaid", "new", "assembling", "cancelled"].includes(s.status))) $("#dBody").insertAdjacentHTML("beforeend", `<button class="lnk" type="button" data-act="order-cancel" style="justify-self:start;color:var(--muted)">${L("Отменить заказ", "Buyurtmani bekor qilish")}</button>`);
   $("#dFoot").innerHTML = `<div style="display:grid;grid-template-columns:auto 1fr;gap:8px"><button class="btn btn-line" type="button" data-repeat="${o.num}">${ui("repeat", 18)} ${L("Повторить", "Takrorlash")}</button><button class="btn btn-dark" type="button" data-act="close-drawer">${L("Продолжить покупки", "Xaridni davom ettirish")}</button></div>`;
+  if (document.querySelector(".livemap[data-ship]")) setTimeout(liveTick, 30);
 }
 function orderStatus(o) {
   if (o.api && o.status === "cancelled") return [L("Отменён", "Bekor qilindi"), true];
@@ -3013,7 +3057,7 @@ const nearestDistrict = (la, lo) => DISTRICTS.reduce((b, d) => ((d.la - la) ** 2
 const inUz = (la, lo) => la > 37 && la < 46 && lo > 55 && lo < 74;
 const yaLink = (la, lo) => `https://yandex.uz/maps/?pt=${lo.toFixed(6)},${la.toFixed(6)}&z=17&l=map`;
 const PIN = `<svg class="pin" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12z" fill="currentColor" stroke="#fff" stroke-width="1.5"/><circle cx="12" cy="10" r="2.6" fill="#fff"/></svg>`;
-function pickMapHTML() {
+function pickMapHTML(key = "") {
   let tiles = "";
   for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) tiles += `<img src="https://tile.openstreetmap.org/12/${MAPZ.x0 + c}/${MAPZ.y0 + r}.png" alt="" draggable="false" decoding="async">`;
   const pts = DISTRICTS.map(d => ({ d, ...toFrac(d.la, d.lo) }));
@@ -3022,9 +3066,9 @@ function pickMapHTML() {
   const scheme = `<svg class="scheme" viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" fill="var(--raised)"/>
     <ellipse cx="${(cx * 100).toFixed(1)}" cy="${(cy * 100).toFixed(1)}" rx="${(rx * 100).toFixed(1)}" ry="${(ry * 100).toFixed(1)}" fill="color-mix(in srgb,var(--accent) 9%,transparent)" stroke="var(--line-strong)" stroke-width=".5" stroke-dasharray="1.5 1"/>
     ${pts.map(p => `<circle cx="${(p.fx * 100).toFixed(1)}" cy="${(p.fy * 100).toFixed(1)}" r="1" fill="var(--muted)"/><text x="${(p.fx * 100).toFixed(1)}" y="${(p.fy * 100 - 2).toFixed(1)}" text-anchor="middle" font-size="3.2" fill="var(--muted)">${esc(L(p.d.ru, p.d.uz).replace(/ский$|ский район$/, ""))}</text>`).join("")}</svg>`;
-  return `<div class="pickmap" id="pickMap" tabindex="0" role="application" aria-label="${L("Карта Ташкента. Нажмите на место магазина или двигайте точку стрелками.", "Toshkent xaritasi. Do‘kon joyini bosing yoki nuqtani strelkalar bilan suring.")}">
-    <div class="tiles">${tiles}</div>${scheme}<span id="mapPin" hidden>${PIN}</span><span class="attr">© OpenStreetMap</span></div>
-    <small class="loc-st">${L("Нажмите на карту там, где находится магазин. Приблизить точнее можно в Яндекс Картах по ссылке выше.", "Do‘kon joylashgan joyni xaritada bosing. Aniqroq ko‘rish uchun yuqoridagi Yandex Xaritalar havolasidan foydalaning.")}</small>`;
+  return `<div class="pickmap" id="pickMap${key}" tabindex="0" role="application" aria-label="${key ? L("Карта Ташкента. Нажмите туда, куда приехать курьеру, или двигайте точку стрелками.", "Toshkent xaritasi. Kuryer kelishi kerak bo‘lgan joyni bosing yoki nuqtani strelkalar bilan suring.", "Map of Tashkent. Tap where the courier should come, or move the point with the arrow keys.") : L("Карта Ташкента. Нажмите на место магазина или двигайте точку стрелками.", "Toshkent xaritasi. Do‘kon joyini bosing yoki nuqtani strelkalar bilan suring.")}">
+    <div class="tiles">${tiles}</div>${scheme}<span id="mapPin${key}" hidden>${PIN}</span><span class="attr">© OpenStreetMap</span></div>${key ? "" : `
+    <small class="loc-st">${L("Нажмите на карту там, где находится магазин. Приблизить точнее можно в Яндекс Картах по ссылке выше.", "Do‘kon joylashgan joyni xaritada bosing. Aniqroq ko‘rish uchun yuqoridagi Yandex Xaritalar havolasidan foydalaning.")}</small>`}`;
 }
 function locStatus() {
   const l = auth.loc;
@@ -3055,6 +3099,28 @@ function bindPickMap() {
     setLoc(p.la, p.lo, "map");
   });
   placePin();
+}
+/* A reusable map picker: key = element suffix, initial = {la, lo} or null, onPick(la, lo) on every change */
+function initPickMap(key, initial, onPick) {
+  const pm = $("#pickMap" + key), pin = $("#mapPin" + key); if (!pm) return;
+  let cur = initial;
+  const place = () => { if (!cur) return; const { fx, fy } = toFrac(cur.la, cur.lo); pin.hidden = !(fx >= 0 && fx <= 1 && fy >= 0 && fy <= 1); pin.style.cssText = `position:absolute;left:${fx * 100}%;top:${fy * 100}%`; };
+  const set = (la, lo) => { cur = { la, lo }; place(); onPick(la, lo); };
+  pm.querySelectorAll(".tiles img").forEach(im => im.addEventListener("error", () => pm.classList.add("notiles"), { once: true }));
+  pm.addEventListener("click", e => { const r = pm.getBoundingClientRect(); const p = fromFrac((e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height); set(p.la, p.lo); });
+  pm.addEventListener("keydown", e => {
+    const k = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key]; if (!k) return; e.preventDefault();
+    const c = cur ? toFrac(cur.la, cur.lo) : toFrac(DIST[district]?.la || 41.3, DIST[district]?.lo || 69.25);
+    const p = fromFrac(Math.min(1, Math.max(0, c.fx + k[0] * .006)), Math.min(1, Math.max(0, c.fy + k[1] * .006))); set(p.la, p.lo);
+  });
+  pm.closest("form, .d-body, body")?.querySelector("[data-act='my-loc']")?.addEventListener("click", () => {
+    const st = $("#addrLocSt");
+    if (!navigator.geolocation) { if (st) { st.className = "loc-st bad"; st.textContent = L("Браузер не умеет определять местоположение — укажите точку на карте.", "Brauzer joylashuvni aniqlay olmaydi — xaritada nuqtani belgilang.", "The browser cannot locate you — tap the point on the map."); } return; }
+    if (st) { st.className = "loc-st"; st.textContent = L("Определяем местоположение…", "Joylashuv aniqlanmoqda…", "Locating…"); }
+    navigator.geolocation.getCurrentPosition(pos => { const la = pos.coords.latitude, lo = pos.coords.longitude; if (!inUz(la, lo)) { if (st) { st.className = "loc-st bad"; st.textContent = L("Похоже, вы не в Узбекистане — укажите точку на карте.", "Siz O‘zbekistonda emassiz shekilli — xaritada nuqtani belgilang.", "You seem to be outside Uzbekistan — tap the point on the map."); } return; } set(la, lo); },
+      () => { if (st) { st.className = "loc-st bad"; st.textContent = L("Не удалось определить местоположение — укажите точку на карте.", "Joylashuvni aniqlab bo‘lmadi — xaritada belgilang.", "Could not locate you — tap the point on the map."); } }, { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 });
+  });
+  place();
 }
 function gpsLocate() {
   const st = $("#locSt");
@@ -3838,6 +3904,58 @@ function payExtra(o) {
   if (o.pay_status === "pending" && o.status !== "cancelled") return `<div class="note warnn" style="display:grid;gap:8px">${ui("wallet", 14)} ${L("Ожидаем оплату картой. Магазин получит заказ сразу после оплаты.", "Karta to‘lovini kutmoqdamiz. Do‘kon buyurtmani to‘lovdan keyin darhol oladi.", "Waiting for the card payment. The store receives the order right after it.")}${o.pay_deadline ? ` ${L(`Оплатить нужно до ${hhmm(o.pay_deadline)}.`, `${hhmm(o.pay_deadline)} gacha to‘lash kerak.`, `Pay before ${hhmm(o.pay_deadline)}.`)}` : ""}${o.pay_url ? `<a class="btn btn-primary" href="${esc(o.pay_url)}">${ui("wallet", 16)} ${L("Оплатить картой", "Karta bilan to‘lash", "Pay by card")} · ${fmt(o.total)}</a>` : ""}</div>`;
   return "";
 }
+/* ---- Live courier map: OpenStreetMap tiles around the store and the address; the courier marker is refreshed every 10 s
+   from /api/orders/:num/courier (Yandex position, or the server's simulation) — in demo mode it is simulated here. ---- */
+const liveCache = {}; let liveTimer = 0;
+function lmProj(z) { const n = 2 ** z; return (la, lo) => { const r = la * Math.PI / 180; return { x: (lo + 180) / 360 * n, y: (1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2 * n }; }; }
+function liveMapHTML(o, s, st, t) {
+  const from = storePt(st) || DIST[st.d] || DIST[district], home = o.d.la != null && o.d.lo != null ? { la: +o.d.la, lo: +o.d.lo } : (DIST[o.d.district] || DIST[district]);
+  if (!from || !home) return "";
+  let z = 15, P, a, b;
+  for (; z > 10; z--) { P = lmProj(z); a = P(from.la, from.lo); b = P(home.la, home.lo); if (Math.abs(a.x - b.x) < 1.25 && Math.abs(a.y - b.y) < .9) break; } // both pins inside a ~400×300 px window
+  const cx = (a.x + b.x) / 2, cy = (a.y + b.y) / 2, x0 = Math.floor(cx) - 1, y0 = Math.floor(cy) - 1;
+  let tiles = ""; for (let j = 0; j < 3; j++) for (let i = 0; i < 3; i++) tiles += `<img src="https://tile.openstreetmap.org/${z}/${x0 + i}/${y0 + j}.png" alt="" loading="lazy" decoding="async" onerror="this.style.visibility='hidden'">`;
+  const px = p => ({ l: ((p.x - x0) * 256).toFixed(1), t: ((p.y - y0) * 256).toFixed(1) });
+  const A = px(a), B = px(b), car = liveCache[s.id]?.pos ? px(P(liveCache[s.id].pos.la, liveCache[s.id].pos.lo)) : null;
+  const icon = ui(t.icon || "car", 18);
+  return `<div class="livemap" id="live${s.id}" data-ship="${s.id}" data-num="${esc(o.num)}" data-z="${z}" data-x0="${x0}" data-y0="${y0}" role="img" aria-label="${L("Карта: магазин, ваш адрес и курьер", "Xarita: do‘kon, manzilingiz va kuryer", "Map: the store, your address and the courier")}">
+    <div class="lm-t" style="left:calc(50% - ${((cx - x0) * 256).toFixed(1)}px);top:calc(50% - ${((cy - y0) * 256).toFixed(1)}px)">${tiles}
+      <svg class="lm-line" viewBox="0 0 768 768"><line x1="${A.l}" y1="${A.t}" x2="${B.l}" y2="${B.t}" stroke="var(--accent)" stroke-width="3" stroke-dasharray="6 7" stroke-linecap="round" opacity=".8"/></svg>
+      <div class="lm-m store" style="left:${A.l}px;top:${A.t}px" title="${esc(st.name)}"></div>
+      <div class="lm-m home" style="left:${B.l}px;top:${B.t}px">${PIN}</div>
+      <div class="lm-m car" id="lmcar${s.id}" style="left:${car ? car.l : A.l}px;top:${car ? car.t : A.t}px;${car ? "" : "display:none"}"><span>${icon}</span></div>
+    </div><span class="attr">© OpenStreetMap</span></div>
+    <div class="lm-bar" id="lmbar${s.id}">${liveBarHTML(s.status ? s : { ...s, status: ["new", "assembling", "searching", "to_store", "on_way", "delivered"][stepOf(o, o.ships.indexOf(s), 6)] }, liveCache[s.id], t)}</div>`;
+}
+function liveBarHTML(s, c, t) {
+  const left = c?.eta_min ? `<b>~${c.eta_min} ${L("мин", "daq", "min")}</b> ` : "";
+  const txt = s.status === "searching" ? L("Ищем свободного курьера рядом с магазином…", "Do‘kon yaqinida bo‘sh kuryer qidirilmoqda…", "Looking for a free courier near the store…")
+    : s.status === "to_store" ? L("Курьер едет в магазин за заказом", "Kuryer buyurtma uchun do‘konga ketmoqda", "The courier is driving to the store")
+    : L("Курьер забрал заказ и едет к вам", "Kuryer buyurtmani oldi va sizga kelmoqda", "The courier has the order and is on the way to you");
+  const who = c?.courier || s.courier ? `<small class="mu">${esc(c?.courier || s.courier)}${t ? " · " + esc(t.veh) : ""}</small>` : "";
+  const link = s.tracking_url ? `<a class="btn btn-line" href="${esc(s.tracking_url)}" target="_blank" rel="noopener" style="padding:7px 12px">${ui("pin", 14)} ${L("Открыть в Яндекс Go", "Yandex Go da ochish", "Open in Yandex Go")}</a>` : "";
+  return `<span>${left}${txt}${who ? "<br>" + who : ""}</span>${link}`;
+}
+function demoCourier(o, s, i, status) {
+  const st = STORE[s.store], from = storePt(st) || DIST[st?.d] || DIST[district], home = o.d.la != null && o.d.lo != null ? { la: +o.d.la, lo: +o.d.lo } : (DIST[o.d.district] || DIST[district]);
+  const stepT = o.t + i * 1200, k = ((Date.now() - stepT) % STEP_MS) / STEP_MS, lerp = (a, b, q) => ({ la: a.la + (b.la - a.la) * q, lo: a.lo + (b.lo - a.lo) * q });
+  if (status === "to_store") return { status, pos: lerp({ la: from.la + .012, lo: from.lo - .016 }, from, k), eta_min: Math.max(1, Math.round(8 * (1 - k))), courier: s.courier };
+  if (status === "on_way") return { status, pos: lerp(from, home, k), eta_min: Math.max(1, Math.round(25 * (1 - k))), courier: s.courier };
+  return { status, pos: null, eta_min: 5 };
+}
+async function liveTick() {
+  const maps = [...document.querySelectorAll(".livemap[data-ship]")]; if (!maps.length || drawerView !== "track") return;
+  for (const m of maps) {
+    const o = orders.find(x => x.num === m.dataset.num), i = o?.ships.findIndex(x => String(x.id) === m.dataset.ship), s = o?.ships[i]; if (!s) continue;
+    const status = o.api ? s.status : ["new", "assembling", "searching", "to_store", "on_way", "delivered"][stepOf(o, i, 6)]; // demo shipments have no stored status
+    let c; try { c = o.api ? (await api("GET", `/api/orders/${o.num}/courier?ship=${s.id}`)).courier : demoCourier(o, s, i, status); } catch (e) { continue; }
+    if (!c) continue; liveCache[s.id] = c;
+    const car = $("#lmcar" + s.id), bar = $("#lmbar" + s.id); if (!car) continue;
+    if (c.pos) { const P = lmProj(+m.dataset.z), p = P(c.pos.la, c.pos.lo); car.style.left = ((p.x - m.dataset.x0) * 256).toFixed(1) + "px"; car.style.top = ((p.y - m.dataset.y0) * 256).toFixed(1) + "px"; car.style.display = ""; } else car.style.display = "none";
+    if (bar) bar.innerHTML = liveBarHTML({ ...s, status: c.status || status }, c, TARIFFS.find(x => x.id === s.tariff));
+  }
+}
+setInterval(() => { if (drawerView === "track" && !document.hidden) liveTick(); }, API ? 10000 : 2500);
 function shipExtra(o, s) {
   if (s.status === "cancelled") return `<div class="note warnn">${ui("close", 14)} ${L("Отменено", "Bekor qilindi")}: ${CANCEL_TXT()[s.cancel_reason] || ""}${s.cancel_reason && s.cancel_reason !== "buyer" ? ". " + L("Платить ничего не нужно — закажите у другого магазина.", "Hech narsa to‘lash shart emas — boshqa do‘kondan buyurtma bering.") : ""}</div>`;
   if (s.status === "new" && s.accept_by && o.pay_status === "paid") return `<div class="note">${ui("clock", 14)} ${L(`Магазин подтвердит заказ до ${hhmm(s.accept_by)}. Не успеет — заказ отменится, а деньги вернутся на карту.`, `Do‘kon buyurtmani ${hhmm(s.accept_by)} gacha tasdiqlaydi. Ulgurmasa — buyurtma bekor bo‘ladi, pul kartaga qaytadi.`, `The store confirms the order by ${hhmm(s.accept_by)}. If it does not, the order is cancelled and the money returns to your card.`)}</div>`;
@@ -3942,13 +4060,24 @@ function sellerExtraHTML(d) {
   <div class="panel" style="margin-top:12px"><div class="panel-h"><h2 class="h-m">${L("Финансы", "Moliya")} · ${esc(f.month)}</h2><span style="font-size:13px;color:var(--muted)">${L("Комиссия", "Komissiya")}: ${esc(rateTxt)}</span></div>
     <div class="mini-kpis"><div><b>${fmt(f.goods)}</b><small>${L("продано за месяц", "oylik sotuv")}</small></div><div><b>${fmt(f.commission)}</b><small>${L("комиссия за месяц", "oylik komissiya")}</small></div><div><b>${fmt(f.settled)}</b><small>${L("оплачено Imorat Go", "Imorat Go’ga to‘langan")}</small></div><div><b style="color:${f.balance > 0 ? "var(--signal)" : "var(--ok)"}">${fmt(Math.abs(f.balance))}</b><small>${f.balance >= 0 ? L("к оплате Imorat Go", "Imorat Go’ga to‘lanishi kerak", "due to Imorat Go") : L("Imorat Go перечислит вам", "Imorat Go sizga o‘tkazadi", "Imorat Go pays you")}</small></div></div>
     ${f.delivery_due || f.payout_due ? `<div class="mini-kpis" style="margin-top:8px">${f.payout_due ? `<div><b>${fmt(f.payout_due)}</b><small>${L("оплачено картой — ваша доля за вычетом комиссии", "karta bilan to‘langan — komissiyasiz sizning ulushingiz", "paid by card — your share after commission")}</small></div>` : ""}${f.delivery_due ? `<div><b>${fmt(f.delivery_due)}</b><small>${L("доставка, полученная от покупателей (платит Imorat Go Яндексу)", "xaridorlardan olingan yetkazish haqi (Imorat Go Yandexga to‘laydi)", "delivery fees collected from buyers (Imorat Go pays Yandex)")}</small></div>` : ""}</div>` : ""}
-    <small style="color:var(--muted)">${(apiCfg?.payments || []).length ? L("Заказы, оплаченные картой, Imorat Go переводит магазину за вычетом комиссии раз в неделю. По заказам с оплатой при получении магазин раз в месяц перечисляет комиссию и стоимость доставки, которую получил от покупателя.", "Karta bilan to‘langan buyurtmalarni Imorat Go komissiyani ayirib haftasiga bir marta do‘konga o‘tkazadi. Olganda to‘lanadigan buyurtmalar bo‘yicha do‘kon oyiga bir marta komissiyani va xaridordan olgan yetkazish haqini o‘tkazadi.", "Orders paid by card are transferred to the store weekly, minus the commission. For orders paid on receipt the store sends the commission and the delivery fee it collected from the buyer once a month.") : L("Сейчас покупатели платят магазину напрямую. Комиссия Imorat Go считается только с выполненных заказов и оплачивается раз в месяц.", "Hozir xaridorlar do‘konga to‘g‘ridan-to‘g‘ri to‘laydi. Imorat Go komissiyasi faqat bajarilgan buyurtmalardan hisoblanadi va oyiga bir marta to‘lanadi.")}</small></div>`;
+    <div class="payout-box" id="payoutBox">
+      <div class="mini-kpis"><div><b>${fmt(f.payout_available || 0)}</b><small>${L("доступно к выводу", "yechib olish mumkin", "available to withdraw")}</small></div>${f.payout_pending ? `<div><b>${fmt(f.payout_pending)}</b><small>${L("в обработке", "qayta ishlanmoqda", "being processed")}</small></div>` : ""}${f.payout_paid ? `<div><b>${fmt(f.payout_paid)}</b><small>${L("уже выплачено", "to‘langan", "paid out so far")}</small></div>` : ""}</div>
+      <form class="settle-f" id="payoutForm" style="margin-top:8px"><label class="visually-hidden" for="payoutTo">${L("Карта или счёт", "Karta yoki hisob", "Card or account")}</label><input id="payoutTo" value="${esc(d.store?.payout_to || "")}" placeholder="${L("Номер карты или расчётный счёт", "Karta raqami yoki hisob raqami", "Card number or bank account")}" autocomplete="off" style="flex:2;min-width:200px"><label class="visually-hidden" for="payoutAmt">${L("Сумма", "Summa")}</label><input id="payoutAmt" type="number" min="1" inputmode="numeric" placeholder="${L("Вся сумма", "Butun summa", "Everything")}"><button class="btn btn-primary" type="submit" ${(f.payout_available || 0) > 0 && !f.payout_pending ? "" : "disabled"}>${L("Вывести", "Yechib olish", "Withdraw")}</button></form>
+      <small style="color:var(--muted)">${L("Деньги за заказы, оплаченные картой, доступны сразу после того, как покупатель получил заказ. Нажмите «Вывести» — переведём на карту или счёт в тот же рабочий день. Комиссия Imorat Go уже вычтена.", "Karta bilan to‘langan buyurtmalar puli xaridor buyurtmani olgan zahoti mavjud bo‘ladi. «Yechib olish»ni bosing — o‘sha ish kunida kartaga yoki hisobga o‘tkazamiz. Imorat Go komissiyasi allaqachon ayirilgan.", "Money for card-paid orders is available as soon as the buyer has received the order. Tap “Withdraw” and we transfer it to your card or account the same working day. The Imorat Go commission is already deducted.")}</small>
+    </div></div>`;
 }
 document.addEventListener("click", e => {
   const b = e.target.closest("[data-look],[data-theme-set]"); if (!b) return;
   setLook(b.dataset.look, b.dataset.themeSet);
 });
 document.addEventListener("submit", async e => {
+  if (e.target.id === "payoutForm") {
+    e.preventDefault(); const to = $("#payoutTo").value.trim(), amt = $("#payoutAmt").value.trim();
+    if (to.length < 8) return toast(L("Укажите номер карты или счёта", "Karta yoki hisob raqamini kiriting", "Enter a card number or an account"));
+    try { await api("POST", "/api/seller/payout", { payout_to: to, ...(amt ? { amount: +amt } : {}) }); toast(L("Запрос принят — переведём в тот же рабочий день", "So‘rov qabul qilindi — o‘sha ish kunida o‘tkazamiz", "Request received — we transfer it the same working day")); sellerData = null; renderSeller(); }
+    catch (er) { toast(apiErr(er)); }
+    return;
+  }
   const f = e.target.closest("[data-reply]"); if (!f) return;
   e.preventDefault(); const v = f.querySelector("input").value.trim(); if (!v) return;
   try { await api("POST", `/api/seller/reviews/${f.dataset.reply}/reply`, { reply: v }); toast(L("Ответ опубликован", "Javob joylandi")); sellerData = null; renderSeller(); } catch (er) { toast(apiErr(er)); }
@@ -3980,8 +4109,19 @@ function adminFinanceHTML() {
     ${F.stores.length ? `<div class="tbl-wrap"><table><thead><tr><th>${L("Магазин", "Do‘kon")}</th><th class="r">${L("Оборот", "Aylanma")}</th><th class="r">${L("Комиссия", "Komissiya")}</th><th class="r">${L("Долг", "Qarz")}</th><th>${L("Получено от магазина", "Do‘kondan olindi")}</th></tr></thead><tbody>
     ${F.stores.map(s => `<tr><td><b>${esc(s.name)}</b><br><small style="color:var(--muted)">${s.orders} ${L("заказов", "buyurtma")}</small></td><td class="r">${fmt(s.goods)}</td><td class="r">${fmt(s.commission)}</td><td class="r" style="color:${s.balance > 0 ? "var(--signal)" : "var(--ok)"}">${fmt(s.balance)}</td>
       <td><form class="settle-f" data-settle="${esc(s.id)}"><label class="visually-hidden" for="st${esc(s.id)}">${L("Сумма", "Summa")}</label><input id="st${esc(s.id)}" type="number" min="1" inputmode="numeric" value="${s.balance > 0 ? s.balance : ""}" style="width:120px"><button class="btn btn-line" type="submit">${L("Записать", "Qayd qilish")}</button></form></td></tr>`).join("")}
-    </tbody></table></div>` : `<small style="color:var(--muted)">${L("Выполненных заказов в этом месяце пока нет.", "Bu oy bajarilgan buyurtmalar hali yo‘q.")}</small>`}</div>`;
+    </tbody></table></div>` : `<small style="color:var(--muted)">${L("Выполненных заказов в этом месяце пока нет.", "Bu oy bajarilgan buyurtmalar hali yo‘q.")}</small>`}
+    ${(F.payouts || []).length ? `<h3 class="h-m" style="margin-top:14px">${L("Выплаты магазинам", "Do‘konlarga to‘lovlar", "Payouts to stores")}</h3><div class="tbl-wrap"><table><thead><tr><th>${L("Магазин", "Do‘kon")}</th><th class="r">${L("Сумма", "Summa")}</th><th>${L("Куда", "Qayerga", "To")}</th><th>${L("Статус", "Holat")}</th></tr></thead><tbody>
+    ${F.payouts.map(p => `<tr><td><b>${esc(p.name || p.store_id)}</b><br><small style="color:var(--muted)">${new Date(p.requested_at).toLocaleString(LOCALE, { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</small></td><td class="r">${fmt(p.amount)}</td><td><span class="mono">${esc(p.payout_to || "")}</span></td>
+      <td>${p.status === "requested" ? `<span style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-primary" type="button" data-payout="${p.id}|paid" style="padding:6px 10px">${L("Выплачено", "To‘landi", "Paid")}</button><button class="btn btn-line" type="button" data-payout="${p.id}|rejected" style="padding:6px 10px">${L("Отклонить", "Rad etish", "Reject")}</button></span>` : `<span class="pill ${p.status === "paid" ? "ok" : "mute"}">${p.status === "paid" ? L("выплачено", "to‘langan", "paid") : L("отклонено", "rad etilgan", "rejected")}</span>${p.note ? `<br><small style="color:var(--muted)">${esc(p.note)}</small>` : ""}`}</td></tr>`).join("")}
+    </tbody></table></div>` : ""}</div>`;
 }
+document.addEventListener("click", async e => {
+  const b = e.target.closest("[data-payout]"); if (!b) return;
+  const [id, status] = b.dataset.payout.split("|"); let note = "";
+  if (status === "rejected") { note = prompt(L("Причина (увидит магазин)", "Sabab (do‘kon ko‘radi)", "Reason (the store will see it)")) || ""; if (!note) return; }
+  else if (!confirm(L("Перевод уже сделан? Магазин получит уведомление «выплачено».", "O‘tkazma qilindimi? Do‘konga «to‘landi» xabari boradi.", "Transfer done? The store will be notified."))) return;
+  try { await adminApi("PATCH", `/api/admin/payouts/${id}`, { status, note }); toast(L("Сохранено", "Saqlandi", "Saved")); loadAdminFin(); } catch (er) { toast(apiErr(er)); }
+});
 async function loadAdminFin() { try { adminFin = await adminApi("GET", "/api/admin/finance" + (adminMonth ? "?month=" + adminMonth : "")); } catch (e) { adminFin = null; } if (route.view === "seller" || route.view === "admin") renderMain(); }
 document.addEventListener("submit", async e => {
   if (e.target.id === "mfaForm") {
