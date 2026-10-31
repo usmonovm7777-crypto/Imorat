@@ -12,6 +12,14 @@ ROOT = Path(__file__).resolve().parent.parent
 src = (ROOT / "src" / "page.html").read_text(encoding="utf-8")
 cut = src.index("<style>")
 head_tags, body = src[:cut], src[cut:]
+# The page's script must parse: a syntax error would ship a blank site. `node --check` runs on the extracted script.
+import subprocess, tempfile, os, sys
+_js = body[body.index("<script>") + 8:body.rindex("</script>")]
+with tempfile.NamedTemporaryFile("w", suffix=".js", delete=False, encoding="utf-8") as _f: _f.write(_js); _tmp = _f.name
+try:
+    _chk = subprocess.run(["node", "--check", _tmp], capture_output=True, text=True)
+    if _chk.returncode: sys.exit("build aborted: the page script has a syntax error\n" + _chk.stderr.strip()[-600:])
+finally: os.unlink(_tmp)
 RESET = (":root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}"
          "body{margin:0;font:14px/1.5 system-ui,-apple-system,'Segoe UI',Roboto,sans-serif}"
          "img{max-width:100%}[hidden]{display:none!important}")

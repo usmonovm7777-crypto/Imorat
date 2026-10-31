@@ -4168,7 +4168,7 @@ function dsLayout() {
     let [w, dp] = inf.size; if (it.krow) { it.n ||= 4; w = it.n * .6; }
     return Object.assign(it, { w, d: dp, tall: inf.tall || 0, place: it.krow ? "krow" : inf.place, model: inf.model, flat: inf.place === "rug", air: ["ceiling", "curtain", "hang", "above"].includes(inf.place), ok: true }); }).filter(Boolean);
   const hitAir = r => placed.filter(o => o.place === "hang" || o.place === "above").some(o => r.x0 < o.r.x1 + .05 && r.x1 > o.r.x0 - .05 && r.z0 < o.r.z1 + .05 && r.z1 > o.r.z0 - .05);
-  const hangAt = (it, x, z, rot) => { const r = rectOf(x, z, it.w, it.d, rot); if (!inside(r) || hitAir(r) || winZ.some(q => ovl(r, q))) return false; Object.assign(it, { x, z, rot, r }); placed.push(it); return true; };
+  const hangAt = (it, x, z, rot) => { const r = rectOf(x, z, it.w, it.d, rot); if (!inside(r) || hitAir(r) || winZ.some(q => ovl(r, q)) || blocks.some(q => ovl(r, q))) return false; Object.assign(it, { x, z, rot, r }); placed.push(it); return true; }; // not over a window, not in the door swing
   const order = ["krow", "wall", "tv", "window", "center", "corner", "front", "desk", "rug", "curtain", "ceiling", "hang", "above"];
   const sorted = [...items].sort((a, b) => order.indexOf(a.place) - order.indexOf(b.place) || (a.krow && b.krow ? items.indexOf(a) - items.indexOf(b) : b.w * b.d - a.w * a.d));
   /* Kitchen: the main run from a corner and, for a corner kitchen, a second run along the next wall */
