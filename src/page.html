@@ -4297,9 +4297,25 @@ function roomSVG(d, opt = {}) {
     else if (Math.abs(a[1]) < .01 && Math.abs(b[1]) < .01) seg = ["R", Math.min(a[0], b[0]), Math.max(a[0], b[0])];
     if (!seg) continue;
     const Q = (u, y) => seg[0] === "L" ? [0, y, u] : [u, y, 0], [_, u0, u1] = seg;
-    if (o.k === "win") g += `<polygon points="${pts([Q(u0, .85), Q(u1, .85), Q(u1, 2.2), Q(u0, 2.2)])}" fill="#f4f6f5"/><polygon points="${pts([Q(u0 + .05, .9), Q(u1 - .05, .9), Q(u1 - .05, 2.15), Q(u0 + .05, 2.15)])}" fill="url(#dsSky)"/><path d="M${P(...Q((u0 + u1) / 2, .9)).join(",")}L${P(...Q((u0 + u1) / 2, 2.15)).join(",")}" stroke="#f4f6f5" stroke-width=".04"/>`;
+    if (o.k === "win") g += `<polygon points="${pts(seg[0] === "L" ? [[0, 0, u0], [0, 0, u1], [1.4, 0, u1 - .2], [1.4, 0, u0 + .2]] : [[u0, 0, 0], [u1, 0, 0], [u1 - .2, 0, 1.4], [u0 + .2, 0, 1.4]])}" fill="#fff" fill-opacity=".09" pointer-events="none"/><polygon points="${pts(seg[0] === "L" ? [[0, 0, u0 + .1], [0, 0, u1 - .1], [.7, 0, u1 - .2], [.7, 0, u0 + .2]] : [[u0 + .1, 0, 0], [u1 - .1, 0, 0], [u1 - .2, 0, .7], [u0 + .2, 0, .7]])}" fill="#fff" fill-opacity=".08" pointer-events="none"/><polygon points="${pts([Q(u0, .85), Q(u1, .85), Q(u1, 2.2), Q(u0, 2.2)])}" fill="#f4f6f5"/><polygon points="${pts([Q(u0 + .05, .9), Q(u1 - .05, .9), Q(u1 - .05, 2.15), Q(u0 + .05, 2.15)])}" fill="url(#dsSky)"/><path d="M${P(...Q((u0 + u1) / 2, .9)).join(",")}L${P(...Q((u0 + u1) / 2, 2.15)).join(",")}" stroke="#f4f6f5" stroke-width=".04"/>`;
     else { const kn = P(...Q(u1 - .12, 1)); g += `<polygon points="${pts([Q(u0, 0), Q(u1, 0), Q(u1, 2.05), Q(u0, 2.05)])}" fill="#9a7353"/><polygon points="${pts([Q(u0 + .05, .05), Q(u1 - .05, .05), Q(u1 - .05, 2), Q(u0 + .05, 2)])}" fill="#b08a66"/><circle cx="${kn[0]}" cy="${kn[1]}" r=".03" fill="#d8d8d8"/>`; }
   }
+  // Soft light: the floor and walls darken a little towards the back corner and along the skirting (ambient occlusion),
+  // and every piece of furniture casts a soft contact shadow on the floor — nested translucent quads, no filters, so dragging stays cheap.
+  const ao = (poly, op) => `<polygon points="${pts(poly)}" fill="#1a1612" fill-opacity="${op}" pointer-events="none"/>`;
+  for (const [w, op] of [[.5, .025], [.25, .035], [.1, .05]]) {
+    g += ao([[0, 0, 0], [W, 0, 0], [W, 0, w], [0, 0, w]], op) + ao([[0, 0, 0], [w, 0, 0], [w, 0, Lr], [0, 0, Lr]], op);
+    g += ao([[0, 0, 0], [0, 0, Lr], [0, w * .6, Lr], [0, w * .6, 0]], op) + ao([[0, 0, 0], [W, 0, 0], [W, w * .6, 0], [0, w * .6, 0]], op);
+    g += ao([[0, 0, 0], [0, 0, w], [0, H, w], [0, H, 0]], op) + ao([[0, 0, 0], [w, 0, 0], [w, H, 0], [0, H, 0]], op);
+  }
+  let shadows = `<g clip-path="url(#dsFloorClip)" pointer-events="none">`; // drawn after rugs, before furniture
+  for (const it of d.items) {
+    if (!it.ok || it.x == null || it.flat || it.air || ["ceiling", "hang", "above", "curtain"].includes(it.place)) continue;
+    const r = it.r || dsRect(it, it.x, it.z, it.rot || 0), a = V.xf(r.x0, r.z0), b = V.xf(r.x1, r.z1);
+    const x0 = Math.min(a[0], b[0]), x1 = Math.max(a[0], b[0]), z0 = Math.min(a[1], b[1]), z1 = Math.max(a[1], b[1]);
+    for (const [e, op] of [[.16, .05], [.08, .07], [.02, .09]]) shadows += `<polygon points="${pts([[x0 - e, 0, z0 - e], [x1 + e, 0, z0 - e], [x1 + e, 0, z1 + e], [x0 - e, 0, z1 + e]])}" fill="#1a1612" fill-opacity="${op}"/>`;
+  }
+  shadows += `</g>`;
   const faces = [];
   for (const it of d.items) {
     if (!it.ok || it.x == null) continue;
@@ -4313,6 +4329,7 @@ function roomSVG(d, opt = {}) {
   faces.sort((a, b) => a.k - b.k);
   const n = v => v.toFixed(3);
   for (const f of faces) {
+    if (shadows && f.k > -100) { g += shadows; shadows = ""; }
     const [x0, y0, z0, x1, y1, z1] = f.b, sel = (f.bad ? ` stroke="#d92d20" stroke-width=".03"` : DS && f.uid === DS.sel ? ` stroke="#E8662A" stroke-width=".02"` : "") + (f.ghost ? ` opacity=".42"` : "");
     const c = f.c, k = f.em ? 1.05 : 1;
     if (f.s === 1) {
@@ -4324,10 +4341,11 @@ function roomSVG(d, opt = {}) {
     const top = pts([[x0, y1, z0], [x1, y1, z0], [x1, y1, z1], [x0, y1, z1]]), fx = pts([[x1, y0, z0], [x1, y0, z1], [x1, y1, z1], [x1, y1, z0]]), fz = pts([[x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1]]);
     g += `<g data-dsuid="${f.uid}"${sel}><polygon points="${fz}" fill="${dsShade(c, .8 * k)}"/><polygon points="${fx}" fill="${dsShade(c, .92 * k)}"/><polygon points="${top}" fill="${dsShade(c, 1.04 * k)}"/></g>`;
   }
+  if (shadows) g += shadows;
   if (opt.nums) for (const [w, pt] of [[wl, P(0, H - .35, Lr / 2)], [wr, P(W / 2, H - .35, 0)]]) g += `<g pointer-events="none"><circle cx="${pt[0].toFixed(3)}" cy="${pt[1].toFixed(3)}" r=".17" fill="#131b1a"/><text x="${pt[0].toFixed(3)}" y="${(pt[1] + .07).toFixed(3)}" font-size=".2" font-weight="700" fill="#fff" text-anchor="middle">${DS_WALLS.indexOf(w) + 1}</text></g>`;
   const xs = [P(0, 0, Lr)[0], P(W, 0, 0)[0]], ys = [P(0, H, 0)[1], P(W, 0, Lr)[1]];
   const pad = .35, vb = [xs[0] - pad, ys[0] - pad, xs[1] - xs[0] + pad * 2, ys[1] - ys[0] + pad * 2].map(v => v.toFixed(2)).join(" ");
-  return `<svg class="ds-svg${opt.edit ? " edit" : ""}" data-dsmode="3d" viewBox="${vb}" role="img" aria-label="${L("3D-вид комнаты", "Xonaning 3D ko‘rinishi")} ${d.W}×${d.L} ${L("м", "m")}"><defs><linearGradient id="dsSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#bfe0f2"/><stop offset="1" stop-color="#eaf6fb"/></linearGradient></defs>${g}</svg>`;
+  return `<svg class="ds-svg${opt.edit ? " edit" : ""}" data-dsmode="3d" viewBox="${vb}" role="img" aria-label="${L("3D-вид комнаты", "Xonaning 3D ko‘rinishi")} ${d.W}×${d.L} ${L("м", "m")}"><defs><clipPath id="dsFloorClip"><polygon points="${pts([[0, 0, 0], [W, 0, 0], [W, 0, Lr], [0, 0, Lr]])}"/></clipPath><linearGradient id="dsSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#bfe0f2"/><stop offset="1" stop-color="#eaf6fb"/></linearGradient></defs>${g}</svg>`;
 }
 /* Top-down plan: precise moving, sizes in metres */
 function planSVG(d, opt = {}) {
