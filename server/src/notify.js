@@ -17,7 +17,9 @@ const CANCEL_TEXT = {
   not_accepted: "магазин не подтвердил заказ вовремя",
   out_of_stock: "товара не оказалось в наличии",
   not_shipped: "магазин не передал заказ вовремя",
-  buyer: "вы отменили заказ"
+  buyer: "вы отменили заказ",
+  unpaid: "оплата картой не поступила вовремя; товар снова в продаже, можно оформить заново",
+  refund: "платёж отменён банком или вами, деньги вернутся на карту"
 };
 export const sellerButtons = s => {
   if (s.status === "new") return [[{ text: "✅ Принять · Qabul qilish", callback_data: `acc:${s.id}` }], [{ text: "❌ Нет в наличии · Mavjud emas", callback_data: `oos:${s.id}` }]];
@@ -43,7 +45,7 @@ export function createNotify({ db, cfg, tg, push, sms, ref, log = console }) {
     const goods = JSON.parse(s.lines).reduce((a, l) => a + l.price * l.q, 0);
     const where = s.tariff ? `Яндекс Доставка → ${h(D[f.district]?.ru || "")} р-н, ${h(f.street)}${f.flat ? ", кв. " + h(f.flat) : ""}${f.floor > 1 ? `, этаж ${f.floor}` : ""}` : "Самовывоз из магазина";
     const deadline = s.status === "new" ? `\n⏱ Примите в течение ${cfg.timers.cancel} минут${s.start_at > Date.now() + 60000 ? ` (отсчёт с ${new Date(s.start_at + 5 * 3600000).toISOString().slice(11, 16)}, когда магазин откроется)` : ""}, иначе заказ отменится.` : "";
-    return `<b>${STATUS_RU[s.status] || s.status} заказ ${h(o.num)}</b> · ${h(st.name)}\n\n${lines}\n<b>Итого: ${money(goods)}</b>\n\n${where}\nКогда: ${WHEN[f.when] || f.when}${f.when === "vip" ? ` (${f.hour}:00)` : ""}\nПокупатель: ${h(f.name)}, +${h(String(f.phone).replace(/\D/g, ""))}${f.comment ? `\nКомментарий: «${h(f.comment)}»` : ""}\nОплата: ${o.pay === "store" || o.pay === "cash" ? "магазину напрямую" : o.pay_status === "paid" ? "оплачен онлайн" : "ожидает оплаты"}${deadline}`;
+    return `<b>${STATUS_RU[s.status] || s.status} заказ ${h(o.num)}</b> · ${h(st.name)}\n\n${lines}\n<b>Итого: ${money(goods)}</b>\n\n${where}\nКогда: ${WHEN[f.when] || f.when}${f.when === "vip" ? ` (${f.hour}:00)` : ""}\nПокупатель: ${h(f.name)}, +${h(String(f.phone).replace(/\D/g, ""))}${f.comment ? `\nКомментарий: «${h(f.comment)}»` : ""}\nОплата: ${o.pay === "store" || o.pay === "cash" ? "покупатель платит магазину при получении" : o.pay_status === "paid" ? "💳 оплачен картой полностью, включая доставку — выдавайте без оплаты" : "ожидает оплаты"}${deadline}`;
   }
   const cabinet = `${cfg.siteUrl}#seller`;
   return {
@@ -70,6 +72,13 @@ export function createNotify({ db, cfg, tg, push, sms, ref, log = console }) {
       const c = ctx(shipId); if (!c.s || !c.st) return;
       const phone = c.st.phone || c.owner?.phone; if (!phone) return;
       await safe(sms.sendText(phone, cfg.smsSellerTemplate.replace("{num}", c.o.num)));
+    },
+    /* card payment received: the buyer learns the order is now with the store */
+    async paid(shipId) {
+      const c = ctx(shipId); if (!c.s || !c.buyer) return;
+      const text = `Оплата по заказу ${c.o.num} получена (${c.o.total.toLocaleString("ru-RU")} сум, включая доставку). Магазин ${c.st.name} получил заказ.`;
+      if (c.buyer.tg_chat) safe(tg.send(c.buyer.tg_chat, h(text)));
+      safe(push.toUser(c.buyer.id, { title: `Imorat Go · ${c.o.num}`, body: text, url: `${cfg.siteUrl}#orders`, tag: "order-" + c.o.num }));
     },
     async status(shipId) {
       const c = ctx(shipId); if (!c.s) return;

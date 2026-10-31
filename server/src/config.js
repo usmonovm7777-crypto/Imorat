@@ -72,6 +72,10 @@ export function loadConfig(env = process.env) {
     ratePerIpMin: Number(env.RATE_PER_IP_MIN || 3000),
     bonus: { rate: Number(env.BONUS_RATE ?? 0.01), ratePro: Number(env.BONUS_RATE_PRO ?? 0.02), maxShare: Number(env.BONUS_MAX_SHARE ?? 0.2), referral: Number(env.BONUS_REFERRAL ?? 30000), welcome: Number(env.BONUS_WELCOME ?? 30000), maxCashback: Number(env.BONUS_MAX_CASHBACK ?? 200000), maxInvites: Number(env.BONUS_MAX_INVITES ?? 20) },
     smsMasterTemplate: env.SMS_MASTER_TEMPLATE ?? "Imorat Go: sizga ustalik uchun yangi so‘rov keldi. Saytda qabul qiling.",
-    paymentsOnline: list(env.PAYMENTS) // e.g. "click,payme" once the company and contracts exist
+    // Online card payment: a provider is offered once its keys are set; PAYMENTS (e.g. "payme") can narrow the list
+    payme: { id: env.PAYME_MERCHANT_ID || "", key: env.PAYME_KEY || "", testKey: env.PAYME_TEST_KEY || "", url: (env.PAYME_CHECKOUT_URL || "https://checkout.paycom.uz").replace(/\/$/, "") },
+    click: { serviceId: env.CLICK_SERVICE_ID || "", merchantId: env.CLICK_MERCHANT_ID || "", secret: env.CLICK_SECRET_KEY || "", userId: env.CLICK_MERCHANT_USER_ID || "" },
+    payTimeoutMin: Number(env.PAY_TIMEOUT_MIN || 30),
+    get paymentsOnline() { const have = [...(this.payme.id && this.payme.key ? ["payme"] : []), ...(this.click.serviceId && this.click.secret ? ["click"] : [])]; const want = list(env.PAYMENTS); return want.length ? have.filter(p => want.includes(p)) : have; }
   };
 }

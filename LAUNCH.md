@@ -43,7 +43,7 @@ curl https://api.<домен>/api/health      # {"ok":true}
 | Usta AI, фото-поиск, AI-дизайнер | `ANTHROPIC_API_KEY` | console.anthropic.com | кнопки AI скрыты |
 | Точные цены Яндекс Доставки | `YANDEX_DELIVERY_TOKEN` | бизнес-кабинет Яндекс Доставки | цена считается по тарифной формуле |
 | Вход через Google / Apple | `GOOGLE_CLIENT_ID`, `APPLE_CLIENT_ID`, `APPLE_REDIRECT_URI` | Google Cloud Console / Apple Developer | только вход по SMS |
-| Онлайн-оплата | `PAYMENTS=click,payme` | договоры с Click/Payme (нужно юрлицо) | покупатель платит магазину напрямую |
+| Оплата картой на сайте (вся сумма с доставкой списывается сразу) | `PAYME_MERCHANT_ID`, `PAYME_KEY` / `CLICK_SERVICE_ID`, `CLICK_MERCHANT_ID`, `CLICK_SECRET_KEY` | договоры с Payme / Click (нужно юрлицо); в их кабинетах указать адреса callback: `/api/pay/payme`, `/api/pay/click` | покупатель платит магазину при получении |
 
 ## 4. Первый день
 

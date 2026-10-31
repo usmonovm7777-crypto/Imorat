@@ -67,7 +67,7 @@ before(async () => {
   const cfg = loadConfig({
     JWT_SECRET: "test-secret", DB_PATH: join(dir, "t.db"), UPLOADS_DIR: join(dir, "up"), ADMIN_PHONES: "998901111111",
     GOOGLE_CLIENT_ID: "gid", GOOGLE_JWKS_URL: fakeBase + "/jwks", ANTHROPIC_API_KEY: "sk-test", ANTHROPIC_URL: fakeBase + "/ai", SMS_MODE: "dev",
-    TELEGRAM_BOT_TOKEN: "TGTOKEN", TELEGRAM_API_URL: fakeBase + "/tg", TELEGRAM_POLL_TIMEOUT: "0", BACKUP_DIR: join(dir, "bk"), OTP_PER_IP_HOUR: "200", TELEGRAM_CHANNEL: "@imorat_test", CHANNEL_HOUR: "25"
+    TELEGRAM_BOT_TOKEN: "TGTOKEN", TELEGRAM_API_URL: fakeBase + "/tg", TELEGRAM_POLL_TIMEOUT: "0", PAYME_MERCHANT_ID: "5e730e8e0b852a417aa49ceb", PAYME_KEY: "PAYME_SECRET", CLICK_SERVICE_ID: "12345", CLICK_MERCHANT_ID: "777", CLICK_SECRET_KEY: "CLICK_SECRET", PAY_TIMEOUT_MIN: "30", BACKUP_DIR: join(dir, "bk"), OTP_PER_IP_HOUR: "200", TELEGRAM_CHANNEL: "@imorat_test", CHANNEL_HOUR: "25"
   });
   app = createApp(cfg, { info() {}, warn() {}, error: console.error });
   await new Promise(r => app.listen(0, "127.0.0.1", r));
@@ -326,7 +326,7 @@ test("Web push: subscription gets an encrypted, VAPID-signed message", async () 
 test("Logout everywhere invalidates old sessions; online payment is refused until connected; backups", async () => {
   const t = (await login("995556677")).data.token;
   assert.equal((await call("GET", "/api/me", null, t)).status, 200);
-  const bad = await call("POST", "/api/orders", { lines: [{ id: 1, store: "usta", q: 1 }], form: { name: "Тест", phone: "998995556677", mode: "pickup", pay: "click" } }, t);
+  const bad = await call("POST", "/api/orders", { lines: [{ id: 1, store: "usta", q: 1 }], form: { name: "Тест", phone: "998995556677", mode: "pickup", pay: "uzum" } }, t);
   assert.equal(bad.data.error, "payment_unavailable");
   await call("POST", "/api/me/logout-all", null, t);
   assert.equal((await call("GET", "/api/me", null, t)).status, 401);
@@ -674,4 +674,83 @@ test("Telegram bot: search, sign-in by contact, request to a master with buttons
   assert.ok(uzm.reply_markup.keyboard.flat().some(b => b.text === "🔎 Mahsulot qidiriş"));
   send(7001, { text: "laminat" });
   await until(() => sentTo(7001, /Topildi[\s\S]*Laminat/).length);
+});
+
+test("Card payment: Payme and Click callbacks, store sees the order only after the money, unpaid orders expire", async () => {
+  const { createHash } = await import("node:crypto");
+  const seller = (await login("998880011")).data.token;
+  const st = await call("POST", "/api/seller/store", { name: "Karta Market", descr: "Магазин для проверки онлайн-оплаты картой", cats: ["build"], phone: "712004455", addr: "ул. Картовая, 7", hours: "00:00–00:00", district: "yunus" }, seller);
+  assert.equal(st.status, 200, JSON.stringify(st.data)); const sid = st.data.store.id;
+  await call("PATCH", `/api/admin/stores/${sid}`, { status: "active" }, globalThis.ADMIN);
+  await call("POST", "/api/seller/offers", { product_id: 1, price: 60000, stock: 20 }, seller);
+  const cfgR = (await call("GET", "/api/config")).data;
+  assert.deepEqual(cfgR.payments, ["payme", "click"], "both providers offered once their keys are set");
+  const buyer = (await login("998880022")).data.token;
+  const form = { name: "Карта", phone: "998998880022", mode: "pickup", pay: "payme" };
+  // --- Payme: order waits for the money
+  const o = await call("POST", "/api/orders", { lines: [{ id: 1, store: sid, q: 2 }], form }, buyer);
+  assert.equal(o.status, 200, JSON.stringify(o.data) + " store=" + JSON.stringify(st.data.store));
+  const num = o.data.order.num, total = o.data.order.total;
+  assert.equal(o.data.order.pay_status, "pending"); assert.match(o.data.order.pay_url, /^https:\/\/checkout\.paycom\.uz\//);
+  const payload = Buffer.from(o.data.order.pay_url.replace("https://checkout.paycom.uz/", ""), "base64").toString();
+  assert.ok(payload.startsWith(`m=5e730e8e0b852a417aa49ceb;ac.order=${num};a=${total * 100};c=`), payload);
+  assert.ok((await call("GET", "/api/seller/summary", null, seller)).data.orders.every(x => x.num !== num), "the store does not see an unpaid order");
+  const stock0 = (await call("GET", "/api/catalog")).data.products.find(p => p.id === 1).offers.find(x => x.store === sid).stock;
+  assert.equal(stock0, 18, "stock is reserved while the payment is pending");
+  const rpc = (method, params, auth = "Paycom:PAYME_SECRET") => fetch(base + "/api/pay/payme", { method: "POST", headers: { "content-type": "application/json", authorization: "Basic " + Buffer.from(auth).toString("base64") }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }) }).then(r => r.json());
+  assert.equal((await rpc("CheckPerformTransaction", { amount: total * 100, account: { order: num } }, "Paycom:wrong")).error.code, -32504);
+  assert.equal((await rpc("CheckPerformTransaction", { amount: total * 100 + 100, account: { order: num } })).error.code, -31001);
+  assert.equal((await rpc("CheckPerformTransaction", { amount: total * 100, account: { order: "IM-1" } })).error.code, -31050);
+  assert.deepEqual((await rpc("CheckPerformTransaction", { amount: total * 100, account: { order: num } })).result, { allow: true });
+  const t1 = Date.now();
+  const cr = await rpc("CreateTransaction", { id: "pm-1", time: t1, amount: total * 100, account: { order: num } });
+  assert.equal(cr.result.state, 1); assert.equal(cr.result.create_time, t1);
+  const cr2 = await rpc("CreateTransaction", { id: "pm-1", time: t1 + 5, amount: total * 100, account: { order: num } });
+  assert.equal(cr2.result.transaction, cr.result.transaction, "idempotent create");
+  assert.equal((await rpc("CreateTransaction", { id: "pm-2", time: t1, amount: total * 100, account: { order: num } })).error.code, -31008, "one open transaction per order");
+  const pf = await rpc("PerformTransaction", { id: "pm-1" });
+  assert.equal(pf.result.state, 2);
+  const paid = (await call("GET", `/api/orders/${num}`, null, buyer)).data.order;
+  assert.equal(paid.pay_status, "paid"); assert.equal(paid.pay_url, null); assert.ok(paid.paid_at);
+  const sv = (await call("GET", "/api/seller/summary", null, seller)).data.orders.find(x => x.num === num);
+  assert.ok(sv, "the store sees the order once it is paid"); assert.equal(sv.status, "new"); assert.equal(sv.pay_status, "paid");
+  assert.equal((await rpc("PerformTransaction", { id: "pm-1" })).result.state, 2, "idempotent perform");
+  assert.equal((await rpc("CheckTransaction", { id: "pm-1" })).result.state, 2);
+  const stt = await rpc("GetStatement", { from: t1 - 1000, to: Date.now() + 1000 });
+  assert.equal(stt.result.transactions.length, 1); assert.equal(stt.result.transactions[0].account.order, num);
+  // refund while the store has not started: order cancelled, stock back
+  const cn = await rpc("CancelTransaction", { id: "pm-1", reason: 5 });
+  assert.equal(cn.result.state, -2);
+  assert.equal((await call("GET", `/api/orders/${num}`, null, buyer)).data.order.pay_status, "refunded");
+  assert.equal((await call("GET", "/api/catalog")).data.products.find(p => p.id === 1).offers.find(x => x.store === sid).stock, 20);
+  // --- Click: prepare + complete with signatures
+  const o2 = await call("POST", "/api/orders", { lines: [{ id: 1, store: sid, q: 1 }], form: { ...form, pay: "click" } }, buyer);
+  assert.equal(o2.status, 200, JSON.stringify(o2.data)); const num2 = o2.data.order.num, total2 = o2.data.order.total;
+  assert.match(o2.data.order.pay_url, /^https:\/\/my\.click\.uz\/services\/pay\?service_id=12345&merchant_id=777&amount=/);
+  const md5 = x => createHash("md5").update(x).digest("hex");
+  const post = body => fetch(base + "/api/pay/click", { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: new URLSearchParams(body).toString() }).then(r => r.json());
+  const signTime = "2026-10-31 10:00:00", amount = total2 + ".00";
+  const bad = await post({ click_trans_id: "9001", service_id: "12345", click_paydoc_id: "1", merchant_trans_id: num2, amount, action: "0", error: "0", error_note: "", sign_time: signTime, sign_string: "deadbeef" });
+  assert.equal(bad.error, -1);
+  const prep = await post({ click_trans_id: "9001", service_id: "12345", click_paydoc_id: "1", merchant_trans_id: num2, amount, action: "0", error: "0", error_note: "", sign_time: signTime, sign_string: md5(`9001` + `12345` + "CLICK_SECRET" + num2 + amount + "0" + signTime) });
+  assert.equal(prep.error, 0, JSON.stringify(prep)); assert.ok(prep.merchant_prepare_id);
+  const wrongAmt = await post({ click_trans_id: "9002", service_id: "12345", click_paydoc_id: "1", merchant_trans_id: num2, amount: "1.00", action: "0", error: "0", error_note: "", sign_time: signTime, sign_string: md5(`9002` + `12345` + "CLICK_SECRET" + num2 + "1.00" + "0" + signTime) });
+  assert.equal(wrongAmt.error, -2);
+  const comp = await post({ click_trans_id: "9001", service_id: "12345", click_paydoc_id: "1", merchant_trans_id: num2, merchant_prepare_id: String(prep.merchant_prepare_id), amount, action: "1", error: "0", error_note: "", sign_time: signTime, sign_string: md5(`9001` + `12345` + "CLICK_SECRET" + num2 + prep.merchant_prepare_id + amount + "1" + signTime) });
+  assert.equal(comp.error, 0, JSON.stringify(comp)); assert.ok(comp.merchant_confirm_id);
+  assert.equal((await call("GET", `/api/orders/${num2}`, null, buyer)).data.order.pay_status, "paid");
+  const sh2 = (await call("GET", "/api/seller/summary", null, seller)).data.orders.find(x => x.num === num2);
+  assert.ok(sh2, "the store sees the Click order once paid");
+  assert.equal((await call("PATCH", `/api/seller/shipments/${sh2.ship_id}`, { status: "assembling" }, seller)).status, 200);
+  // --- an unpaid order expires after PAY_TIMEOUT_MIN and frees the stock
+  const o3 = await call("POST", "/api/orders", { lines: [{ id: 1, store: sid, q: 5 }], form }, buyer);
+  assert.equal(o3.status, 200, JSON.stringify(o3.data)); const num3 = o3.data.order.num;
+  assert.equal((await call("GET", "/api/catalog")).data.products.find(p => p.id === 1).offers.find(x => x.store === sid).stock, 14);
+  app.sweep(Date.now() + 31 * 60000);
+  const gone = (await call("GET", `/api/orders/${num3}`, null, buyer)).data.order;
+  assert.equal(gone.status, "cancelled"); assert.equal(gone.pay_url, null);
+  assert.equal((await call("GET", "/api/catalog")).data.products.find(p => p.id === 1).offers.find(x => x.store === sid).stock, 19);
+  assert.equal((await call("GET", `/api/orders/${num3}/pay`, null, buyer)).status, 409);
+  // a provider without keys is refused
+  assert.equal((await call("POST", "/api/orders", { lines: [{ id: 1, store: sid, q: 1 }], form: { ...form, pay: "uzum" } }, buyer)).status, 400);
 });

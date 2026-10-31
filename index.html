@@ -996,7 +996,7 @@ html.fx .fx-btn { color: #fff; border-color: transparent; background: linear-gra
 .srate.new { color: var(--accent); font-weight: 600; }
 .store .srate { display: block; margin-top: 4px; }
 .pill.closed { background: color-mix(in srgb, var(--muted) 14%, transparent); color: var(--muted); }
-.note.warnn { background: var(--signal-soft); }
+.note.warnn { background: var(--signal-soft); } .note.okn { background: color-mix(in srgb, var(--ok) 12%, var(--surface)); border-color: color-mix(in srgb, var(--ok) 35%, transparent); }
 .rv-form { display: grid; gap: 8px; padding: 12px; border: 1px dashed var(--line-strong); border-radius: 12px; margin-top: 8px; }
 .rv-form textarea { width: 100%; border: 1.5px solid var(--line); border-radius: 10px; padding: 8px 10px; background: var(--raised); font: inherit; color: inherit; }
 .stars { display: flex; gap: 4px; }
@@ -2525,7 +2525,9 @@ function dCart() {
   { const ph = cartPlanHTML(); if (ph) $("#dBody").insertAdjacentHTML("afterbegin", ph); }
   $("#dBody").insertAdjacentHTML("beforeend", `<div class="save-proj" id="saveProj" hidden><label class="visually-hidden" for="projName">${L("Название проекта", "Loyiha nomi")}</label><input id="projName" placeholder="${L("Например: Ремонт ванной", "Masalan: Vannaxona ta’miri")}"><button class="btn btn-primary" type="button" data-act="proj-save" style="padding:8px 12px">${L("Сохранить", "Saqlash")}</button></div><button class="lnk" type="button" data-act="proj-open" style="justify-self:start">${ui("folder", 15)} ${L("Сохранить корзину как проект ремонта", "Savatni ta’mir loyihasi sifatida saqlash")}</button>`);
   const goods = gs.reduce((a, g) => a + g.sum, 0), svc = svcSum(), disc = bundleDisc();
-  $("#dFoot").innerHTML = totalsHTML(goods, svc, disc) + `<div class="sumrow total"><span>${L("Итого без доставки", "Yetkazishsiz jami")}</span><span class="num">${fmt(goods + svc - disc)}</span></div>
+  const est = quote({ mode: form.mode || "yandex", district: form.district || district, when: form.when || "asap", floor: form.floor || "1", lift: false });
+  $("#dFoot").innerHTML = totalsHTML(goods, svc, disc) + ((form.mode || "yandex") !== "pickup" ? `<div class="sumrow"><span class="mu">${L("Доставка Яндекс", "Yandex yetkazish", "Yandex delivery")} <small>· ${esc(dName(form.district || district))}${est.ships.length > 1 ? ` · ${est.ships.length} ${L(plural(est.ships.length, ["магазин", "магазина", "магазинов"]), "do‘kon", "stores")}` : ""}</small></span><span class="num">${est.del ? "≈ " + fmt(est.del) : L("Бесплатно", "Bepul", "Free")}</span></div>` : "") +
+    `<div class="sumrow total"><span>${(form.mode || "yandex") !== "pickup" ? L("Итого с доставкой", "Yetkazish bilan jami", "Total with delivery") : L("Итого", "Jami")}</span><span class="num">${fmt(goods + svc - disc + ((form.mode || "yandex") !== "pickup" ? est.del : 0))}</span></div>
     <div style="display:grid;grid-template-columns:auto 1fr;gap:8px"><button class="btn btn-line" type="button" data-act="ai-cart" title="${L("Проверить корзину с AI", "Savatni AI bilan tekshirish")}">${ui("spark", 18)} ${L("Проверить", "Tekshirish")}</button><button class="btn btn-primary" type="button" data-act="checkout">${L("Оформить заказ", "Buyurtma berish")}</button></div>`;
 }
 function readForm() {
@@ -2553,8 +2555,8 @@ function quote(d) {
 }
 function dCheckout() {
   $("#dTitle").textContent = L("Оформление", "Rasmiylashtirish");
-  const d = Object.assign({ name: user?.name || "", phone: user?.phone || "+998 ", district, street: "", flat: "", floor: "1", mode: "yandex", when: "asap", hour: "09", pay: API ? "store" : "click", lift: false, comment: "" }, form);
-  if (API && !["store", ...(apiCfg?.payments || [])].includes(d.pay)) d.pay = "store";
+  const d = Object.assign({ name: user?.name || "", phone: user?.phone || "+998 ", district, street: "", flat: "", floor: "1", mode: "yandex", when: "asap", hour: "09", pay: API ? (apiCfg?.payments?.[0] || "store") : "click", lift: false, comment: "" }, form);
+  if (API && !["store", ...(apiCfg?.payments || [])].includes(d.pay)) d.pay = apiCfg?.payments?.[0] || "store";
   const hours = []; for (let h = 8; h <= 20; h++) hours.push(String(h).padStart(2, "0"));
   $("#dBody").innerHTML = `<form id="orderForm" novalidate style="display:grid;gap:22px">
     <fieldset><legend>${L("Получатель", "Qabul qiluvchi")}</legend>
@@ -2578,7 +2580,8 @@ function dCheckout() {
       </div>
     </fieldset>
     <fieldset><legend>${L("Оплата", "To‘lov")}</legend>
-      <div class="pay">${(API ? [["store", L("Магазину напрямую", "Do‘konga to‘g‘ridan-to‘g‘ri")], ...(apiCfg?.payments || []).map(x => [x, { click: "Click", payme: "Payme", uzum: "Uzum" }[x] || x])] : [["click", "Click"], ["payme", "Payme"], ["uzum", "Uzum"], ["nasiya", L("Рассрочка", "Muddatli")], ["cash", L("Наличными", "Naqd")]]).map(([val, n]) => `<label><input type="radio" name="pay" value="${val}" ${d.pay === val ? "checked" : ""}>${n}</label>`).join("")}</div>
+      <div class="pay">${(API ? [...(apiCfg?.payments || []).map(x => [x, { click: L("Картой · Click", "Karta · Click", "Card · Click"), payme: L("Картой · Payme", "Karta · Payme", "Card · Payme"), uzum: L("Картой · Uzum", "Karta · Uzum", "Card · Uzum") }[x] || x]), ["store", L("Магазину при получении", "Olganda do‘konga", "To the store on receipt")]] : [["click", "Click"], ["payme", "Payme"], ["uzum", "Uzum"], ["nasiya", L("Рассрочка", "Muddatli")], ["cash", L("Наличными", "Naqd")]]).map(([val, n]) => `<label><input type="radio" name="pay" value="${val}" ${d.pay === val ? "checked" : ""}>${n}</label>`).join("")}</div>
+      <div class="note" id="cardPayNote" hidden>${ui("wallet", 14)} ${L("Списываем всю сумму сразу — товары и доставку. Курьеру и магазину ничего доплачивать не нужно. Магазин получит заказ, как только пройдёт оплата; не оплаченный за 30 минут заказ отменится сам.", "Butun summani — mahsulot va yetkazishni — birdan yechamiz. Kuryerga va do‘konga qo‘shimcha to‘lash shart emas. To‘lov o‘tishi bilan do‘kon buyurtmani oladi; 30 daqiqada to‘lanmagan buyurtma o‘zi bekor bo‘ladi.", "The whole amount — goods and delivery — is charged at once. Nothing to pay the courier or the store. The store receives the order as soon as the payment goes through; an order unpaid for 30 minutes cancels itself.")}</div>
       <div class="note" id="nasiyaNote" hidden></div>
       <div class="note" id="storePayNote" hidden>${ui("store", 14)} ${L("Платить заранее не нужно. Магазин подтвердит заказ и способ оплаты: наличными или переводом при получении. Если магазин не подтвердит заказ вовремя, он отменится автоматически.", "Oldindan to‘lash shart emas. Do‘kon buyurtmani va to‘lov usulini tasdiqlaydi: olganda naqd yoki o‘tkazma. Do‘kon o‘z vaqtida tasdiqlamasa, buyurtma avtomatik bekor qilinadi.")}</div>
       ${bonusBalance() > 0 ? `<label class="check"><input type="checkbox" id="fPts" name="usePts" ${d.usePts ? "checked" : ""}><span>${ui("gift", 15)} ${L(`Оплатить бонусами — у вас ${fmtN(bonusBalance())}`, `Bonus bilan to‘lash — sizda ${fmtN(bonusBalance())}`, `Pay with points — you have ${fmtN(bonusBalance())}`)} <small class="mu">${L(`(до ${Math.round(bonusCfg().maxShare * 100)}% стоимости товаров)`, `(mahsulotlar narxining ${Math.round(bonusCfg().maxShare * 100)}% gacha)`, `(up to ${Math.round(bonusCfg().maxShare * 100)}% of the product total)`)}</small></span></label>` : ""}
@@ -2605,6 +2608,7 @@ function updateQuote() {
     (d.mode === "yandex" ? `<div class="note">${L("Цена доставки — оценка прототипа. В рабочей версии цену и время вернёт API Яндекс Доставки по точным координатам.", "Yetkazish narxi taxminiy. Ishchi versiyada narx va vaqtni Yandex API aniq koordinatalar bo‘yicha qaytaradi.")}</div>` : "");
   const nn = $("#nasiyaNote"); nn.hidden = d.pay !== "nasiya";
   const spn = $("#storePayNote"); if (spn) spn.hidden = d.pay !== "store";
+  const cpn = $("#cardPayNote"); if (cpn) cpn.hidden = !(API && (apiCfg?.payments || []).includes(d.pay));
   nn.innerHTML = `${ui("wallet", 14)} ${L(`Рассрочка на 12 месяцев: от ${fmt(monthly(qt.total))} в месяц. Одобрение через партнёра при оплате; точные условия покажет партнёр.`, `12 oyga muddatli to‘lov: oyiga ${fmt(monthly(qt.total))}dan. To‘lovda hamkor orqali tasdiqlanadi; aniq shartlarni hamkor ko‘rsatadi.`, `12-month installments: from ${fmt(monthly(qt.total))} per month. Approval through the partner at payment; the partner will show the exact terms.`)}`;
   $("#totals").innerHTML = totalsHTML(qt.goods, qt.svc, qt.disc, `<div class="sumrow"><span class="mu">${L("Доставка", "Yetkazish")}</span><span class="num">${fmt(qt.del)}</span></div>`) +
     (qt.pd ? `<div class="sumrow disc"><span>${L("Промокод", "Promokod")} ${esc(promo)}</span><span class="num">−${fmt(qt.pd)}</span></div>` : "") +
@@ -2651,6 +2655,7 @@ function dTrack() {
   const hm = ms => new Date(ms).toLocaleTimeString(LOCALE, { hour: "2-digit", minute: "2-digit", second: "2-digit" });
   const sched = o.d.when === "slot" ? L("Доставка завтра, 10:00–14:00", "Yetkazish ertaga, 10:00–14:00") : o.d.when === "vip" ? `VIP · ${L("завтра", "ertaga")} ${o.d.hour}:00–${String(+o.d.hour + 1).padStart(2, "0")}:00` : "";
   $("#dBody").innerHTML = `${o.api ? `<div class="note">${o.status === "cancelled" ? L("Заказ отменён.", "Buyurtma bekor qilindi.") : L("Статусы обновляют магазин и Яндекс Доставка — страница обновляется сама.", "Holatlarni do‘kon va Yandex yangilaydi — sahifa o‘zi yangilanadi.")}</div>` : `<div class="note">${L("Демо: статусы меняются каждые несколько секунд. В рабочей версии их присылает Яндекс Доставка, а клиент получает SMS или уведомление в Yandex Go.", "Demo: holatlar har necha soniyada o‘zgaradi. Ishchi versiyada ularni Yandex yuboradi, mijoz SMS yoki Yandex Go xabarini oladi.")}</div>`}
+    ${payExtra(o)}
     ${sched ? `<div class="note vipn">${ui("clock", 14)} ${sched}. ${L("Поиск курьера начнётся за 90 минут до интервала.", "Kuryer qidiruvi oraliqdan 90 daqiqa oldin boshlanadi.")}</div>` : ""}
     ${o.ships.map((s, i) => {
       const st = STORE[s.store], t = TARIFFS.find(x => x.id === s.tariff), steps = t ? STEPS_Y(o) : STEPS_P(o), cur = stepOf(o, i, steps.length);
@@ -3435,7 +3440,7 @@ function showServerTotals(q) {
 async function submitOrderApi(d, qt) {
   const btn = $("#payBtn"), lbl = btn.textContent;
   btn.disabled = true; btn.textContent = L("Оформляем…", "Rasmiylashtirilmoqda…");
-  const body = { lines: cartLines().map(l => ({ id: l.p.id, store: l.store, q: l.q })), services: Object.keys(services).map(Number), bundles: bundlesOn, form: d, promo, points: qt.pts || 0, expected_total: expectTotal ?? qt.total };
+  const body = { lines: cartLines().map(l => ({ id: l.p.id, store: l.store, q: l.q })), services: Object.keys(services).map(Number), bundles: bundlesOn, form: d, promo, points: qt.pts || 0, lang, expected_total: expectTotal ?? qt.total };
   try {
     const r = await api("POST", "/api/orders", body);
     expectTotal = null;
@@ -3444,6 +3449,7 @@ async function submitOrderApi(d, qt) {
     if (r.order.promo) { LS.set("imorat.promoUsed", [...promoUsed(), user.id]); promo = ""; LS.set("imorat.promoCode", ""); }
     if (r.order.pts) { user.points = Math.max(0, (user.points || 0) - r.order.pts); LS.set("imorat.user", user); form.usePts = false; } bonusApi = null;
     cart = {}; services = {}; bundlesOn = []; LS.set("imorat.svc", services); LS.set("imorat.bundles", bundlesOn); saveCart(); refreshCards();
+    if (o.pay_url) { LS.set("imorat.payWait", o.num); toast(L("Переходим к оплате картой…", "Karta bilan to‘lovga o‘tamiz…", "Taking you to the card payment…")); setTimeout(() => { location.href = o.pay_url; }, 400); return; }
     openDrawer("track", o.num);
     syncCatalog();
   } catch (e) {
@@ -3460,7 +3466,7 @@ let ordersFetched = false;
 function fetchOrders() {
   if (!API || !apiToken || ordersFetched) return;
   ordersFetched = true;
-  api("GET", "/api/orders").then(r => {
+  return api("GET", "/api/orders").then(r => {
     const srv = r.orders.map(mapOrder), nums = new Set(srv.map(o => o.num));
     orders = [...srv, ...orders.filter(o => !o.api && !nums.has(o.num))].sort((a, b) => b.t - a.t);
     LS.set("imorat.orders", orders.slice(0, 30));
@@ -3596,7 +3602,7 @@ function renderSellerApi() {
       ${ords.length ? `<div class="tbl-wrap"><table><thead><tr><th>${L("Заказ", "Buyurtma")}</th><th>${L("Состав", "Tarkibi")}</th><th class="r">${L("Сумма", "Summa")}</th><th>${L("Статус", "Holat")}</th><th></th></tr></thead><tbody>
       ${ords.map(o => { const [lb, c] = lab[o.status] || [o.status, "mute"]; return `<tr><td><b class="mono">${esc(o.num)}</b><br><small style="color:var(--muted)">${esc(o.buyer || "")} · ${esc(o.phone || "")}<br>${o.tariff ? `${L(DIST[o.district]?.ru || "", DIST[o.district]?.uz || "")}, ${esc(o.street)}` : L("Самовывоз", "Olib ketish")}${o.when === "vip" ? ` · ${L("завтра", "ertaga")} ${o.hour}:00` : o.when === "slot" ? ` · ${L("завтра 10–14", "ertaga 10–14")}` : ""}</small>${o.comment ? `<br><small>«${esc(o.comment)}»</small>` : ""}</td>
         <td style="min-width:180px;font-size:13px">${o.lines.map(l => `${esc(PROD[l.id] ? pName(PROD[l.id]) : l.name)} × ${l.q}`).join("<br>")}<br><small style="color:var(--muted)">${o.tariff ? `${tName(TARIFFS.find(t => t.id === o.tariff) || TARIFFS[0])} · ${fmtKg(o.kg)}` : ""}</small></td>
-        <td class="r">${fmt(o.lines.reduce((a, l) => a + l.price * l.q, 0))}<br><small style="color:var(--muted)">${["cash", "store"].includes(o.pay) ? L("оплата магазину", "do‘konga to‘lov") : o.pay_status === "paid" ? L("оплачен", "to‘langan") : L("ждёт оплаты", "to‘lov kutilmoqda")}</small></td>
+        <td class="r">${fmt(o.lines.reduce((a, l) => a + l.price * l.q, 0))}<br><small style="color:var(--muted)">${["cash", "store"].includes(o.pay) ? L("оплата при получении", "olganda to‘lov", "paid on receipt") : o.pay_status === "paid" ? L("оплачен картой — выдавайте без оплаты", "karta bilan to‘langan — to‘lovsiz bering", "paid by card — hand over without payment") : L("ждёт оплаты", "to‘lov kutilmoqda")}</small></td>
         <td><span class="pill ${c}">${lb}</span>${o.status === "new" && o.accept_by ? `<br><small data-until="${o.accept_by}"></small>` : ""}${o.status === "cancelled" && o.cancel_reason ? `<br><small style="color:var(--muted)">${CANCEL_TXT()[o.cancel_reason] || ""}</small>` : ""}</td><td style="white-space:nowrap">${o.next.map(n => `<button class="btn ${n === "cancelled" ? "btn-line" : "btn-primary"}" type="button" data-shipst="${o.ship_id}|${n}" style="margin:2px 0">${nx[n]}</button>`).join(" ")}</td></tr>`; }).join("")}
       </tbody></table></div>` : `<p style="color:var(--muted);margin:0">${L("Заказов пока нет. Когда покупатель оформит заказ с вашими товарами, он появится здесь.", "Hozircha buyurtmalar yo‘q. Xaridor mahsulotlaringiz bilan buyurtma bersa, shu yerda chiqadi.")}</p>`}</div>
     ${sellerExtraHTML(sellerData)}
@@ -3686,7 +3692,7 @@ async function setVipApi(on) {
 
 /* ================= Ratings, timers, reviews, notifications, finance (v2) ================= */
 const hhmm = ms => new Date(ms).toLocaleTimeString(LOCALE, { hour: "2-digit", minute: "2-digit" });
-const CANCEL_TXT = () => ({ not_accepted: L("магазин не подтвердил заказ вовремя", "do‘kon buyurtmani o‘z vaqtida tasdiqlamadi"), out_of_stock: L("товара не оказалось в наличии", "mahsulot mavjud emas ekan"), not_shipped: L("магазин не передал заказ вовремя", "do‘kon buyurtmani o‘z vaqtida topshirmadi"), buyer: L("вы отменили заказ", "buyurtmani bekor qildingiz"), admin: L("отменено поддержкой Imorat Go", "Imorat Go yordam xizmati bekor qildi") });
+const CANCEL_TXT = () => ({ unpaid: L("оплата картой не поступила вовремя — товар снова в продаже, можно оформить заново", "karta to‘lovi o‘z vaqtida kelmadi — mahsulot yana sotuvda, qayta rasmiylashtirish mumkin", "the card payment did not arrive in time — the goods are back on sale, you can order again"), refund: L("платёж отменён, деньги вернутся на карту", "to‘lov bekor qilindi, pul kartaga qaytadi", "the payment was cancelled, the money returns to your card"), not_accepted: L("магазин не подтвердил заказ вовремя", "do‘kon buyurtmani o‘z vaqtida tasdiqlamadi"), out_of_stock: L("товара не оказалось в наличии", "mahsulot mavjud emas ekan"), not_shipped: L("магазин не передал заказ вовремя", "do‘kon buyurtmani o‘z vaqtida topshirmadi"), buyer: L("вы отменили заказ", "buyurtmani bekor qildingiz"), admin: L("отменено поддержкой Imorat Go", "Imorat Go yordam xizmati bekor qildi") });
 /* Store hours are Tashkent time (UTC+5) */
 function openState(s) {
   const m = String(s.hours || "").match(/(\d{1,2}):(\d{2})\D+(\d{1,2}):(\d{2})/);
@@ -3708,8 +3714,16 @@ function ratingHTML(s, long) {
   if (!r.stars && r.reliability == null) return `<span class="srate new">${L("Новый магазин", "Yangi do‘kon")}</span>`;
   return `<span class="srate">${r.stars ? `<b>★ ${r.stars.toFixed(1).replace(".", DEC)}</b>${r.reviews ? ` <span>(${r.reviews})</span>` : ""}` : ""}${r.reliability != null ? ` · <span title="${L("Доля заказов, выполненных без отмены по вине магазина", "Do‘kon aybi bilan bekor qilinmagan buyurtmalar ulushi")}">${r.reliability}% ${L("выполнено", "bajarildi")}</span>` : ""}${long && r.accept_min ? ` · ${L(`принимает за ~${r.accept_min} мин`, `~${r.accept_min} daqiqada qabul qiladi`, `accepts in ~${r.accept_min} min`)}` : ""}</span>`;
 }
+function payExtra(o) {
+  if (!o.api || ["store", "cash"].includes(o.pay)) return "";
+  if (o.pay_status === "paid") return `<div class="note okn">${ui("check", 14)} ${L(`Оплачено картой (${{ click: "Click", payme: "Payme", uzum: "Uzum" }[o.pay] || o.pay}) — ${fmt(o.total)}, включая доставку. Курьеру ничего платить не нужно.`, `Karta bilan to‘langan (${{ click: "Click", payme: "Payme", uzum: "Uzum" }[o.pay] || o.pay}) — ${fmt(o.total)}, yetkazish bilan. Kuryerga hech narsa to‘lamaysiz.`, `Paid by card (${{ click: "Click", payme: "Payme", uzum: "Uzum" }[o.pay] || o.pay}) — ${fmt(o.total)}, delivery included. Nothing to pay the courier.`)}</div>`;
+  if (o.pay_status === "refunded" || o.pay_status === "refund_due") return `<div class="note warnn">${ui("wallet", 14)} ${L("Деньги за отменённую часть заказа вернутся на карту в срок банка (обычно 1–3 дня).", "Bekor qilingan qism uchun pul bank muddatida (odatda 1–3 kun) kartaga qaytadi.", "The money for the cancelled part returns to your card within the bank’s term (usually 1–3 days).")}</div>`;
+  if (o.pay_status === "pending" && o.status !== "cancelled") return `<div class="note warnn" style="display:grid;gap:8px">${ui("wallet", 14)} ${L("Ожидаем оплату картой. Магазин получит заказ сразу после оплаты.", "Karta to‘lovini kutmoqdamiz. Do‘kon buyurtmani to‘lovdan keyin darhol oladi.", "Waiting for the card payment. The store receives the order right after it.")}${o.pay_deadline ? ` ${L(`Оплатить нужно до ${hhmm(o.pay_deadline)}.`, `${hhmm(o.pay_deadline)} gacha to‘lash kerak.`, `Pay before ${hhmm(o.pay_deadline)}.`)}` : ""}${o.pay_url ? `<a class="btn btn-primary" href="${esc(o.pay_url)}">${ui("wallet", 16)} ${L("Оплатить картой", "Karta bilan to‘lash", "Pay by card")} · ${fmt(o.total)}</a>` : ""}</div>`;
+  return "";
+}
 function shipExtra(o, s) {
   if (s.status === "cancelled") return `<div class="note warnn">${ui("close", 14)} ${L("Отменено", "Bekor qilindi")}: ${CANCEL_TXT()[s.cancel_reason] || ""}${s.cancel_reason && s.cancel_reason !== "buyer" ? ". " + L("Платить ничего не нужно — закажите у другого магазина.", "Hech narsa to‘lash shart emas — boshqa do‘kondan buyurtma bering.") : ""}</div>`;
+  if (s.status === "new" && s.accept_by && o.pay_status === "paid") return `<div class="note">${ui("clock", 14)} ${L(`Магазин подтвердит заказ до ${hhmm(s.accept_by)}. Не успеет — заказ отменится, а деньги вернутся на карту.`, `Do‘kon buyurtmani ${hhmm(s.accept_by)} gacha tasdiqlaydi. Ulgurmasa — buyurtma bekor bo‘ladi, pul kartaga qaytadi.`, `The store confirms the order by ${hhmm(s.accept_by)}. If it does not, the order is cancelled and the money returns to your card.`)}</div>`;
   if (s.status === "new" && s.accept_by) return `<div class="note">${ui("clock", 14)} ${L(`Магазин подтвердит заказ до ${hhmm(s.accept_by)}. Не успеет — заказ отменится автоматически, платить ничего не нужно.`, `Do‘kon buyurtmani ${hhmm(s.accept_by)} gacha tasdiqlaydi. Ulgurmasa — buyurtma avtomatik bekor qilinadi, to‘lash shart emas.`, `The store will confirm the order by ${hhmm(s.accept_by)}. If it doesn't, the order is cancelled automatically and you pay nothing.`)}</div>`;
   if (["delivered", "picked"].includes(s.status)) {
     if (s.review) return `<div class="note"><span class="stars-ro">${"★".repeat(s.review.stars)}${"☆".repeat(5 - s.review.stars)}</span> ${L("Ваш отзыв", "Sharhingiz")}${s.review.text ? `: «${esc(s.review.text)}»` : ""}${s.review.reply ? `<br><small>${L("Ответ магазина", "Do‘kon javobi")}: ${esc(s.review.reply)}</small>` : ""}</div>`;
@@ -3809,8 +3823,9 @@ function sellerExtraHTML(d) {
       ${d.reviews?.length ? d.reviews.slice(0, 6).map(r => `<div class="rv-item"><span class="stars-ro">${"★".repeat(r.stars)}${"☆".repeat(5 - r.stars)}</span> <b>${esc(r.name || L("Покупатель", "Xaridor"))}</b> <small style="color:var(--muted)">${new Date(r.created_at).toLocaleDateString(LOCALE)}</small>${r.text ? `<p>${esc(r.text)}</p>` : ""}${r.reply ? `<small>${L("Ваш ответ", "Javobingiz")}: ${esc(r.reply)}</small>` : `<form class="reply-f" data-reply="${r.ship_id}"><label class="visually-hidden" for="rp${r.ship_id}">${L("Ответ", "Javob")}</label><input id="rp${r.ship_id}" maxlength="500" placeholder="${L("Ответить покупателю", "Xaridorga javob berish")}"><button class="btn btn-line" type="submit">${L("Ответить", "Javob")}</button></form>`}</div>`).join("") : `<small style="color:var(--muted)">${L("Отзывов пока нет. Покупатели оценивают магазин после получения заказа.", "Hozircha sharhlar yo‘q. Xaridorlar buyurtmani olgach baholaydi.")}</small>`}</div>
   </div>
   <div class="panel" style="margin-top:12px"><div class="panel-h"><h2 class="h-m">${L("Финансы", "Moliya")} · ${esc(f.month)}</h2><span style="font-size:13px;color:var(--muted)">${L("Комиссия", "Komissiya")}: ${esc(rateTxt)}</span></div>
-    <div class="mini-kpis"><div><b>${fmt(f.goods)}</b><small>${L("продано за месяц", "oylik sotuv")}</small></div><div><b>${fmt(f.commission)}</b><small>${L("комиссия за месяц", "oylik komissiya")}</small></div><div><b>${fmt(f.settled)}</b><small>${L("оплачено Imorat Go", "Imorat Go’ga to‘langan")}</small></div><div><b style="color:${f.balance > 0 ? "var(--signal)" : "var(--ok)"}">${fmt(f.balance)}</b><small>${L("к оплате", "to‘lanishi kerak")}</small></div></div>
-    <small style="color:var(--muted)">${L("Сейчас покупатели платят магазину напрямую. Комиссия Imorat Go считается только с выполненных заказов и оплачивается раз в месяц.", "Hozir xaridorlar do‘konga to‘g‘ridan-to‘g‘ri to‘laydi. Imorat Go komissiyasi faqat bajarilgan buyurtmalardan hisoblanadi va oyiga bir marta to‘lanadi.")}</small></div>`;
+    <div class="mini-kpis"><div><b>${fmt(f.goods)}</b><small>${L("продано за месяц", "oylik sotuv")}</small></div><div><b>${fmt(f.commission)}</b><small>${L("комиссия за месяц", "oylik komissiya")}</small></div><div><b>${fmt(f.settled)}</b><small>${L("оплачено Imorat Go", "Imorat Go’ga to‘langan")}</small></div><div><b style="color:${f.balance > 0 ? "var(--signal)" : "var(--ok)"}">${fmt(Math.abs(f.balance))}</b><small>${f.balance >= 0 ? L("к оплате Imorat Go", "Imorat Go’ga to‘lanishi kerak", "due to Imorat Go") : L("Imorat Go перечислит вам", "Imorat Go sizga o‘tkazadi", "Imorat Go pays you")}</small></div></div>
+    ${f.delivery_due || f.payout_due ? `<div class="mini-kpis" style="margin-top:8px">${f.payout_due ? `<div><b>${fmt(f.payout_due)}</b><small>${L("оплачено картой — ваша доля за вычетом комиссии", "karta bilan to‘langan — komissiyasiz sizning ulushingiz", "paid by card — your share after commission")}</small></div>` : ""}${f.delivery_due ? `<div><b>${fmt(f.delivery_due)}</b><small>${L("доставка, полученная от покупателей (платит Imorat Go Яндексу)", "xaridorlardan olingan yetkazish haqi (Imorat Go Yandexga to‘laydi)", "delivery fees collected from buyers (Imorat Go pays Yandex)")}</small></div>` : ""}</div>` : ""}
+    <small style="color:var(--muted)">${(apiCfg?.payments || []).length ? L("Заказы, оплаченные картой, Imorat Go переводит магазину за вычетом комиссии раз в неделю. По заказам с оплатой при получении магазин раз в месяц перечисляет комиссию и стоимость доставки, которую получил от покупателя.", "Karta bilan to‘langan buyurtmalarni Imorat Go komissiyani ayirib haftasiga bir marta do‘konga o‘tkazadi. Olganda to‘lanadigan buyurtmalar bo‘yicha do‘kon oyiga bir marta komissiyani va xaridordan olgan yetkazish haqini o‘tkazadi.", "Orders paid by card are transferred to the store weekly, minus the commission. For orders paid on receipt the store sends the commission and the delivery fee it collected from the buyer once a month.") : L("Сейчас покупатели платят магазину напрямую. Комиссия Imorat Go считается только с выполненных заказов и оплачивается раз в месяц.", "Hozir xaridorlar do‘konga to‘g‘ridan-to‘g‘ri to‘laydi. Imorat Go komissiyasi faqat bajarilgan buyurtmalardan hisoblanadi va oyiga bir marta to‘lanadi.")}</small></div>`;
 }
 document.addEventListener("click", e => {
   const b = e.target.closest("[data-look],[data-theme-set]"); if (!b) return;
@@ -5165,6 +5180,15 @@ const BONUS = { rate: .01, ratePro: .02, maxShare: .2, referral: 30000, welcome:
 let bonusApi = null; // GET /api/me/bonus
 let bonusDemo = LS.get("imorat.bonus", null);
 { const rc = (location.search.match(/[?&]ref=([A-Za-z0-9]{4,12})\b/) || [])[1]; if (rc) LS.set("imorat.refPending", rc.toUpperCase()); }
+{ // back from the bank page: show the order and poll until the payment is confirmed
+  const pn = (location.search.match(/[?&]paid=(IM-\d+)/) || [])[1] || LS.get("imorat.payWait", null);
+  if (pn && API) setTimeout(() => {
+    history.replaceState(null, "", location.pathname + "#orders"); LS.set("imorat.payWait", null);
+    openDrawer("track", pn);
+    let n = 0; const tick = () => { if (n++ > 40) return; ordersFetched = false; Promise.resolve(fetchOrders()).then(() => { const o = orders.find(x => x.num === pn); if (o && o.api && (o.pay_status === "paid" || o.status === "cancelled")) { if (drawerView === "track") renderDrawer(); if (o.pay_status === "paid") toast(L("Оплата получена — магазин собирает заказ", "To‘lov qabul qilindi — do‘kon buyurtmani yig‘moqda", "Payment received — the store is packing your order")); return; } setTimeout(tick, 3000); }); };
+    setTimeout(tick, 1500);
+  }, 400);
+}
 { // links from the Telegram bot: ?q=<search> opens the results, ?ai=<question> asks Usta AI
   const sp = new URLSearchParams(location.search), q0 = (sp.get("q") || "").trim().slice(0, 120), ai0 = (sp.get("ai") || "").trim().slice(0, 500);
   if (q0 || ai0) setTimeout(() => {

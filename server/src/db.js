@@ -82,6 +82,10 @@ export function openDb(path, catalogPath, opts = {}) {
   addCol("shipments", "accepted_at", "INTEGER"); addCol("shipments", "start_at", "INTEGER"); addCol("shipments", "reminded", "INTEGER NOT NULL DEFAULT 0");
   addCol("shipments", "sms_sent", "INTEGER NOT NULL DEFAULT 0"); addCol("shipments", "cancel_reason", "TEXT"); addCol("shipments", "tg_msg", "TEXT");
   addCol("shipments", "goods", "INTEGER NOT NULL DEFAULT 0"); addCol("shipments", "commission", "INTEGER NOT NULL DEFAULT 0");
+  addCol("orders", "paid_at", "INTEGER"); addCol("orders", "pay_ref", "TEXT");
+  raw.exec(`CREATE TABLE IF NOT EXISTS payments(id INTEGER PRIMARY KEY AUTOINCREMENT, provider TEXT NOT NULL, pid TEXT NOT NULL, order_id INTEGER NOT NULL REFERENCES orders(id),
+    amount INTEGER NOT NULL, state INTEGER NOT NULL, create_time INTEGER NOT NULL, perform_time INTEGER, cancel_time INTEGER, reason INTEGER, UNIQUE(provider, pid));
+    CREATE INDEX IF NOT EXISTS payments_order ON payments(order_id)`);
   const cache = new Map();
   const st = sql => { let s = cache.get(sql); if (!s) { s = raw.prepare(sql); cache.set(sql, s); } return s; };
   const clean = p => p.map(v => (v === undefined ? null : typeof v === "boolean" ? (v ? 1 : 0) : v));

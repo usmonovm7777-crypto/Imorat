@@ -18,6 +18,7 @@ import { registerMasters } from "./masters.js";
 import { registerBot } from "./bot.js";
 import { createBonus } from "./bonus.js";
 import { registerStats } from "./stats.js";
+import { createPayments } from "./payments.js";
 import { createChannel } from "./channel.js";
 import { registerDisputes } from "./disputes.js";
 import { registerQuestions } from "./questions.js";
@@ -266,7 +267,7 @@ export function createApp(cfg, log = console) {
     if (form.mode !== "pickup" && form.street.length < 4) throw bad("bad_address", "Street and house are required for delivery");
     if (!["store", "cash"].includes(form.pay) && !cfg.paymentsOnline.includes(form.pay)) throw bad("payment_unavailable", "Online payment is not connected yet; pay the store directly");
     if (b.expected_total != null && Number(b.expected_total) !== q.total) throw new HttpError(409, "total_changed", "Prices or delivery changed, check the new total", { quote: q });
-    const now = Date.now();
+    const now = Date.now(), online = !["store", "cash"].includes(form.pay);
     const order = db.tx(() => {
       for (const l of lines) {
         const res = db.run("UPDATE offers SET stock=stock-?, updated_at=? WHERE product_id=? AND store_id=? AND stock>=?", l.q, now, l.p.id, l.store, l.q);
@@ -275,7 +276,7 @@ export function createApp(cfg, log = console) {
       if (q.pts && !db.run("UPDATE users SET points=points-? WHERE id=? AND points>=?", q.pts, u.id, q.pts).changes) throw new HttpError(409, "total_changed", "Bonus balance changed, check the new total", { quote: { ...q, pts: 0, total: q.total + q.pts } });
       const ins = db.run(`INSERT INTO orders(num,user_id,created_at,status,pay,pay_status,form,goods,del,svc,disc,promo_disc,total,cash,promo,services,points_used)
         VALUES(?,?,?,'active',?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-        "tmp-" + randomBytes(6).toString("hex"), u.id, now, form.pay, ["cash", "store"].includes(form.pay) ? "to_store" : "pending", JSON.stringify(form),
+        "tmp-" + randomBytes(6).toString("hex"), u.id, now, form.pay, ["cash", "store"].includes(form.pay) ? "to_store" : "pending", JSON.stringify({ ...form, lang: String(b.lang || "ru").slice(0, 2) }),
         q.goods, q.del, q.svc, q.disc, q.pd, q.total, q.cash, q.promo, JSON.stringify(q.services), q.pts || 0);
       const id = Number(ins.lastInsertRowid), num = "IM-" + (100000 + id);
       if (q.pts) db.run("INSERT INTO points_log(user_id,delta,reason,ref,created_at) VALUES(?,?,?,?,?)", u.id, -q.pts, "spent", "order:" + id, now);
@@ -284,16 +285,24 @@ export function createApp(cfg, log = console) {
         const goods = s.lines.reduce((a, l) => a + l.price * l.q, 0);
         const commission = s.lines.reduce((a, l) => a + Math.round(l.price * l.q * rateOf(PCAT.get(l.id) || db.get("SELECT cat FROM products WHERE id=?", l.id)?.cat)), 0);
         const start = storeStartAt(db.get("SELECT hours FROM stores WHERE id=?", s.store), now);
-        db.run("INSERT INTO shipments(order_id,store_id,tariff,price,kg,dist,lines,status,status_at,history,goods,commission,start_at) VALUES(?,?,?,?,?,?,?,'new',?,?,?,?,?)",
-          id, s.store, s.tariff, s.price, s.kg, s.dist, JSON.stringify(s.lines), now, JSON.stringify([{ s: "new", t: now }]), goods, commission, start);
+        const st0 = online ? "unpaid" : "new";
+        db.run("INSERT INTO shipments(order_id,store_id,tariff,price,kg,dist,lines,status,status_at,history,goods,commission,start_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
+          id, s.store, s.tariff, s.price, s.kg, s.dist, JSON.stringify(s.lines), st0, now, JSON.stringify([{ s: st0, t: now }]), goods, commission, start);
       }
       if (q.promo) db.run("INSERT OR IGNORE INTO promo_uses(user_id,code,order_id) VALUES(?,?,?)", u.id, q.promo, id);
       return num;
     });
     bumpCatalog();
     log.info(`[order] ${order} by ${u.id}: ${q.total} so'm, ${q.ships.length} shipment(s)`);
-    for (const sh of db.all("SELECT id FROM shipments WHERE order_id=(SELECT id FROM orders WHERE num=?)", order)) notify.shipmentNew(sh.id);
+    if (!online) for (const sh of db.all("SELECT id FROM shipments WHERE order_id=(SELECT id FROM orders WHERE num=?)", order)) notify.shipmentNew(sh.id);
     return { order: orderOut(db.get("SELECT * FROM orders WHERE num=?", order)) };
+  });
+  /* a fresh checkout link for an order that is still waiting for its card payment */
+  r.get("/api/orders/:num/pay", (req, res, p) => {
+    const u = need(req), o = db.get("SELECT * FROM orders WHERE num=? AND user_id=?", p.num, u.id);
+    if (!o) throw new HttpError(404, "not_found", "Order not found");
+    if (o.pay_status !== "pending" || ["store", "cash"].includes(o.pay) || o.status === "cancelled") throw new HttpError(409, "not_payable", "This order does not wait for a payment");
+    return { pay_url: payments.payUrl(o) };
   });
 
   function orderOut(o, { forStore = null } = {}) {
@@ -301,6 +310,8 @@ export function createApp(cfg, log = console) {
     return {
       num: o.num, t: o.created_at, status: o.status, pay: o.pay, pay_status: o.pay_status, d: JSON.parse(o.form),
       goods: o.goods, del: o.del, svc: o.svc, disc: o.disc + o.promo_disc, bdisc: o.disc, pd: o.promo_disc, pts: o.points_used || 0, total: o.total, cash: o.cash, promo: o.promo,
+      paid_at: o.paid_at || null, pay_url: o.pay_status === "pending" && !["store", "cash"].includes(o.pay) && o.status !== "cancelled" ? payments.payUrl(o) : null,
+      pay_deadline: o.pay_status === "pending" && !["store", "cash"].includes(o.pay) ? o.created_at + cfg.payTimeoutMin * 60000 : null,
       ships: ships.map(s => ({ id: s.id, store: s.store_id, tariff: s.tariff, price: s.price, kg: s.kg, dist: s.dist, status: s.status, status_at: s.status_at,
         step: (STEPS[s.tariff ? "yandex" : "pickup"].indexOf(s.status)), history: JSON.parse(s.history), lines: JSON.parse(s.lines), courier: s.courier,
         cancel_reason: s.cancel_reason, accept_by: s.status === "new" ? (s.start_at || s.status_at) + cfg.timers.cancel * 60000 : null,
@@ -321,20 +332,39 @@ export function createApp(cfg, log = console) {
     const u = need(req);
     const o = db.get("SELECT * FROM orders WHERE num=? AND user_id=?", p.num, u.id);
     if (!o) throw new HttpError(404, "not_found", "Order not found");
+    if (!cancelOrder(o, "buyer")) throw new HttpError(409, "too_late", "The order is already on its way");
+    return { order: orderOut(db.get("SELECT * FROM orders WHERE id=?", o.id)) };
+  });
+  /* Cancels a whole order while nothing has left the stores: stock back, points back (via setShipStatus), promo freed. False once a shipment is on its way. */
+  function cancelOrder(o, reason) {
     const ships = db.all("SELECT * FROM shipments WHERE order_id=?", o.id);
-    if (ships.some(s => !["new", "assembling", "cancelled"].includes(s.status))) throw new HttpError(409, "too_late", "The order is already on its way");
+    if (ships.some(s => !["unpaid", "new", "assembling", "cancelled"].includes(s.status))) return false;
     db.tx(() => {
       for (const s of ships) {
         if (s.status === "cancelled") continue;
         for (const l of JSON.parse(s.lines)) db.run("UPDATE offers SET stock=stock+? WHERE product_id=? AND store_id=?", l.q, l.id, s.store_id);
-        setShipStatus(s, "cancelled", "buyer");
+        setShipStatus(s, "cancelled", reason);
       }
       db.run("UPDATE orders SET status='cancelled' WHERE id=?", o.id);
-      if (o.promo) db.run("DELETE FROM promo_uses WHERE user_id=? AND code=?", u.id, o.promo);
+      if (o.promo) db.run("DELETE FROM promo_uses WHERE user_id=? AND code=?", o.user_id, o.promo);
     });
     bumpCatalog();
-    return { order: orderOut(db.get("SELECT * FROM orders WHERE id=?", o.id)) };
-  });
+    return true;
+  }
+  /* the card payment arrived: the stores get the order now, as if it had just been placed */
+  function orderPaid(orderId) {
+    const now = Date.now(), ids = [];
+    db.tx(() => {
+      for (const s of db.all("SELECT * FROM shipments WHERE order_id=? AND status='unpaid'", orderId)) {
+        const h = JSON.parse(s.history); h.push({ s: "new", t: now });
+        db.run("UPDATE shipments SET status='new', status_at=?, history=?, start_at=? WHERE id=?", now, JSON.stringify(h), storeStartAt(db.get("SELECT hours FROM stores WHERE id=?", s.store_id), now), s.id);
+        ids.push(s.id);
+      }
+    });
+    for (const id of ids) { notify.shipmentNew(id); notify.paid(id); }
+  }
+  const payments = createPayments({ db, cfg, log, onPaid: orderPaid, cancelOrder });
+  payments.routes(r);
 
   function setShipStatus(s, status, reason = null) {
     const now = Date.now(), h = JSON.parse(s.history); h.push({ s: status, t: now, ...(reason ? { r: reason } : {}) });
@@ -346,6 +376,15 @@ export function createApp(cfg, log = console) {
     db.run("UPDATE orders SET status=? WHERE id=?", st, s.order_id);
     if (status === "delivered" || status === "picked") bonus.shipDone({ ...s, status });
     if (st === "cancelled") bonus.orderCancelled(s.order_id);
+    // a card-paid shipment the store failed (or the buyer cancelled in time): the money must go back — flagged for the admin until refunds are automated
+    if (status === "cancelled" && reason !== "refund") {
+      const o = db.get("SELECT * FROM orders WHERE id=?", s.order_id);
+      if (o && o.pay_status === "paid" && !["store", "cash"].includes(o.pay)) {
+        const part = JSON.parse(s.lines).reduce((a, l) => a + l.price * l.q, 0) + (s.price || 0);
+        db.run("UPDATE orders SET pay_status='refund_due' WHERE id=?", o.id);
+        notify.admins(`💳 Возврат по заказу ${o.num}: ${part.toLocaleString("ru-RU")} сум (${o.pay}) — отправление отменено (${reason || "—"}). Сделайте возврат в кабинете ${o.pay === "payme" ? "Payme" : "Click"}.`);
+      }
+    }
   }
 
   /* ---------- AI ---------- */
@@ -426,7 +465,7 @@ export function createApp(cfg, log = console) {
   r.get("/api/seller/summary", req => {
     const { s } = needSeller(req);
     const since = Date.now() - 30 * 86400_000;
-    const ships = db.all("SELECT sh.*, o.num, o.form, o.created_at oc, o.pay, o.pay_status FROM shipments sh JOIN orders o ON o.id=sh.order_id WHERE sh.store_id=? ORDER BY sh.id DESC LIMIT 100", s.id);
+    const ships = db.all("SELECT sh.*, o.num, o.form, o.created_at oc, o.pay, o.pay_status FROM shipments sh JOIN orders o ON o.id=sh.order_id WHERE sh.store_id=? AND sh.status<>'unpaid' ORDER BY sh.id DESC LIMIT 100", s.id);
     const revenue = ships.filter(x => x.oc >= since && x.status !== "cancelled").reduce((a, x) => a + JSON.parse(x.lines).reduce((b, l) => b + l.price * l.q, 0), 0);
     const products = db.all(`SELECT p.id,p.ru,p.uz,p.cat,p.sub,p.unit,p.kg,p.img,p.active,p.store_id, o.price,o.stock FROM offers o JOIN products p ON p.id=o.product_id WHERE o.store_id=? ORDER BY p.id`, s.id)
       .map(p => ({ ...p, img: mediaUrl(p.img), own: p.store_id === s.id }));
@@ -630,8 +669,14 @@ export function createApp(cfg, log = console) {
     const [a, b, month] = monthRange(m);
     const mon = db.get("SELECT COALESCE(SUM(goods),0) goods, COALESCE(SUM(commission),0) commission, COUNT(*) n FROM shipments WHERE store_id=? AND status IN ('delivered','picked') AND status_at>=? AND status_at<?", storeId, a, b);
     const all = db.get("SELECT COALESCE(SUM(commission),0) c FROM shipments WHERE store_id=? AND status IN ('delivered','picked')", storeId).c;
+    // Money that crossed sides: for orders paid to the store the buyer also handed it the delivery fee that Imorat Go paid to Yandex;
+    // for orders paid by card online Imorat Go holds the goods money and owes the store its share (goods minus commission).
+    const flow = db.get(`SELECT COALESCE(SUM(CASE WHEN o.pay IN ('store','cash') AND sh.tariff IS NOT NULL THEN sh.price ELSE 0 END),0) delivery_due,
+        COALESCE(SUM(CASE WHEN o.pay NOT IN ('store','cash') AND o.pay_status='paid' THEN sh.goods - sh.commission ELSE 0 END),0) payout_due,
+        COALESCE(SUM(CASE WHEN o.pay NOT IN ('store','cash') AND o.pay_status='paid' AND sh.status_at>=? AND sh.status_at<? THEN sh.goods ELSE 0 END),0) online_month
+        FROM shipments sh JOIN orders o ON o.id=sh.order_id WHERE sh.store_id=? AND sh.status IN ('delivered','picked')`, a, b, storeId);
     const paid = db.get("SELECT COALESCE(SUM(amount),0) s FROM settlements WHERE store_id=?", storeId).s;
-    return { month, goods: mon.goods, commission: mon.commission, orders: mon.n, commission_total: all, settled: paid, balance: all - paid };
+    return { month, goods: mon.goods, commission: mon.commission, orders: mon.n, online_month: flow.online_month, commission_total: all, delivery_due: flow.delivery_due, payout_due: flow.payout_due, settled: paid, balance: all + flow.delivery_due - flow.payout_due - paid };
   }
 
   /* ---------- admin ---------- */
@@ -697,7 +742,7 @@ export function createApp(cfg, log = console) {
   });
   r.patch("/api/admin/orders/:num/pay", async (req, res, p) => {
     needAdmin(req); const b = await readJson(req);
-    if (!["paid", "pending", "refunded", "on_delivery"].includes(b.pay_status)) throw bad("bad_status", "Unknown payment status");
+    if (!["paid", "pending", "refunded", "refund_due", "on_delivery"].includes(b.pay_status)) throw bad("bad_status", "Unknown payment status");
     const o = db.get("SELECT id FROM orders WHERE num=?", p.num); if (!o) throw new HttpError(404, "not_found", "Order not found");
     db.run("UPDATE orders SET pay_status=? WHERE id=?", b.pay_status, o.id);
     audit(req, "order.pay." + b.pay_status, p.num);
@@ -772,6 +817,7 @@ export function createApp(cfg, log = console) {
       }
     }
     db.run("DELETE FROM tg_links WHERE expires_at<?", now);
+    payments.sweep(now);
   }
   function backup() {
     if (!cfg.backupDir || cfg.dbPath === ":memory:") return;
