@@ -9,7 +9,7 @@ import html, json, os, re, shutil
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-SITE = os.environ.get("SITE_URL", "https://usmonovm7777-crypto.github.io/Imorat Go/").rstrip("/") + "/"
+SITE = os.environ.get("SITE_URL", "https://usmonovm7777-crypto.github.io/Imorat/").rstrip("/") + "/"
 cat = json.loads((ROOT / "server" / "data" / "catalog.json").read_text(encoding="utf-8"))
 STORES = {s["id"]: s for s in cat["stores"]}
 CATS = {c["id"]: c for c in cat["cats"]}

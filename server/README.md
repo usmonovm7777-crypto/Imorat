@@ -25,7 +25,7 @@ npm test                  # автотесты API
 2. Направьте домен, например `api.imorat.uz`, на IP сервера (A-запись в DNS).
 3. На сервере:
    ```bash
-   git clone https://github.com/usmonovm7777-crypto/Imorat Go.git && cd Imorat Go/server
+   git clone https://github.com/usmonovm7777-crypto/Imorat.git && cd Imorat/server
    cp .env.example .env && nano .env     # API_DOMAIN, PUBLIC_URL, JWT_SECRET, ADMIN_PHONES, ключи
    docker compose up -d --build
    ```

@@ -29,7 +29,9 @@ export function registerBot({ db, cfg, ref, tg, bonus, masters, log = console })
   const search = createSearch(ref.cats || []);
   const safe = p => Promise.resolve(p).catch(e => log.warn("[bot]", e.message));
   const hits = new Map(); // simple flood guard: 40 messages a minute per chat
-  const flood = chat => { const now = Date.now(), a = (hits.get(chat) || []).filter(t => now - t < 60000); a.push(now); hits.set(chat, a); return a.length > 40; };
+  const flood = chat => { const now = Date.now(), a = (hits.get(chat) || []).filter(t => now - t < 60000); a.push(now); hits.set(chat, a);
+    if (hits.size > 5000) for (const [k, v] of hits) if (!v.some(t => now - t < 60000)) hits.delete(k);
+    return a.length > 40; };
 
   /* ---------- chat state ---------- */
   function chatOf(id, from) {
@@ -41,6 +43,7 @@ export function registerBot({ db, cfg, ref, tg, bonus, masters, log = console })
       db.run("INSERT OR IGNORE INTO tg_chats(chat,lang,updated_at) VALUES(?,?,?)", chat, lang, Date.now());
       c = db.get("SELECT * FROM tg_chats WHERE chat=?", chat);
     }
+    if (c.state && Date.now() - (c.updated_at || 0) > 2 * 3600000) { db.run("UPDATE tg_chats SET state=NULL, data=NULL WHERE chat=?", chat); c = { ...c, state: null, data: null }; }
     const user = db.get("SELECT * FROM users WHERE tg_chat=?", chat);
     const uz = c.lang === "uz", L = (ru, uzT) => (uz ? uzT : ru);
     return { id: chat, c, user, uz, L, b: k => BTN[k][uz ? 1 : 0], data: c.data ? JSON.parse(c.data) : {} };
@@ -83,7 +86,7 @@ export function registerBot({ db, cfg, ref, tg, bonus, masters, log = console })
     safe(tg.typing(ch.id));
     const r = search(q, products(), 6), aiUrl = `${site}?${ch.uz ? "lang=uz&" : ""}ai=${encodeURIComponent(q)}`;
     if (!r.list.length) return tg.send(ch.id, ch.L(`По запросу «${h(q)}» ничего не нашли 🤔\nПопробуйте другое слово или опишите задачу Usta AI — он подберёт материалы и посчитает количество.`, `«${h(q)}» bo‘yiça hech narsa topilmadi 🤔\nBoşqa so‘z bilan yozing yoki vazifani Usta AI ga tushuntiring — u materiallarni tanlab, miqdorini hisoblaydi.`),
-      [[{ text: ch.L("🤖 Спросить Usta AI", "🤖 Usta AI dan so‘raş"), url: aiUrl }], ...[ch.L("цемент", "sement"), ch.L("ламинат", "laminat"), ch.L("смеситель", "aralaştirgiç")].map(x => [{ text: "🔎 " + x, callback_data: "s:" + x.slice(0, 40) }])]);
+      [[{ text: ch.L("🤖 Спросить Usta AI", "🤖 Usta AI dan so‘raş"), url: aiUrl }], ...[ch.L("цемент", "sement"), ch.L("ламинат", "laminat"), ch.L("смеситель", "aralaştirgiç")].map(x => [{ text: "🔎 " + x, callback_data: "s:" + x.slice(0, 28) }])]);
     const name = p => (ch.uz ? uzNew(p.uz) : p.ru);
     const head = r.fix ? ch.L(`Исправили опечатку: <b>${h(r.fix)}</b>\n`, `Xato tuzatildi: <b>${h(r.fix)}</b>\n`) : r.loose ? ch.L("Точных совпадений нет — вот похожее:\n", "Aniq mos kelmadi — o‘xşaşlari:\n") : "";
     const lines = r.list.map(({ p }, i) => `${i + 1}. <b>${h(name(p))}</b>\n    ${ch.L("от", "")} ${money(p.min, ch.uz)}${ch.uz ? "dan" : ""} · ${p.n} ${ch.L(p.n === 1 ? "магазин" : p.n < 5 ? "магазина" : "магазинов", "do‘kon")}`).join("\n");
@@ -227,7 +230,7 @@ export function registerBot({ db, cfg, ref, tg, bonus, masters, log = console })
   /* returns true when the button belongs to the bot (not a seller's order button) */
   async function callback(q) {
     const data = String(q.data || ""), chat = q.message?.chat?.id, mid = q.message?.message_id;
-    if (!/^(s|ms|mm|mq|wh|di|x|mr|rv|rvs):?/.test(data) || !chat) return false;
+    if (!/^(s|ms|mm|mq|wh|di|x|mr|rv|rvs)(:|$)/.test(data) || !chat || q.message?.chat?.type === "channel") return false;
     const ch = chatOf(chat, q.from), [a, b, c] = data.split(":");
     if (a === "x") { setState(ch, null); await tg.answer(q.id, ch.L("Отменено", "Bekor qilindi")); safe(tg.editButtons(chat, mid, [])); return true; }
     if (a === "s") { await tg.answer(q.id); await doSearch(ch, data.slice(2)); return true; }

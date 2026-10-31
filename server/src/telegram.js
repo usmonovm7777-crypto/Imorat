@@ -20,6 +20,7 @@ export function createTelegram(cfg, log = console) {
       for (const u of ups) {
         offset = u.update_id + 1;
         try {
+          if (u.message?.chat?.type && u.message.chat.type !== "private") continue; // the bot talks in private chats only; groups and channels are ignored
           if (u.message?.text?.startsWith("/start")) await handlers.start?.(u.message.chat.id, u.message.text.split(" ")[1] || "", u.message.from, u.message);
           else if (u.callback_query) await handlers.callback?.(u.callback_query);
           else if (u.message && u.message.chat?.type === "private") await handlers.message?.(u.message);

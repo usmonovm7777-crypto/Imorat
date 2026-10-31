@@ -73,7 +73,7 @@ window.IMORAT_API = "https://api.imorat.uz"; // пусто — демо-режи
 
 ## Приложение
 - Сайт ставится на телефон как приложение: ☰ → «Приложение Imorat Go».
-- Android APK собирается автоматически: GitHub → Releases → **app-latest** → `Imorat Go.apk`. Подробнее — [`app/README.md`](app/README.md).
+- Android APK собирается автоматически: GitHub → Releases → **app-latest** → `Imorat.apk`. Подробнее — [`app/README.md`](app/README.md).
 
 ## Следующий этап
 - Оплата Click / Payme / Uzum.

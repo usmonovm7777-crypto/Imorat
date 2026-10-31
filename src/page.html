@@ -2321,7 +2321,7 @@ function renderCatalog() {
   renderList();
 }
 function filtered() {
-  const q = f.q.trim(), sr = q ? smartSearch(q) : null;
+  const q = f.q.trim(); let sr = q ? smartSearch(q) : null; if (sr && !sr.toks.length) sr = null; // only stop words typed — nothing to filter by
   const list = PRODUCTS.filter(p =>
     (!route.cat || p.cat === route.cat) && (!f.sub || p.sub === f.sub) &&
     (!f.stores.length || p.offers.some(o => f.stores.includes(o.store))) &&
@@ -5635,7 +5635,7 @@ function demoDash() {
   const tp = PRODUCTS.filter(p => p.hit).slice(0, 10).map((p, i) => ({ id: p.id, name: p.ru, q: 40 - i * 3, sum: minPrice(p) * (40 - i * 3) }));
   const ts = STORES.slice(0, 9).map((s, i) => ({ id: s.id, name: s.name, orders: Math.round(orders * (.24 - i * .02)), gmv: Math.round(gmv * (.24 - i * .02)), fail: i % 4 === 3 ? 3 : i % 3 === 2 ? 1 : 0, done: 0, accept_min: 4 + (i * 5) % 13 })).map(s => ({ ...s, fail_pct: Math.round(s.fail * 100 / Math.max(1, s.orders)) }));
   return { demo: true, days: n, series, totals: { orders, orders_prev: Math.round(orders * .78), gmv, gmv_prev: Math.round(gmv * .74), commission: Math.round(gmv * .068), avg_check: Math.round(gmv / orders), buyers: Math.round(orders * .72), repeat_pct: 27, new_users: sum("users"), cancel_pct: 4, views: orders * 46, carts: orders * 6 },
-    counts: { users: 2140, stores_active: STORES.length, stores_pending: 2, masters_active: 12, masters_pending: 3, problems_open: 2, questions_open: 5 }, series, top_products: tp, top_stores: ts.sort((a, b) => b.gmv - a.gmv), slow_stores: ts.filter(s => s.fail || s.accept_min > 10).sort((a, b) => b.fail_pct - a.fail_pct) };
+    counts: { users: 2140, stores_active: STORES.length, stores_pending: 2, masters_active: 12, masters_pending: 3, problems_open: 2, questions_open: 5 }, top_products: tp, top_stores: ts.sort((a, b) => b.gmv - a.gmv), slow_stores: ts.filter(s => s.fail || s.accept_min > 10).sort((a, b) => b.fail_pct - a.fail_pct) };
 }
 function renderAdmin() {
   const crumbs = `<nav class="crumbs"><button type="button" data-go="home">${L("Главная", "Asosiy")}</button>${ui("chev", 12)}<span>${L("Панель Imorat Go", "Imorat Go paneli")}</span></nav>`;
@@ -5897,6 +5897,7 @@ async function dsPhotoStart() {
   st.hidden = false;
   let strip = mob ? 24 : 48, done = 0; const total = N * h;
   for (let k = 0; k < N; k++) {
+    if (job !== dsPh.job) return; // a newer render took over (the room changed) — leave its uniforms alone
     gl.blendColor(0, 0, 0, 1 / (k + 1)); gl.uniform2f(U("uJit"), jit[k][0], jit[k][1]);
     for (let y = 0; y < h;) {
       if (job !== dsPh.job) return;
@@ -6038,7 +6039,8 @@ function suggHTML(q) {
     <div class="sg-chips">${popularQ().map(x => `<button type="button" class="sg-i chip" data-sgq="${esc(x)}">${esc(L(x, x))}</button>`).join("")}</div>
     <div class="sg-h"><span>${L("Разделы", "Bo‘limlar")}</span><button type="button" class="lnk" data-sggo="catalog">${L("Весь каталог", "Butun katalog")}</button></div>
     <div class="sg-cats">${CATS.map(c => `<button type="button" class="sg-i sg-cat" data-sggo="cat-${c.id}"><span class="sg-ci">${ic(c.icon)}</span><span>${L(c.ru, c.uz)}</span></button>`).join("")}</div>`;
-  const r = smartSearch(q), ids = [...r.scores].sort((a, b) => b[1] - a[1]), n = ids.length, cats = catMatches(q), fix = skFixText(q, r);
+  const r = smartSearch(q); if (!r.toks.length) return suggHTML(""); // only stop words typed — show the start panel
+  const ids = [...r.scores].sort((a, b) => b[1] - a[1]), n = ids.length, cats = catMatches(q), fix = skFixText(q, r);
   const pop = p => (p.hit ? 1000 : 0) + p.rating * p.reviews;
   const top = ids.map(([id, s]) => [PROD[id], s]).filter(x => x[0]).sort((a, b) => b[1] - a[1] || pop(b[0]) - pop(a[0])).slice(0, 6).map(x => x[0]);
   return `${fix ? `<div class="sg-fix">${L("Исправили опечатку", "Xato tuzatildi")}: <b>${esc(fix)}</b></div>` : r.loose ? `<div class="sg-fix">${L("Точных совпадений нет — показываем похожее", "Aniq mos kelmadi — o‘xshashlarini ko‘rsatamiz")}</div>` : ""}
@@ -6058,7 +6060,9 @@ function closeSugg() { const box = $("#sugg"); if (box) box.hidden = true; $("#q
 function searchGo(q) {
   q = (q ?? $("#q")?.value ?? "").trim(); closeSugg();
   f.q = q; f.photo = null; if ($("#q")) $("#q").value = q; saveRecentQ(q);
-  route = { view: "catalog", cat: null }; history.replaceState(null, "", "#catalog"); f.sub = null; renderMain(); window.scrollTo(0, 0); $("#q")?.blur();
+  // searching from inside a section stays in it while something there matches; otherwise the whole catalogue
+  const keep = route.view === "catalog" && route.cat && q && smartSearch(q, PRODUCTS.filter(p => p.cat === route.cat)).scores.size > 0 ? route.cat : null;
+  route = { view: "catalog", cat: keep }; history.replaceState(null, "", keep ? "#cat-" + keep : "#catalog"); if (!keep) f.sub = null; renderMain(); window.scrollTo(0, 0); $("#q")?.blur();
 }
 document.addEventListener("pointerdown", e => { if (!e.target.closest(".search")) closeSugg(); });
 document.addEventListener("focusin", e => { if (e.target.id === "q") openSugg(); });

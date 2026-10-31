@@ -42,5 +42,5 @@ jobs:
         env: { GH_TOKEN: "${{ github.token }}" }
         run: |
           cp app/android/app/build/outputs/apk/debug/app-debug.apk Imorat.apk
-          gh release view app-latest >/dev/null 2>&1 || gh release create app-latest --prerelease --title "Imorat — Android (тестовая сборка)" --notes "Последняя тестовая сборка приложения. Скачайте Imorat.apk на телефон Android и установите."
+          gh release view app-latest >/dev/null 2>&1 || gh release create app-latest --prerelease --title "Imorat Go — Android (тестовая сборка)" --notes "Последняя тестовая сборка приложения. Скачайте Imorat.apk на телефон Android и установите."
           gh release upload app-latest Imorat.apk --clobber
