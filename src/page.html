@@ -563,6 +563,8 @@ legend { font-family: var(--f-display); font-size: 15px; font-weight: 600; margi
 .modal { position: fixed; inset: 0; z-index: 55; display: grid; place-items: center; padding: 24px max(16px, env(safe-area-inset-right, 0px)) 24px max(16px, env(safe-area-inset-left, 0px)); visibility: hidden; pointer-events: none; }
 .modal.on { visibility: visible; pointer-events: auto; }
 .modal .scrim-g { z-index: 0; }
+.m-more { grid-column: 1 / -1; position: sticky; bottom: 0; height: 40px; margin-top: -40px; background: linear-gradient(transparent, var(--surface)); pointer-events: none; transition: opacity .2s; }
+.m-box.at-end .m-more { opacity: 0; }
 /* one layer of dimming while a dialog sits over an open drawer, so the page and the drawer look equally inactive */
 html:has(.modal.on) #scrim.on { opacity: 0; }
 .m-box { position: relative; z-index: 1; background: var(--surface); border-radius: var(--r-lg); width: min(1040px, 100%); max-height: calc(100vh - 48px); overflow-y: auto; display: grid; grid-template-columns: 1fr 1.1fr; box-shadow: var(--shadow); opacity: 0; transform: translateY(12px) scale(.99); transition: opacity .2s, transform .2s; }
@@ -2544,11 +2546,14 @@ function openProduct(id) {
       <div class="m-actions"><button class="btn btn-ai" type="button" data-askp="${p.id}">${ui("spark", 18)} ${L("Спросить AI", "AI dan so‘rash")}</button><button class="btn btn-line" type="button" data-fav="${p.id}" aria-pressed="${fav}">${ui("heart", 18)} ${fav ? L("В избранном", "Saralanganlarda") : L("В избранное", "Saralanganlarga")}</button><button class="btn btn-line" type="button" data-cmp="${p.id}">${ui("filter", 18)} ${compare.includes(p.id) ? L("В сравнении", "Solishtirishda") : L("Сравнить", "Solishtirish")}</button><button class="btn btn-line" type="button" data-watch="${p.id}" aria-pressed="${watch.includes(p.id)}">${ui("bell", 18)} ${watch.includes(p.id) ? L("Слежу за ценой", "Narx kuzatilmoqda") : L("Следить за ценой", "Narxni kuzatish")}</button></div>
       ${rel.length ? `<div><h3 class="h-m" style="margin-bottom:10px">${L("С этим покупают", "Bu bilan birga olishadi")}</h3><div class="related">${rel.map(r => `<button class="rel" type="button" data-open="${r.id}">${mini(r)}<span>${esc(pName(r))}</span><b>${fmt(minPrice(r))}</b></button>`).join("")}</div></div>` : ""}
       <div class="prv-box" id="pRev" data-pid="${p.id}">${prodReviewsHTML(p)}</div>
-    </div>`;
+    </div><div class="m-more" aria-hidden="true"></div>`;
   setPanel($("#modal"), true); syncLock();
-  $("#mBox").scrollTop = 0;
+  const mb = $("#mBox"); mb.scrollTop = 0; requestAnimationFrame(moreHint);
   setTimeout(() => $("#mBox .m-close")?.focus(), 50);
 }
+/* a soft fade at the bottom of the product sheet while there is more to scroll */
+function moreHint() { const mb = $("#mBox"); if (mb) mb.classList.toggle("at-end", mb.scrollTop + mb.clientHeight >= mb.scrollHeight - 6); }
+$("#mBox")?.addEventListener("scroll", moreHint, { passive: true });
 function closeModal() { setPanel($("#modal"), false); syncLock(); }
 
 /* ================= Cart actions ================= */
