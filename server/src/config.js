@@ -60,8 +60,8 @@ export function loadConfig(env = process.env) {
     siteUrl: (env.SITE_URL || "https://usmonovm7777-crypto.github.io/Imorat/").replace(/\/?$/, "/"),
     // Seller deadlines (minutes): reminder, SMS, auto-cancel if not accepted; hours to hand the order over
     timers: { remind: Number(env.ACCEPT_REMIND_MIN) || 5, sms: Number(env.ACCEPT_SMS_MIN) || 10, cancel: Number(env.ACCEPT_TIMEOUT_MIN) || 20, handover: Number(env.HANDOVER_HOURS) || 4 },
-    // Commission by category, %: "build:5,metal:5,fasten:5,*:10"
-    commission: Object.fromEntries(String(env.COMMISSION || "build:5,metal:5,fasten:5,*:10").split(",").map(x => x.split(":")).filter(x => x.length === 2).map(([k, v]) => [k.trim(), Number(v) / 100])),
+    // Commission by category, %: "build:4,metal:4,fasten:4,*:8"
+    commission: Object.fromEntries(String(env.COMMISSION || "build:4,metal:4,fasten:4,*:8").split(",").map(x => x.split(":")).filter(x => x.length === 2).map(([k, v]) => [k.trim(), Number(v) / 100])),
     adminMfa: env.ADMIN_MFA !== "0",
     backupDir: env.BACKUP_DIR || "",
     smsSellerTemplate: env.SMS_SELLER_TEMPLATE || "Imorat Go: yangi buyurtma {num}. Iltimos, qabul qiling.",

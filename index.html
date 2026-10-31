@@ -5737,7 +5737,7 @@ function demoDash() {
   const sum = k => series.reduce((a, x) => a + x[k], 0), orders = sum("orders"), gmv = sum("gmv");
   const tp = PRODUCTS.filter(p => p.hit).slice(0, 10).map((p, i) => ({ id: p.id, name: p.ru, q: 40 - i * 3, sum: minPrice(p) * (40 - i * 3) }));
   const ts = STORES.slice(0, 9).map((s, i) => ({ id: s.id, name: s.name, orders: Math.round(orders * (.24 - i * .02)), gmv: Math.round(gmv * (.24 - i * .02)), fail: i % 4 === 3 ? 3 : i % 3 === 2 ? 1 : 0, done: 0, accept_min: 4 + (i * 5) % 13 })).map(s => ({ ...s, fail_pct: Math.round(s.fail * 100 / Math.max(1, s.orders)) }));
-  return { demo: true, days: n, series, totals: { orders, orders_prev: Math.round(orders * .78), gmv, gmv_prev: Math.round(gmv * .74), commission: Math.round(gmv * .068), avg_check: Math.round(gmv / orders), buyers: Math.round(orders * .72), repeat_pct: 27, new_users: sum("users"), cancel_pct: 4, views: orders * 46, carts: orders * 6 },
+  return { demo: true, days: n, series, totals: { orders, orders_prev: Math.round(orders * .78), gmv, gmv_prev: Math.round(gmv * .74), commission: Math.round(gmv * .055), avg_check: Math.round(gmv / orders), buyers: Math.round(orders * .72), repeat_pct: 27, new_users: sum("users"), cancel_pct: 4, views: orders * 46, carts: orders * 6 },
     counts: { users: 2140, stores_active: STORES.length, stores_pending: 2, masters_active: 12, masters_pending: 3, problems_open: 2, questions_open: 5 }, top_products: tp, top_stores: ts.sort((a, b) => b.gmv - a.gmv), slow_stores: ts.filter(s => s.fail || s.accept_min > 10).sort((a, b) => b.fail_pct - a.fail_pct) };
 }
 function renderAdmin() {

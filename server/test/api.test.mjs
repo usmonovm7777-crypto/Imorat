@@ -266,9 +266,9 @@ test("Telegram: link seller, order arrives with buttons, accept from Telegram", 
   const cat = await call("GET", "/api/catalog");
   const sr = cat.data.stores.find(s => s.id === sid).rating;
   assert.equal(sr.stars, 5); assert.equal(sr.done, 1);
-  // finance: build category → 5% commission
+  // finance: build category → 4% commission
   const fin = (await call("GET", "/api/seller/summary", null, seller)).data.finance;
-  assert.equal(fin.goods, 57000 * 3); assert.equal(fin.commission, Math.round(57000 * 3 * 0.05)); assert.equal(fin.balance, fin.commission);
+  assert.equal(fin.goods, 57000 * 3); assert.equal(fin.commission, Math.round(57000 * 3 * 0.04)); assert.equal(fin.balance, fin.commission);
   const af = await call("GET", "/api/admin/finance", null, globalThis.ADMIN);
   assert.ok(af.data.stores.some(x => x.id === sid && x.commission === fin.commission));
   await call("POST", "/api/admin/settlements", { store_id: sid, amount: fin.commission, note: "Наличными" }, globalThis.ADMIN);
