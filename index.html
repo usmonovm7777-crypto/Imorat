@@ -818,7 +818,8 @@ html.ds-dragging, html.ds-dragging * { cursor: grabbing !important; user-select:
 .ds-room .ib { position: absolute; top: 6px; right: 6px; background: var(--surface); }
 .ds-head p { margin: 4px 0 0; max-width: 70ch; }
 .hero-q .hq-ds { background: linear-gradient(135deg, var(--hero-acc, #3fb8b0), var(--signal)); color: #fff; border-color: transparent; font-weight: 600; display: inline-flex; gap: 6px; align-items: center; }
-.ds-steps { list-style: none; display: flex; gap: 6px; padding: 0; margin: 14px 0; overflow-x: auto; scrollbar-width: none; }
+.ds-steps { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; padding: 0; margin: 14px 0; }
+@media (max-width: 520px) { .ds-steps button { padding: 7px 10px; font-size: 12.5px; gap: 6px; } }
 .ds-steps button { display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--surface); font-weight: 600; font-size: 13.5px; white-space: nowrap; color: var(--muted); }
 .ds-steps button span { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: var(--raised); font-size: 12px; }
 .ds-steps .now button { border-color: var(--accent); color: var(--ink); } .ds-steps .now button span { background: var(--accent); color: var(--accent-ink, #fff); }
