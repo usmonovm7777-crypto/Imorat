@@ -2700,7 +2700,7 @@ function dTrack() {
     ${payExtra(o)}
     ${sched ? `<div class="note vipn">${ui("clock", 14)} ${sched}. ${L("Поиск курьера начнётся за 90 минут до интервала.", "Kuryer qidiruvi oraliqdan 90 daqiqa oldin boshlanadi.")}</div>` : ""}
     ${o.ships.map((s, i) => {
-      const st = STORE[s.store], t = TARIFFS.find(x => x.id === s.tariff), steps = t ? STEPS_Y(o) : STEPS_P(o), cur = stepOf(o, i, steps.length);
+      const st = STORE[s.store] || { id: s.store, name: s.store_name || L("Магазин", "Do‘kon", "Store"), d: "chil", addr: s.store_addr || "", addrUz: s.store_addr || "", hours: s.store_hours || "" }, t = TARIFFS.find(x => x.id === s.tariff), steps = t ? STEPS_Y(o) : STEPS_P(o), cur = stepOf(o, i, steps.length);
       return `<div class="track"><div class="track-h"><b>${esc(st.name)}</b><span class="pill ${s.status === "cancelled" ? "closed" : cur === steps.length - 1 ? "ok" : "acc"}">${s.status === "cancelled" ? L("Отменён", "Bekor qilindi") : t ? tName(t) : L("Самовывоз", "Olib ketish")}</span></div>
         <ol class="steps">${steps.map((n, k) => `<li class="${k < cur || (k === cur && k === steps.length - 1) ? "done" : k === cur ? "now" : ""}"><span class="d"></span><span>${n}</span><time class="mono">${k <= cur ? hm(o.api ? ((s.history || []).find(h => h.s === (s.tariff ? ["new", "assembling", "searching", "to_store", "on_way", "delivered"] : ["new", "assembling", "ready"])[k])?.t || s.status_at) : o.t + i * 1200 + k * STEP_MS) : ""}</time></li>`).join("")}</ol>
         ${o.api ? shipExtra(o, s) : ""}

@@ -308,13 +308,13 @@ export function createApp(cfg, log = console) {
   });
 
   function orderOut(o, { forStore = null } = {}) {
-    const ships = db.all("SELECT * FROM shipments WHERE order_id=? ORDER BY id", o.id).filter(s => !forStore || s.store_id === forStore);
+    const ships = db.all("SELECT sh.*, st.name store_name, st.addr store_addr, st.hours store_hours FROM shipments sh LEFT JOIN stores st ON st.id=sh.store_id WHERE sh.order_id=? ORDER BY sh.id", o.id).filter(s => !forStore || s.store_id === forStore);
     return {
       num: o.num, t: o.created_at, status: o.status, pay: o.pay, pay_status: o.pay_status, d: JSON.parse(o.form),
       goods: o.goods, del: o.del, svc: o.svc, disc: o.disc + o.promo_disc, bdisc: o.disc, pd: o.promo_disc, pts: o.points_used || 0, total: o.total, cash: o.cash, promo: o.promo,
       paid_at: o.paid_at || null, pay_url: o.pay_status === "pending" && !["store", "cash"].includes(o.pay) && o.status !== "cancelled" ? payments.payUrl(o) : null,
       pay_deadline: o.pay_status === "pending" && !["store", "cash"].includes(o.pay) ? o.created_at + cfg.payTimeoutMin * 60000 : null,
-      ships: ships.map(s => ({ id: s.id, store: s.store_id, tariff: s.tariff, price: s.price, kg: s.kg, dist: s.dist, status: s.status, status_at: s.status_at,
+      ships: ships.map(s => ({ id: s.id, store: s.store_id, store_name: s.store_name, store_addr: s.store_addr, store_hours: s.store_hours, tariff: s.tariff, price: s.price, kg: s.kg, dist: s.dist, status: s.status, status_at: s.status_at,
         step: (STEPS[s.tariff ? "yandex" : "pickup"].indexOf(s.status)), history: JSON.parse(s.history), lines: JSON.parse(s.lines), courier: s.courier,
         cancel_reason: s.cancel_reason, accept_by: s.status === "new" ? (s.start_at || s.status_at) + cfg.timers.cancel * 60000 : null,
         review: db.get("SELECT stars, text, reply FROM reviews WHERE ship_id=?", s.id) || null }))
@@ -674,11 +674,14 @@ export function createApp(cfg, log = console) {
     // Money that crossed sides: for orders paid to the store the buyer also handed it the delivery fee that Imorat Go paid to Yandex;
     // for orders paid by card online Imorat Go holds the goods money and owes the store its share (goods minus commission).
     const flow = db.get(`SELECT COALESCE(SUM(CASE WHEN o.pay IN ('store','cash') AND sh.tariff IS NOT NULL THEN sh.price ELSE 0 END),0) delivery_due,
-        COALESCE(SUM(CASE WHEN o.pay NOT IN ('store','cash') AND o.pay_status='paid' THEN sh.goods - sh.commission ELSE 0 END),0) payout_due,
-        COALESCE(SUM(CASE WHEN o.pay NOT IN ('store','cash') AND o.pay_status='paid' AND sh.status_at>=? AND sh.status_at<? THEN sh.goods ELSE 0 END),0) online_month
+        COALESCE(SUM(CASE WHEN o.pay NOT IN ('store','cash') AND o.pay_status IN ('paid','refund_due','refunded') THEN sh.goods - sh.commission ELSE 0 END),0) payout_due,
+        COALESCE(SUM(CASE WHEN o.pay NOT IN ('store','cash') AND o.pay_status IN ('paid','refund_due','refunded') THEN sh.goods ELSE 0 END),0) online_held,
+        COALESCE(SUM(CASE WHEN o.pay NOT IN ('store','cash') AND o.pay_status IN ('paid','refund_due','refunded') AND sh.status_at>=? AND sh.status_at<? THEN sh.goods ELSE 0 END),0) online_month
         FROM shipments sh JOIN orders o ON o.id=sh.order_id WHERE sh.store_id=? AND sh.status IN ('delivered','picked')`, a, b, storeId);
     const paid = db.get("SELECT COALESCE(SUM(amount),0) s FROM settlements WHERE store_id=?", storeId).s;
-    return { month, goods: mon.goods, commission: mon.commission, orders: mon.n, online_month: flow.online_month, commission_total: all, delivery_due: flow.delivery_due, payout_due: flow.payout_due, settled: paid, balance: all + flow.delivery_due - flow.payout_due - paid };
+    // balance > 0: the store owes Imorat Go; < 0: Imorat Go owes the store. Commission on card-paid orders is already inside
+    // the goods money Imorat Go holds, so it is counted once: all commissions + delivery fees handed to the store − goods money held.
+    return { month, goods: mon.goods, commission: mon.commission, orders: mon.n, online_month: flow.online_month, commission_total: all, delivery_due: flow.delivery_due, payout_due: flow.payout_due, settled: paid, balance: all + flow.delivery_due - flow.online_held - paid };
   }
 
   /* ---------- admin ---------- */
@@ -745,9 +748,11 @@ export function createApp(cfg, log = console) {
   r.patch("/api/admin/orders/:num/pay", async (req, res, p) => {
     needAdmin(req); const b = await readJson(req);
     if (!["paid", "pending", "refunded", "refund_due", "on_delivery"].includes(b.pay_status)) throw bad("bad_status", "Unknown payment status");
-    const o = db.get("SELECT id FROM orders WHERE num=?", p.num); if (!o) throw new HttpError(404, "not_found", "Order not found");
-    db.run("UPDATE orders SET pay_status=? WHERE id=?", b.pay_status, o.id);
+    const o = db.get("SELECT id, pay_status FROM orders WHERE num=?", p.num); if (!o) throw new HttpError(404, "not_found", "Order not found");
+    db.run("UPDATE orders SET pay_status=?, paid_at=CASE WHEN ?='paid' AND paid_at IS NULL THEN ? ELSE paid_at END WHERE id=?", b.pay_status, b.pay_status, Date.now(), o.id);
     audit(req, "order.pay." + b.pay_status, p.num);
+    // marked paid by hand (payment confirmed outside the callbacks): the stores get the order exactly as after a bank callback
+    if (b.pay_status === "paid") orderPaid(o.id);
     return { ok: true };
   });
 

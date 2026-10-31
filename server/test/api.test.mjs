@@ -758,3 +758,39 @@ test("Card payment: Payme and Click callbacks, store sees the order only after t
   assert.equal(cashDel.data.error, "card_required");
   assert.equal((await call("POST", "/api/orders", { lines: [{ id: 1, store: sid, q: 1 }], form: { ...form, pay: "store", mode: "pickup" } }, buyer)).status, 200);
 });
+
+test("Finance with card payments: money held once, a partner's share survives another store's cancellation, admin can mark an order paid", async () => {
+  const sellerA = (await login("998880033")).data.token, sellerB = (await login("998880044")).data.token;
+  const mk = async (tok, name) => { const r = await call("POST", "/api/seller/store", { name, descr: "Магазин для проверки финансов по картам", cats: ["build"], phone: "712004466", addr: "ул. Финансовая, 1", hours: "00:00–00:00", district: "chil" }, tok); assert.equal(r.status, 200, JSON.stringify(r.data)); await call("PATCH", `/api/admin/stores/${r.data.store.id}`, { status: "active" }, globalThis.ADMIN); return r.data.store.id; };
+  const A = await mk(sellerA, "Fin A"), B = await mk(sellerB, "Fin B");
+  await call("POST", "/api/seller/offers", { product_id: 1, price: 100000, stock: 50 }, sellerA);
+  await call("POST", "/api/seller/offers", { product_id: 2, price: 100000, stock: 50 }, sellerB);
+  const buyer = (await login("998880055")).data.token;
+  const form = { name: "Финансы", phone: "998998880055", mode: "pickup", pay: "payme" };
+  const rpc = (method, params) => fetch(base + "/api/pay/payme", { method: "POST", headers: { "content-type": "application/json", authorization: "Basic " + Buffer.from("Paycom:PAYME_SECRET").toString("base64") }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }) }).then(r => r.json());
+  const pay = async (o, id) => { await rpc("CreateTransaction", { id, time: Date.now(), amount: o.total * 100, account: { order: o.num } }); const r = await rpc("PerformTransaction", { id }); assert.equal(r.result?.state, 2, JSON.stringify(r)); };
+  const fin = async (tok) => (await call("GET", "/api/seller/summary", null, tok)).data.finance;
+  const ship = async (tok, num) => (await call("GET", "/api/seller/summary", null, tok)).data.orders.find(x => x.num === num);
+  const advance = async (tok, num, states) => { const s = await ship(tok, num); for (const st of states) assert.equal((await call("PATCH", `/api/seller/shipments/${s.ship_id}`, { status: st }, tok)).status, 200, st); };
+  // 1) one store, 100 000 by card, commission 4% = 4 000: Imorat Go holds 100 000 and owes the store 96 000 — not 92 000
+  const o1 = (await call("POST", "/api/orders", { lines: [{ id: 1, store: A, q: 1 }], form }, buyer)).data.order;
+  await pay(o1, "fin-1"); await advance(sellerA, o1.num, ["assembling", "ready", "picked"]);
+  let f = await fin(sellerA);
+  assert.equal(f.payout_due, 96000); assert.equal(f.commission_total, 4000); assert.equal(f.balance, -96000, "card money is counted once");
+  // 2) two stores in one order; A hands over, B cancels: A's share stays, the order is flagged for a partial refund
+  const o2 = (await call("POST", "/api/orders", { lines: [{ id: 1, store: A, q: 1 }, { id: 2, store: B, q: 1 }], form }, buyer)).data.order;
+  await pay(o2, "fin-2"); await advance(sellerA, o2.num, ["assembling", "ready", "picked"]);
+  assert.equal((await fin(sellerA)).payout_due, 192000);
+  const sb = await ship(sellerB, o2.num); assert.equal((await call("PATCH", `/api/seller/shipments/${sb.ship_id}`, { status: "cancelled", reason: "out_of_stock" }, sellerB)).status, 200);
+  assert.equal((await call("GET", `/api/orders/${o2.num}`, null, buyer)).data.order.pay_status, "refund_due");
+  f = await fin(sellerA); assert.equal(f.payout_due, 192000, "A keeps its share after B's cancellation"); assert.equal(f.balance, -192000);
+  assert.equal((await fin(sellerB)).payout_due, 0);
+  // 3) the admin marks an order paid by hand: the store gets it like after a bank callback
+  const o3 = (await call("POST", "/api/orders", { lines: [{ id: 1, store: A, q: 1 }], form }, buyer)).data.order;
+  assert.equal(await ship(sellerA, o3.num), undefined);
+  assert.equal((await call("PATCH", `/api/admin/orders/${o3.num}/pay`, { pay_status: "paid" }, globalThis.ADMIN)).status, 200);
+  const s3 = await ship(sellerA, o3.num); assert.ok(s3, "the store sees the order"); assert.equal(s3.status, "new");
+  const got = (await call("GET", `/api/orders/${o3.num}`, null, buyer)).data.order; assert.equal(got.pay_status, "paid"); assert.ok(got.paid_at);
+  await advance(sellerA, o3.num, ["assembling"]); app.sweep(Date.now() + 31 * 60000);
+  assert.equal((await call("GET", `/api/orders/${o3.num}`, null, buyer)).data.order.status, "active", "a paid order is not expired by the payment sweep");
+});
