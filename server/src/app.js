@@ -431,6 +431,7 @@ export function createApp(cfg, log = console) {
       out.district = d;
     }
     if (out.la === null && out.district) { out.la = D[out.district].la; out.lo = D[out.district].lo; }
+    for (const k of ["name", "addr", "hours", "landmark", "telegram"]) if (typeof out[k] === "string") out[k] = out[k].replace(/[<>]/g, ""); // shown in every buyer's browser and in Telegram
     return out;
   }
 

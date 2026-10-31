@@ -1168,7 +1168,7 @@ html.fx .fx-btn { color: #fff; border-color: transparent; background: linear-gra
 
 <div class="mega" id="mega" aria-hidden="true"><div class="scrim" data-act="close-mega"></div><div class="mega-panel" id="megaPanel"></div></div>
 <div class="scrim-g" id="scrim" data-act="close-all"></div>
-<aside class="drawer" id="drawer" aria-hidden="true">
+<aside class="drawer" id="drawer" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="dTitle" tabindex="-1">
   <div class="d-head"><button class="ib" id="dBack" type="button" data-act="d-back" aria-label="Назад" hidden></button><h2 id="dTitle"></h2><button class="ib" type="button" data-act="close-drawer" id="dClose" aria-label="Закрыть"></button></div>
   <div class="d-body" id="dBody"></div>
   <div class="d-foot" id="dFoot"></div>
@@ -1855,7 +1855,16 @@ let drawerView = null, drawerOrder = null, sellerStore = LS.get("imorat.sellerSt
 let sellerSt = LS.get("imorat.sst", {});
 
 const saveCart = () => { LS.set("imorat.cart2", cart); counts(); };
-const cartLines = () => Object.entries(cart).map(([k, q]) => { const [id, s] = k.split("|"); const p = PROD[id]; if (!p || q <= 0) return null; const o = p.offers.find(x => x.store === s) || p.offers[0]; const tr = tierOf(p, q); return { k, p, store: o.store, base: o.price, price: tr ? round(o.price * (1 - tr)) : o.price, tier: tr, q }; }).filter(Boolean);
+/* A line is a product in a particular store. If that store no longer sells it (catalog changed), the line is left out
+   rather than quietly moved to another store at another price; pruneCart() removes such lines and tells the buyer once. */
+const cartLines = () => Object.entries(cart).map(([k, q]) => { const [id, s] = k.split("|"); const p = PROD[id]; q = Math.floor(+q) || 0; if (!p || q <= 0) return null; const o = p.offers.find(x => x.store === s); if (!o) return null; const tr = tierOf(p, q); return { k, p, store: o.store, base: o.price, price: tr ? round(o.price * (1 - tr)) : o.price, tier: tr, q }; }).filter(Boolean);
+function pruneCart() {
+  const gone = Object.keys(cart).filter(k => { const [id, s] = k.split("|"), p = PROD[id]; return !p || !p.offers.some(x => x.store === s) || !(Math.floor(+cart[k]) > 0); });
+  if (!gone.length) return;
+  const names = gone.map(k => PROD[k.split("|")[0]]).filter(Boolean).map(p => pName(p));
+  gone.forEach(k => delete cart[k]); saveCart();
+  if (names.length) toast(L(`Больше не продаётся в выбранном магазине: ${names.slice(0, 2).join(", ")}${names.length > 2 ? "…" : ""} — убрали из корзины`, `Tanlangan do‘konda endi sotilmaydi: ${names.slice(0, 2).join(", ")}${names.length > 2 ? "…" : ""} — savatdan olib tashladik`, `No longer sold by the chosen store: ${names.slice(0, 2).join(", ")}${names.length > 2 ? "…" : ""} — removed from the cart`));
+}
 const qtyOf = id => cartLines().filter(l => l.p.id === id).reduce((a, l) => a + l.q, 0);
 const cartCount = () => cartLines().reduce((a, l) => a + l.q, 0);
 function groups() {
@@ -1887,7 +1896,14 @@ function setLook(fx, theme) {
   if (theme) { themePref = theme; LS.set("imorat.theme", theme); }
   applyLook(); renderAll();
 }
-function setPanel(el, on) { el.classList.toggle("on", on); el.setAttribute("aria-hidden", on ? "false" : "true"); if (on) el.removeAttribute("inert"); else el.setAttribute("inert", ""); }
+/* Panels (drawer, product modal) take keyboard focus when they open and hand it back to the element that opened them. */
+const panelFocus = new WeakMap();
+function setPanel(el, on) {
+  const was = el.classList.contains("on");
+  el.classList.toggle("on", on); el.setAttribute("aria-hidden", on ? "false" : "true"); if (on) el.removeAttribute("inert"); else el.setAttribute("inert", "");
+  if (on && !was) { if (document.activeElement && !el.contains(document.activeElement)) panelFocus.set(el, document.activeElement); setTimeout(() => { if (el.classList.contains("on") && !el.contains(document.activeElement)) (el.querySelector("[data-act='close-drawer'],.m-close,button,[href],input,select,textarea") || el).focus({ preventScroll: true }); }, 60); }
+  if (!on && was) { const back = panelFocus.get(el); panelFocus.delete(el); if (back && back.isConnected && (!document.activeElement || document.activeElement === document.body || el.contains(document.activeElement))) { try { back.focus({ preventScroll: true }); } catch (e) {} } }
+}
 function syncLock() { document.documentElement.classList.toggle("lock", !!drawerView || aiOpen || $("#modal").classList.contains("on") || $("#mega").classList.contains("on") || $("#authM").classList.contains("on") || $("#wid").classList.contains("on")); }
 function fly(fromEl) {
   if (!motionOK() || !fromEl) return;
@@ -2209,7 +2225,7 @@ function renderHome() {
 
     <section class="sec" id="stores">
       <div class="sec-head"><div><h2 class="h-l">${L("Магазины-партнёры", "Hamkor do‘konlar")}</h2><p>${L("Курьер забирает заказ прямо со склада магазина", "Kuryer buyurtmani do‘kon omboridan oladi")}</p></div></div>
-      <div class="stores rv">${STORES.map(s => { const n = PRODUCTS.filter(p => p.offers.some(o => o.store === s.id)).length; if (!n) return ""; return `<div class="store"><span class="av">${esc(s.name.slice(0, 1))}</span><div><button type="button" class="slink" data-go="store-${s.id}"><b>${esc(s.name)}</b>${isVerified(s) ? ` <span class="vmini">${ui("shield", 12)}</span>` : ""}</button><span class="m">${dName(s.d)}, ${L(s.addr, s.addrUz)}</span><br><span class="m">${L(s.ru, s.uz)}</span>${ratingHTML(s, true)}<div class="r"><span class="pill ${openState(s).open ? "ok" : "closed"}">${openState(s).text}</span><button class="link" type="button" data-store="${s.id}">${n} ${L(plural(n, ["товар", "товара", "товаров"]), "mahsulot", n === 1 ? "product" : "products")} ${ui("chev", 14)}</button></div></div></div>`; }).join("")}</div>
+      <div class="stores rv">${STORES.map(s => { const n = PRODUCTS.filter(p => p.offers.some(o => o.store === s.id)).length; if (!n) return ""; return `<div class="store"><span class="av">${esc(s.name.slice(0, 1))}</span><div><button type="button" class="slink" data-go="store-${s.id}"><b>${esc(s.name)}</b>${isVerified(s) ? ` <span class="vmini">${ui("shield", 12)}</span>` : ""}</button><span class="m">${dName(s.d)}, ${esc(L(s.addr, s.addrUz))}</span><br><span class="m">${L(s.ru, s.uz)}</span>${ratingHTML(s, true)}<div class="r"><span class="pill ${openState(s).open ? "ok" : "closed"}">${openState(s).text}</span><button class="link" type="button" data-store="${s.id}">${n} ${L(plural(n, ["товар", "товара", "товаров"]), "mahsulot", n === 1 ? "product" : "products")} ${ui("chev", 14)}</button></div></div></div>`; }).join("")}</div>
     </section>
 
     <section class="sec">
@@ -2682,7 +2698,7 @@ function updateQuote() {
   const qt = quote(d);
   $("#shipBox").innerHTML = `<legend>${L("Доставки", "Yetkazishlar")}</legend>` + qt.ships.map(s => `<div class="ship">
     <div class="t"><b>${esc(s.g.store.name)}</b><span class="num" style="font-weight:700">${s.t ? (s.full > s.price ? `<s>${fmt(s.full)}</s>` : "") + (s.price ? fmt(s.price) : L("Бесплатно", "Bepul")) : L("Самовывоз", "Olib ketish")}</span></div>
-    <small>${s.t ? `${tName(s.t)} · ${s.t.veh} · ${fmtKg(s.g.kg)} · ~${s.dist.toFixed(1).replace(".", DEC)} ${L("км", "km")} · ${d.when === "slot" ? L("завтра 10–14", "ertaga 10–14") : d.when === "vip" ? `${L("завтра", "ertaga")} ${d.hour}:00–${String(+d.hour + 1).padStart(2, "0")}:00` : etaStr(s.t)}` : `${L(s.g.store.addr, s.g.store.addrUz)} · ${s.g.store.hours}`}</small></div>`).join("") +
+    <small>${s.t ? `${tName(s.t)} · ${s.t.veh} · ${fmtKg(s.g.kg)} · ~${s.dist.toFixed(1).replace(".", DEC)} ${L("км", "km")} · ${d.when === "slot" ? L("завтра 10–14", "ertaga 10–14") : d.when === "vip" ? `${L("завтра", "ertaga")} ${d.hour}:00–${String(+d.hour + 1).padStart(2, "0")}:00` : etaStr(s.t)}` : `${esc(L(s.g.store.addr, s.g.store.addrUz))} · ${esc(s.g.store.hours || "")}`}</small></div>`).join("") +
     (d.mode === "yandex" ? `<div class="note">${L("Цена доставки — оценка прототипа. В рабочей версии цену и время вернёт API Яндекс Доставки по точным координатам.", "Yetkazish narxi taxminiy. Ishchi versiyada narx va vaqtni Yandex API aniq koordinatalar bo‘yicha qaytaradi.")}</div>` : "");
   const spn = $("#storePayNote"); if (spn) spn.hidden = d.pay !== "store";
   const cpn = $("#cardPayNote"); if (cpn) cpn.hidden = !(API && (apiCfg?.payments || []).includes(d.pay));
@@ -2741,10 +2757,10 @@ function dTrack() {
         ${problemHTML(o, s, i)}
         ${t && cur >= 3 && cur < steps.length - 1 && s.status !== "cancelled" ? routeMap(st.name, st.d, o.d.district || district, etaStr(t)) : ""}
         ${t && cur >= 3 && s.plate ? `<div class="courier"><span>${lang === "ru" ? s.courier : ({ "Шерзод": "Sherzod", "Бобур": "Bobur", "Жасур": "Jasur", "Отабек": "Otabek", "Дилшод": "Dilshod", "Сардор": "Sardor" }[s.courier] || s.courier)} · ${t.veh}<small>${L("Телефон курьера придёт в SMS", "Kuryer telefoni SMSda keladi")}</small></span><span class="plate"><i>${s.plate[0]}</i>${s.plate[1]} ${s.plate[2]} ${s.plate[3]}</span></div>` : ""}
-        ${!t ? `<div class="courier"><span>${L(st.addr, st.addrUz)}<small>${st.hours} · ${L("назовите номер", "raqamni ayting")} ${o.num}</small></span></div>` : ""}</div>`;
+        ${!t ? `<div class="courier"><span>${esc(L(st.addr, st.addrUz))}<small>${esc(st.hours || "")} · ${L("назовите номер", "raqamni ayting")} ${o.num}</small></span></div>` : ""}</div>`;
     }).join("")}
     <div style="display:grid;gap:6px">${totalsHTML(o.goods, o.svc || 0, o.bdisc != null ? o.bdisc : (o.disc || 0), `<div class="sumrow"><span class="mu">${L("Доставка", "Yetkazish")}</span><span class="num">${fmt(o.del)}</span></div>` + (o.bdisc != null && o.pd ? `<div class="sumrow disc"><span>${L("Промокод", "Promokod")} ${esc(o.promo || o.d?.promo || "")}</span><span class="num">−${fmt(o.pd)}</span></div>` : "") + (o.bdisc != null && o.pts ? `<div class="sumrow disc"><span>${L("Бонусами", "Bonus bilan")}</span><span class="num">−${fmt(o.pts)}</span></div>` : ""))}${o.cash ? `<div class="sumrow cash"><span>${L("Кешбэк", "Keshbek")}</span><span>+${fmt(o.cash)}</span></div>` : ""}<div class="sumrow total"><span>${o.d.pay === "store" || o.d.pay === "cash" ? L("К оплате в магазине", "Do‘konda to‘lanadi", "To pay at the store") : o.api && o.pay_status !== "paid" ? L("К оплате картой", "Karta bilan to‘lanadi", "To pay by card") : L("Оплачено", "To‘langan")}</span><span class="num">${fmt(o.total)}</span></div></div>`;
-  if (o.api && o.status === "active" && o.ships.every(s => ["new", "assembling", "cancelled"].includes(s.status))) $("#dBody").insertAdjacentHTML("beforeend", `<button class="lnk" type="button" data-act="order-cancel" style="justify-self:start;color:var(--muted)">${L("Отменить заказ", "Buyurtmani bekor qilish")}</button>`);
+  if (o.api && o.status === "active" && o.ships.every(s => ["unpaid", "new", "assembling", "cancelled"].includes(s.status))) $("#dBody").insertAdjacentHTML("beforeend", `<button class="lnk" type="button" data-act="order-cancel" style="justify-self:start;color:var(--muted)">${L("Отменить заказ", "Buyurtmani bekor qilish")}</button>`);
   $("#dFoot").innerHTML = `<div style="display:grid;grid-template-columns:auto 1fr;gap:8px"><button class="btn btn-line" type="button" data-repeat="${o.num}">${ui("repeat", 18)} ${L("Повторить", "Takrorlash")}</button><button class="btn btn-dark" type="button" data-act="close-drawer">${L("Продолжить покупки", "Xaridni davom ettirish")}</button></div>`;
 }
 function orderStatus(o) {
@@ -2774,7 +2790,7 @@ function dWatch() {
 const fmtP = p => p.offers.length > 1 ? fromP(minPrice(p)) : fmt(minPrice(p));
 function dProjects() {
   $("#dTitle").textContent = L("Проекты ремонта", "Ta’mir loyihalari");
-  $("#dBody").innerHTML = projects.length ? `<div class="note">${L("Сохраняйте списки материалов под каждую комнату и возвращайте их в корзину одним нажатием.", "Har bir xona uchun material ro‘yxatini saqlang va bir bosishda savatga qaytaring.")}</div>` + projects.map(pr => { const items = Object.entries(pr.cart).filter(([k]) => PROD[k.split("|")[0]]); const sum = items.reduce((a, [k, q]) => { const [id, st] = k.split("|"), p = PROD[id], o = p.offers.find(x => x.store === st) || p.offers[0]; return a + o.price * q; }, 0);
+  $("#dBody").innerHTML = projects.length ? `<div class="note">${L("Сохраняйте списки материалов под каждую комнату и возвращайте их в корзину одним нажатием.", "Har bir xona uchun material ro‘yxatini saqlang va bir bosishda savatga qaytaring.")}</div>` + projects.map(pr => { const items = Object.entries(pr.cart).filter(([k]) => PROD[k.split("|")[0]]); const sum = items.reduce((a, [k, q]) => { const [id, st] = k.split("|"), p = PROD[id], o = p && (p.offers.find(x => x.store === st) || p.offers[0]); if (!o) return a; return a + o.price * q; }, 0);
     return `<div class="proj"><span><b>${esc(pr.name)}</b><small>${items.length} ${L(plural(items.length, ["позиция", "позиции", "позиций"]), "pozitsiya", items.length === 1 ? "item" : "items")} · ${fmt(sum)} · ${new Date(pr.t).toLocaleDateString(LOCALE)}</small></span><button class="btn btn-primary" type="button" data-projload="${pr.id}">${L("В корзину", "Savatga")}</button><button class="ib" type="button" data-projshare="${pr.id}" aria-label="${L("Отправить список", "Ro‘yxatni yuborish")}" title="${L("Отправить", "Yuborish")}">${ui("send", 15)}</button><button class="ib" type="button" data-projdel="${pr.id}" aria-label="${L("Удалить проект", "Loyihani o‘chirish")}">${ui("trash", 15)}</button></div>`; }).join("")
     : `<div class="empty"><b>${L("Проектов пока нет", "Hali loyiha yo‘q")}</b><span>${L("Соберите корзину — вручную, калькулятором или с Usta AI — и сохраните её как проект.", "Savatni qo‘lda, kalkulyator yoki Usta AI bilan yig‘ing va loyiha sifatida saqlang.")}</span></div>`;
   $("#dBody").insertAdjacentHTML("beforeend", teamHTML());
@@ -2957,13 +2973,14 @@ function afterLogin(r) {
   finishAuth(u, r.token);
 }
 function finishAuth(u, token) {
+  if (u.api && user && digitsOf(user.phone) !== digitsOf(u.phone)) forgetAccountData(); else if (u.api) { orders = orders.filter(o => !o.api); ordersFetched = false; }
   if (token) { apiToken = token; LS.set("imorat.token", token); }
   user = u; if (!u.api) accounts[digitsOf(u.phone).slice(-9)] = u; LS.set("imorat.user", user); LS.set("imorat.accounts", accounts);
   if (u.api) { vip = !!u.vip; LS.set("imorat.vip", vip); }
   if (u.district) { district = u.district; LS.set("imorat.district", district); }
   form.name = u.name; form.phone = u.phone; LS.set("imorat.form2", form);
   const then = auth.then; closeAuth(); renderHeader(); renderTabbar(); counts();
-  if (u.api) { bonusApi = null; loadBonus(); loadStockWatch(); teamProj = null; if (LS.get("imorat.teamPending", "")) loadTeams(); } else if (LS.get("imorat.refPending", "")) { const rc = LS.get("imorat.refPending", ""); LS.set("imorat.refPending", ""); setTimeout(() => applyRefCode(rc, true), 400); }
+  if (u.api) { bonusApi = null; loadBonus(); loadStockWatch(); fetchOrders(); teamProj = null; if (LS.get("imorat.teamPending", "")) loadTeams(); } else if (LS.get("imorat.refPending", "")) { const rc = LS.get("imorat.refPending", ""); LS.set("imorat.refPending", ""); setTimeout(() => applyRefCode(rc, true), 400); }
   toast(then === "seller" ? L("Магазин отправлен на проверку", "Do‘kon tekshiruvga yuborildi") : L(`Добро пожаловать, ${u.name}!`, `Xush kelibsiz, ${u.name}!`, `Welcome, ${u.name}!`));
   if (then === "checkout") openDrawer("checkout"); else if (then === "seller") { sellerData = null; go("seller"); } else if (typeof then === "function") setTimeout(then, 0); else if (drawerView === "profile") renderDrawer();
   if (route.view === "masters" && typeof then !== "function") { mApi.list = null; mApi.me = undefined; renderMasters(); }
@@ -3255,9 +3272,18 @@ function renderAuth() {
   }
   if (st === "store") { bindStoreForm(); setTimeout(() => $("#sName")?.focus(), 60); }
 }
+/* Everything that belongs to the signed-in account (server orders, bonus balance, VIP, prefilled contacts) leaves with it,
+   so a guest or the next account on this device never sees it. */
+function forgetAccountData() {
+  if (!API) return;
+  orders = orders.filter(o => !o.api); LS.set("imorat.orders", orders.slice(0, 30)); ordersFetched = false;
+  bonusApi = null; vip = false; LS.set("imorat.vip", false); drawerOrder = null;
+  form.name = ""; form.phone = ""; form.usePts = false; LS.set("imorat.form2", form);
+}
 function logout() {
+  forgetAccountData();
   user = null; apiToken = ""; LS.set("imorat.token", ""); sellerData = null; adminToken = ""; LS.set("imorat.adminToken", ""); adminState = { need: null }; adminStores = null; adminFin = null;
-  if (API) { myStore = null; LS.set("imorat.myStore", null); }
+  if (API) { myStore = null; LS.set("imorat.myStore", null); if (drawerView === "track") drawerView = "orders"; }
   try { localStorage.removeItem("imorat.user"); } catch (e) {}
   renderHeader(); renderTabbar(); counts(); if (drawerView) renderDrawer(); if (route.view === "catalog") renderList(true); if (route.view === "seller") renderSeller();
   toast(L("Вы вышли из аккаунта", "Akkauntdan chiqdingiz"));
@@ -3481,7 +3507,7 @@ async function syncCatalog() {
   if (!API) return;
   try {
     apiCat = await api("GET", "/api/catalog");
-    buildProducts();
+    buildProducts(); pruneCart();
     const busy = drawerView || $("#modal").classList.contains("on") || route.view === "seller";
     if (!busy) { const y = window.scrollY; renderMain(); window.scrollTo(0, y); } else counts();
   } catch (e) { /* keep the built-in catalog */ }
@@ -3771,7 +3797,7 @@ const CANCEL_TXT = () => ({ unpaid: L("оплата картой не посту
 /* Store hours are Tashkent time (UTC+5) */
 function openState(s) {
   const m = String(s.hours || "").match(/(\d{1,2}):(\d{2})\D+(\d{1,2}):(\d{2})/);
-  if (!m) return { open: true, text: s.hours || "" };
+  if (!m) return { open: true, text: esc(s.hours || "") }; // free-form hours come from the store owner: escaped for HTML
   const o = +m[1] * 60 + +m[2], c = +m[3] * 60 + +m[4];
   const t = new Date(Date.now() + 5 * 3600000), mins = t.getUTCHours() * 60 + t.getUTCMinutes();
   if (c <= o || (mins >= o && mins < c)) return { open: true, text: c <= o ? L("Круглосуточно", "Kecha-yu kunduz") : L(`Открыто до ${m[3].padStart(2, "0")}:${m[4]}`, `${m[3].padStart(2, "0")}:${m[4]} gacha ochiq`, `Open until ${m[3].padStart(2, "0")}:${m[4]}`) };
@@ -3934,7 +3960,7 @@ function adminFinanceHTML() {
   if (!adminFin) return "";
   const F = adminFin;
   return `<div class="panel" style="margin-top:12px"><div class="panel-h"><h2 class="h-m">${L("Финансы Imorat Go", "Imorat Go moliyasi")}</h2><label class="visually-hidden" for="finMonth">${L("Месяц", "Oy")}</label><input type="month" id="finMonth" class="sel" value="${esc(F.month)}" style="max-width:170px"></div>
-    <div class="mini-kpis"><div><b>${fmt(F.totals.goods)}</b><small>${L("оборот магазинов", "do‘konlar aylanmasi")}</small></div><div><b>${fmt(F.totals.commission)}</b><small>${L("ваша комиссия за месяц", "oylik komissiyangiz")}</small></div><div><b>${fmt(F.totals.balance)}</b><small>${L("магазины должны всего", "do‘konlar jami qarzi")}</small></div></div>
+    <div class="mini-kpis"><div><b>${fmt(F.totals.goods)}</b><small>${L("оборот магазинов", "do‘konlar aylanmasi")}</small></div><div><b>${fmt(F.totals.commission)}</b><small>${L("ваша комиссия за месяц", "oylik komissiyangiz")}</small></div><div><b style="color:${F.totals.balance >= 0 ? "inherit" : "var(--ok)"}">${fmt(Math.abs(F.totals.balance))}</b><small>${F.totals.balance >= 0 ? L("магазины должны всего", "do‘konlar jami qarzi") : L("вы должны магазинам (итог)", "siz do‘konlarga qarzdorsiz (jami)", "you owe the stores (net)")}</small></div></div>
     ${F.stores.length ? `<div class="tbl-wrap"><table><thead><tr><th>${L("Магазин", "Do‘kon")}</th><th class="r">${L("Оборот", "Aylanma")}</th><th class="r">${L("Комиссия", "Komissiya")}</th><th class="r">${L("Долг", "Qarz")}</th><th>${L("Получено от магазина", "Do‘kondan olindi")}</th></tr></thead><tbody>
     ${F.stores.map(s => `<tr><td><b>${esc(s.name)}</b><br><small style="color:var(--muted)">${s.orders} ${L("заказов", "buyurtma")}</small></td><td class="r">${fmt(s.goods)}</td><td class="r">${fmt(s.commission)}</td><td class="r" style="color:${s.balance > 0 ? "var(--signal)" : "var(--ok)"}">${fmt(s.balance)}</td>
       <td><form class="settle-f" data-settle="${esc(s.id)}"><label class="visually-hidden" for="st${esc(s.id)}">${L("Сумма", "Summa")}</label><input id="st${esc(s.id)}" type="number" min="1" inputmode="numeric" value="${s.balance > 0 ? s.balance : ""}" style="width:120px"><button class="btn btn-line" type="submit">${L("Записать", "Qayd qilish")}</button></form></td></tr>`).join("")}
@@ -4889,7 +4915,7 @@ function renderSeller() {
   const nextBtn = { new: L("Собрать", "Yig‘ish"), packed: L("Передать курьеру", "Kuryerga berish"), handed: L("Отметить доставку", "Yetkazildi deb belgilash") };
   $("#app").innerHTML = `<div class="wrap">
     <nav class="crumbs"><button type="button" data-go="home">${L("Главная", "Asosiy")}</button>${ui("chev", 12)}<span>${L("Кабинет продавца", "Sotuvchi kabineti")}</span></nav>
-    <div class="s-head" style="padding-top:4px"><div><h1 class="h-l">${esc(s.name)}</h1><p>${dName(s.d)}, ${L(s.addr, s.addrUz)} · ${s.hours} · <span class="pill mute">${L("демо-кабинет", "demo kabinet")}</span></p></div>
+    <div class="s-head" style="padding-top:4px"><div><h1 class="h-l">${esc(s.name)}</h1><p>${dName(s.d)}, ${esc(L(s.addr, s.addrUz))} · ${esc(s.hours || "")} · <span class="pill mute">${L("демо-кабинет", "demo kabinet")}</span></p></div>
       <div class="f" style="min-width:200px"><label for="sStore">${L("Магазин", "Do‘kon")}</label><select class="sel" id="sStore">${[...(myStore ? [myStore] : []), ...STORES].map(x => `<option value="${x.id}" ${x.id === s.id ? "selected" : ""}>${esc(x.name)}</option>`).join("")}</select></div></div>
     ${s.mine ? storeBanner(s, true) + storeCardHTML(s) : ""}
     ${sellerProblemsHTML(s.id)}
@@ -5790,7 +5816,7 @@ async function loadTeams() {
   try { teamProj = (await api("GET", "/api/team-projects")).projects; } catch (e) { teamProj = teamProj || []; }
   if (drawerView === "projects") renderDrawer();
 }
-const itemsSum = items => Object.entries(items).reduce((a, [k, v]) => { const [id, st] = k.split("|"), p = PROD[id], q = typeof v === "object" ? v.q : v; if (!p) return a; const o = p.offers.find(x => x.store === st) || p.offers[0]; return a + o.price * q; }, 0);
+const itemsSum = items => Object.entries(items).reduce((a, [k, v]) => { const [id, st] = k.split("|"), p = PROD[id], q = typeof v === "object" ? v.q : v; if (!p) return a; const o = p.offers.find(x => x.store === st) || p.offers[0]; return o ? a + o.price * q : a; }, 0);
 function teamHTML() {
   if (!API) return `<div class="team"><b>${ui("user", 16)} ${L("Общий проект бригады", "Brigada umumiy loyihasi")}</b><small class="mu">${L("На рабочем сайте прораб создаёт проект, приглашает бригаду по коду, и все добавляют нужное в один список. В демо можно поделиться списком ссылкой — кнопка «Отправить» у проекта.", "Ishchi saytda prorab loyiha yaratadi, brigadani kod bilan taklif qiladi va hamma kerakli narsani bitta ro‘yxatga qo‘shadi. Demo versiyada ro‘yxatni havola bilan ulashish mumkin — loyihadagi «Yuborish» tugmasi.")}</small></div>`;
   if (!user) return `<div class="team"><b>${ui("user", 16)} ${L("Общий проект бригады", "Brigada umumiy loyihasi")}</b><small class="mu">${L("Войдите, чтобы вести один список закупок вместе с бригадой.", "Brigada bilan bitta xarid ro‘yxatini yuritish uchun kiring.")}</small><button class="btn btn-line" type="button" data-act="login">${L("Войти", "Kirish")}</button></div>`;
