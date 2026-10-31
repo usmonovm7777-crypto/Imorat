@@ -266,6 +266,8 @@ export function createApp(cfg, log = console) {
     if (!/^998\d{9}$/.test(phone)) throw bad("bad_phone", "Recipient phone must be +998 XX XXX XX XX");
     if (form.mode !== "pickup" && form.street.length < 4) throw bad("bad_address", "Street and house are required for delivery");
     if (!["store", "cash"].includes(form.pay) && !cfg.paymentsOnline.includes(form.pay)) throw bad("payment_unavailable", "Online payment is not connected yet; pay the store directly");
+    // Delivery is paid by card on the site (the courier takes no money); cash only when the buyer collects the order at the store
+    if (["store", "cash"].includes(form.pay) && form.mode !== "pickup" && cfg.paymentsOnline.length) throw bad("card_required", "Delivery orders are paid by card on the site; cash is for pickup only");
     if (b.expected_total != null && Number(b.expected_total) !== q.total) throw new HttpError(409, "total_changed", "Prices or delivery changed, check the new total", { quote: q });
     const now = Date.now(), online = !["store", "cash"].includes(form.pay);
     const order = db.tx(() => {

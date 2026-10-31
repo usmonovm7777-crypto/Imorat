@@ -108,13 +108,13 @@ a { color: inherit; }
 radial-gradient(ellipse 70% 55% at 50% 38%, hsl(var(--h) var(--tile-s) calc(var(--tile-l) + 5%)) 0%, transparent 70%),
 linear-gradient(180deg, hsl(var(--h) var(--tile-s) var(--tile-l)) 0 70%, hsl(var(--h) var(--tile-s) calc(var(--tile-l) - 4%)) 70% 100%); }
 .art { width: 100%; height: 100%; display: block; }
-.art .sh { fill: hsl(var(--h) 30% 12%); opacity: var(--art-sh); filter: blur(2.2px); }
+.art .sh { fill: url(#artsh); opacity: var(--art-sh); }
 .art .d2 { stroke: hsl(var(--h) 35% var(--art-d2)); opacity: .28; }
 .art .d1 { stroke: hsl(var(--h) 42% var(--art-d1)); }
 .art .fg { stroke: hsl(var(--h) 48% var(--art-fg)); }
 .art .hl { stroke: var(--art-hl); }
 .photo { width: 100%; height: 100%; object-fit: cover; display: block; }
-.hdr { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 30; background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: saturate(1.4) blur(14px); -webkit-backdrop-filter: saturate(1.4) blur(14px); border-bottom: 1px solid var(--line); }
+.hdr { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 30; background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: saturate(1.3) blur(9px); -webkit-backdrop-filter: saturate(1.3) blur(9px); border-bottom: 1px solid var(--line); }
 .hdr-row { display: flex; align-items: center; gap: 12px; padding-block: 12px; }
 .logo { display: flex; align-items: center; gap: 9px; flex: none; }
 .logo-mark { width: 30px; height: 30px; display: grid; grid-template-columns: 1fr 1fr; gap: 2.5px; }
@@ -667,7 +667,10 @@ html.lock { overflow: hidden; }
 .cat-tile:hover .cat-img img { transform: scale(1.08) rotate(-1deg); }
 .cat-tile.all { align-content: space-between; }
 .cat-tile.all .ico { margin-top: auto; }
-.marquee { overflow: hidden; margin-top: 12px; border-radius: var(--r); background: var(--surface); border: 1px solid var(--line); padding-block: 10px; -webkit-mask: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent); mask: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent); }
+.marquee { overflow: hidden; margin-top: 12px; border-radius: var(--r); background: var(--surface); border: 1px solid var(--line); padding-block: 10px; position: relative; }
+.marquee::before, .marquee::after { content: ""; position: absolute; top: 0; bottom: 0; width: 7%; z-index: 2; pointer-events: none; }
+.marquee::before { left: 0; background: linear-gradient(90deg, var(--surface), transparent); }
+.marquee::after { right: 0; background: linear-gradient(270deg, var(--surface), transparent); }
 .mq-track { display: flex; gap: 10px; width: max-content; }
 .mq-item { display: inline-flex; align-items: center; gap: 10px; padding: 4px 14px 4px 4px; border-radius: 999px; background: var(--raised); border: 1px solid var(--line); white-space: nowrap; font-size: 14px; font-weight: 500; }
 .mq-item .mini { width: 40px; height: 40px; border-radius: 50%; }
@@ -704,22 +707,23 @@ html.lock { overflow: hidden; }
 .ws { font-size: 12px; color: var(--ok); font-weight: 600; }
 .flyer { position: fixed; z-index: 80; width: 64px; height: 64px; border-radius: 50%; overflow: hidden; pointer-events: none; box-shadow: var(--shadow); }
 .flyer img, .flyer svg { width: 100%; height: 100%; object-fit: cover; }
-@property --ang { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
-html.fx .askbar { border: 2px solid transparent; background: linear-gradient(var(--hero-fg), var(--hero-fg)) padding-box, conic-gradient(from var(--ang), var(--hero-acc), var(--signal), #ffffff, var(--hero-acc)) border-box; animation: spin 5s linear infinite; }
-@keyframes spin { to { --ang: 360deg; } }
+html.fx .askbar { position: relative; isolation: isolate; overflow: hidden; padding: 8px 8px 8px 18px; background: transparent; }
+html.fx .askbar::before { content: ""; position: absolute; left: 50%; top: 50%; width: 220%; aspect-ratio: 1; margin: -110% 0 0 -110%; z-index: -2; background: conic-gradient(var(--hero-acc), var(--signal), #ffffff, var(--hero-acc)); animation: spin 5s linear infinite; }
+html.fx .askbar::after { content: ""; position: absolute; inset: 2px; z-index: -1; border-radius: 14px; background: var(--hero-fg); }
+@keyframes spin { to { transform: rotate(1turn); } }
 html.fx .hero .h-xl { animation: rise 1s cubic-bezier(.2,.8,.2,1) both; }
 html.fx .hero .lead, html.fx .hero .askbar, html.fx .hero .hero-q, html.fx .hero .stats { animation: rise 1s cubic-bezier(.2,.8,.2,1) both; }
-html.fx .hero .lead { animation-delay: .08s; } html.fx .hero .askbar { animation: rise 1s cubic-bezier(.2,.8,.2,1) .16s both, spin 5s linear infinite; } html.fx .hero .hero-q { animation-delay: .22s; } html.fx .hero .stats { animation-delay: .28s; }
-@keyframes rise { from { transform: translateY(22px); filter: blur(3px); } to { transform: none; filter: none; } }
+html.fx .hero .lead { animation-delay: .08s; } html.fx .hero .askbar { animation-delay: .16s; } html.fx .hero .hero-q { animation-delay: .22s; } html.fx .hero .stats { animation-delay: .28s; }
+@keyframes rise { from { transform: translateY(22px); opacity: 0; } to { transform: none; opacity: 1; } }
 html.fx .collage .tile { transform: translate3d(calc(var(--px, 0) * var(--d, 10) * 1px), calc(var(--py, 0) * var(--d, 10) * 1px + var(--oy, 0px)), 0); transition: transform .25s ease-out, box-shadow .25s; }
 html.fx .collage .tile:nth-child(1) { --d: 14; } html.fx .collage .tile:nth-child(2) { --d: 22; --oy: 18px; } html.fx .collage .tile:nth-child(3) { --d: 10; }
 html.fx .collage .tile:nth-child(4) { --d: 26; --oy: 18px; } html.fx .collage .tile:nth-child(5) { --d: 12; } html.fx .collage .tile:nth-child(6) { --d: 18; --oy: 18px; }
 html.fx .collage .tile:hover { box-shadow: 0 26px 60px rgba(0,0,0,.4); }
-html.fx .hero::after { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; background: radial-gradient(420px 320px at var(--gx, 70%) var(--gy, 30%), color-mix(in srgb, var(--hero-acc) 18%, transparent), transparent 70%); transition: background .2s; }
+html.fx .hero::after { content: ""; position: absolute; left: 0; top: 0; width: 840px; height: 640px; z-index: -1; pointer-events: none; background: radial-gradient(closest-side, color-mix(in srgb, var(--hero-acc) 18%, transparent), transparent); transform: translate3d(calc(var(--gxp, 70%) - 420px), calc(var(--gyp, 30%) - 320px), 0); transition: transform .25s ease-out; will-change: transform; }
 html.fx .mq-track { animation: marquee var(--mq-dur, 600s) linear infinite; }
 html.fx .marquee:hover .mq-track { animation-play-state: paused; }
 @keyframes marquee { to { transform: translateX(-50%); } }
-html.fx .card, html.fx .bundle, html.fx .cat-tile { transform-style: preserve-3d; will-change: transform; }
+html.fx .tilt { will-change: transform; }
 html.fx .tilt { transform: perspective(900px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) translateY(-4px) !important; transition: transform .08s linear, box-shadow .2s !important; box-shadow: 0 22px 40px rgba(14, 26, 24, .16) !important; }
 html.fx .card::after, html.fx .bundle::after { content: ""; position: absolute; inset: 0; pointer-events: none; border-radius: inherit; opacity: 0; transition: opacity .25s; background: radial-gradient(260px 200px at var(--mx, 50%) var(--my, 30%), rgba(255,255,255,.22), transparent 70%); z-index: 2; }
 html.fx .tilt::after { opacity: 1; }
@@ -731,12 +735,13 @@ html.fx .route .dash { stroke-dasharray: 6 8; animation: dash 1.2s linear infini
 @supports (animation-timeline: view()) {
 html.fx .rv { animation: rv linear both; animation-timeline: view(); animation-range: entry 0% cover 24%; }
 @keyframes rv { from { opacity: .2; transform: translateY(48px) scale(.985); } to { opacity: 1; transform: none; } }
-html.fx .rv-x > * { animation: rvx linear both; animation-timeline: view(); animation-range: entry 0% cover 30%; }
-@keyframes rvx { from { opacity: .2; transform: translateX(60px) rotate(1.5deg); } to { opacity: 1; transform: none; } }
+html.fx .rv-x { animation: rvx linear both; animation-timeline: view(); animation-range: entry 0% cover 30%; }
+@keyframes rvx { from { opacity: .3; transform: translateX(40px); } to { opacity: 1; transform: none; } }
 }
 html.fx::view-transition-old(root), html.fx::view-transition-new(root) { animation-duration: .35s; }
 @media (max-width: 760px), (hover: none) {
-html:not(.fx) .marquee { overflow-x: auto; -webkit-mask: none; mask: none; scrollbar-width: none; }
+html:not(.fx) .marquee { overflow-x: auto; scrollbar-width: none; }
+html:not(.fx) .marquee::before, html:not(.fx) .marquee::after { display: none; }
 html:not(.fx) .marquee::-webkit-scrollbar { display: none; }
 html:not(.fx) .mq-track { padding-inline: 10px; }
 html:not(.fx) .collage .tile { animation: none; }
@@ -1110,6 +1115,7 @@ html.fx .fx-btn { color: #fff; border-color: transparent; background: linear-gra
 .calc-res > div > span:first-child { flex: 0 1 auto; }
 .calc .row3 .f label, .calc .row2 .f label { min-height: 2.6em; display: flex; align-items: end; line-height: 1.25; }</style>
 
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs><radialGradient id="artsh"><stop offset="0" stop-color="#0d1513"/><stop offset=".5" stop-color="#0d1513" stop-opacity=".8"/><stop offset="1" stop-color="#0d1513" stop-opacity="0"/></radialGradient></defs></svg>
 <header class="hdr" id="hdr"></header>
 <main id="app"></main>
 <footer id="foot"></footer>
@@ -1749,7 +1755,7 @@ function art(p, label, eager) {
 }
 function artSvg(p, label) {
   const g = ICONS[p.icon] || ICONS.box;
-  return `<svg class="art" viewBox="0 0 100 100" role="img" aria-label="${esc(label || pName(p))}"><ellipse class="sh" cx="51" cy="83" rx="27" ry="4.5"/><g transform="translate(19 13) scale(2.6)" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.55"><g class="d2" transform="translate(.9 1.1)">${g}</g><g class="d1" transform="translate(.4 .5)">${g}</g><g class="fg">${g}</g><g class="hl" stroke-width=".45" transform="translate(-.22 -.28)">${g}</g></g></svg>`;
+  return `<svg class="art" viewBox="0 0 100 100" role="img" aria-label="${esc(label || pName(p))}"><ellipse class="sh" cx="51" cy="83" rx="31" ry="6"/><g transform="translate(19 13) scale(2.6)" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.55"><g class="d2" transform="translate(.9 1.1)">${g}</g><g class="d1" transform="translate(.4 .5)">${g}</g><g class="fg">${g}</g><g class="hl" stroke-width=".45" transform="translate(-.22 -.28)">${g}</g></g></svg>`;
 }
 const hueOf = p => CAT[p.cat].h + ((p.id % 3) - 1) * 8;
 const mini = p => `<span class="mini studio" style="--h:${hueOf(p)}">${art(p)}</span>`;
@@ -1853,19 +1859,30 @@ function fly(fromEl) {
   const anim = el.animate([{ transform: "translate(0,0) scale(1)", opacity: 1 }, { transform: `translate(${dx * .5}px, ${dy * .5 - 80}px) scale(.8)`, opacity: 1, offset: .5 }, { transform: `translate(${dx}px, ${dy}px) scale(.25)`, opacity: .3 }], { duration: 750, easing: "cubic-bezier(.5,0,.3,1)" });
   anim.onfinish = () => { el.remove(); target.animate([{ transform: "scale(1)" }, { transform: "scale(1.12)" }, { transform: "scale(1)" }], { duration: 300 }); };
 }
-let tiltEl = null;
-document.addEventListener("pointermove", e => {
-  if (!motionOK()) return;
+let tiltEl = null, pmEv = null, pmRaf = 0, heroRect = null, tiltRect = null;
+/* Parallax and tilt: pointer events are coalesced to one style update per frame; element sizes are measured once per hover,
+   and the variables go on the small elements that use them, so a move never invalidates the whole hero. */
+function pointerFrame() {
+  pmRaf = 0; const e = pmEv; if (!e) return;
   const hero = e.target.closest(".hero");
-  if (hero) { const r = hero.getBoundingClientRect(); const x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height; hero.style.setProperty("--px", (x - .5).toFixed(3)); hero.style.setProperty("--py", (y - .5).toFixed(3)); hero.style.setProperty("--gx", (x * 100).toFixed(1) + "%"); hero.style.setProperty("--gy", (y * 100).toFixed(1) + "%"); }
+  if (hero) {
+    if (!heroRect || heroRect.el !== hero) heroRect = { el: hero, r: hero.getBoundingClientRect() };
+    const r = heroRect.r, x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height;
+    const col = hero.querySelector(".collage"); if (col) { col.style.setProperty("--px", (x - .5).toFixed(3)); col.style.setProperty("--py", (y - .5).toFixed(3)); }
+    hero.style.setProperty("--gxp", Math.round(x * r.width) + "px"); hero.style.setProperty("--gyp", Math.round(y * r.height) + "px");
+  } else heroRect = null;
   const c = e.target.closest(".card,.bundle,.cat-tile");
-  if (tiltEl && tiltEl !== c) { tiltEl.classList.remove("tilt"); tiltEl = null; }
+  if (tiltEl && tiltEl !== c) { tiltEl.classList.remove("tilt"); tiltEl = null; tiltRect = null; }
   if (!c) return;
-  const r = c.getBoundingClientRect(), x = (e.clientX - r.left) / r.width - .5, y = (e.clientY - r.top) / r.height - .5;
+  if (!tiltRect || tiltRect.el !== c) tiltRect = { el: c, r: c.getBoundingClientRect() };
+  const r = tiltRect.r, x = (e.clientX - r.left) / r.width - .5, y = (e.clientY - r.top) / r.height - .5;
   c.style.setProperty("--rx", (-y * 7).toFixed(2) + "deg"); c.style.setProperty("--ry", (x * 9).toFixed(2) + "deg");
   c.style.setProperty("--mx", ((x + .5) * 100).toFixed(1) + "%"); c.style.setProperty("--my", ((y + .5) * 100).toFixed(1) + "%");
   c.classList.add("tilt"); tiltEl = c;
-}, { passive: true });
+}
+document.addEventListener("pointermove", e => { if (!motionOK()) return; pmEv = e; if (!pmRaf) pmRaf = requestAnimationFrame(pointerFrame); }, { passive: true });
+window.addEventListener("scroll", () => { heroRect = null; tiltRect = null; }, { passive: true });
+window.addEventListener("resize", () => { heroRect = null; tiltRect = null; }, { passive: true });
 document.addEventListener("pointerleave", () => { if (tiltEl) { tiltEl.classList.remove("tilt"); tiltEl = null; } });
 /* Compare up to 3 products */
 let compare = LS.get("imorat.cmp", []).filter(id => PROD[id]);
@@ -1924,7 +1941,7 @@ function renderFooter() {
       <p class="num" style="margin:10px 0 0">+998 71 200 00 00 · 08:00–22:00</p>
       <a class="tg-l" href="https://t.me/${esc(apiCfg?.telegram_bot || "imoratGo_bot")}" target="_blank" rel="noopener">${ui("send", 16)} Telegram · @${esc(apiCfg?.telegram_bot || "imoratGo_bot")}</a></div>
     <div><b>${L("Покупателям", "Xaridorlarga")}</b><ul><li><button type="button" data-go="catalog">${L("Весь каталог", "Butun katalog")}</button></li><li><button type="button" data-act="ai">Usta AI</button></li><li><button type="button" data-scroll="calc">${L("Калькуляторы ремонта", "Ta’mir kalkulyatorlari")}</button></li><li><button type="button" data-go="list">${L("Список покупок → корзина", "Xaridlar ro‘yxati → savat")}</button></li><li><button type="button" data-act="orders">${L("Мои заказы", "Buyurtmalarim")}</button></li></ul></div>
-    <div><b>${L("Доставка и оплата", "Yetkazish va to‘lov")}</b><ul><li>${L("Яндекс Доставка", "Yandex Yetkazib berish")}</li><li><button type="button" data-scroll="vip">Imorat Go VIP</button></li><li>${L("Рассрочка на 12 месяцев", "12 oyga muddatli to‘lov")}</li><li><button type="button" data-go="masters">${L("Мастера и спецтехника", "Ustalar va maxsus texnika", "Pros and machinery")}</button></li></ul></div>
+    <div><b>${L("Доставка и оплата", "Yetkazish va to‘lov")}</b><ul><li>${L("Яндекс Доставка", "Yandex Yetkazib berish")}</li><li><button type="button" data-scroll="vip">Imorat Go VIP</button></li><li>${L("Оплата картой на сайте", "Saytda karta bilan to‘lov", "Card payment on the site")}</li><li><button type="button" data-go="masters">${L("Мастера и спецтехника", "Ustalar va maxsus texnika", "Pros and machinery")}</button></li></ul></div>
     <div><b>${L("Партнёрам", "Hamkorlarga")}</b><ul><li><button type="button" data-go="seller">${L("Кабинет продавца", "Sotuvchi kabineti")}</button></li><li><button type="button" data-scroll="stores">${L("Магазины", "Do‘konlar")}</button></li><li><button type="button" data-go="admin">${L("Панель владельца", "Egasi paneli")}</button></li><li><button type="button" data-go="masters" data-mtabgo="me">${L("Стать мастером", "Usta bo‘lish")}</button></li></ul></div>
   </div>`;
 }
@@ -1965,7 +1982,7 @@ function card(p) {
       <div class="rate">${p.reviews ? `<span class="s">${ui("star", 13)}${p.rating.toFixed(1).replace(".", DEC)}</span><span>${p.reviews} ${L(plural(p.reviews, ["отзыв", "отзыва", "отзывов"]), "sharh", p.reviews === 1 ? "review" : "reviews")}</span>` : `<span>${L("Пока без отзывов", "Hali sharh yo‘q")}</span>`}</div>
       <h3><button type="button" data-open="${p.id}">${esc(pName(p))}</button></h3>
       <div class="unitline">${L("за", "narxi:")} ${unitAcc(p.unit)} · ${fmtKg(p.kg)}${p.group && GROUPS[p.group]?.length > 1 ? ` · ${GROUPS[p.group].length} ${L(plural(GROUPS[p.group].length, ["вариант", "варианта", "вариантов"]), "variant", GROUPS[p.group].length === 1 ? "option" : "options")}` : ""}</div>
-      <div class="buy"><div><div class="price">${from}</div>${mp >= 500000 ? `<div class="inst">${fmt(monthly(mp))}${L(" × 12 мес", " × 12 oy")}</div>` : `<div class="sub">${n > 1 ? `${n} ${L(plural(n, ["магазин", "магазина", "магазинов"]), "do‘konda", n === 1 ? "store" : "stores")}` : STORE[p.offers[0].store].name}</div>`}</div>
+      <div class="buy"><div><div class="price">${from}</div>${false ? "" : `<div class="sub">${n > 1 ? `${n} ${L(plural(n, ["магазин", "магазина", "магазинов"]), "do‘konda", n === 1 ? "store" : "stores")}` : STORE[p.offers[0].store].name}</div>`}</div>
         <button class="add ${q ? "in" : ""}" type="button" data-add="${p.id}" aria-label="${L("В корзину", "Savatga")}">${q ? `<span class="num">${q}</span>` : ui("plus", 20)}</button></div>
     </div></article>`;
 }
@@ -2077,7 +2094,7 @@ function renderHome() {
     <div class="trust">
       <div><span class="ti">${ui("truck", 20)}</span><span><b>${L("Яндекс Доставка", "Yandex Yetkazish")}</b><small>${L("Курьер от 40 минут", "Kuryer 40 daqiqadan")}</small></span></div>
       <div><span class="ti">${ui("store", 20)}</span><span><b>${storesTxt()}</b><small>${L("Сравнение в карточке", "Kartochkada solishtirish")}</small></span></div>
-      <div><span class="ti">${ui("wallet", 20)}</span><span><b>${L("Рассрочка 12 мес", "12 oy muddatli to‘lov")}</b><small>${L("На покупки от 500 000 сум", "500 000 so‘mdan xaridlarga")}</small></span></div>
+      <div><span class="ti">${ui("wallet", 20)}</span><span><b>${L("Оплата картой", "Karta bilan to‘lov", "Card payment")}</b><small>${L("Товар и доставка одним платежом", "Mahsulot va yetkazish bir to‘lovda", "Goods and delivery in one payment")}</small></span></div>
       <div><span class="ti">${ui("wrench", 20)}</span><span><b>${L("Установка мастером", "Usta o‘rnatadi")}</b><small>${L("Добавьте в корзину вместе с товаром", "Mahsulot bilan savatga qo‘shing")}</small></span></div>
     </div>
     <div class="marquee" aria-label="${L("Популярное сейчас", "Hozir ommabop")}"><div class="mq-track">${[0, 1].map(k => PRODUCTS.filter(p => p.hit || p.isNew).concat(PRODUCTS.filter(p => p.key && !p.hit).slice(0, 8)).map(p => `<button class="mq-item" type="button" data-open="${p.id}" ${k ? 'tabindex="-1" aria-hidden="true"' : ""}>${mini(p)}${esc(pName(p))} <b>${fmt(minPrice(p))}</b></button>`).join("")).join("")}</div></div>
@@ -2449,7 +2466,6 @@ function openProduct(id) {
       ${stockWatchHTML(p)}
       ${svc ? `<label class="infobox" for="svcChk">${ui("wrench", 20)}<span><b>${L("Установка мастером", "Usta o‘rnatishi")}</b><small>${fmt(svc)} ${L("за", "har")} ${unitAcc(p.unit)} · ${L("мастер приедет после доставки", "usta yetkazilgandan keyin keladi")}</small></span><span class="check"><input type="checkbox" id="svcChk" data-svc="${p.id}" ${svcOn ? "checked" : ""}></span></label>` : ""}
       ${SUB_SPEC[p.sub] ? `<button class="infobox lnkbox" type="button" data-mfind="${SUB_SPEC[p.sub]}">${ui("wrench", 20)}<span><b>${L("Найти мастера", "Usta topish")}: ${esc(mSpecName(SUB_SPEC[p.sub]).toLowerCase())}</b><small>${L("С отзывами покупателей, в вашем районе", "Xaridorlar sharhlari bilan, tumaningizda")}</small></span>${ui("chev", 16)}</button>` : ""}
-      ${mp >= 500000 ? `<div class="infobox">${ui("wallet", 20)}<span><b>${L("Рассрочка на 12 месяцев", "12 oyga muddatli to‘lov")}</b><small>${L(`от ${fmt(monthly(mp))} в месяц`, `oyiga ${fmt(monthly(mp))}dan`, `from ${fmt(monthly(mp))} per month`)} · ${L("оформление при оплате, условия партнёра", "to‘lovda rasmiylashtiriladi, hamkor shartlari")}</small></span></div>` : ""}
       <div class="infobox">${ui(t.icon, 20)}<span><b>${L("Доставка Яндекс в", "Yandex yetkazish:")} ${dName(district)}</b><small>${tName(t)} · ${fromP(round(t.base + t.perKm * dist))} · ${etaStr(t)}${vip ? " · VIP" : ""}</small></span></div>
       ${TIER_CATS.includes(p.cat) ? `<div class="infobox">${ui("store", 20)}<span style="flex:1"><b>${L("Оптом дешевле — для мастеров и прорабов", "Ulgurji arzonroq — ustalar va prorablar uchun")}</b><span class="tier"><span class="on">${L("1–9", "1–9")}<b>${fmt(mp)}</b></span><span>${L("от 10", "10 dan")}<b>${fmt(round(mp * .97))}</b></span><span>${L("от 50", "50 dan")}<b>${fmt(round(mp * .94))}</b></span></span></span></div>` : ""}
       <div class="m-actions"><button class="btn btn-ai" type="button" data-askp="${p.id}">${ui("spark", 18)} ${L("Спросить AI", "AI dan so‘rash")}</button><button class="btn btn-line" type="button" data-fav="${p.id}" aria-pressed="${fav}">${ui("heart", 18)} ${fav ? L("В избранном", "Saralanganlarda") : L("В избранное", "Saralanganlarga")}</button><button class="btn btn-line" type="button" data-cmp="${p.id}">${ui("filter", 18)} ${compare.includes(p.id) ? L("В сравнении", "Solishtirishda") : L("Сравнить", "Solishtirish")}</button><button class="btn btn-line" type="button" data-watch="${p.id}" aria-pressed="${watch.includes(p.id)}">${ui("bell", 18)} ${watch.includes(p.id) ? L("Слежу за ценой", "Narx kuzatilmoqda") : L("Следить за ценой", "Narxni kuzatish")}</button></div>
@@ -2553,10 +2569,18 @@ function quote(d) {
   const pts = d.usePts ? Math.max(0, Math.min(bonusBalance(), Math.floor(goods * bonusCfg().maxShare))) : 0;
   return { ships, goods, del, svc, disc, pd, pts, total: goods + del + svc - disc - pd - pts, cash: vip ? Math.round(goods * 0.03) : 0 };
 }
+/* Payment rules: delivery → card on the site only (the courier takes no money); pickup → card or cash at the store */
+function payOptions(d) {
+  const cardNames = { click: L("Картой · Click", "Karta · Click", "Card · Click"), payme: L("Картой · Payme", "Karta · Payme", "Card · Payme"), uzum: L("Картой · Uzum", "Karta · Uzum", "Card · Uzum") };
+  const cards = (API ? (apiCfg?.payments || []) : ["click", "payme", "uzum"]).map(x => [x, cardNames[x] || x]);
+  const cash = API ? ["store", L("Наличными в магазине", "Do‘konda naqd", "Cash at the store")] : ["cash", L("Наличными в магазине", "Do‘konda naqd", "Cash at the store")];
+  if (d.mode === "pickup") return [...cards, cash];
+  return cards.length ? cards : [cash]; // no card provider connected yet: the store takes the money on delivery
+}
 function dCheckout() {
   $("#dTitle").textContent = L("Оформление", "Rasmiylashtirish");
-  const d = Object.assign({ name: user?.name || "", phone: user?.phone || "+998 ", district, street: "", flat: "", floor: "1", mode: "yandex", when: "asap", hour: "09", pay: API ? (apiCfg?.payments?.[0] || "store") : "click", lift: false, comment: "" }, form);
-  if (API && !["store", ...(apiCfg?.payments || [])].includes(d.pay)) d.pay = apiCfg?.payments?.[0] || "store";
+  const d = Object.assign({ name: user?.name || "", phone: user?.phone || "+998 ", district, street: "", flat: "", floor: "1", mode: "yandex", when: "asap", hour: "09", pay: "", lift: false, comment: "" }, form);
+  { const ok = payOptions(d).map(x => x[0]); if (!ok.includes(d.pay)) d.pay = ok[0]; }
   const hours = []; for (let h = 8; h <= 20; h++) hours.push(String(h).padStart(2, "0"));
   $("#dBody").innerHTML = `<form id="orderForm" novalidate style="display:grid;gap:22px">
     <fieldset><legend>${L("Получатель", "Qabul qiluvchi")}</legend>
@@ -2580,10 +2604,10 @@ function dCheckout() {
       </div>
     </fieldset>
     <fieldset><legend>${L("Оплата", "To‘lov")}</legend>
-      <div class="pay">${(API ? [...(apiCfg?.payments || []).map(x => [x, { click: L("Картой · Click", "Karta · Click", "Card · Click"), payme: L("Картой · Payme", "Karta · Payme", "Card · Payme"), uzum: L("Картой · Uzum", "Karta · Uzum", "Card · Uzum") }[x] || x]), ["store", L("Магазину при получении", "Olganda do‘konga", "To the store on receipt")]] : [["click", "Click"], ["payme", "Payme"], ["uzum", "Uzum"], ["nasiya", L("Рассрочка", "Muddatli")], ["cash", L("Наличными", "Naqd")]]).map(([val, n]) => `<label><input type="radio" name="pay" value="${val}" ${d.pay === val ? "checked" : ""}>${n}</label>`).join("")}</div>
+      <div class="pay" id="payOpts">${payOptions(d).map(([val, n]) => `<label><input type="radio" name="pay" value="${val}" ${d.pay === val ? "checked" : ""}>${n}</label>`).join("")}</div>
+      <p class="mu" id="payRule" style="font-size:13px;margin:0">${d.mode === "pickup" ? L("При самовывозе можно оплатить картой на сайте или наличными в магазине.", "Olib ketishda saytda karta bilan yoki do‘konda naqd to‘lash mumkin.", "For pickup you can pay by card on the site or in cash at the store.") : L("Доставка оплачивается картой на сайте: одна сумма за товар и доставку, курьеру платить не нужно.", "Yetkazish saytda karta bilan to‘lanadi: mahsulot va yetkazish uchun bitta summa, kuryerga to‘lash shart emas.", "Delivery orders are paid by card on the site: one amount for goods and delivery, nothing to pay the courier.")}</p>
       <div class="note" id="cardPayNote" hidden>${ui("wallet", 14)} ${L("Списываем всю сумму сразу — товары и доставку. Курьеру и магазину ничего доплачивать не нужно. Магазин получит заказ, как только пройдёт оплата; не оплаченный за 30 минут заказ отменится сам.", "Butun summani — mahsulot va yetkazishni — birdan yechamiz. Kuryerga va do‘konga qo‘shimcha to‘lash shart emas. To‘lov o‘tishi bilan do‘kon buyurtmani oladi; 30 daqiqada to‘lanmagan buyurtma o‘zi bekor bo‘ladi.", "The whole amount — goods and delivery — is charged at once. Nothing to pay the courier or the store. The store receives the order as soon as the payment goes through; an order unpaid for 30 minutes cancels itself.")}</div>
-      <div class="note" id="nasiyaNote" hidden></div>
-      <div class="note" id="storePayNote" hidden>${ui("store", 14)} ${L("Платить заранее не нужно. Магазин подтвердит заказ и способ оплаты: наличными или переводом при получении. Если магазин не подтвердит заказ вовремя, он отменится автоматически.", "Oldindan to‘lash shart emas. Do‘kon buyurtmani va to‘lov usulini tasdiqlaydi: olganda naqd yoki o‘tkazma. Do‘kon o‘z vaqtida tasdiqlamasa, buyurtma avtomatik bekor qilinadi.")}</div>
+      <div class="note" id="storePayNote" hidden>${ui("store", 14)} ${L("Оплата наличными в магазине при получении. Магазин подтвердит заказ и соберёт его к вашему приходу; если не подтвердит вовремя — заказ отменится автоматически.", "Olganda do‘konda naqd to‘lov. Do‘kon buyurtmani tasdiqlab, kelishingizga yig‘ib qo‘yadi; o‘z vaqtida tasdiqlamasa — buyurtma avtomatik bekor bo‘ladi.", "Cash at the store on pickup. The store confirms the order and packs it for your arrival; if it does not confirm in time, the order cancels automatically.")}</div>
       ${bonusBalance() > 0 ? `<label class="check"><input type="checkbox" id="fPts" name="usePts" ${d.usePts ? "checked" : ""}><span>${ui("gift", 15)} ${L(`Оплатить бонусами — у вас ${fmtN(bonusBalance())}`, `Bonus bilan to‘lash — sizda ${fmtN(bonusBalance())}`, `Pay with points — you have ${fmtN(bonusBalance())}`)} <small class="mu">${L(`(до ${Math.round(bonusCfg().maxShare * 100)}% стоимости товаров)`, `(mahsulotlar narxining ${Math.round(bonusCfg().maxShare * 100)}% gacha)`, `(up to ${Math.round(bonusCfg().maxShare * 100)}% of the product total)`)}</small></span></label>` : ""}
       <div class="f"><label for="fPromo">${L("Промокод", "Promokod")}</label><div class="promo-row"><input id="fPromo" value="${esc(promo)}" placeholder="IMORAT5" autocomplete="off" autocapitalize="characters"><button class="btn btn-line" type="button" data-act="promo">${L("Применить", "Qo‘llash")}</button></div><span class="promo-msg" id="promoMsg"></span></div>
       <div class="f"><label for="fComment">${L("Комментарий курьеру", "Kuryerga izoh")}</label><textarea id="fComment" name="comment" rows="2" placeholder="${L("Позвоните за 10 минут", "10 daqiqa oldin qo‘ng‘iroq qiling")}">${esc(d.comment)}</textarea></div>
@@ -2594,7 +2618,15 @@ function dCheckout() {
   $("#dFoot").innerHTML = `<div id="totals" style="display:grid;gap:6px"></div><button class="btn btn-primary" type="submit" form="orderForm" id="payBtn" style="width:100%"></button>`;
   const el = $("#orderForm");
   el.addEventListener("input", updateQuote);
-  el.addEventListener("change", e => { if (e.target.name === "mode") $("#addrSet").hidden = e.target.value === "pickup"; if (e.target.id === "fHour") el.querySelector('[name=when][value=vip]').checked = true; updateQuote(); });
+  el.addEventListener("change", e => {
+    if (e.target.name === "mode") {
+      $("#addrSet").hidden = e.target.value === "pickup";
+      // payment options follow the delivery mode: card only for delivery, card or cash for pickup
+      const d0 = readForm(), opts = payOptions(d0), cur = opts.some(x => x[0] === d0.pay) ? d0.pay : opts[0][0];
+      $("#payOpts").innerHTML = opts.map(([val, n]) => `<label><input type="radio" name="pay" value="${val}" ${cur === val ? "checked" : ""}>${n}</label>`).join("");
+      const pr = $("#payRule"); if (pr) pr.textContent = d0.mode === "pickup" ? L("При самовывозе можно оплатить картой на сайте или наличными в магазине.", "Olib ketishda saytda karta bilan yoki do‘konda naqd to‘lash mumkin.", "For pickup you can pay by card on the site or in cash at the store.") : L("Доставка оплачивается картой на сайте: одна сумма за товар и доставку, курьеру платить не нужно.", "Yetkazish saytda karta bilan to‘lanadi: mahsulot va yetkazish uchun bitta summa, kuryerga to‘lash shart emas.", "Delivery orders are paid by card on the site: one amount for goods and delivery, nothing to pay the courier.");
+    }
+    if (e.target.id === "fHour") el.querySelector('[name=when][value=vip]').checked = true; updateQuote(); });
   el.addEventListener("submit", submitOrder);
   updateQuote();
 }
@@ -2606,17 +2638,15 @@ function updateQuote() {
     <div class="t"><b>${esc(s.g.store.name)}</b><span class="num" style="font-weight:700">${s.t ? (s.full > s.price ? `<s>${fmt(s.full)}</s>` : "") + (s.price ? fmt(s.price) : L("Бесплатно", "Bepul")) : L("Самовывоз", "Olib ketish")}</span></div>
     <small>${s.t ? `${tName(s.t)} · ${s.t.veh} · ${fmtKg(s.g.kg)} · ~${s.dist.toFixed(1).replace(".", DEC)} ${L("км", "km")} · ${d.when === "slot" ? L("завтра 10–14", "ertaga 10–14") : d.when === "vip" ? `${L("завтра", "ertaga")} ${d.hour}:00–${String(+d.hour + 1).padStart(2, "0")}:00` : etaStr(s.t)}` : `${L(s.g.store.addr, s.g.store.addrUz)} · ${s.g.store.hours}`}</small></div>`).join("") +
     (d.mode === "yandex" ? `<div class="note">${L("Цена доставки — оценка прототипа. В рабочей версии цену и время вернёт API Яндекс Доставки по точным координатам.", "Yetkazish narxi taxminiy. Ishchi versiyada narx va vaqtni Yandex API aniq koordinatalar bo‘yicha qaytaradi.")}</div>` : "");
-  const nn = $("#nasiyaNote"); nn.hidden = d.pay !== "nasiya";
   const spn = $("#storePayNote"); if (spn) spn.hidden = d.pay !== "store";
   const cpn = $("#cardPayNote"); if (cpn) cpn.hidden = !(API && (apiCfg?.payments || []).includes(d.pay));
-  nn.innerHTML = `${ui("wallet", 14)} ${L(`Рассрочка на 12 месяцев: от ${fmt(monthly(qt.total))} в месяц. Одобрение через партнёра при оплате; точные условия покажет партнёр.`, `12 oyga muddatli to‘lov: oyiga ${fmt(monthly(qt.total))}dan. To‘lovda hamkor orqali tasdiqlanadi; aniq shartlarni hamkor ko‘rsatadi.`, `12-month installments: from ${fmt(monthly(qt.total))} per month. Approval through the partner at payment; the partner will show the exact terms.`)}`;
   $("#totals").innerHTML = totalsHTML(qt.goods, qt.svc, qt.disc, `<div class="sumrow"><span class="mu">${L("Доставка", "Yetkazish")}</span><span class="num">${fmt(qt.del)}</span></div>`) +
     (qt.pd ? `<div class="sumrow disc"><span>${L("Промокод", "Promokod")} ${esc(promo)}</span><span class="num">−${fmt(qt.pd)}</span></div>` : "") +
     (qt.pts ? `<div class="sumrow disc"><span>${L("Бонусами", "Bonus bilan")}</span><span class="num">−${fmt(qt.pts)}</span></div>` : "") +
     (API && !user ? "" : `<div class="sumrow cash"><span>${L("Начислим бонусов после получения", "Olgandan keyin bonus beriladi")}</span><span class="num">+${fmtN(Math.floor(qt.goods * bonusRate()))}</span></div>`) +
     (qt.cash ? `<div class="sumrow cash"><span>${L("Кешбэк VIP 3%", "VIP keshbek 3%")}</span><span class="num">+${fmt(qt.cash)}</span></div>` : "") +
     `<div class="sumrow total"><span>${L("Итого", "Jami")}</span><span class="num">${fmt(qt.total)}</span></div>`;
-  $("#payBtn").textContent = d.pay === "cash" || d.pay === "store" ? L("Подтвердить заказ", "Buyurtmani tasdiqlash") : d.pay === "nasiya" ? L("Оформить рассрочку", "Muddatli to‘lovni rasmiylashtirish") : `${L("Оплатить", "To‘lash")} ${fmt(qt.total)}`;
+  $("#payBtn").textContent = d.pay === "cash" || d.pay === "store" ? L("Подтвердить заказ", "Buyurtmani tasdiqlash") : `${L("Оплатить картой", "Karta bilan to‘lash", "Pay by card")} ${fmt(qt.total)}`;
 }
 const NAMES = ["Шерзод", "Бобур", "Жасур", "Отабек", "Дилшод", "Сардор"];
 const LET = "ABCDEFHKMOPTXYZ";
@@ -2645,8 +2675,8 @@ function submitOrder(e) {
   cart = {}; services = {}; bundlesOn = []; LS.set("imorat.svc", services); LS.set("imorat.bundles", bundlesOn); saveCart(); refreshCards();
   openDrawer("track", o.num);
 }
-const STEPS_Y = o => [o?.api && o.pay_status !== "paid" ? L("Заказ принят", "Buyurtma qabul qilindi") : L("Заказ оплачен", "Buyurtma to‘landi"), L("Магазин собирает заказ", "Do‘kon yig‘moqda"), L("Ищем исполнителя в Яндексе", "Yandexda ijrochi qidirilmoqda"), L("Курьер едет в магазин", "Kuryer do‘konga ketmoqda"), L("Забрал заказ, в пути", "Buyurtmani oldi, yo‘lda"), L("Доставлено", "Yetkazildi")];
-const STEPS_P = o => [o?.api && o.pay_status !== "paid" ? L("Заказ принят", "Buyurtma qabul qilindi") : L("Заказ оплачен", "Buyurtma to‘landi"), L("Магазин собирает заказ", "Do‘kon yig‘moqda"), L("Готов к выдаче", "Topshirishga tayyor")];
+const STEPS_Y = o => [(o?.api ? o.pay_status === "paid" : !["cash", "store"].includes(o?.pay)) ? L("Заказ оплачен", "Buyurtma to‘landi") : L("Заказ принят", "Buyurtma qabul qilindi"), L("Магазин собирает заказ", "Do‘kon yig‘moqda"), L("Ищем исполнителя в Яндексе", "Yandexda ijrochi qidirilmoqda"), L("Курьер едет в магазин", "Kuryer do‘konga ketmoqda"), L("Забрал заказ, в пути", "Buyurtmani oldi, yo‘lda"), L("Доставлено", "Yetkazildi")];
+const STEPS_P = o => [(o?.api ? o.pay_status === "paid" : !["cash", "store"].includes(o?.pay)) ? L("Заказ оплачен", "Buyurtma to‘landi") : L("Заказ принят", "Buyurtma qabul qilindi"), L("Магазин собирает заказ", "Do‘kon yig‘moqda"), L("Готов к выдаче", "Topshirishga tayyor")];
 const STEP_MS = 3500;
 function stepOf(o, i, len) { if (o.api) { const sh = o.ships[i]; return sh ? Math.min(len - 1, Math.max(0, sh.step)) : 0; } if (o.d.when !== "asap" && o.d.mode !== "pickup") return 1; return Math.max(0, Math.min(len - 1, Math.floor((Date.now() - o.t - i * 1200) / STEP_MS))); }
 function dTrack() {
@@ -2667,7 +2697,7 @@ function dTrack() {
         ${t && cur >= 3 && s.plate ? `<div class="courier"><span>${lang === "ru" ? s.courier : ({ "Шерзод": "Sherzod", "Бобур": "Bobur", "Жасур": "Jasur", "Отабек": "Otabek", "Дилшод": "Dilshod", "Сардор": "Sardor" }[s.courier] || s.courier)} · ${t.veh}<small>${L("Телефон курьера придёт в SMS", "Kuryer telefoni SMSda keladi")}</small></span><span class="plate"><i>${s.plate[0]}</i>${s.plate[1]} ${s.plate[2]} ${s.plate[3]}</span></div>` : ""}
         ${!t ? `<div class="courier"><span>${L(st.addr, st.addrUz)}<small>${st.hours} · ${L("назовите номер", "raqamni ayting")} ${o.num}</small></span></div>` : ""}</div>`;
     }).join("")}
-    <div style="display:grid;gap:6px">${totalsHTML(o.goods, o.svc || 0, o.bdisc != null ? o.bdisc : (o.disc || 0), `<div class="sumrow"><span class="mu">${L("Доставка", "Yetkazish")}</span><span class="num">${fmt(o.del)}</span></div>` + (o.bdisc != null && o.pd ? `<div class="sumrow disc"><span>${L("Промокод", "Promokod")} ${esc(o.promo || o.d?.promo || "")}</span><span class="num">−${fmt(o.pd)}</span></div>` : "") + (o.bdisc != null && o.pts ? `<div class="sumrow disc"><span>${L("Бонусами", "Bonus bilan")}</span><span class="num">−${fmt(o.pts)}</span></div>` : ""))}${o.cash ? `<div class="sumrow cash"><span>${L("Кешбэк", "Keshbek")}</span><span>+${fmt(o.cash)}</span></div>` : ""}<div class="sumrow total"><span>${o.d.pay === "store" ? L("К оплате магазину", "Do‘konga to‘lanadi") : o.d.pay === "cash" ? L("К оплате курьеру", "Kuryerga to‘lov") : o.d.pay === "nasiya" ? L("В рассрочку", "Muddatli to‘lovga") : L("Оплачено", "To‘langan")}</span><span class="num">${fmt(o.total)}</span></div></div>`;
+    <div style="display:grid;gap:6px">${totalsHTML(o.goods, o.svc || 0, o.bdisc != null ? o.bdisc : (o.disc || 0), `<div class="sumrow"><span class="mu">${L("Доставка", "Yetkazish")}</span><span class="num">${fmt(o.del)}</span></div>` + (o.bdisc != null && o.pd ? `<div class="sumrow disc"><span>${L("Промокод", "Promokod")} ${esc(o.promo || o.d?.promo || "")}</span><span class="num">−${fmt(o.pd)}</span></div>` : "") + (o.bdisc != null && o.pts ? `<div class="sumrow disc"><span>${L("Бонусами", "Bonus bilan")}</span><span class="num">−${fmt(o.pts)}</span></div>` : ""))}${o.cash ? `<div class="sumrow cash"><span>${L("Кешбэк", "Keshbek")}</span><span>+${fmt(o.cash)}</span></div>` : ""}<div class="sumrow total"><span>${o.d.pay === "store" || o.d.pay === "cash" ? L("К оплате в магазине", "Do‘konda to‘lanadi", "To pay at the store") : o.api && o.pay_status !== "paid" ? L("К оплате картой", "Karta bilan to‘lanadi", "To pay by card") : L("Оплачено", "To‘langan")}</span><span class="num">${fmt(o.total)}</span></div></div>`;
   if (o.api && o.status === "active" && o.ships.every(s => ["new", "assembling", "cancelled"].includes(s.status))) $("#dBody").insertAdjacentHTML("beforeend", `<button class="lnk" type="button" data-act="order-cancel" style="justify-self:start;color:var(--muted)">${L("Отменить заказ", "Buyurtmani bekor qilish")}</button>`);
   $("#dFoot").innerHTML = `<div style="display:grid;grid-template-columns:auto 1fr;gap:8px"><button class="btn btn-line" type="button" data-repeat="${o.num}">${ui("repeat", 18)} ${L("Повторить", "Takrorlash")}</button><button class="btn btn-dark" type="button" data-act="close-drawer">${L("Продолжить покупки", "Xaridni davom ettirish")}</button></div>`;
 }
@@ -2719,7 +2749,6 @@ function dCompare() {
     ${row(L("Магазины", "Do‘konlar"), p => p.offers.map(o => esc(STORE[o.store].name)).join("<br>"))}
     ${row(L("Доставка", "Yetkazish"), p => tName(pickTariff(p.kg)))}
     ${row(L("Установка", "O‘rnatish"), p => SERVICE[p.sub] ? fmt(SERVICE[p.sub]) : "—")}
-    ${row(L("Рассрочка", "Muddatli"), p => minPrice(p) >= 500000 ? `${fmt(monthly(minPrice(p)))} × 12` : "—")}
     ${row("", p => `<button class="btn btn-primary" type="button" data-add="${p.id}" style="padding:8px 10px;font-size:13px;width:100%">${L("В корзину", "Savatga")}</button>`)}
   </tbody></table></div>`;
   $("#dFoot").innerHTML = `<div style="display:grid;grid-template-columns:1fr auto;gap:8px">${ps.length > 1 ? `<button class="btn btn-ai" type="button" data-act="ai-cmp">${ui("spark", 18)} ${L("Что выбрать? Спросить AI", "Qaysi birini tanlash? AI dan so‘rash")}</button>` : `<span></span>`}<button class="btn btn-line" type="button" data-act="cmp-clear">${L("Очистить", "Tozalash")}</button></div>`;
@@ -5123,7 +5152,6 @@ function renderFlat() {
       <div class="panel-h" style="margin-top:8px"><h2 class="h-m">${L("Мебель и техника", "Mebel va texnika")}</h2><span class="num">${fmt(e.furnSum)}</span></div>
       ${e.furn.map(row).join("") || `<p class="mu">${L("Мебели нет", "Mebel yo‘q")}</p>`}
       <div class="sumrow total"><span>${L("Итого по квартире", "Kvartira bo‘yicha jami")}</span><span class="num">${fmt(e.total)}</span></div>
-      ${e.total >= 500000 ? `<p class="mu" style="font-size:13px;margin:0">${L(`В рассрочку на 12 месяцев — от ${fmt(monthly(e.total))} в месяц`, `12 oyga muddatli to‘lov — oyiga ${fmt(monthly(e.total))}dan`, `12-month installments — from ${fmt(monthly(e.total))} per month`)}</p>` : ""}
       <div class="ds-nav" style="justify-content:flex-start"><button class="btn btn-primary" type="button" data-flat="cart" ${rooms.length ? "" : "disabled"}>${ui("cart", 16)} ${L("Всё в корзину", "Hammasini savatga")}</button><button class="btn btn-line" type="button" data-flat="png" ${rooms.length ? "" : "disabled"}>${ui("photo", 16)} ${L("Картинкой", "Rasm qilib")}</button><button class="btn btn-line" type="button" data-flat="print" ${rooms.length ? "" : "disabled"}>${ui("folder", 16)} ${L("Печать / PDF", "Chop etish / PDF")}</button><button class="btn btn-line" type="button" data-mfind="tile">${ui("wrench", 16)} ${L("Найти мастера", "Usta topish")}</button></div></div></div>`}
   </div>`;
 }
@@ -6260,7 +6288,9 @@ function go(h, sub) {
   window.scrollTo(0, 0);
 }
 function routeTo() { const prevCat = route.cat; route = parseHash(); if (route.cat !== prevCat) { f.sub = null; f.max = 0; } renderMain(); const qi = $("#q"); if (qi) qi.value = f.q; window.scrollTo(0, 0); }
-window.addEventListener("hashchange", () => { if (document.startViewTransition && motionOK()) document.startViewTransition(routeTo); else routeTo(); });
+/* View transitions snapshot the whole page; WebKit does that slowly on a page this size, so Safari gets a plain route change. */
+const SAFARI = /AppleWebKit/.test(navigator.userAgent) && !/Chrome|Chromium|CriOS|Edg|OPR|Android/.test(navigator.userAgent);
+window.addEventListener("hashchange", () => { if (document.startViewTransition && motionOK() && !SAFARI) document.startViewTransition(routeTo); else routeTo(); });
 function scrollToSec(id) {
   closeMega(); if (drawerView) closeDrawer(); if (aiOpen) closeAI(); if (widOpen) closeWidgets();
   const doIt = () => { document.documentElement.classList.add("cv-all"); const el = document.getElementById(id); if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - ($("#hdr").offsetHeight + 12), behavior: "smooth" }); };

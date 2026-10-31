@@ -119,7 +119,7 @@ test("order: server prices, tiers, promo, stock, cancel", async () => {
   const { data } = await login("977001122");
   await call("PATCH", "/api/me", { name: "Нилуфар", district: "mirob" }, data.token);
   const cart = { lines: [{ id: 1, store: "usta", q: 10 }, { id: 53, store: "elp", q: 2 }], services: [], bundles: [], promo: "imorat5",
-    form: { name: "Нилуфар", phone: "+998 97 700 11 22", district: "mirob", street: "ул. Навои, 10", floor: "3", lift: true, mode: "yandex", when: "asap", pay: "cash" } };
+    form: { name: "Нилуфар", phone: "+998 97 700 11 22", district: "mirob", street: "ул. Навои, 10", floor: "3", lift: true, mode: "yandex", when: "asap", pay: "payme" } };
   const q = await call("POST", "/api/quote", cart, data.token);
   const cem = q.data.quote.ships.find(s => s.store === "usta").lines[0];
   assert.equal(cem.tier, 0.03); // 10 bags → wholesale −3%
@@ -132,7 +132,7 @@ test("order: server prices, tiers, promo, stock, cancel", async () => {
   const o = await call("POST", "/api/orders", { ...cart, expected_total: q.data.quote.total }, data.token);
   assert.equal(o.status, 200, JSON.stringify(o.data));
   assert.match(o.data.order.num, /^IM-1\d{5}$/);
-  assert.equal(o.data.order.pay_status, "to_store");
+  assert.equal(o.data.order.pay_status, "pending"); assert.ok(o.data.order.pay_url, "delivery is paid by card: a checkout link comes back");
   const afterStock = (await call("GET", "/api/catalog")).data.products.find(p => p.id === 1).offers.find(o => o.store === "usta").stock;
   assert.equal(afterStock, before - 10);
   const q2 = await call("POST", "/api/quote", cart, data.token);
@@ -753,4 +753,8 @@ test("Card payment: Payme and Click callbacks, store sees the order only after t
   assert.equal((await call("GET", `/api/orders/${num3}/pay`, null, buyer)).status, 409);
   // a provider without keys is refused
   assert.equal((await call("POST", "/api/orders", { lines: [{ id: 1, store: sid, q: 1 }], form: { ...form, pay: "uzum" } }, buyer)).status, 400);
+  // delivery must be paid by card; cash stays for pickup
+  const cashDel = await call("POST", "/api/orders", { lines: [{ id: 1, store: sid, q: 1 }], form: { ...form, pay: "store", mode: "yandex", street: "ул. Навои, 10", district: "yunus" } }, buyer);
+  assert.equal(cashDel.data.error, "card_required");
+  assert.equal((await call("POST", "/api/orders", { lines: [{ id: 1, store: sid, q: 1 }], form: { ...form, pay: "store", mode: "pickup" } }, buyer)).status, 200);
 });
