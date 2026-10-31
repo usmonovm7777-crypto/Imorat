@@ -99,7 +99,8 @@ a { color: inherit; }
 .logo { display: flex; align-items: center; gap: 9px; flex: none; }
 .logo-mark { width: 30px; height: 30px; display: grid; grid-template-columns: 1fr 1fr; gap: 2.5px; }
 .logo-mark i { background: var(--accent); border-radius: 3px; }
-.logo-mark i:nth-child(2) { background: var(--signal); }
+.logo-mark i:nth-child(2) { background: var(--signal); position: relative; }
+.logo-mark i:nth-child(2)::after { content: ""; position: absolute; left: 42%; top: 50%; width: 26%; height: 26%; border: solid #fff; border-width: 2px 2px 0 0; transform: translate(-30%, -50%) rotate(45deg); }
 .logo-mark i:nth-child(3) { opacity: .55; }
 .logo b { font-family: var(--f-display); font-weight: 700; font-size: 19px; letter-spacing: -.03em; }
 .logo b em { font-style: normal; color: var(--accent); margin-left: .2em; }

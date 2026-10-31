@@ -9,6 +9,15 @@
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#0B6E69">
 <link rel="icon" type="image/png" href="icons/favicon-64.png">
+<link rel="icon" href="favicon.ico" sizes="any">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Imorat Go">
+<meta property="og:title" content="Imorat Go — стройматериалы из магазинов Ташкента с доставкой">
+<meta property="og:description" content="Сравнение цен 9 магазинов, Usta AI считает материалы, 3D-дизайнер комнаты, мастера и доставка Яндекс.">
+<meta property="og:image" content="https://usmonovm7777-crypto.github.io/Imorat/icons/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Imorat Go">
@@ -110,7 +119,8 @@ linear-gradient(180deg, hsl(var(--h) var(--tile-s) var(--tile-l)) 0 70%, hsl(var
 .logo { display: flex; align-items: center; gap: 9px; flex: none; }
 .logo-mark { width: 30px; height: 30px; display: grid; grid-template-columns: 1fr 1fr; gap: 2.5px; }
 .logo-mark i { background: var(--accent); border-radius: 3px; }
-.logo-mark i:nth-child(2) { background: var(--signal); }
+.logo-mark i:nth-child(2) { background: var(--signal); position: relative; }
+.logo-mark i:nth-child(2)::after { content: ""; position: absolute; left: 42%; top: 50%; width: 26%; height: 26%; border: solid #fff; border-width: 2px 2px 0 0; transform: translate(-30%, -50%) rotate(45deg); }
 .logo-mark i:nth-child(3) { opacity: .55; }
 .logo b { font-family: var(--f-display); font-weight: 700; font-size: 19px; letter-spacing: -.03em; }
 .logo b em { font-style: normal; color: var(--accent); margin-left: .2em; }

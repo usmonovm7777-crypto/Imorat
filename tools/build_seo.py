@@ -69,7 +69,7 @@ dl{display:grid;grid-template-columns:auto 1fr;gap:4px 16px;margin:12px 0}dt{col
 def page(lang, depth, title, desc, canon, alt, body, ld, img=None):
     up = "../" * depth
     other = "ru" if lang == "uz" else "uz"
-    og = f'<meta property="og:image" content="{E(SITE + img)}">' if img else ""
+    og = f'<meta property="og:image" content="{E(SITE + (img or "icons/og-image.png"))}">\n<meta property="og:site_name" content="Imorat Go">\n<meta name="twitter:card" content="summary_large_image">'
     return f"""<!doctype html>
 <html lang="{lang}">
 <head>
