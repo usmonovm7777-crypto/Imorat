@@ -6176,7 +6176,8 @@ async function dsPhotoStart() {
       gl.deleteSync(sync);
       const dt = performance.now() - t0; strip = Math.max(8, Math.min(256, Math.round(n * (dt > 0 ? 40 / dt : 2))));
       y += n; done += n;
-      st.textContent = L(`Рендерим фото комнаты… ${Math.round(done * 100 / total)}%`, `Xona fotosi chizilmoqda… ${Math.round(done * 100 / total)}%`, `Rendering the room photo… ${Math.round(done * 100 / total)}%`);
+      const pc = Math.round(done * 100 / total); // the first pass already shows the whole picture; the rest only refine it
+      st.textContent = k === 0 ? L(`Рендерим фото комнаты… ${pc}%`, `Xona fotosi chizilmoqda… ${pc}%`, `Rendering the room photo… ${pc}%`) : L(`Улучшаем качество… ${pc}%`, `Sifat yaxshilanmoqda… ${pc}%`, `Refining the picture… ${pc}%`);
       await new Promise(r => setTimeout(r, 0));
     }
     if (k === 0 && gl.isContextLost()) { st.textContent = L("Видеокарта не справилась. Попробуйте ещё раз или на компьютере.", "Videokarta uddalay olmadi. Qayta urinib ko‘ring yoki kompyuterda oching."); return; }
