@@ -669,11 +669,29 @@ test("Telegram bot: search, sign-in by contact, request to a master with buttons
   await until(() => sentTo(7001, /Заказов пока нет/).length);
   send(7001, { text: "/bonus" });
   await until(() => sentTo(7001, /Ваш код для друзей/).length);
-  send(7001, { text: "🌐 Özbekça" });
+  send(7001, { text: "🌐 Язык" });
+  const pick = await until(() => sentTo(7001, /Выберите язык/)[0]);
+  assert.deepEqual(pick.reply_markup.inline_keyboard[0].map(b => b.callback_data), ["lg:uz", "lg:en"], "the other two languages are offered");
+  press(7001, "lg:uz");
   const uzm = await until(() => sentTo(7001, /Til: özbekça/)[0]);
   assert.ok(uzm.reply_markup.keyboard.flat().some(b => b.text === "🔎 Mahsulot qidiriş"));
   send(7001, { text: "laminat" });
   await until(() => sentTo(7001, /Topildi[\s\S]*Laminat/).length);
+  // English: a chat whose Telegram is in English starts in English; menu, search and pros are translated
+  tgUpdates.push({ update_id: ++uid, message: { chat: { id: 7003, type: "private" }, from: { id: 7003, language_code: "en" }, text: "/start" } });
+  const en = await until(() => sentTo(7003, /I am the <b>Imorat Go<\/b> bot/)[0]);
+  assert.ok(en.reply_markup.keyboard.flat().some(b => b.text === "🔎 Find a product"));
+  send(7003, { text: "cement" });
+  const es = await until(() => sentTo(7003, /Found: <b>\d+<\/b>/)[0]);
+  assert.match(es.text, /from \d[\d ]* UZS · \d+ stores?/);
+  assert.ok(es.reply_markup.inline_keyboard.some(r => r[0].url && r[0].url.includes("?lang=en#p-")), "product links open the English site");
+  send(7003, { text: "/masters" });
+  const em = await until(() => sentTo(7003, /Which pro do you need/)[0]);
+  assert.ok(em.reply_markup.inline_keyboard.flat().some(b => /Tiler/.test(b.text)));
+  press(7003, "ms:tile");
+  await until(() => sentTo(7003, /<b>Tiler<\/b>|No available pros/).length);
+  send(7001, { text: "/lang" }); press(7001, "lg:ru");
+  await until(() => sentTo(7001, /Язык: русский/).length);
 });
 
 test("Card payment: Payme and Click callbacks, store sees the order only after the money, unpaid orders expire", async () => {

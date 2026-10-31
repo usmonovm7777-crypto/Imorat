@@ -10,7 +10,7 @@
 | Сайт (RU / UZ / EN, PWA) | `index.html`, GitHub Pages `https://usmonovm7777-crypto.github.io/Imorat/` | готов; без сервера работает в демо-режиме |
 | SEO-страницы товаров и категорий | `p/`, `c/`, `uz/`, `sitemap.xml` | генерируются `tools/build_seo.py` |
 | Сервер (API, SQLite, без зависимостей) | `server/` | готов, 24 автотеста, Docker + HTTPS |
-| Telegram-бот и канал | `server/src/bot.js`, `@imoratGo_bot`, `@imoratgo` | готов; включается токеном в `.env` |
+| Telegram-бот (RU / UZ / EN) и канал | `server/src/bot.js`, `@imoratGo_bot`, `@imoratgo` | готов; включается токеном в `.env` |
 | Шаблон прайса для магазинов | `templates/imorat-go-price-template.xlsx` (RU+UZ), `…-en.xlsx` | ссылка есть в кабинете продавца |
 | Логотип и иконки | `brand/`, `icons/`, `brand/README.txt` | готово |
 | Презентации для магазинов (RU / UZ / EN) | артефакты Claude (Slides), экспорт в PDF/PPTX из меню Share | готово; впишите телефон вместо «[ваш телефон]» |
