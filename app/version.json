@@ -1,0 +1,5 @@
+{
+  "versionName": "1.0.0",
+  "versionCode": 1,
+  "_comment": "Bump versionCode for every store upload (Google Play and App Store both refuse a repeated build number); versionName is what people see."
+}

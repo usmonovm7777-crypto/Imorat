@@ -1,0 +1,55 @@
+name: iOS app (build check)
+
+# There is no Mac in the project, so GitHub's macOS runner does the one thing that can be checked without an Apple
+# Developer account: it creates the Xcode project from the website, applies our Info.plist / privacy-manifest patches
+# and compiles the app for the iOS Simulator without code signing. A green run means "the project builds";
+# the signed archive, TestFlight and App Store submission still need a Mac with Xcode 26 and the developer account.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["app/**", ".github/workflows/ios.yml"]
+
+jobs:
+  ios:
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: Pick the newest Xcode on the runner
+        run: |
+          ls -d /Applications/Xcode*.app
+          X=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1); [ -n "$X" ] || X=$(ls -d /Applications/Xcode*.app | sort -V | tail -1)
+          sudo xcode-select -s "$X"; xcodebuild -version
+      - name: Build website
+        run: python3 tools/build_site.py
+      - name: Install Capacitor
+        working-directory: app
+        run: npm install --no-audit --no-fund
+      - name: Create the iOS project
+        working-directory: app
+        run: |
+          npm run www
+          [ -d ios ] || npx cap add ios
+          npx @capacitor/assets generate --ios --iconBackgroundColor '#0B6E69' --splashBackgroundColor '#F3F5F2' || echo "icons: using defaults"
+          npx cap sync ios
+          npm run patch:ios
+          plutil -lint ios/App/App/Info.plist ios/App/App/PrivacyInfo.xcprivacy ios/App/App/App.entitlements
+          plutil -p ios/App/App/Info.plist | grep -E "NS(Camera|Photo|Location)|CFBundleURLSchemes|CFBundleShortVersionString|CFBundleVersion|ITSApp" || true
+      - name: Compile for the iOS Simulator (no signing)
+        working-directory: app/ios/App
+        run: |
+          set -o pipefail
+          xcodebuild -workspace App.xcworkspace -scheme App -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build | tail -40
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ios-project-files
+          path: |
+            app/ios/App/App/Info.plist
+            app/ios/App/App/PrivacyInfo.xcprivacy
+            app/ios/App/App/App.entitlements
+            app/ios/App/Podfile

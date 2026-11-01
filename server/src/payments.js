@@ -24,17 +24,19 @@ export function createPayments({ db, cfg, log = console, onPaid, cancelOrder }) 
   if (payme.id && payme.key) providers.push("payme");
   if (click.serviceId && click.secret) providers.push("click");
   const available = p => providers.includes(p);
-  const returnUrl = num => `${cfg.siteUrl}?paid=${encodeURIComponent(num)}`;
+  // after the bank page the buyer lands on the site; an order placed in the app gets &app=1 so the page offers the way back into the app
+  const returnUrl = (num, app) => `${cfg.siteUrl}?paid=${encodeURIComponent(num)}${app ? "&app=1" : ""}`;
 
   /* checkout link the buyer is sent to */
   function payUrl(o) {
+    const f = JSON.parse(o.form || "{}"), app = f.app === true;
     if (o.pay === "payme" && available("payme")) {
-      const lang = (JSON.parse(o.form || "{}").lang || "ru").replace(/[^a-z]/g, "").slice(0, 2) || "ru";
-      const p = `m=${payme.id};ac.order=${o.num};a=${o.total * 100};c=${returnUrl(o.num)};l=${lang}`;
+      const lang = (f.lang || "ru").replace(/[^a-z]/g, "").slice(0, 2) || "ru";
+      const p = `m=${payme.id};ac.order=${o.num};a=${o.total * 100};c=${returnUrl(o.num, app)};l=${lang}`;
       return `${payme.url}/${Buffer.from(p, "utf8").toString("base64")}`;
     }
     if (o.pay === "click" && available("click")) {
-      const q = new URLSearchParams({ service_id: click.serviceId, merchant_id: click.merchantId, amount: String(o.total), transaction_param: o.num, return_url: returnUrl(o.num) });
+      const q = new URLSearchParams({ service_id: click.serviceId, merchant_id: click.merchantId, amount: String(o.total), transaction_param: o.num, return_url: returnUrl(o.num, app) });
       return `https://my.click.uz/services/pay?${q}`;
     }
     return null;

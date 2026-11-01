@@ -323,7 +323,7 @@ export function createApp(cfg, log = console) {
       if (q.pts && !db.run("UPDATE users SET points=points-? WHERE id=? AND points>=?", q.pts, u.id, q.pts).changes) throw new HttpError(409, "total_changed", "Bonus balance changed, check the new total", { quote: { ...q, pts: 0, total: q.total + q.pts } });
       const ins = db.run(`INSERT INTO orders(num,user_id,created_at,status,pay,pay_status,form,goods,del,svc,disc,promo_disc,total,cash,promo,services,points_used)
         VALUES(?,?,?,'active',?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-        "tmp-" + randomBytes(6).toString("hex"), u.id, now, form.pay, ["cash", "store"].includes(form.pay) ? "to_store" : "pending", JSON.stringify({ ...form, lang: String(b.lang || "ru").slice(0, 2) }),
+        "tmp-" + randomBytes(6).toString("hex"), u.id, now, form.pay, ["cash", "store"].includes(form.pay) ? "to_store" : "pending", JSON.stringify({ ...form, lang: String(b.lang || "ru").slice(0, 2), ...(b.app === true ? { app: true } : {}) }),
         q.goods, q.del, q.svc, q.disc, q.pd, q.total, q.cash, q.promo, JSON.stringify(q.services), q.pts || 0);
       const id = Number(ins.lastInsertRowid), num = "IM-" + (100000 + id);
       if (q.pts) db.run("INSERT INTO points_log(user_id,delta,reason,ref,created_at) VALUES(?,?,?,?,?)", u.id, -q.pts, "spent", "order:" + id, now);

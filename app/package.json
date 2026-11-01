@@ -5,18 +5,23 @@
   "description": "Imorat Go mobile app (Android / iOS) built from the website with Capacitor",
   "scripts": {
     "www": "node scripts/prepare-www.mjs",
-    "android": "npm run www && npx cap sync android && npx cap open android",
-    "ios": "npm run www && npx cap sync ios && npx cap open ios"
+    "www:release": "node scripts/prepare-www.mjs --release",
+    "patch:android": "node scripts/patch-android.mjs",
+    "patch:ios": "node scripts/patch-ios.mjs",
+    "android": "npm run www && npx cap sync android && npm run patch:android && npx cap open android",
+    "ios": "npm run www && npx cap sync ios && npm run patch:ios && npx cap open ios"
   },
   "dependencies": {
-    "@capacitor/android": "^7.0.0",
-    "@capacitor/core": "^7.0.0",
-    "@capacitor/ios": "^7.0.0",
-    "@capacitor/splash-screen": "^7.0.0",
-    "@capacitor/status-bar": "^7.0.0"
+    "@capacitor/android": "^8.0.0",
+    "@capacitor/app": "^8.0.0",
+    "@capacitor/core": "^8.0.0",
+    "@capacitor/ios": "^8.0.0",
+    "@capacitor/push-notifications": "^8.0.0",
+    "@capacitor/splash-screen": "^8.0.0",
+    "@capacitor/status-bar": "^8.0.0"
   },
   "devDependencies": {
     "@capacitor/assets": "^3.0.5",
-    "@capacitor/cli": "^7.0.0"
+    "@capacitor/cli": "^8.0.0"
   }
 }

@@ -114,6 +114,7 @@ linear-gradient(180deg, hsl(var(--h) var(--tile-s) var(--tile-l)) 0 70%, hsl(var
 .art .fg { stroke: hsl(var(--h) 48% var(--art-fg)); }
 .art .hl { stroke: var(--art-hl); }
 .photo { width: 100%; height: 100%; object-fit: cover; display: block; }
+.demo-badge { font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--signal); border: 1px solid currentColor; border-radius: 999px; padding: 2px 7px; margin-left: 6px; align-self: center; }
 .hdr { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 30; background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
 .hdr-row { display: flex; align-items: center; gap: 12px; padding-block: 12px; }
 .logo { display: flex; align-items: center; gap: 9px; flex: none; }
@@ -1339,6 +1340,8 @@ const fmt = n => fmtN(n) + L(" сум", " so‘m");
 /* What a store pays from a card-paid order: Imorat Go's commission and the bank's acquiring fee, two separate lines.
    The rates come from /api/config; the defaults are the server's own defaults, so the demo shows the same numbers. */
 const pct = v => String(Math.round(v * 1000) / 10).replace(".", DEC) + "%";
+/* the legal pages live on the website; inside the app they open in the browser */
+const legalUrl = name => `${window.IMORAT_APP && window.IMORAT_SITE_URL ? String(window.IMORAT_SITE_URL).replace(/\/?$/, "/") : ""}legal/${name}.html?lang=${lang}`;
 const feeInfo = () => ({ ours: apiCfg?.commission?.["*"] ?? 0.01, bank: apiCfg?.acquiring ?? 0.02, months: apiCfg?.promo_months ?? 3 });
 const feeLine = () => { const f = feeInfo(); return L(`Imorat Go ${pct(f.ours)} + эквайринг Payme/Click ${pct(f.bank)}`, `Imorat Go ${pct(f.ours)} + Payme/Click ekvayringi ${pct(f.bank)}`, `Imorat Go ${pct(f.ours)} + Payme/Click acquiring ${pct(f.bank)}`); };
 const fmtKg = n => n < 1 ? Math.round(n * 1000) + L(" г", " g") : (n < 10 ? (Math.round(n * 10) / 10).toString().replace(".", DEC) : fmtN(n)) + L(" кг", " kg");
@@ -1469,6 +1472,7 @@ const ui = (k, s = 20) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" f
    window.IMORAT_API (set in config.js on the website) is the address of the Imorat Go server.
    Without it the page runs as a self-contained demo: data stays in this browser. */
 const API = String(window.IMORAT_API || "").replace(/\/+$/, "");
+const NATIVE = !!(window.Capacitor && typeof window.Capacitor.isNativePlatform === "function" && window.Capacitor.isNativePlatform()); // inside the Android / iPhone app
 let apiToken = LS.get("imorat.token", ""), apiCfg = null, apiCat = null, myStore = LS.get("imorat.myStore", null), sellerData = null, adminStores = null, adminMasters = null;
 async function api(method, path, body, opts = {}) {
   const isBlob = typeof Blob !== "undefined" && body instanceof Blob;
@@ -2137,7 +2141,7 @@ function renderCmpBar() {
   if (!bar) { bar = document.createElement("div"); bar.id = "cmpBar"; bar.className = "cmp-bar"; document.body.appendChild(bar); }
   bar.innerHTML = `<span style="display:flex">${compare.map(id => mini(PROD[id])).join("")}</span><button class="go" type="button" data-act="compare">${L("Сравнить", "Solishtirish")} · ${compare.length}</button><button class="x" type="button" data-act="cmp-clear" aria-label="${L("Очистить сравнение", "Solishtirishni tozalash")}">${ui("close", 16)}</button>`;
 }
-function toast(m) { const t = $("#toast"); t.textContent = m; t.classList.add("on"); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove("on"), 2200); }
+function toast(m, ms = 2200) { const t = $("#toast"); t.textContent = m; t.classList.add("on"); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove("on"), ms); }
 
 /* ================= Header, footer, tabbar ================= */
 function renderHeader() {
@@ -2148,7 +2152,7 @@ function renderHeader() {
   $("#hdr").innerHTML = `
   <div class="wrap hdr-row">
     <button class="menu-btn" type="button" data-act="widgets" aria-label="${L("Инструменты: калькуляторы, Usta AI, дизайнер, доставка", "Asboblar: kalkulyatorlar, Usta AI, dizayner, yetkazish", "Tools: calculators, Usta AI, designer, delivery")}" title="${L("Инструменты", "Asboblar", "Tools")}">${ui("menu", 22)}<span class="dot" aria-hidden="true"></span></button>
-    <button class="logo" type="button" data-go="home" aria-label="Imorat Go"><span class="logo-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span><b>imorat<em>go</em></b></button>
+    <button class="logo" type="button" data-go="home" aria-label="Imorat Go"><span class="logo-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span><b>imorat<em>go</em></b></button>${API ? "" : `<span class="demo-badge" title="${L("Демо-режим: данные хранятся только в этом браузере, заказы и оплата не настоящие", "Demo rejim: ma’lumotlar faqat shu brauzerda, buyurtma va to‘lov haqiqiy emas", "Demo mode: data stays in this browser, orders and payments are not real")}">${L("демо", "demo", "demo")}</span>`}
     <button class="cat-btn" type="button" data-act="mega">${ui("grid", 18)}${L("Каталог", "Katalog")}</button>
     <div class="search" role="search">${ui("search", 18)}<input id="q" type="search" enterkeyhint="search" role="combobox" aria-controls="sugg" aria-expanded="false" aria-autocomplete="list" value="${esc(f.q)}" placeholder="${L("Цемент, смеситель, ламинат…", "Sement, aralashtirgich, laminat…")}" aria-label="${L("Поиск по каталогу", "Katalog bo‘yicha qidiruv")}" autocomplete="off"><div class="sugg" id="sugg" role="listbox" aria-label="${L("Подсказки поиска", "Qidiruv takliflari")}" hidden></div><span class="s-tools"><button class="s-ic" type="button" data-act="voice" ${SRec ? "" : "hidden"} aria-label="${L("Поиск голосом", "Ovozli qidiruv")}" title="${L("Поиск голосом", "Ovozli qidiruv")}">${ui("mic", 18)}</button><button class="s-ic" type="button" data-act="photo-search" ${photoAIon() ? "" : "hidden"} aria-label="${L("Поиск по фото", "Rasm bo‘yicha qidiruv")}" title="${L("Поиск по фото", "Rasm bo‘yicha qidiruv")}">${ui("camera", 18)}</button><button class="ask" type="button" data-act="ask-search">${ui("spark", 14)}<span class="t">${L("Спросить AI", "AI dan so‘rash")}</span></button></span><input type="file" id="psFile" accept="image/*" hidden></div>
     <label class="where" title="${L("Район доставки", "Yetkazish tumani")}">${ui("pin", 16)}<span class="visually-hidden">${L("Район доставки", "Yetkazish tumani")}</span><select id="distSel">${DISTRICTS.map(d => `<option value="${d.id}" ${d.id === district ? "selected" : ""}>${L(d.ru, d.uz)}</option>`).join("")}</select></label>
@@ -2182,6 +2186,7 @@ function renderFooter() {
       <a class="tg-l" href="https://t.me/${esc(apiCfg?.telegram_bot || "imoratGo_bot")}" target="_blank" rel="noopener">${ui("send", 16)} Telegram · @${esc(apiCfg?.telegram_bot || "imoratGo_bot")}</a></div>
     <div><b>${L("Покупателям", "Xaridorlarga")}</b><ul><li><button type="button" data-go="catalog">${L("Весь каталог", "Butun katalog")}</button></li><li><button type="button" data-act="ai">Usta AI</button></li><li><button type="button" data-scroll="calc">${L("Калькуляторы ремонта", "Ta’mir kalkulyatorlari")}</button></li><li><button type="button" data-go="list">${L("Список покупок → корзина", "Xaridlar ro‘yxati → savat")}</button></li><li><button type="button" data-act="orders">${L("Мои заказы", "Buyurtmalarim")}</button></li></ul></div>
     <div><b>${L("Доставка и оплата", "Yetkazish va to‘lov")}</b><ul><li>${L("Яндекс Доставка", "Yandex Yetkazib berish")}</li><li><button type="button" data-scroll="vip">Imorat Go VIP</button></li><li>${L("Оплата картой на сайте", "Saytda karta bilan to‘lov", "Card payment on the site")}</li><li><button type="button" data-go="masters">${L("Мастера и спецтехника", "Ustalar va maxsus texnika", "Pros and machinery")}</button></li></ul></div>
+    <div><b>${L("Документы", "Hujjatlar", "Documents")}</b><ul><li><a href="${legalUrl("privacy")}" target="_blank" rel="noopener">${L("Политика конфиденциальности", "Maxfiylik siyosati", "Privacy policy")}</a></li><li><a href="${legalUrl("terms")}" target="_blank" rel="noopener">${L("Пользовательское соглашение", "Foydalanuvchi kelishuvi", "Terms of use")}</a></li><li><a href="${legalUrl("delete-account")}" target="_blank" rel="noopener">${L("Удаление аккаунта", "Akkauntni o‘chirish", "Delete your account")}</a></li></ul></div>
     <div><b>${L("Партнёрам", "Hamkorlarga")}</b><ul><li><button type="button" data-go="seller">${L("Кабинет продавца", "Sotuvchi kabineti")}</button></li><li><button type="button" data-scroll="stores">${L("Магазины", "Do‘konlar")}</button></li><li><button type="button" data-go="admin">${L("Панель владельца", "Egasi paneli")}</button></li><li><button type="button" data-go="masters" data-mtabgo="me">${L("Стать мастером", "Usta bo‘lish")}</button></li></ul></div>
   </div>`;
 }
@@ -3087,7 +3092,7 @@ function dProfile() {
       <button class="order-row" type="button" data-act="home-setup"><b>${L("Настроить главную", "Bosh sahifani sozlash", "Customize home")}</b>${ui("grid", 18)}<small>${L("Какие блоки показывать и в каком порядке", "Qaysi bloklar va qanday tartibda", "Which blocks to show and in what order")}</small></button>
       ${user && user.store_id && myStore ? `<button class="order-row" type="button" data-go="seller"><b>${esc(myStore.name)}</b>${ui("store", 18)}<small>${L("Кабинет продавца", "Sotuvchi kabineti")} · ${(ST_STATUS()[myStore.status] || ST_STATUS().pending)[0]}</small></button>` : `<button class="order-row" type="button" data-act="store-reg"><b>${L("Добавить свой магазин", "Do‘konimni qo‘shish")}</b>${ui("store", 18)}<small>${L("Продавайте на Imorat Go: витрина, заказы, доставка Яндекс", "Imorat Go’da soting: vitrina, buyurtmalar, Yandex yetkazish")}</small></button>`}${API ? "" : `<button class="order-row" type="button" data-go="seller"><b>${L("Кабинет продавца", "Sotuvchi kabineti")}</b>${ui("chev", 18)}<small>${L("Для магазинов-партнёров", "Hamkor do‘konlar uchun")}</small></button>`}
     </div>`;
-  $("#dFoot").innerHTML = `${API && user ? `<button class="lnk" type="button" data-act="logout-all" style="font-size:12px;color:var(--muted);justify-self:start">${L("Выйти на всех устройствах", "Barcha qurilmalardan chiqish")}</button>` : ""}<span style="font-size:12px;color:var(--muted)">${(API ? L("Аккаунт, заказы и магазин хранятся на сервере Imorat Go.", "Akkaunt, buyurtmalar va do‘kon Imorat Go serverida saqlanadi.") : L("Данные этого прототипа хранятся только в вашем браузере.", "Prototip ma’lumotlari faqat brauzeringizda saqlanadi."))}</span>`;
+  $("#dFoot").innerHTML = `${API && user ? `<div style="display:flex;gap:14px;flex-wrap:wrap"><button class="lnk" type="button" data-act="logout-all" style="font-size:12px;color:var(--muted)">${L("Выйти на всех устройствах", "Barcha qurilmalardan chiqish")}</button><button class="lnk" type="button" data-act="del-account" style="font-size:12px;color:var(--muted)">${L("Удалить аккаунт", "Akkauntni o‘chirish", "Delete account")}</button></div>` : ""}<span style="font-size:12px;color:var(--muted)">${(API ? L("Аккаунт, заказы и магазин хранятся на сервере Imorat Go.", "Akkaunt, buyurtmalar va do‘kon Imorat Go serverida saqlanadi.") : L("Данные этого прототипа хранятся только в вашем браузере.", "Prototip ma’lumotlari faqat brauzeringizda saqlanadi."))}</span>`;
   $("#pDist").addEventListener("change", e => { setDistrict(e.target.value); renderHeader(); });
   $("#roleBox")?.addEventListener("change", async e => {
     if (e.target.name !== "prole") return; const v = e.target.value;
@@ -3558,7 +3563,7 @@ function renderAuth() {
       ${API && apiCfg?.sms === "telegram" ? `<p class="demo">${L("Вход по номеру телефона через Telegram: бот попросит поделиться контактом — это и есть подтверждение номера. SMS-коды подключим позже.", "Telefon raqami orqali kirish — Telegram orqali: bot kontaktni ulashishni so‘raydi, bu raqamni tasdiqlash. SMS-kodlar keyinroq ulanadi.", "Sign in with your phone number through Telegram: the bot asks you to share your contact, which confirms the number. SMS codes come later.")}</p>` : phoneForm("", "").replace("<h2></h2><p></p>", "") + `<div class="or">${L("или", "yoki", "or")}</div>`}
       ${API && apiCfg?.telegram_bot ? `<button class="soc tg" type="button" data-act="tg-login">${ui("send", 20)} ${L("Войти через Telegram", "Telegram orqali kirish", "Sign in with Telegram")}</button>`
         : `<button class="soc tg" type="button" disabled title="${L("Заработает после подключения сервера", "Server ulangandan keyin ishlaydi", "Works once the server is connected")}">${ui("send", 20)} ${L("Войти через Telegram", "Telegram orqali kirish", "Sign in with Telegram")}</button>`}
-      <p class="fine">${L("Продолжая, вы соглашаетесь с условиями сервиса и политикой конфиденциальности.", "Davom etib, siz xizmat shartlari va maxfiylik siyosatiga rozilik bildirasiz.")}</p>
+      <p class="fine">${L("Продолжая, вы соглашаетесь с", "Davom etib, siz", "By continuing you agree to the")} <a href="${legalUrl("terms")}" target="_blank" rel="noopener">${L("условиями сервиса", "xizmat shartlari", "terms of use")}</a> ${L("и", "va", "and the")} <a href="${legalUrl("privacy")}" target="_blank" rel="noopener">${L("политикой конфиденциальности", "maxfiylik siyosatiga", "privacy policy")}</a>${L(".", " rozilik bildirasiz.", ".")}</p>
       ${API ? "" : `<p class="demo">${L("Демо-режим: отправка SMS и вход через Telegram заработают после подключения сервера.", "Demo rejim: SMS yuborish va Telegram orqali kirish server ulangandan keyin ishlaydi.", "Demo mode: SMS and Telegram sign-in work once the server is connected.")}</p>`}`;
   } else if (st === "tg") {
     h = `${back("start")}<h2>${L("Вход через Telegram", "Telegram orqali kirish", "Sign in with Telegram")}</h2>
@@ -3682,12 +3687,77 @@ function forgetAccountData() {
   form.name = ""; form.phone = ""; form.usePts = false; LS.set("imorat.form2", form);
 }
 function logout() {
+  nativePushForget();
   forgetAccountData();
   user = null; apiToken = ""; LS.set("imorat.token", ""); sellerData = null; adminToken = ""; LS.set("imorat.adminToken", ""); adminState = { need: null }; adminStores = null; adminFin = null;
   if (API) { myStore = null; LS.set("imorat.myStore", null); if (drawerView === "track") drawerView = "orders"; }
   try { localStorage.removeItem("imorat.user"); } catch (e) {}
   renderHeader(); renderTabbar(); counts(); if (drawerView) renderDrawer(); if (route.view === "catalog") renderList(true); if (route.view === "seller") renderSeller();
   toast(L("Вы вышли из аккаунта", "Akkauntdan chiqdingiz"));
+}
+
+/* ================= The Android / iPhone app (Capacitor) =================
+   The same page runs inside the app. Native pieces are reached through window.Capacitor and used only when they exist:
+   push notifications (FCM / APNs through our server), the Android back button, the imoratgo:// link back from the bank. */
+const CP = () => (window.Capacitor && window.Capacitor.Plugins) || {};
+const appPlatform = () => (window.Capacitor?.getPlatform?.() || "web");
+let pushState = { token: LS.get("imorat.pushTok", ""), perm: LS.get("imorat.pushPerm", "unknown") };
+async function nativePushSetup({ ask = false } = {}) {
+  const P = CP().PushNotifications; if (!NATIVE || !P || !API) return "unavailable";
+  try {
+    if (appPlatform() === "android") await P.createChannel({ id: "orders", name: L("Заказы", "Buyurtmalar", "Orders"), description: L("Статусы заказов и новые заказы магазина", "Buyurtma holatlari va do‘konning yangi buyurtmalari", "Order statuses and new store orders"), importance: 5, sound: "default", visibility: 1, vibration: true }).catch(() => {});
+    let { receive } = await P.checkPermissions();
+    if (receive === "prompt" || receive === "prompt-with-rationale") { if (!ask) return (pushState.perm = "prompt"); receive = (await P.requestPermissions()).receive; }
+    pushState.perm = receive; LS.set("imorat.pushPerm", receive);
+    if (receive !== "granted") return receive;
+    await P.register();
+    return "granted";
+  } catch (e) { return "error"; }
+}
+async function nativePushSend(token) {
+  pushState.token = token; LS.set("imorat.pushTok", token);
+  if (!apiToken) return;
+  try { await api("POST", "/api/me/devices", { platform: appPlatform(), token, lang, app_ver: window.IMORAT_APP_VERSION || "" }); } catch (e) {}
+}
+function nativePushForget() { const t = pushState.token; if (!t || !API || !apiToken) return; api("DELETE", "/api/me/devices", { token: t }).catch(() => {}); }
+/* a tap on a notification opens what it is about: an order, the seller cabinet or the orders list */
+function openFromPush(data) {
+  const url = String(data?.url || ""), tag = String(data?.tag || "");
+  const num = (tag.match(/^order-(IM-\d+)/) || [])[1];
+  if (num) { openDrawer("track", num); return; }
+  if (/#seller/.test(url) || /^ship-/.test(tag)) { go("seller"); return; }
+  if (/#orders/.test(url)) { openDrawer("orders"); return; }
+  const h = (url.match(/#([a-z0-9-]+)/i) || [])[1]; if (h) go(h);
+}
+if (NATIVE) {
+  const P = CP().PushNotifications, A = CP().App;
+  if (P) {
+    P.addListener("registration", t => nativePushSend(t.value));
+    P.addListener("registrationError", e => console.warn("push registration", e));
+    P.addListener("pushNotificationActionPerformed", a => openFromPush(a.notification?.data));
+    P.addListener("pushNotificationReceived", n => { const t = n?.title || n?.data?.title; if (t) toast(`${t}${n.body ? " · " + n.body : ""}`, 6000); if (drawerView === "track" || drawerView === "orders") { ordersFetched = false; fetchOrders(); } if (route.view === "seller" && sellerData) { sellerData = null; renderSeller(); } });
+    // a device already allowed earlier re-registers at every start (tokens rotate); first-time asking happens after the first order
+    if (apiToken && pushState.perm === "granted") setTimeout(() => nativePushSetup(), 1500);
+  }
+  if (A) {
+    A.addListener("appUrlOpen", ({ url }) => {
+      const u = String(url || ""), paid = (u.match(/paid\/(IM-\d+)/) || u.match(/[?&]paid=(IM-\d+)/) || [])[1];
+      if (paid) { LS.set("imorat.payWait", paid); resumePayWait(paid); return; }
+      const h = (u.match(/#([a-z0-9-]+)/i) || [])[1]; if (h) go(h);
+    });
+    A.addListener("appStateChange", ({ isActive }) => { if (isActive && LS.get("imorat.payWait", null)) resumePayWait(); });
+    // Android back: close what is open, step back through the app, and only then leave it to the system
+    A.addListener("backButton", () => {
+      if ($("#modal").classList.contains("on")) return closeModal();
+      if ($("#authM")?.classList.contains("on")) return closeAuth();
+      if (aiOpen) return closeAI();
+      if (widOpen) return closeWidgets();
+      if (drawerView) return closeDrawer();
+      if ($("#mega")?.classList.contains("on")) return closeMega();
+      if (route.view !== "home") return go("home");
+      Promise.resolve(A.minimizeApp?.()).catch(() => A.exitApp?.());
+    });
+  }
 }
 
 /* ================= Usta AI ================= */
@@ -3942,7 +4012,7 @@ function showServerTotals(q) {
 async function submitOrderApi(d, qt) {
   const btn = $("#payBtn"), lbl = btn.textContent;
   btn.disabled = true; btn.textContent = L("Оформляем…", "Rasmiylashtirilmoqda…");
-  const body = { lines: cartLines().map(l => ({ id: l.p.id, store: l.store, q: l.q })), services: Object.keys(services).map(Number), bundles: bundlesOn, form: d, promo, points: qt.pts || 0, lang, expected_total: expectTotal ?? qt.total };
+  const body = { lines: cartLines().map(l => ({ id: l.p.id, store: l.store, q: l.q })), services: Object.keys(services).map(Number), bundles: bundlesOn, form: d, promo, points: qt.pts || 0, lang, expected_total: expectTotal ?? qt.total, app: NATIVE };
   try {
     const r = await api("POST", "/api/orders", body);
     expectTotal = null;
@@ -3951,7 +4021,8 @@ async function submitOrderApi(d, qt) {
     if (r.order.promo) { LS.set("imorat.promoUsed", [...promoUsed(), user.id]); promo = ""; LS.set("imorat.promoCode", ""); }
     if (r.order.pts) { user.points = Math.max(0, (user.points || 0) - r.order.pts); LS.set("imorat.user", user); form.usePts = false; } bonusApi = null;
     cart = {}; services = {}; bundlesOn = []; LS.set("imorat.svc", services); LS.set("imorat.bundles", bundlesOn); saveCart(); refreshCards();
-    if (o.pay_url) { LS.set("imorat.payWait", o.num); toast(L("Переходим к оплате картой…", "Karta bilan to‘lovga o‘tamiz…", "Taking you to the card payment…")); setTimeout(() => { location.href = o.pay_url; }, 400); return; }
+    if (NATIVE && pushState.perm !== "granted") setTimeout(() => nativePushSetup({ ask: true }), o.pay_url ? 6000 : 1500); // the moment it makes sense: there is an order to follow
+    if (o.pay_url) { LS.set("imorat.payWait", o.num); toast(L("Переходим к оплате картой…", "Karta bilan to‘lovga o‘tamiz…", "Taking you to the card payment…")); setTimeout(() => { if (NATIVE) { openDrawer("track", o.num); window.open(o.pay_url, "_system"); } else location.href = o.pay_url; }, 400); return; }
     openDrawer("track", o.num);
     syncCatalog();
   } catch (e) {
@@ -4353,12 +4424,26 @@ window.addEventListener("focus", async () => {
   try { const r = await api("GET", "/api/me"); if (r.user.telegram) { tgWatch = 0; user = fromApiUser(r.user); LS.set("imorat.user", user); toast(L("Telegram подключён ✅", "Telegram ulandi ✅")); sellerData = null; if (route.view === "seller") renderSeller(); if (drawerView) renderDrawer(); } } catch (e) {}
 });
 async function unlinkTelegram() { try { await api("DELETE", "/api/me/telegram"); user.telegram = false; LS.set("imorat.user", user); sellerData = null; toast(L("Telegram отключён", "Telegram uzildi")); if (route.view === "seller") renderSeller(); if (drawerView) renderDrawer(); } catch (e) { toast(apiErr(e)); } }
+/* Delete my account: an explanation, one confirmation, then the server wipes the personal data (orders stay anonymised) */
+function deleteAccountFlow() {
+  const body = $("#dBody"); if (!body || !user) return;
+  body.innerHTML = `<div class="empty" style="text-align:left;align-items:start"><b>${L("Удалить аккаунт?", "Akkaunt o‘chirilsinmi?", "Delete your account?")}</b>
+    <span>${L("Удалим номер телефона, имя, адреса и привязки (Telegram, Google, Apple). История заказов останется в обезличенном виде — она нужна магазинам для учёта и по закону. Активные заказы нужно сначала получить или отменить; владельцу магазина — закрыть открытые заказы и вывести остаток.", "Telefon raqami, ism, manzillar va ulanishlar (Telegram, Google, Apple) o‘chiriladi. Buyurtmalar tarixi shaxssiz holda qoladi — u do‘konlarga hisob uchun va qonun bo‘yicha kerak. Faol buyurtmalarni avval olish yoki bekor qilish kerak; do‘kon egasi ochiq buyurtmalarni yopib, qoldiqni yechib olishi kerak.", "We delete your phone number, name, addresses and linked sign-ins (Telegram, Google, Apple). Order history stays anonymised — stores need it for accounting and the law requires it. Active orders must be received or cancelled first; a store owner must close open orders and withdraw the balance.")}</span>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px"><button class="btn btn-line" type="button" id="delNo">${L("Оставить", "Qoldirish", "Keep it")}</button><button class="btn" type="button" id="delYes" style="background:var(--signal);color:#fff">${L("Удалить навсегда", "Butunlay o‘chirish", "Delete forever")}</button></div>
+    <span class="err" id="delErr" role="alert" hidden></span></div>`;
+  $("#delNo").onclick = () => renderDrawer();
+  $("#delYes").onclick = async () => {
+    const b = $("#delYes"); b.disabled = true;
+    try { await api("DELETE", "/api/me", { confirm: true }); logout(); closeDrawer(); toast(L("Аккаунт удалён", "Akkaunt o‘chirildi", "Account deleted")); }
+    catch (e) { b.disabled = false; const m = { active_orders: L("Сначала получите или отмените активные заказы", "Avval faol buyurtmalarni oling yoki bekor qiling", "Receive or cancel your active orders first"), store_orders: L("У магазина есть открытые заказы — завершите их", "Do‘konda ochiq buyurtmalar bor — ularni yakunlang", "The store still has open orders — finish them"), payout_due: L("Сначала выведите остаток магазина", "Avval do‘kon qoldig‘ini yechib oling", "Withdraw the store's balance first") }[e.code] || apiErr(e); const er = $("#delErr"); er.textContent = m; er.hidden = false; }
+  };
+}
 async function logoutAll() { try { await api("POST", "/api/me/logout-all"); } catch (e) {} logout(); toast(L("Вы вышли на всех устройствах", "Barcha qurilmalarda chiqdingiz")); }
 function notifyRows() {
   if (!API || !user) return "";
   return `<div class="notif-box"><b>${L("Уведомления", "Bildirishnomalar")}</b>
     <div class="nrow"><span>${ui("send", 16)} Telegram${apiCfg?.telegram_bot ? ` · @${esc(apiCfg.telegram_bot)}` : ""}</span>${user.telegram ? `<span class="pill ok">${L("подключён", "ulangan")}</span><button class="lnk" type="button" data-act="tg-unlink">${L("Отключить", "Uzish")}</button>` : `<button class="btn btn-line" type="button" data-act="tg-link" ${apiCfg?.telegram_bot ? "" : "disabled"}>${L("Подключить", "Ulash")}</button>`}</div>
-    ${window.IMORAT_APP ? "" : `<div class="nrow"><span>${ui("bell", 16)} ${L("На этом устройстве", "Shu qurilmada")}</span>${LS.get("imorat.push", false) ? `<span class="pill ok">${L("включены", "yoqilgan")}</span>` : `<button class="btn btn-line" type="button" data-act="push-on">${L("Включить", "Yoqish")}</button>`}</div>`}
+    ${NATIVE ? `<div class="nrow"><span>${ui("bell", 16)} ${L("На этом телефоне", "Shu telefonda", "On this phone")}</span>${pushState.perm === "granted" && pushState.token ? `<span class="pill ok">${L("включены", "yoqilgan", "on")}</span>` : pushState.perm === "denied" ? `<small style="color:var(--muted)">${L("Разрешите уведомления в настройках телефона", "Telefon sozlamalarida bildirishnomalarga ruxsat bering", "Allow notifications in the phone settings")}</small>` : `<button class="btn btn-line" type="button" data-act="push-native-on">${L("Включить", "Yoqish")}</button>`}</div>` : window.IMORAT_APP ? "" : `<div class="nrow"><span>${ui("bell", 16)} ${L("На этом устройстве", "Shu qurilmada")}</span>${LS.get("imorat.push", false) ? `<span class="pill ok">${L("включены", "yoqilgan")}</span>` : `<button class="btn btn-line" type="button" data-act="push-on">${L("Включить", "Yoqish")}</button>`}</div>`}
   </div>`;
 }
 
@@ -5804,15 +5889,24 @@ const bonusOn = () => (API ? !!apiCfg?.bonus : false);
 let bonusApi = null; // GET /api/me/bonus
 let bonusDemo = LS.get("imorat.bonus", null);
 { const rc = (location.search.match(/[?&]ref=([A-Za-z0-9]{4,12})\b/) || [])[1]; if (rc) LS.set("imorat.refPending", rc.toUpperCase()); }
-{ // back from the bank page: show the order and poll until the payment is confirmed
-  const pn = (location.search.match(/[?&]paid=(IM-\d+)/) || [])[1] || LS.get("imorat.payWait", null);
-  if (pn && API) setTimeout(() => {
-    history.replaceState(null, "", location.pathname + "#orders"); LS.set("imorat.payWait", null);
-    openDrawer("track", pn);
-    let n = 0; const tick = () => { if (n++ > 40) return; ordersFetched = false; Promise.resolve(fetchOrders()).then(() => { const o = orders.find(x => x.num === pn); if (o && o.api && (o.pay_status === "paid" || o.status === "cancelled")) { if (drawerView === "track") renderDrawer(); if (o.pay_status === "paid") toast(L("Оплата получена — магазин собирает заказ", "To‘lov qabul qilindi — do‘kon buyurtmani yig‘moqda", "Payment received — the store is packing your order")); return; } setTimeout(tick, 3000); }); };
-    setTimeout(tick, 1500);
-  }, 400);
+/* Back from the bank page: show the order and poll until the payment is confirmed. Runs at start (the site: ?paid=…),
+   when the app comes back to the foreground (the bank opened in the system browser) and from the app's imoratgo:// link. */
+let payWaitTimer = 0;
+function resumePayWait(num) {
+  const pn = num || (location.search.match(/[?&]paid=(IM-\d+)/) || [])[1] || LS.get("imorat.payWait", null);
+  if (!pn || !API || !apiToken) return;
+  if (location.search) history.replaceState(null, "", location.pathname + "#orders");
+  if (drawerView !== "track" || drawerOrder !== pn) openDrawer("track", pn);
+  clearTimeout(payWaitTimer);
+  let n = 0; const tick = () => { if (n++ > 40) { LS.set("imorat.payWait", null); return; } ordersFetched = false; Promise.resolve(fetchOrders()).then(() => { const o = orders.find(x => x.num === pn); if (o && o.api && (o.pay_status === "paid" || o.status === "cancelled")) { LS.set("imorat.payWait", null); if (drawerView === "track") renderDrawer(); if (o.pay_status === "paid") toast(L("Оплата получена — магазин собирает заказ", "To‘lov qabul qilindi — do‘kon buyurtmani yig‘moqda", "Payment received — the store is packing your order")); return; } payWaitTimer = setTimeout(tick, 1500); }); };
+  payWaitTimer = setTimeout(tick, 1200);
 }
+{ // the website opened by the bank's return link inside the app flow: offer the way back into the app
+  const m = location.search.match(/[?&]paid=(IM-\d+)/), fromApp = /[?&]app=1/.test(location.search);
+  if (m && fromApp && !NATIVE) { const link = `imoratgo://paid/${m[1]}`; setTimeout(() => { toast(L("Оплата принята. Вернитесь в приложение Imorat Go", "To‘lov qabul qilindi. Imorat Go ilovasiga qayting", "Payment accepted. Return to the Imorat Go app"), 8000); try { location.href = link; } catch (e) {} }, 300); }
+}
+setTimeout(() => resumePayWait(), 400);
+document.addEventListener("visibilitychange", () => { if (!document.hidden && LS.get("imorat.payWait", null)) resumePayWait(); });
 { // links from the Telegram bot: ?q=<search> opens the results, ?ai=<question> asks Usta AI
   const sp = new URLSearchParams(location.search), q0 = (sp.get("q") || "").trim().slice(0, 120), ai0 = (sp.get("ai") || "").trim().slice(0, 500);
   if (q0 || ai0) setTimeout(() => {
@@ -6957,6 +7051,8 @@ document.addEventListener("click", e => {
     case "tg-unlink": return unlinkTelegram();
     case "push-on": return enablePush();
     case "logout-all": return logoutAll();
+    case "push-native-on": return nativePushSetup({ ask: true }).then(r => { if (r === "granted") toast(L("Уведомления включены", "Bildirishnomalar yoqildi", "Notifications are on")); else if (r === "denied") toast(L("Разрешите уведомления в настройках телефона", "Telefon sozlamalarida bildirishnomalarga ruxsat bering", "Allow notifications in the phone settings")); if (drawerView === "profile") renderDrawer(); });
+    case "del-account": return deleteAccountFlow();
     case "mfa-setup": adminApi("POST", "/api/admin/mfa/setup").then(r => { adminState = { need: "setup", secret: r.secret, url: r.url }; renderMain(); }).catch(e => toast(apiErr(e))); return;
     case "order-cancel": { const num = drawerOrder; api("POST", `/api/orders/${encodeURIComponent(num)}/cancel`).then(r => { const o = orders.find(x => x.num === num); Object.assign(o, mapOrder(r.order)); LS.set("imorat.orders", orders.slice(0, 30)); toast(L("Заказ отменён", "Buyurtma bekor qilindi")); renderDrawer(); syncCatalog(); }).catch(e => toast(e.code === "too_late" ? L("Заказ уже в пути — отменить нельзя", "Buyurtma yo‘lda — bekor qilib bo‘lmaydi") : apiErr(e))); return; }
     case "close-auth": return closeAuth();

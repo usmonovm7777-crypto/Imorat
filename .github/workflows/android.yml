@@ -1,16 +1,38 @@
-name: Android app (APK)
+name: Android app
+
+# Two builds from the same website:
+#  • apk  — test build (debug-signed) after every site update → GitHub release "app-latest". Talks to the server from
+#           the repository variable IMORAT_API; without it the app runs in the clearly marked DEMO mode (test builds only).
+#  • aab  — store build for Google Play, started by hand (Actions → Run workflow → release) or by a tag v1.2.3.
+#           Refuses to build without IMORAT_API and the release keystore. Signing material comes from repository secrets:
+#             ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD
+#           optional: GOOGLE_SERVICES_JSON (Firebase, for push), IMORAT_YMAPS_KEY (variable).
+#           The .aab is uploaded as a workflow artifact (never to a public release) — download it and upload to Play Console.
 
 on:
   workflow_dispatch:
+    inputs:
+      kind:
+        description: "test = APK for testers · release = signed AAB for Google Play"
+        type: choice
+        options: [test, release]
+        default: test
   push:
     branches: [main]
     paths: ["src/**", "app/**", "config.js", ".github/workflows/android.yml"]
+    tags: ["v*"]
 
 permissions:
   contents: write
 
+env:
+  IMORAT_API: ${{ vars.IMORAT_API }}
+  IMORAT_YMAPS_KEY: ${{ vars.IMORAT_YMAPS_KEY }}
+  IMORAT_SITE_URL: ${{ vars.IMORAT_SITE_URL }}
+
 jobs:
   apk:
+    if: github.event_name == 'push' && !startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && inputs.kind == 'test')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -23,24 +45,88 @@ jobs:
       - name: Install Capacitor
         working-directory: app
         run: npm install --no-audit --no-fund
-      - name: Create Android project
+      - name: Prepare the Android project (test build)
         working-directory: app
         run: |
           npm run www
           [ -d android ] || npx cap add android
           npx @capacitor/assets generate --android --iconBackgroundColor '#0B6E69' --splashBackgroundColor '#F3F5F2' || echo "icons: using defaults"
           npx cap sync android
-      - name: Build APK
+          npm run patch:android
+          grep -E "compileSdkVersion|targetSdkVersion|minSdkVersion" android/variables.gradle
+      - name: Build debug APK
         working-directory: app/android
         run: ./gradlew assembleDebug --no-daemon
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
-          name: imorat-android
+          name: imorat-android-test-apk
           path: app/android/app/build/outputs/apk/debug/app-debug.apk
       - name: Publish to the "app-latest" release (download from a phone)
         env: { GH_TOKEN: "${{ github.token }}" }
         run: |
           cp app/android/app/build/outputs/apk/debug/app-debug.apk Imorat.apk
-          gh release view app-latest >/dev/null 2>&1 || gh release create app-latest --prerelease --title "Imorat Go — Android (тестовая сборка)" --notes "Последняя тестовая сборка приложения. Скачайте Imorat.apk на телефон Android и установите."
+          MODE=$([ -n "$IMORAT_API" ] && echo "сервер $IMORAT_API" || echo "ДЕМО-режим: сервер не указан, заказы и оплата не настоящие")
+          gh release view app-latest >/dev/null 2>&1 || gh release create app-latest --prerelease --title "Imorat Go — Android (тестовая сборка)" --notes "Тестовая сборка приложения, не для магазинов. Скачайте Imorat.apk на телефон Android и установите."
+          gh release edit app-latest --notes "Тестовая сборка приложения ($MODE). Не для Google Play — магазинная сборка (.aab) делается отдельно. Скачайте Imorat.apk на телефон Android и установите. Обновлено: $(date -u +%F\ %H:%M) UTC, коммит ${GITHUB_SHA::7}."
           gh release upload app-latest Imorat.apk --clobber
+
+  aab:
+    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.kind == 'release')
+    runs-on: ubuntu-latest
+    env:
+      APP_RELEASE: "1"
+      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+      GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 21 }
+      - name: Check the release prerequisites
+        run: |
+          fail=0
+          [ -n "$IMORAT_API" ] || { echo "::error::Repository variable IMORAT_API is empty — a store build must point to the real server"; fail=1; }
+          [ -n "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ] || { echo "::error::Secret ANDROID_KEYSTORE_BASE64 is missing (see app/README.md → Ключ подписи)"; fail=1; }
+          [ -n "$ANDROID_KEYSTORE_PASSWORD" ] && [ -n "$ANDROID_KEY_ALIAS" ] && [ -n "$ANDROID_KEY_PASSWORD" ] || { echo "::error::Secrets ANDROID_KEYSTORE_PASSWORD / ANDROID_KEY_ALIAS / ANDROID_KEY_PASSWORD are missing"; fail=1; }
+          [ -n "$GOOGLE_SERVICES_JSON" ] || echo "::warning::GOOGLE_SERVICES_JSON is not set — the app builds, native push on Android stays off"
+          exit $fail
+      - name: Restore the release keystore (kept only on this runner)
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > "$RUNNER_TEMP/release.jks"
+          echo "ANDROID_KEYSTORE_FILE=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+      - name: Build website
+        run: python3 tools/build_site.py
+      - name: Install Capacitor
+        working-directory: app
+        run: npm install --no-audit --no-fund
+      - name: Prepare the Android project (release)
+        working-directory: app
+        run: |
+          npm run www:release
+          [ -d android ] || npx cap add android
+          npx @capacitor/assets generate --android --iconBackgroundColor '#0B6E69' --splashBackgroundColor '#F3F5F2' || echo "icons: using defaults"
+          npx cap sync android
+          npm run patch:android
+          grep -E "compileSdkVersion|targetSdkVersion|minSdkVersion" android/variables.gradle
+          grep -E "versionCode|versionName" android/app/build.gradle
+      - name: Build signed App Bundle and release APK
+        working-directory: app/android
+        run: ./gradlew bundleRelease assembleRelease --no-daemon
+      - name: Verify the signature
+        working-directory: app/android
+        run: |
+          ls -la app/build/outputs/bundle/release/ app/build/outputs/apk/release/
+          "$ANDROID_HOME/build-tools/$(ls $ANDROID_HOME/build-tools | sort -V | tail -1)/apksigner" verify --print-certs app/build/outputs/apk/release/app-release.apk | head -5
+      - uses: actions/upload-artifact@v4
+        with:
+          name: imorat-android-release
+          path: |
+            app/android/app/build/outputs/bundle/release/app-release.aab
+            app/android/app/build/outputs/apk/release/app-release.apk
+          retention-days: 30
+      - name: Forget the keystore
+        if: always()
+        run: rm -f "$RUNNER_TEMP/release.jks"
