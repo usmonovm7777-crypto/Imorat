@@ -1,0 +1,33 @@
+name: Server tests
+
+# Runs the API test suite (server/test/api.test.mjs: no external services, everything is faked in-process) and checks that
+# the website still builds from src/, on every push and pull request that touches them. Nothing is deployed here.
+
+on:
+  push:
+    branches: [main]
+    paths: ["server/**", "src/**", "tools/**", ".github/workflows/server.yml"]
+  pull_request:
+    paths: ["server/**", "src/**", "tools/**", ".github/workflows/server.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  api:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: Syntax of every server module
+        run: for f in server/src/*.js server/tools/*.mjs; do node --check "$f"; done
+      - name: API tests
+        working-directory: server
+        run: npm test
+      - name: Website builds
+        run: python3 tools/build_site.py
+      - name: Installer scripts parse
+        run: bash -n server/tools/install.sh && bash -n server/tools/imorat.sh

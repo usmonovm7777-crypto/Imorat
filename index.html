@@ -35,13 +35,14 @@
 --raised: #F8FAF7;
 --ink: #131B1A;
 --muted: #5A6561;
---faint: #8A9490;
+--faint: #66706C;
 --line: #E0E5DF;
 --line-strong: #CBD2CB;
 --accent: #0B6E69;
 --accent-ink: #FFFFFF;
 --accent-soft: #E0EFEC;
---signal: #D9530A;
+--signal: #C94A05;
+--signal-ink: #FFFFFF;
 --signal-soft: #FCE8DB;
 --ok: #23803A;
 --warn: #B7791F;
@@ -72,9 +73,9 @@
 }
 @media (prefers-color-scheme: dark) {
 :root:not([data-theme="light"]) {
---bg: #0E1312; --surface: #171E1D; --raised: #1C2423; --ink: #E9EEEC; --muted: #9CA7A3; --faint: #74807C;
+--bg: #0E1312; --surface: #171E1D; --raised: #1C2423; --ink: #E9EEEC; --muted: #9CA7A3; --faint: #87928E;
 --line: #28312F; --line-strong: #36403D; --accent: #3DB3AA; --accent-ink: #06201E; --accent-soft: #163029;
---signal: #FF8040; --signal-soft: #3A2518; --ok: #6CC27A; --warn: #E0A84A; --vip-bg: #E9EEEC; --vip-fg: #121817;
+--signal: #FF8040; --signal-ink: #1A0E05; --signal-soft: #3A2518; --ok: #6CC27A; --warn: #E0A84A; --vip-bg: #E9EEEC; --vip-fg: #121817;
 --hero-bg: #12302C; --hero-fg: #EEF5F3; --hero-acc: #6FE0D3; --hero-line: rgba(238, 245, 243, .14);
 --tile-s: 16%; --tile-l: 20%; --tile-ink-s: 48%; --tile-ink-l: 72%;
 --art-fg: 70%; --art-d1: 46%; --art-d2: 10%; --art-hl: rgba(255, 255, 255, .35); --art-sh: .45;
@@ -82,9 +83,9 @@
 }
 }
 :root[data-theme="dark"] {
---bg: #0E1312; --surface: #171E1D; --raised: #1C2423; --ink: #E9EEEC; --muted: #9CA7A3; --faint: #74807C;
+--bg: #0E1312; --surface: #171E1D; --raised: #1C2423; --ink: #E9EEEC; --muted: #9CA7A3; --faint: #87928E;
 --line: #28312F; --line-strong: #36403D; --accent: #3DB3AA; --accent-ink: #06201E; --accent-soft: #163029;
---signal: #FF8040; --signal-soft: #3A2518; --ok: #6CC27A; --warn: #E0A84A; --vip-bg: #E9EEEC; --vip-fg: #121817;
+--signal: #FF8040; --signal-ink: #1A0E05; --signal-soft: #3A2518; --ok: #6CC27A; --warn: #E0A84A; --vip-bg: #E9EEEC; --vip-fg: #121817;
 --hero-bg: #12302C; --hero-fg: #EEF5F3; --hero-acc: #6FE0D3; --hero-line: rgba(238, 245, 243, .14);
 --tile-s: 16%; --tile-l: 20%; --tile-ink-s: 48%; --tile-ink-l: 72%;
 --art-fg: 70%; --art-d1: 46%; --art-d2: 10%; --art-hl: rgba(255, 255, 255, .35); --art-sh: .45;
@@ -198,7 +199,7 @@ linear-gradient(180deg, hsl(var(--h) var(--tile-s) var(--tile-l)) 0 70%, hsl(var
 .seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
 .hb { position: relative; width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; flex: none; color: var(--ink); }
 .hb:hover { background: var(--raised); }
-.hb .dot, .cart-btn .dot { position: absolute; top: 4px; right: 3px; min-width: 18px; height: 18px; border-radius: 9px; background: var(--signal); color: #fff; font-size: 11px; font-weight: 700; display: grid; place-items: center; padding: 0 5px; }
+.hb .dot, .cart-btn .dot { position: absolute; top: 4px; right: 3px; min-width: 18px; height: 18px; border-radius: 9px; background: var(--signal); color: var(--signal-ink); font-size: 11px; font-weight: 700; display: grid; place-items: center; padding: 0 5px; }
 .cart-btn { position: relative; display: inline-flex; align-items: center; gap: 8px; background: var(--ink); color: var(--bg); border-radius: 12px; padding: 10px 16px; font-weight: 600; flex: none; }
 .cart-btn .dot { position: static; }
 .rail-nav { display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; padding-bottom: 8px; margin-top: -2px; }
@@ -233,7 +234,7 @@ linear-gradient(180deg, hsl(var(--h) var(--tile-s) var(--tile-l)) 0 70%, hsl(var
 .tabbar { display: grid; grid-template-columns: repeat(5, 1fr); position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; background: color-mix(in srgb, var(--surface) 94%, transparent); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-top: 1px solid var(--line); padding: 6px max(8px, env(safe-area-inset-right, 0px)) calc(6px + env(safe-area-inset-bottom, 0px)) max(8px, env(safe-area-inset-left, 0px)); }
 .tabbar button { display: grid; justify-items: center; gap: 2px; font-size: 11px; color: var(--muted); padding: 4px 0; position: relative; }
 .tabbar button[aria-current="true"] { color: var(--accent); font-weight: 600; }
-.tabbar .dot { position: absolute; top: 0; left: calc(50% + 6px); min-width: 17px; height: 17px; border-radius: 9px; background: var(--signal); color: #fff; font-size: 10px; font-weight: 700; display: grid; place-items: center; padding: 0 4px; }
+.tabbar .dot { position: absolute; top: 0; left: calc(50% + 6px); min-width: 17px; height: 17px; border-radius: 9px; background: var(--signal); color: var(--signal-ink); font-size: 10px; font-weight: 700; display: grid; place-items: center; padding: 0 4px; }
 }
 .mega { position: fixed; inset: 0; z-index: 45; display: none; }
 .mega.on { display: block; }
@@ -343,7 +344,7 @@ mask: linear-gradient(180deg, #000, rgba(0,0,0,.55)); -webkit-mask: linear-gradi
 .bundle { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; display: flex; flex-direction: column; }
 .bundle .bimg { display: flex; height: 132px; position: relative; }
 .bundle .bimg > div { flex: 1; min-width: 0; }
-.bundle .bimg .off { position: absolute; right: 10px; top: 10px; background: var(--signal); color: #fff; font-weight: 700; font-size: 12px; padding: 3px 8px; border-radius: 6px; }
+.bundle .bimg .off { position: absolute; right: 10px; top: 10px; background: var(--signal); color: var(--signal-ink); font-weight: 700; font-size: 12px; padding: 3px 8px; border-radius: 6px; }
 .bundle .bb { padding: 14px 16px 16px; display: grid; gap: 8px; flex: 1; align-content: start; }
 .bundle b { font-weight: 600; font-size: 16px; }
 .bundle ul { margin: 0; padding: 0; list-style: none; font-size: 13px; color: var(--muted); display: grid; gap: 2px; }
@@ -361,7 +362,7 @@ mask: linear-gradient(180deg, #000, rgba(0,0,0,.55)); -webkit-mask: linear-gradi
 .thumb .art { transition: transform .35s cubic-bezier(.2,.8,.2,1); }
 .card:hover .thumb .art { transform: scale(1.06) translateY(-2px); }
 .badges { position: absolute; left: 10px; top: 10px; display: flex; gap: 4px; flex-wrap: wrap; }
-.badge { font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px; background: var(--signal); color: #fff; letter-spacing: .02em; }
+.badge { font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px; background: var(--signal); color: var(--signal-ink); letter-spacing: .02em; }
 .badge.new { background: var(--accent); color: var(--accent-ink); }
 .badge.svc { background: var(--ink); color: var(--bg); }
 .fav { position: absolute; right: 8px; top: 8px; width: 36px; height: 36px; border-radius: 50%; background: var(--surface); display: grid; place-items: center; color: var(--muted); box-shadow: var(--shadow-sm); }
@@ -426,7 +427,7 @@ mask: linear-gradient(180deg, #000, rgba(0,0,0,.55)); -webkit-mask: linear-gradi
 .vip-price { display: flex; align-items: baseline; gap: 8px; margin-top: 20px; flex-wrap: wrap; }
 .vip-price b { font-family: var(--f-display); font-size: 30px; letter-spacing: -.03em; }
 .vip-price span { color: color-mix(in srgb, var(--vip-fg) 60%, transparent); }
-.vip .btn-primary { background: var(--signal); color: #fff; margin-top: 18px; }
+.vip .btn-primary { background: var(--signal); color: var(--signal-ink); margin-top: 18px; }
 .vip .btn-on { margin-top: 18px; border: 1.5px solid color-mix(in srgb, var(--vip-fg) 35%, transparent); }
 .perks { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-content: center; }
 .perks li { background: color-mix(in srgb, var(--vip-fg) 7%, transparent); border-radius: var(--r); padding: 16px; display: grid; gap: 6px; }
@@ -522,7 +523,7 @@ legend { font-family: var(--f-display); font-size: 15px; font-weight: 600; margi
 .opt b { font-weight: 600; }
 .opt small { display: block; color: var(--muted); font-size: 12.5px; }
 .opt .tag { font-size: 12px; font-weight: 600; color: var(--muted); white-space: nowrap; }
-.opt.vipopt b::after { content: "VIP"; font-size: 10px; font-weight: 700; background: var(--signal); color: #fff; padding: 1px 6px; border-radius: 4px; margin-left: 6px; vertical-align: 2px; }
+.opt.vipopt b::after { content: "VIP"; font-size: 10px; font-weight: 700; background: var(--signal); color: var(--signal-ink); padding: 1px 6px; border-radius: 4px; margin-left: 6px; vertical-align: 2px; }
 .pay { display: grid; grid-template-columns: repeat(auto-fit, minmax(84px, 1fr)); gap: 8px; }
 .pay label { border: 1.5px solid var(--line); border-radius: 10px; padding: 10px 4px; text-align: center; font-size: 13px; font-weight: 600; cursor: pointer; position: relative; }
 .pay label:has(input:checked) { border-color: var(--accent); color: var(--accent); background: color-mix(in srgb, var(--accent) 6%, transparent); }
@@ -1281,7 +1282,7 @@ html[data-theme="dark"] .pickmap .pm-tiles img { filter: brightness(.82) contras
 .wtile.feat.alt { background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 55%, var(--signal))); color: #fff; }
 .wtile.feat.alt .wi { color: #fff; }
 .wtile.feat.alt small { color: rgba(255,255,255,.82); }
-.wtile .cnt { position: absolute; right: 12px; top: 12px; min-width: 22px; height: 22px; border-radius: 11px; background: var(--signal); color: #fff; font-size: 12px; font-weight: 700; display: grid; place-items: center; padding: 0 6px; }
+.wtile .cnt { position: absolute; right: 12px; top: 12px; min-width: 22px; height: 22px; border-radius: 11px; background: var(--signal); color: var(--signal-ink); font-size: 12px; font-weight: 700; display: grid; place-items: center; padding: 0 6px; }
 .wsec { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 600; margin-top: 4px; }
 .ctabs { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
 .ctabs::-webkit-scrollbar { display: none; }
@@ -1401,6 +1402,8 @@ const legalUrl = name => `${window.IMORAT_APP ? publicSiteUrl() : ""}legal/${nam
 /* "Stage 0" (server: no payment provider yet, ALLOW_PAY_AT_STORE=1): buyers pay the store on receipt, Imorat Go holds no money;
    with no carrier connected the store delivers with its own courier and names the delivery price itself. */
 const stage0 = () => !!(API && apiCfg?.pay_on_receipt);
+/* the buyer pays the store itself (every stage-0 order, or cash on pickup): promo codes, bundle discounts, points and installation do not apply */
+const payAtStore = d => stage0() || ["store", "cash"].includes((d || form)?.pay);
 const storeDelivers = () => !!(API && apiCfg?.delivery_by === "store");
 const feeInfo = () => ({ ours: apiCfg?.commission?.["*"] ?? 0.01, bank: apiCfg?.acquiring ?? 0.02, bankBy: apiCfg?.acquiring_by || {}, months: apiCfg?.promo_months ?? 3 });
 // the acquiring rate as text: one number, or each provider's contract rate when they differ ("Payme 2% / Click 1,8%")
@@ -1562,7 +1565,8 @@ async function api(method, path, body, opts = {}) {
   let r;
   try { r = await fetch(API + path, { method, headers, body: body === undefined ? undefined : isBlob ? body : JSON.stringify(body), signal: opts.signal }); }
   catch (e) { if (e.name === "AbortError") throw e; if (!opts.probe && apiState !== "incompatible") setApiState("offline"); const er = new Error("offline"); er.code = "offline"; throw er; }
-  if (apiState === "offline" && !opts.probe) setApiState("ok");
+  // the server answers again: a plain call proves it is back, but the config and catalogue still have to be (re)loaded — apiBoot does that
+  if (apiState === "offline" && !opts.probe) { if (apiCfg) setApiState("ok"); else if (!apiBooting) apiBoot(); }
   if (r.status === 401 && apiToken && !path.startsWith("/api/auth/")) { apiToken = ""; LS.set("imorat.token", ""); }
   if (opts.raw && r.ok) return r;
   const j = await r.json().catch(() => ({}));
@@ -1595,10 +1599,48 @@ function apiErr(e) {
     auth_required: L("Войдите в аккаунт", "Akkauntga kiring"),
     forbidden: L("Нет доступа", "Ruxsat yo‘q"),
     bad_image: L("Подойдёт фото JPG, PNG или WEBP до 5 МБ", "5 MB gacha JPG, PNG yoki WEBP rasm mos keladi"),
-    too_large: L("Файл слишком большой", "Fayl juda katta")
+    too_large: L("Файл слишком большой", "Fayl juda katta"),
+    bad_address: L("Для доставки нужны улица и дом", "Yetkazish uchun ko‘cha va uy kerak", "Street and house are required for delivery"),
+    bad_addr: L("Укажите адрес", "Manzilni kiriting", "Address is required"),
+    bad_name: L("Укажите имя или название", "Ism yoki nomni kiriting", "Enter a name"),
+    bad_store_name: L("Укажите название магазина", "Do‘kon nomini kiriting", "Store name is required"),
+    bad_store_phone: L("Телефон магазина: +998 XX XXX XX XX", "Do‘kon telefoni: +998 XX XXX XX XX", "Store phone must be +998 XX XXX XX XX"),
+    bad_descr: L("Опишите магазин одним-двумя предложениями", "Do‘konni bir-ikki gap bilan tasvirlang", "Describe the store in a sentence or two"),
+    bad_cats: L("Выберите хотя бы одну категорию", "Kamida bitta toifani tanlang", "Choose at least one category"),
+    bad_category: L("Выберите категорию и подкатегорию", "Toifa va kichik toifani tanlang", "Choose a category and subcategory"),
+    bad_district: L("Выберите район", "Tumanni tanlang", "Choose the district"),
+    bad_districts: L("Выберите районы, где вы работаете", "Ishlaydigan tumanlaringizni tanlang", "Choose the districts where you work"),
+    bad_price: L("Цена — не меньше 100 сум", "Narx — kamida 100 so‘m", "Price must be at least 100 so'm"),
+    bad_offer: L("Нужны товар, цена (от 100 сум) и остаток (0 или больше)", "Mahsulot, narx (100 so‘mdan) va qoldiq (0 yoki ko‘proq) kerak", "A product, a price (from 100 so'm) and a stock (0 or more) are required"),
+    bad_stock: L("Остаток — 0 или больше", "Qoldiq — 0 yoki ko‘proq", "Stock must be 0 or more"),
+    bad_product: L("Этот магазин не продаёт такой товар", "Bu do‘kon bunday mahsulotni sotmaydi", "The store does not sell this product"),
+    bad_line: L("Проверьте корзину: не хватает данных о товаре", "Savatni tekshiring: mahsulot ma’lumoti yetarli emas", "Check the cart: a line is incomplete"),
+    bad_text: L("Напишите текст", "Matn yozing", "Write the text"),
+    bad_stars: L("Поставьте оценку от 1 до 5", "1 dan 5 gacha baho qo‘ying", "Rate from 1 to 5 stars"),
+    bad_reason: L("Выберите, что пошло не так", "Nima xato ketganini tanlang", "Choose what went wrong"),
+    bad_shipment: L("Выберите магазин, к которому относится проблема", "Muammo qaysi do‘konga tegishli — tanlang", "Choose the store the problem is about"),
+    bad_email: L("Проверьте e-mail", "E-mailni tekshiring", "Invalid e-mail"),
+    bad_code: L("Такого кода нет", "Bunday kod yo‘q", "No such code"),
+    bad_location: L("Точка должна быть в Узбекистане", "Nuqta O‘zbekistonda bo‘lishi kerak", "The location must be in Uzbekistan"),
+    bad_specs: L("Выберите хотя бы один вид работ", "Kamida bitta ish turini tanlang", "Choose at least one kind of work"),
+    bad_numbers: L("Опыт и цена — числа", "Tajriba va narx — raqamlar", "Experience and price must be numbers"),
+    bad_status: L("Такой переход статуса невозможен", "Bunday holat o‘tishi mumkin emas", "This status change is not possible"),
+    bad_token: L("Вход не подтверждён — попробуйте ещё раз", "Kirish tasdiqlanmadi — qayta urinib ko‘ring", "Sign-in could not be verified — try again"),
+    bad_json: L("Ошибка запроса — обновите страницу", "So‘rov xatosi — sahifani yangilang", "Bad request — reload the page"),
+    total_changed: L("Цены или доставка изменились — проверьте новую сумму", "Narx yoki yetkazish o‘zgardi — yangi summani tekshiring", "Prices or delivery changed — check the new total"),
+    cart_changed: L("Часть товаров закончилась — проверьте корзину", "Ba’zi mahsulotlar tugadi — savatni tekshiring", "Some items just went out of stock — check the cart"),
+    delivery_price_unavailable: L("Перевозчик не вернул цену доставки по этому адресу — попробуйте через минуту или выберите самовывоз", "Yetkazuvchi bu manzil uchun narx bermadi — bir daqiqadan keyin urinib ko‘ring yoki olib ketishni tanlang", "The carrier gave no delivery price for this address — try again in a minute or choose pickup"),
+    not_bought: L("Отзыв можно оставить на товар, который вы получили", "Sharhni olgan mahsulotingizga qoldirish mumkin", "You can review products you have received"),
+    already_reviewed: L("Вы уже оставили отзыв", "Siz allaqachon sharh qoldirgansiz", "You have already reviewed this product"),
+    already_open: L("По этому магазину уже есть открытая проблема — дождитесь ответа", "Bu do‘kon bo‘yicha ochiq muammo bor — javobni kuting", "There is already an open problem for this store — wait for the answer"),
+    too_early: L("Эта часть заказа ещё не в работе", "Buyurtmaning bu qismi hali ishda emas", "This part of the order is not in progress"),
+    too_many_photos: L("Не больше 3 фото", "3 tadan ko‘p bo‘lmagan rasm", "Up to 3 photos"),
+    not_found: L("Не найдено", "Topilmadi", "Not found"),
+    mfa_required: L("Нужен код из приложения-аутентификатора", "Autentifikator ilovasidan kod kerak", "A code from the authenticator app is needed"),
+    mfa_setup_required: L("Сначала настройте защиту входа модератора", "Avval moderator kirishini himoyalashni sozlang", "Set up moderator sign-in protection first")
   };
   if (m[e.code]) return m[e.code];
-  if (String(e.code || "").startsWith("bad_")) return L("Проверьте данные: ", "Ma’lumotlarni tekshiring: ") + e.message;
+  if (String(e.code || "").startsWith("bad_")) return lang === "en" ? "Check the data: " + e.message : L("Проверьте введённые данные", "Kiritilgan ma’lumotlarni tekshiring"); // the server's text is English
   return L("Что-то пошло не так. Попробуйте ещё раз.", "Nimadir xato ketdi. Qayta urinib ko‘ring.");
 }
 const fromApiUser = u => ({ id: u.id, name: u.name, phone: u.phone, email: u.email, via: u.via, role: u.role, district: u.district, vip: u.vip, store_id: u.store_id, admin: u.admin, created: u.created, telegram: !!u.telegram, mfa: !!u.mfa, points: u.points || 0, api: true });
@@ -2044,7 +2086,7 @@ const VIP_FEE = 49000, VIP_HOUR_FEE = 25000, LOADER = 15000, VIP_FREE_FROM = 500
 /* ================= State ================= */
 let cart = LS.get("imorat.cart2", null);
 /* the Claude preview starts with a sample cart to show checkout; the real site starts empty */
-if (!cart) { cart = {}; if (!window.IMORAT_SITE && !window.IMORAT_APP) { const c = byKey("cement"), b = byKey("bulb"), pt = byKey("paint"); cart[c.id + "|usta"] = 10; cart[b.id + "|elp"] = 6; cart[pt.id + "|boyoq"] = 2; } }
+if (!cart) { cart = {}; if (!window.IMORAT_SITE && !window.IMORAT_APP && !API) { const c = byKey("cement"), b = byKey("bulb"), pt = byKey("paint"); if (c && b && pt) { cart[c.id + "|usta"] = 10; cart[b.id + "|elp"] = 6; cart[pt.id + "|boyoq"] = 2; } } } // a pre-filled demo cart only in the standalone demo
 let favs = LS.get("imorat.favs", []);
 let watch = LS.get("imorat.watch", []);
 let projects = LS.get("imorat.projects", []);
@@ -2164,9 +2206,15 @@ function setPanel(el, on) {
   const was = el.classList.contains("on");
   el.classList.toggle("on", on); el.setAttribute("aria-hidden", on ? "false" : "true"); if (on) el.removeAttribute("inert"); else el.setAttribute("inert", "");
   if (on && !was) { if (document.activeElement && !el.contains(document.activeElement)) panelFocus.set(el, document.activeElement); setTimeout(() => { if (el.classList.contains("on") && !el.contains(document.activeElement)) (el.querySelector("[data-act='close-drawer'],.m-close,button,[href],input,select,textarea") || el).focus({ preventScroll: true }); }, 60); }
-  if (!on && was) { const back = panelFocus.get(el); panelFocus.delete(el); if (back && back.isConnected && (!document.activeElement || document.activeElement === document.body || el.contains(document.activeElement))) { try { back.focus({ preventScroll: true }); } catch (e) {} } }
+  // focus goes back after syncLock() has made the page shell focusable again (it is inert while a panel is open)
+  if (!on && was) { const back = panelFocus.get(el); panelFocus.delete(el); setTimeout(() => { if (back && back.isConnected && (!document.activeElement || document.activeElement === document.body || el.contains(document.activeElement))) { try { back.focus({ preventScroll: true }); } catch (e) {} } }, 0); }
 }
-function syncLock() { document.documentElement.classList.toggle("lock", !!drawerView || aiOpen || $("#modal").classList.contains("on") || $("#mega").classList.contains("on") || $("#authM").classList.contains("on") || $("#wid").classList.contains("on")); }
+/* while a drawer / modal / sheet is open the page behind it is scroll-locked and inert: Tab and screen readers stay inside the dialog */
+function syncLock() {
+  const on = !!drawerView || aiOpen || $("#modal").classList.contains("on") || $("#mega").classList.contains("on") || $("#authM").classList.contains("on") || $("#wid").classList.contains("on");
+  document.documentElement.classList.toggle("lock", on);
+  for (const id of ["hdr", "app", "foot", "tabbar", "fab", "apiBar"]) { const el = document.getElementById(id); if (el) { if (on) el.setAttribute("inert", ""); else el.removeAttribute("inert"); } }
+}
 function fly(fromEl) {
   if (!motionOK() || !fromEl) return;
   const src = fromEl.closest(".card,.ai-pick,.offer,.mq-item,.line")?.querySelector("img.photo, svg.art") || document.querySelector("#mBox .m-img img.photo");
@@ -2305,7 +2353,7 @@ function card(p) {
   const from = n > 1 ? L("от " + fmt(mp), fmt(mp) + "dan", "from " + fmt(mp)) : fmt(mp);
   return `<article class="card">
     <button class="thumb studio" type="button" data-open="${p.id}" style="--h:${hueOf(p)}" aria-label="${esc(pName(p))}">${art(p)}
-      <span class="badges">${p.hit ? `<span class="badge">${L("Хит", "Xit")}</span>` : ""}${p.isNew ? `<span class="badge new">${L("Новинка", "Yangi")}</span>` : ""}${SERVICE[p.sub] ? `<span class="badge svc">${L("+ установка", "+ o‘rnatish")}</span>` : ""}</span></button>
+      <span class="badges">${p.hit ? `<span class="badge">${L("Хит", "Xit")}</span>` : ""}${p.isNew ? `<span class="badge new">${L("Новинка", "Yangi")}</span>` : ""}${SERVICE[p.sub] && !stage0() ? `<span class="badge svc">${L("+ установка", "+ o‘rnatish")}</span>` : ""}</span></button>
     <button class="fav ${fav ? "on" : ""}" type="button" data-fav="${p.id}" aria-pressed="${fav}" aria-label="${L("В избранное", "Saralanganlarga")}">${ui("heart", 18)}</button>
     <div class="cb">
       <div class="rate">${p.reviews ? `<span class="s">${ui("star", 13)}${p.rating.toFixed(1).replace(".", DEC)}</span><span>${p.reviews} ${L(plural(p.reviews, ["отзыв", "отзыва", "отзывов"]), "sharh", p.reviews === 1 ? "review" : "reviews")}</span>` : `<span>${L("Пока без отзывов", "Hali sharh yo‘q")}</span>`}</div>
@@ -2334,7 +2382,7 @@ function renderHomeLaunch() {
         <p class="lead">${L("Imorat Go запускается: магазины подключаются к площадке, и первые товары с ценами и наличием появятся здесь. Usta AI, 3D-дизайнер комнат, калькуляторы и мастера уже работают.", "Imorat Go ishga tushmoqda: do‘konlar platformaga ulanmoqda, narx va mavjudlik bilan birinchi mahsulotlar shu yerda chiqadi. Usta AI, 3D xona dizayneri, kalkulyatorlar va ustalar allaqachon ishlaydi.")}</p>
         ${apiCfg?.ai ? `<form class="askbar" id="heroAsk">${ui("spark", 20).replace("<svg", '<svg class="sp"')}<label class="visually-hidden" for="heroQ">${L("Вопрос для Usta AI", "Usta AI uchun savol")}</label><input id="heroQ" placeholder="${L("Например: с чего начать ремонт ванной 4 м²?", "Masalan: 4 m² vannaxona ta’mirini nimadan boshlash?")}" autocomplete="off"><button class="btn btn-ai" type="submit">${ui("spark", 16)} <span>${L("Спросить", "So‘rash")}</span></button></form>` : ""}
         <div class="hero-q"><button type="button" data-go="design" class="hq-ds">${ui("spark", 14)} ${L("Спроектировать комнату в 3D", "Xonani 3D da loyihalash")}</button><button type="button" data-go="masters" class="hq-ds">${ui("wrench", 14)} ${L("Найти мастера", "Usta topish")}</button><button type="button" data-go="seller" class="hq-ds">${ui("store", 14)} ${L("Подключить магазин", "Do‘konni ulash")}</button></div>
-        <div class="stats"><div><b class="num">${CATS.length}</b><span>${L("категорий", "toifa")}</span></div><div><b class="num">${STORES.length || "—"}</b><span>${L(plural(STORES.length, ["магазин подключён", "магазина подключено", "магазинов подключено"]), "do‘kon ulangan", STORES.length === 1 ? "store connected" : "stores connected")}</span></div><div><b class="num">${PRODUCTS.length || "—"}</b><span>${L(plural(PRODUCTS.length, ["товар уже в каталоге", "товара уже в каталоге", "товаров уже в каталоге"]), "mahsulot katalogda", PRODUCTS.length === 1 ? "product in the catalog" : "products in the catalog")}</span></div><div><b class="num">40 ${L("мин", "daq")}</b><span>${L("доставка курьером", "kuryer yetkazishi")}</span></div></div>
+        <div class="stats"><div><b class="num">${CATS.length}</b><span>${L("категорий", "toifa")}</span></div><div><b class="num">${STORES.length || "—"}</b><span>${L(plural(STORES.length, ["магазин подключён", "магазина подключено", "магазинов подключено"]), "do‘kon ulangan", STORES.length === 1 ? "store connected" : "stores connected")}</span></div><div><b class="num">${PRODUCTS.length || "—"}</b><span>${L(plural(PRODUCTS.length, ["товар уже в каталоге", "товара уже в каталоге", "товаров уже в каталоге"]), "mahsulot katalogda", PRODUCTS.length === 1 ? "product in the catalog" : "products in the catalog")}</span></div>${storeDelivers() ? `<div><b class="num">0 ${L("сум", "so‘m", "UZS")}</b><span>${L("предоплата", "oldindan to‘lov", "prepayment")}</span></div>` : `<div><b class="num">40 ${L("мин", "daq")}</b><span>${L("доставка курьером", "kuryer yetkazishi")}</span></div>`}</div>
       </div>
       <div class="collage" aria-hidden="true">${tiles.map(c => `<span class="tile studio lt" style="--h:${c.h}"><span class="ico">${ic(c.icon)}</span><span>${L(c.ru, c.uz)}</span></span>`).join("")}</div>
     </section>
@@ -2362,7 +2410,7 @@ function renderHomeLaunch() {
           ${routeMap()}
           <ol><li><span><b>${L("Магазин собирает заказ", "Do‘kon buyurtmani yig‘adi")}</b><span>${L("Подтверждает наличие за 15 минут", "15 daqiqada mavjudligini tasdiqlaydi")}</span></span></li>
           <li><span><b>${storeDelivers() ? L("Магазин привозит сам", "Do‘kon o‘zi olib keladi", "The store delivers itself") : L("Мы вызываем Яндекс", "Yandexni o‘zimiz chaqiramiz")}</b><span>${storeDelivers() ? L("Стоимость доставки назовёт магазин, платите при получении", "Yetkazish narxini do‘kon aytadi, olganda to‘laysiz", "The store names the delivery price, you pay on receipt") : L("Тариф подбирается по общему весу", "Tarif umumiy vaznga qarab tanlanadi")}</span></span></li>
-          <li><span><b>${L("Вы следите за машиной", "Mashinani kuzatasiz")}</b><span>${L("Номер авто и статус в заказе", "Buyurtmada avto raqami va holati")}</span></span></li></ol></div>
+          <li><span><b>${storeDelivers() ? L("Статусы в заказе", "Buyurtmada holatlar", "Statuses in the order") : L("Вы следите за машиной", "Mashinani kuzatasiz")}</b><span>${storeDelivers() ? L("Магазин отмечает сборку, выезд курьера и доставку", "Do‘kon yig‘ish, kuryer chiqishi va yetkazishni belgilaydi", "The store marks packing, courier departure and delivery") : L("Номер авто и статус в заказе", "Buyurtmada avto raqami va holati")}</span></span></li></ol></div>
         <div class="est" id="est">
           <span class="eyebrow">${L("Калькулятор доставки", "Yetkazish kalkulyatori")}</span>
           <h2>${L("Какая машина приедет за вашим заказом?", "Buyurtmangiz uchun qaysi mashina keladi?")}</h2>
@@ -2413,10 +2461,10 @@ function renderHome() {
       <div class="hero-l">
         <span class="eyebrow">${ui("spark", 14)} ${L("Строительные магазины Ташкента + AI-помощник", "Toshkent qurilish do‘konlari + AI yordamchi")}</span>
         <h1 class="h-xl">${L("Ремонт без лишних поездок. <em>Подберём, сравним, привезём.</em>", "Ortiqcha qatnovsiz ta’mir. <em>Tanlaymiz, solishtiramiz, yetkazamiz.</em>")}</h1>
-        <p class="lead">${L("Опишите задачу своими словами — Usta AI посчитает материалы и соберёт корзину из магазинов Ташкента. Курьер или грузовое авто Яндекса привезут всё в один день.", "Vazifani o‘z so‘zingiz bilan yozing — Usta AI materiallarni hisoblaydi va Toshkent do‘konlaridan savat yig‘adi. Yandex kuryeri yoki yuk mashinasi bir kunda olib keladi.")}</p>
+        <p class="lead">${storeDelivers() ? L("Опишите задачу своими словами — Usta AI посчитает материалы и соберёт корзину из магазинов Ташкента. Магазин подтвердит заказ и привезёт его своим курьером, оплата при получении.", "Vazifani o‘z so‘zingiz bilan yozing — Usta AI materiallarni hisoblaydi va Toshkent do‘konlaridan savat yig‘adi. Do‘kon buyurtmani tasdiqlaydi va o‘z kuryeri bilan olib keladi, to‘lov olganda.", "Describe the job in your own words — Usta AI counts the materials and fills a cart from Tashkent stores. The store confirms the order and brings it with its own courier; you pay on receipt.") : L("Опишите задачу своими словами — Usta AI посчитает материалы и соберёт корзину из магазинов Ташкента. Курьер или грузовое авто Яндекса привезут всё в один день.", "Vazifani o‘z so‘zingiz bilan yozing — Usta AI materiallarni hisoblaydi va Toshkent do‘konlaridan savat yig‘adi. Yandex kuryeri yoki yuk mashinasi bir kunda olib keladi.")}</p>
         <form class="askbar" id="heroAsk">${ui("spark", 20).replace("<svg", '<svg class="sp"')}<label class="visually-hidden" for="heroQ">${L("Вопрос для Usta AI", "Usta AI uchun savol")}</label><input id="heroQ" placeholder="${L("Например: штукатурка стен 30 м², что купить?", "Masalan: 30 m² devor suvog‘i uchun nima olish kerak?")}" autocomplete="off"><button class="btn btn-ai" type="submit">${ui("send", 18)}<span>${L("Спросить", "So‘rash")}</span></button></form>
         <div class="hero-q"><button type="button" data-go="design" class="hq-ds">${ui("spark", 14)} ${L("Спроектировать комнату в 3D", "Xonani 3D da loyihalash")}</button><button type="button" data-go="list" class="hq-ds">${ui("camera", 14)} ${L("Список по фото → корзина", "Rasmdagi ro‘yxat → savat")}</button>${asks.map(a => `<button type="button" data-ask="${esc(a)}">${esc(a)}</button>`).join("")}</div>
-        <div class="stats"><div><b class="num">${STORES.length}</b><span>${L("магазинов", "do‘kon")}</span></div><div><b class="num">${PRODUCTS.length}</b><span>${L("товаров", "mahsulot")}</span></div><div><b class="num">${CATS.length}</b><span>${L("категорий", "toifa")}</span></div><div><b class="num">40 ${L("мин", "daq")}</b><span>${L("доставка курьером", "kuryer yetkazishi")}</span></div></div>
+        <div class="stats"><div><b class="num">${STORES.length}</b><span>${L("магазинов", "do‘kon")}</span></div><div><b class="num">${PRODUCTS.length}</b><span>${L("товаров", "mahsulot")}</span></div><div><b class="num">${CATS.length}</b><span>${L("категорий", "toifa")}</span></div>${storeDelivers() ? `<div><b class="num">0 ${L("сум", "so‘m", "UZS")}</b><span>${L("предоплата", "oldindan to‘lov", "prepayment")}</span></div>` : `<div><b class="num">40 ${L("мин", "daq")}</b><span>${L("доставка курьером", "kuryer yetkazishi")}</span></div>`}</div>
       </div>
       <div class="collage" aria-hidden="false">${collage.map(p => `<button class="tile studio" type="button" data-open="${p.id}" style="--h:${hueOf(p)}">${art(p, "", true)}<span>${esc(pName(p))}</span></button>`).join("")}</div>
     </section>
@@ -2432,7 +2480,7 @@ function renderHome() {
     <div class="trust" data-w="trust">
       <div><span class="ti">${ui("truck", 20)}</span><span><b>${storeDelivers() ? L("Доставка магазином", "Do‘kon yetkazib beradi", "Delivery by the store") : L("Яндекс Доставка", "Yandex Yetkazish")}</b><small>${storeDelivers() ? L("Или самовывоз — заберите сами", "Yoki olib ketish — o‘zingiz oling", "Or pick it up yourself") : L("Курьер от 40 минут", "Kuryer 40 daqiqadan")}</small></span></div>
       <div><span class="ti">${ui("store", 20)}</span><span><b>${storesTxt()}</b><small>${L("Сравнение в карточке", "Kartochkada solishtirish")}</small></span></div>
-      <div><span class="ti">${ui("wallet", 20)}</span><span><b>${L("Оплата картой", "Karta bilan to‘lov", "Card payment")}</b><small>${L("Товар и доставка одним платежом", "Mahsulot va yetkazish bir to‘lovda", "Goods and delivery in one payment")}</small></span></div>
+      <div><span class="ti">${ui("wallet", 20)}</span><span><b>${stage0() ? L("Оплата при получении", "Olganda to‘lov", "Pay on receipt") : L("Оплата картой", "Karta bilan to‘lov", "Card payment")}</b><small>${stage0() ? L("Платите магазину за товары; доставку называет магазин", "Do‘konga mahsulotlar uchun to‘laysiz; yetkazishni do‘kon aytadi", "You pay the store for the goods; the store names the delivery") : L("Товар и доставка одним платежом", "Mahsulot va yetkazish bir to‘lovda", "Goods and delivery in one payment")}</small></span></div>
       <div><span class="ti">${ui("wrench", 20)}</span><span><b>${L("Установка мастером", "Usta o‘rnatadi")}</b><small>${L("Добавьте в корзину вместе с товаром", "Mahsulot bilan savatga qo‘shing")}</small></span></div>
     </div>
     <div class="marquee" data-w="marquee" aria-label="${L("Популярное сейчас", "Hozir ommabop")}"><div class="mq-track">${[0, 1].map(k => PRODUCTS.filter(p => p.hit || p.isNew).concat(PRODUCTS.filter(p => p.key && !p.hit).slice(0, 8)).map(p => `<button class="mq-item" type="button" data-open="${p.id}" ${k ? 'tabindex="-1" aria-hidden="true"' : ""}>${mini(p)}${esc(pName(p))} <b>${fmt(minPrice(p))}</b></button>`).join("")).join("")}</div></div>
@@ -2447,7 +2495,7 @@ function renderHome() {
     ${mastersTeaser()}
 
     <section class="sec" id="bundles" data-w="bundles">
-      <div class="sec-head"><div><h2 class="h-l">${L("Комплекты под ключ", "Tayyor to‘plamlar")}</h2><p>${L("Всё для типовой задачи одной кнопкой, на 5% дешевле", "Oddiy vazifa uchun hammasi bir tugmada, 5% arzonroq")}</p></div></div>
+      <div class="sec-head"><div><h2 class="h-l">${L("Комплекты под ключ", "Tayyor to‘plamlar")}</h2><p>${stage0() ? L("Всё для типовой задачи одной кнопкой", "Oddiy vazifa uchun hammasi bir tugmada", "Everything for a typical job in one tap") : L("Всё для типовой задачи одной кнопкой, на 5% дешевле", "Oddiy vazifa uchun hammasi bir tugmada, 5% arzonroq", "Everything for a typical job in one tap, 5% cheaper")}</p></div></div>
       <div class="bundles rv">${BUNDLES.filter(b => bundleItems(b).length === b.items.length).map(bundleCard).join("")}</div>
     </section>
 
@@ -2464,7 +2512,7 @@ function renderHome() {
           ${routeMap()}
           <ol><li><span><b>${L("Магазин собирает заказ", "Do‘kon buyurtmani yig‘adi")}</b><span>${L("Подтверждает наличие за 15 минут", "15 daqiqada mavjudligini tasdiqlaydi")}</span></span></li>
           <li><span><b>${storeDelivers() ? L("Магазин привозит сам", "Do‘kon o‘zi olib keladi", "The store delivers itself") : L("Мы вызываем Яндекс", "Yandexni o‘zimiz chaqiramiz")}</b><span>${storeDelivers() ? L("Стоимость доставки назовёт магазин, платите при получении", "Yetkazish narxini do‘kon aytadi, olganda to‘laysiz", "The store names the delivery price, you pay on receipt") : L("Тариф подбирается по общему весу", "Tarif umumiy vaznga qarab tanlanadi")}</span></span></li>
-          <li><span><b>${L("Вы следите за машиной", "Mashinani kuzatasiz")}</b><span>${L("Номер авто и статус в заказе", "Buyurtmada avto raqami va holati")}</span></span></li></ol></div>
+          <li><span><b>${storeDelivers() ? L("Статусы в заказе", "Buyurtmada holatlar", "Statuses in the order") : L("Вы следите за машиной", "Mashinani kuzatasiz")}</b><span>${storeDelivers() ? L("Магазин отмечает сборку, выезд курьера и доставку", "Do‘kon yig‘ish, kuryer chiqishi va yetkazishni belgilaydi", "The store marks packing, courier departure and delivery") : L("Номер авто и статус в заказе", "Buyurtmada avto raqami va holati")}</span></span></li></ol></div>
         <div class="est" id="est">
           <span class="eyebrow">${L("Калькулятор доставки", "Yetkazish kalkulyatori")}</span>
           <h2>${L("Какая машина приедет за вашим заказом?", "Buyurtmangiz uchun qaysi mashina keladi?")}</h2>
@@ -2490,15 +2538,15 @@ function renderHome() {
 
     <section class="sec" id="calc" data-w="calc">
       <div class="sec-head"><div><h2 class="h-l">${L("Калькуляторы ремонта", "Ta’mir kalkulyatorlari")}</h2><p>${L("Посчитайте материалы и сразу добавьте в корзину", "Materiallarni hisoblang va darhol savatga qo‘shing")}</p></div></div>
-      ${isPhone() ? `<div class="calc-chips rv">${CALCS.slice(0, 8).map(c => `<button type="button" class="chip" data-act="w-calc" data-calc="${c.id}">${ui(c.icon || "calc", 16)} ${esc(L(c.ru, c.uz, c.en))}</button>`).join("")}<button type="button" class="chip more" data-act="w-calc">${L(`Все ${CALCS.length}`, `Barcha ${CALCS.length}`, `All ${CALCS.length}`)} ${ui("chev", 14)}</button></div>`
+      ${isPhone() ? `<div class="calc-chips rv">${CALCS.slice(0, 8).map(c => `<button type="button" class="chip" data-act="w-calc" data-wcalc-id="${c.id}">${ic(c.icon || "calc")} ${esc(L(c.ru, c.uz, c.en))}</button>`).join("")}<button type="button" class="chip more" data-act="w-calc">${L(`Все ${CALCS.length}`, `Barcha ${CALCS.length}`, `All ${CALCS.length}`)} ${ui("chev", 14)}</button></div>`
       : `<div class="calcs rv">${["basement", "tile", "paint"].map(id => calcCard(CALCS.find(c => c.id === id), "h")).join("")}</div>
       <div class="calc-more"><button class="btn btn-line" type="button" data-act="w-calc">${ui("calc", 18)} ${L(`Все ${CALCS.length} калькуляторов в виджете`, `Vidjetda barcha ${CALCS.length} ta kalkulyator`, `All ${CALCS.length} calculators in the widget`)}</button></div>`}
     </section>
 
-    <section class="sec rv" id="vip" data-w="vip">${vipBlock()}</section>
+    ${storeDelivers() ? "" : `<section class="sec rv" id="vip" data-w="vip">${vipBlock()}</section>`}
 
     <section class="sec" id="stores" data-w="stores">
-      <div class="sec-head"><div><h2 class="h-l">${L("Магазины-партнёры", "Hamkor do‘konlar")}</h2><p>${L("Курьер забирает заказ прямо со склада магазина", "Kuryer buyurtmani do‘kon omboridan oladi")}</p></div></div>
+      <div class="sec-head"><div><h2 class="h-l">${L("Магазины-партнёры", "Hamkor do‘konlar")}</h2><p>${storeDelivers() ? L("Магазин собирает заказ и привозит его своим курьером", "Do‘kon buyurtmani yig‘adi va o‘z kuryeri bilan olib keladi", "The store packs the order and brings it with its own courier") : L("Курьер забирает заказ прямо со склада магазина", "Kuryer buyurtmani do‘kon omboridan oladi")}</p></div></div>
       <div class="stores rv">${STORES.map(s => { const n = PRODUCTS.filter(p => p.offers.some(o => o.store === s.id)).length; if (!n) return ""; return `<div class="store"><span class="av">${esc(s.name.slice(0, 1))}</span><div><button type="button" class="slink" data-go="store-${s.id}"><b>${esc(s.name)}${isVerified(s) ? ` <span class="vmini">${ui("shield", 12)}</span>` : ""}</b></button><span class="m">${dName(s.d)}, ${esc(L(s.addr, s.addrUz))}</span><br><span class="m">${L(s.ru, s.uz)}</span>${ratingHTML(s, true)}<div class="r"><span class="pill ${openState(s).open ? "ok" : "closed"}">${openState(s).text}</span><button class="link" type="button" data-store="${s.id}">${n} ${L(plural(n, ["товар", "товара", "товаров"]), "mahsulot", n === 1 ? "product" : "products")} ${ui("chev", 14)}</button></div></div></div>`; }).join("")}</div>
       ${STORES.length > 5 ? `<div class="stores-more"><button class="btn btn-line" type="button" data-act="stores-all">${L(`Все ${STORES.length} магазинов`, `Barcha ${STORES.length} do‘kon`, `All ${STORES.length} stores`)}</button></div>` : ""}
     </section>
@@ -2519,10 +2567,10 @@ function renderHome() {
 }
 function bundleCard(b) {
   const items = bundleItems(b), sum = bundleSum(b), on = bundlesOn.includes(b.id) && items.every(([p, q]) => qtyOf(p.id) >= q);
-  return `<article class="bundle"><div class="bimg">${items.slice(0, 3).map(([p]) => `<div class="studio" style="--h:${hueOf(p)}">${art(p)}</div>`).join("")}<span class="off">−5%</span></div>
+  return `<article class="bundle"><div class="bimg">${items.slice(0, 3).map(([p]) => `<div class="studio" style="--h:${hueOf(p)}">${art(p)}</div>`).join("")}${stage0() ? "" : `<span class="off">−5%</span>`}</div>
     <div class="bb"><b>${L(b.ru, b.uz)}</b><span style="font-size:13px;color:var(--muted)">${L(b.sru, b.suz)}</span>
       <ul>${items.slice(0, 4).map(([p, q]) => `<li>${esc(pName(p))} × ${q}</li>`).join("")}${items.length > 4 ? `<li>${L("и ещё", "yana")} ${items.length - 4}…</li>` : ""}</ul>
-      <div class="bp"><s class="num">${fmt(sum)}</s><b>${fmt(sum * (1 - BUNDLE_OFF))}</b></div>
+      <div class="bp">${stage0() ? `<b>${fmt(sum)}</b>` : `<s class="num">${fmt(sum)}</s><b>${fmt(sum * (1 - BUNDLE_OFF))}</b>`}</div>
       <button class="btn ${on ? "btn-line" : "btn-primary"}" type="button" data-bundle="${b.id}">${on ? ui("check", 18) + L(" В корзине", " Savatda") : ui("cart", 18) + L(" Добавить комплект", " To‘plamni qo‘shish")}</button></div></article>`;
 }
 let routeN = 0;
@@ -2550,7 +2598,8 @@ function updateEstimator(pre = "") {
   const t = pickTariff(kg), dist = km("chil", district);
   const price = round(t.base + t.perKm * dist);
   $p("estKg").textContent = fmtKg(kg);
-  $p("estOut").innerHTML = `<span class="veh">${ui(t.icon, 28)}</span><div><b>${tName(t)}</b><small>${t.veh} · ${L("до", "")} ${fmtN(t.maxKg)} ${L("кг", "kg gacha")} · ${etaStr(t)}</small></div><div class="p num">${fmt(price)}<small>${L("≈ оценка", "≈ taxminan")}</small></div>`;
+  $p("estOut").innerHTML = `<span class="veh">${ui(t.icon, 28)}</span><div><b>${tName(t)}</b><small>${t.veh} · ${L("до", "")} ${fmtN(t.maxKg)} ${L("кг", "kg gacha")}${storeDelivers() ? "" : " · " + etaStr(t)}</small></div>${storeDelivers() ? `<div class="p" style="font-size:13px;font-weight:600">${L("цену назовёт магазин", "narxni do‘kon aytadi", "the store names the price")}</div>` : `<div class="p num">${fmt(price)}<small>${L("≈ оценка", "≈ taxminan")}</small></div>`}`;
+  if (storeDelivers()) { $p("estNote").textContent = L("Такая машина нужна для заказа этого веса. Доставку выполняет магазин своим транспортом и называет её стоимость при подтверждении заказа; платите при получении.", "Bu vazndagi buyurtma uchun shunday mashina kerak. Yetkazishni do‘kon o‘z transporti bilan bajaradi va narxini buyurtmani tasdiqlashda aytadi; olganda to‘laysiz.", "An order of this weight needs this vehicle. The store delivers with its own transport and names the price when it confirms the order; you pay on receipt."); return; }
   $p("estNote").textContent = L(`Пример: из Usta Market (Чиланзар) в ${DIST[district].ru} р-н, ~${dist.toFixed(1).replace(".", DEC)} км. Точную цену в рабочей версии вернёт Яндекс Доставка.`, `Misol: Usta Market (Chilonzor)dan ${DIST[district].uz} tumaniga, ~${dist.toFixed(1)} km. Ishchi versiyada aniq narxni Yandex qaytaradi.`, `Example: from Usta Market (Chilanzar) to ${L(DIST[district].ru, DIST[district].uz)} district, ~${dist.toFixed(1)} km. In the production version Yandex Delivery will return the exact price.`);
 }
 function vipBlock() {
@@ -2708,7 +2757,9 @@ function renderCatalog() {
   const c = route.cat ? CAT[route.cat] : null;
   const base = PRODUCTS.filter(p => !c || p.cat === c.id);
   const maxP = Math.max(...base.map(minPrice), 1000);
-  if (!f.max || f.max > maxP || f.maxFor !== (route.cat || "all")) { f.max = maxP; f.maxFor = route.cat || "all"; }
+  // the price cap follows the catalogue while the person has not touched it (an empty catalogue before the server answered must not pin it at 1 000)
+  const maxKey = route.cat || "all";
+  if (!f.max || f.max > maxP || f.maxFor !== maxKey || (f.max === f.maxAuto && f.maxAuto !== maxP)) { f.max = maxP; f.maxAuto = maxP; f.maxFor = maxKey; }
   const storesHere = STORES.filter(s => base.some(p => p.offers.some(o => o.store === s.id)));
   const open = window.innerWidth > 860;
   $("#app").innerHTML = `<div class="wrap">
@@ -2804,7 +2855,7 @@ function openProduct(id) {
       <div><h3 class="h-m" style="margin-bottom:10px">${L("Цены в магазинах", "Do‘konlardagi narxlar")}</h3>
       <div class="offers">${offers.map((o, i) => { const s = STORE[o.store], st = stockOf(p, o.store); return `<div class="offer ${i === 0 && offers.length > 1 ? "best" : ""}"><div><button type="button" class="slink" data-go="store-${s.id}"><b>${esc(s.name)}</b>${isVerified(s) ? ` <span class="vmini" title="${L("Проверенный магазин", "Tekshirilgan do‘kon")}">${ui("shield", 12)}</span>` : ""}</button><small>${dName(s.d)} · ${openState(s).text}</small><small>${ratingHTML(s)}</small>${i === 0 && offers.length > 1 ? `<small style="color:var(--accent);font-weight:600">${L("Лучшая цена", "Eng yaxshi narx")}</small>` : ""}</div><div style="display:grid;justify-items:end;gap:4px"><span class="pr">${fmt(o.price)}</span>${stockTxt(st)}</div><button class="btn btn-primary" type="button" data-addo="${p.id}|${o.store}">${L("В корзину", "Savatga")}</button>${freshHTML(o.upd, "offer-fresh")}</div>`; }).join("")}</div></div>
       ${stockWatchHTML(p)}
-      ${svc ? `<label class="infobox" for="svcChk">${ui("wrench", 20)}<span><b>${L("Установка мастером", "Usta o‘rnatishi")}</b><small>${fmt(svc)} ${L("за", "har")} ${unitAcc(p.unit)} · ${L("мастер приедет после доставки", "usta yetkazilgandan keyin keladi")}</small></span><span class="check"><input type="checkbox" id="svcChk" data-svc="${p.id}" ${svcOn ? "checked" : ""}></span></label>` : ""}
+      ${svc && !stage0() ? `<label class="infobox" for="svcChk">${ui("wrench", 20)}<span><b>${L("Установка мастером", "Usta o‘rnatishi")}</b><small>${fmt(svc)} ${L("за", "har")} ${unitAcc(p.unit)} · ${L("мастер приедет после доставки", "usta yetkazilgandan keyin keladi")}</small></span><span class="check"><input type="checkbox" id="svcChk" data-svc="${p.id}" ${svcOn ? "checked" : ""}></span></label>` : ""}
       ${SUB_SPEC[p.sub] ? `<button class="infobox lnkbox" type="button" data-mfind="${SUB_SPEC[p.sub]}">${ui("wrench", 20)}<span><b>${L("Найти мастера", "Usta topish")}: ${esc(mSpecName(SUB_SPEC[p.sub]).toLowerCase())}</b><small>${L("С отзывами покупателей, в вашем районе", "Xaridorlar sharhlari bilan, tumaningizda")}</small></span>${ui("chev", 16)}</button>` : ""}
       <div class="infobox">${ui(t.icon, 20)}<span><b>${storeDelivers() ? L("Доставка магазином в", "Do‘kon yetkazadi:", "Store delivery to") : L("Доставка Яндекс в", "Yandex yetkazish:")} ${dName(district)}</b><small>${storeDelivers() ? `${tName(t)} · ${L("цену доставки назовёт магазин", "yetkazish narxini do‘kon aytadi", "the store names the delivery price")}` : `${tName(t)} · ${fromP(round(t.base + t.perKm * dist))} · ${etaStr(t)}${vip ? " · VIP" : ""}`}</small></span></div>
       ${TIER_CATS.includes(p.cat) ? `<div class="infobox">${ui("store", 20)}<span style="flex:1"><b>${L("Оптом дешевле — для мастеров и прорабов", "Ulgurji arzonroq — ustalar va prorablar uchun")}</b><span class="tier"><span class="on">${L("1–9", "1–9")}<b>${fmt(mp)}</b></span><span>${L("от 10", "10 dan")}<b>${fmt(round(mp * .97))}</b></span><span>${L("от 50", "50 dan")}<b>${fmt(round(mp * .94))}</b></span></span></span></div>` : ""}
@@ -2932,12 +2983,12 @@ function dCart() {
     ${g.lines.map(l => `<div class="line">${mini(l.p)}<div class="nm"><button type="button" data-open="${l.p.id}" style="text-align:left">${esc(pName(l.p))}</button><small>${fmt(l.price)} · ${unitName(l.p.unit)}${l.tier ? ` · <span class="ws">${L("опт", "ulgurji")} −${Math.round(l.tier * 100)}%</span>` : ""}</small></div>
       <div class="rt"><div class="qty"><button type="button" data-dec="${l.k}" aria-label="${L("Меньше", "Kamroq")}">−</button><span>${l.q}</span><button type="button" data-inc="${l.k}" aria-label="${L("Больше", "Ko‘proq")}">+</button></div><b class="num" style="font-size:14px">${fmt(l.price * l.q)}</b></div></div>`).join("")}
   </div>`; }).join("") +
-  (sv.length ? `<div><div class="gh"><span><b>${L("Услуги мастеров", "Usta xizmatlari")}</b></span></div>${sv.map(s => `<div class="line"><span class="svc-ico">${ui("wrench", 22)}</span><div class="nm">${L("Установка", "O‘rnatish")}: ${esc(pName(s.p))}<small>${fmt(s.price)} × ${s.q}</small></div><div class="rt"><b class="num" style="font-size:14px">${fmt(s.price * s.q)}</b><button class="link" type="button" data-svcoff="${s.p.id}" style="font-size:12px;color:var(--muted)">${L("Убрать", "Olib tashlash")}</button></div></div>`).join("")}</div>` : "") +
+  (sv.length && !stage0() ? `<div><div class="gh"><span><b>${L("Услуги мастеров", "Usta xizmatlari")}</b></span></div>${sv.map(s => `<div class="line"><span class="svc-ico">${ui("wrench", 22)}</span><div class="nm">${L("Установка", "O‘rnatish")}: ${esc(pName(s.p))}<small>${fmt(s.price)} × ${s.q}</small></div><div class="rt"><b class="num" style="font-size:14px">${fmt(s.price * s.q)}</b><button class="link" type="button" data-svcoff="${s.p.id}" style="font-size:12px;color:var(--muted)">${L("Убрать", "Olib tashlash")}</button></div></div>`).join("")}</div>` : "") +
   (gs.length > 1 ? `<div class="note">${storeDelivers() ? L(`Товары из ${gs.length} магазинов приедут ${gs.length} отдельными доставками — каждый магазин привозит своё.`, `${gs.length} ta do‘kondan mahsulotlar ${gs.length} ta alohida yetkazish bilan keladi — har bir do‘kon o‘zinikini olib keladi.`, `Goods from ${gs.length} stores arrive as ${gs.length} separate deliveries — each store brings its own.`) : L(`Товары из ${gs.length} магазинов приедут ${gs.length} отдельными доставками: Яндекс забирает заказ в каждом магазине.`, `${gs.length} ta do‘kondan mahsulotlar ${gs.length} ta alohida yetkazish bilan keladi: Yandex buyurtmani har bir do‘kondan alohida oladi.`, `Products from ${gs.length} stores will arrive as ${gs.length} separate deliveries: Yandex picks up the order at each store.`)}</div>` : "");
-  if (!promoUsed().includes(user ? user.id : "guest") && promo !== "IMORAT5") $("#dBody").insertAdjacentHTML("afterbegin", `<div class="hint-promo">${ui("gift", 16)} <span>${L("Первый заказ? Промокод", "Birinchi buyurtma? Promokod")} <b>IMORAT5</b> ${L("— скидка 5% на товары", "— mahsulotlarga 5% chegirma")}</span></div>`);
+  if (!stage0() && !promoUsed().includes(user ? user.id : "guest") && promo !== "IMORAT5") $("#dBody").insertAdjacentHTML("afterbegin", `<div class="hint-promo">${ui("gift", 16)} <span>${L("Первый заказ? Промокод", "Birinchi buyurtma? Promokod")} <b>IMORAT5</b> ${L("— скидка 5% на товары", "— mahsulotlarga 5% chegirma")}</span></div>`);
   { const ph = cartPlanHTML(); if (ph) $("#dBody").insertAdjacentHTML("afterbegin", ph); }
   $("#dBody").insertAdjacentHTML("beforeend", `<div class="save-proj" id="saveProj" hidden><label class="visually-hidden" for="projName">${L("Название проекта", "Loyiha nomi")}</label><input id="projName" placeholder="${L("Например: Ремонт ванной", "Masalan: Vannaxona ta’miri")}"><button class="btn btn-primary" type="button" data-act="proj-save" style="padding:8px 12px">${L("Сохранить", "Saqlash")}</button></div><button class="lnk" type="button" data-act="proj-open" style="justify-self:start">${ui("folder", 15)} ${L("Сохранить корзину как проект ремонта", "Savatni ta’mir loyihasi sifatida saqlash")}</button>`);
-  const goods = gs.reduce((a, g) => a + g.sum, 0), svc = svcSum(), disc = bundleDisc();
+  const goods = gs.reduce((a, g) => a + g.sum, 0), svc = stage0() ? 0 : svcSum(), disc = stage0() ? 0 : bundleDisc(); // stage 0: the store is paid for goods only
   const est = quote({ mode: form.mode || "yandex", district: form.district || district, when: form.when || "asap", floor: form.floor || "1", lift: false });
   const delMode = (form.mode || "yandex") !== "pickup", byStoreC = delMode && storeDelivers();
   $("#dFoot").innerHTML = totalsHTML(goods, svc, disc) + (delMode ? `<div class="sumrow"><span class="mu">${byStoreC ? L("Доставка магазином", "Do‘kon yetkazadi", "Delivery by the store") : L("Доставка Яндекс", "Yandex yetkazish", "Yandex delivery")} <small>· ${esc(dName(form.district || district))}${est.ships.length > 1 ? ` · ${est.ships.length} ${L(plural(est.ships.length, ["магазин", "магазина", "магазинов"]), "do‘kon", "stores")}` : ""}</small></span>${byStoreC ? `<span class="mu" style="font-size:13px">${L("уточнит магазин", "do‘kon aniqlaydi", "the store will confirm")}</span>` : `<span class="num">${est.del ? "≈ " + fmt(est.del) : L("Бесплатно", "Bepul", "Free")}</span>`}</div>` : "") +
@@ -2968,14 +3019,21 @@ function quote(d) {
     const price = round(p) + (d.when === "vip" && !vip ? VIP_HOUR_FEE : 0);
     return { g, t, dist, price, full };
   });
-  const goods = gs.reduce((a, g) => a + g.sum, 0), del = ships.reduce((a, s) => a + (s.price || 0), 0), svc = svcSum(), disc = bundleDisc();
-  const pd = promoDisc(goods);
-  const pts = d.usePts && bonusOn() ? Math.max(0, Math.min(bonusBalance(), Math.floor(goods * bonusCfg().maxShare))) : 0;
-  return { ships, goods, del, svc, disc, pd, pts, total: goods + del + svc - disc - pd - pts, cash: vip && bonusOn() ? Math.round(goods * bonusCfg().rateVip) : 0 };
+  // the buyer pays the store directly (stage 0 / cash on pickup): no promo, bundle discount, points, cashback or installation —
+  // the platform sees no money to finance them with (the server's quote does the same, so the totals agree)
+  const atStore = payAtStore(d);
+  const goods = gs.reduce((a, g) => a + g.sum, 0), del = ships.reduce((a, s) => a + (s.price || 0), 0), svc = atStore ? 0 : svcSum(), disc = atStore ? 0 : bundleDisc();
+  const pd = atStore ? 0 : promoDisc(goods);
+  const pts = !atStore && d.usePts && bonusOn() ? Math.max(0, Math.min(bonusBalance(), Math.floor(goods * bonusCfg().maxShare))) : 0;
+  return { ships, goods, del, svc, disc, pd, pts, total: goods + del + svc - disc - pd - pts, cash: vip && bonusOn() && !atStore ? Math.round(goods * bonusCfg().rateVip) : 0, pay_at_store: atStore };
 }
 /* Payment rules: delivery → card on the site only (the courier takes no money); pickup → card or cash at the store */
 /* Every order is paid by card on the site — goods and delivery in one amount; neither the courier nor the store takes money.
    ALLOW_PAY_AT_STORE on the server (apiCfg.pay_at_store) re-enables "pay the store on pickup" for special cases. */
+/* the pay-at-store note follows the delivery mode (it is re-read when the mode switch changes) */
+function storePayText(d) {
+  return stage0() && d.mode !== "pickup" ? L("Магазин подтвердит заказ, назовёт стоимость доставки и привезёт своим курьером; платите при получении. Если магазин не подтвердит вовремя — заказ отменится автоматически.", "Do‘kon buyurtmani tasdiqlaydi, yetkazish narxini aytadi va o‘z kuryeri bilan olib keladi; olganda to‘laysiz. Do‘kon o‘z vaqtida tasdiqlamasa — buyurtma avtomatik bekor bo‘ladi.", "The store confirms the order, names the delivery price and brings it with its own courier; you pay on receipt. If the store does not confirm in time, the order is cancelled automatically.") : L("Оплата наличными в магазине при получении. Магазин подтвердит заказ и соберёт его к вашему приходу; если не подтвердит вовремя — заказ отменится автоматически.", "Olganda do‘konda naqd to‘lov. Do‘kon buyurtmani tasdiqlab, kelishingizga yig‘ib qo‘yadi; o‘z vaqtida tasdiqlamasa — buyurtma avtomatik bekor bo‘ladi.", "Cash at the store on pickup. The store confirms the order and packs it for your arrival; if it does not confirm in time, the order cancels automatically.");
+}
 function payOptions(d) {
   const cardNames = { click: L("Картой · Click", "Karta · Click", "Card · Click"), payme: L("Картой · Payme", "Karta · Payme", "Card · Payme"), uzum: L("Картой · Uzum", "Karta · Uzum", "Card · Uzum") };
   if (stage0()) return [["store", d.mode === "pickup" ? L("При получении в магазине", "Do‘konda olganda", "On pickup at the store") : L("При получении — курьеру магазина", "Olganda — do‘kon kuryeriga", "On receipt — to the store's courier")]];
@@ -3016,10 +3074,10 @@ function dCheckout() {
         <label class="opt"><input type="radio" name="help" value="one" ${d.help === "one" ? "checked" : ""}><span><b>${L("Курьер поможет спустить и занести", "Kuryer tushirib, olib kirishga yordam beradi", "The courier helps unload and carry it in")}</b><small>${storeDelivers() ? L("Попросим магазин: сможет ли курьер занести и сколько это стоит — уточнит при подтверждении", "Do‘kondan so‘raymiz: kuryer olib kira oladimi va narxi qancha — tasdiqlashda aytadi", "We ask the store: whether the courier can carry it in and the price — confirmed with the order") : L("Донесёт до двери и поднимет на этаж", "Eshikkacha olib keladi va qavatga ko‘taradi", "Carries it to the door and up the stairs")}</small></span><span class="tag" data-help-tag="one"></span></label>
       </div>${API && apiCfg?.yandex ? `<small class="mu" style="display:block;margin-top:6px">${L("Грузчика подтверждает перевозчик при назначении машины. Если на ваш рейс его не окажется, мы сразу сообщим, курьер привезёт заказ к подъезду, а плату за помощь вернём.", "Yuk tashuvchini mashina tayinlanganda tashuvchi tasdiqlaydi. Reysingizga topilmasa, darhol xabar beramiz, kuryer buyurtmani kirishgacha olib keladi, yordam haqini qaytaramiz.", "The carrier confirms the loader when a car is assigned. If none is available for your trip we tell you at once, the courier brings the order to the entrance and the help fee is refunded.")}</small>` : ""}</div>
       <div class="opts">
-        <label class="opt"><input type="radio" name="when" value="asap" ${d.when === "asap" ? "checked" : ""}><span><b>${L("Как можно скорее", "Imkon qadar tez")}</b><small>${L("Ищем исполнителя сразу после оплаты", "To‘lovdan so‘ng darhol ijrochi qidiramiz")}</small></span><span></span></label>
-        <label class="opt"><input type="radio" name="when" value="slot" ${d.when === "slot" ? "checked" : ""}><span><b>${L("Завтра, 10:00–14:00", "Ertaga, 10:00–14:00")}</b><small>${L("Скидка 10% на доставку", "Yetkazishga 10% chegirma")}</small></span><span class="tag">−10%</span></label>
+        <label class="opt"><input type="radio" name="when" value="asap" ${d.when === "asap" || storeDelivers() ? "checked" : ""}><span><b>${L("Как можно скорее", "Imkon qadar tez")}</b><small>${storeDelivers() ? L("Магазин привезёт после сборки и назовёт время", "Do‘kon yig‘ib bo‘lgach olib keladi va vaqtni aytadi", "The store delivers after packing and names the time") : L("Ищем исполнителя сразу после оплаты", "To‘lovdan so‘ng darhol ijrochi qidiramiz")}</small></span><span></span></label>
+        ${storeDelivers() ? `<p class="fine" style="margin:4px 0 0">${L("Удобное время можно написать в комментарии к заказу — магазин постарается его учесть.", "Qulay vaqtni buyurtma izohida yozishingiz mumkin — do‘kon hisobga olishga harakat qiladi.", "Write a convenient time in the order comment — the store will try to meet it.")}</p>` : `<label class="opt"><input type="radio" name="when" value="slot" ${d.when === "slot" ? "checked" : ""}><span><b>${L("Завтра, 10:00–14:00", "Ertaga, 10:00–14:00")}</b><small>${L("Скидка 10% на доставку", "Yetkazishga 10% chegirma")}</small></span><span class="tag">−10%</span></label>
         <label class="opt vipopt"><input type="radio" name="when" value="vip" ${d.when === "vip" ? "checked" : ""}><span><b>${L("Точный час", "Aniq soat")}</b><small>${L("Курьер приедет в выбранный часовой интервал", "Kuryer tanlangan soatda keladi")}</small>
-          <select class="sel" name="hour" id="fHour" style="margin-top:8px" aria-label="${L("Час доставки", "Yetkazish soati")}">${hours.map(h => `<option value="${h}" ${h === d.hour ? "selected" : ""}>${L("Завтра", "Ertaga")} ${h}:00–${String(+h + 1).padStart(2, "0")}:00</option>`).join("")}</select></span><span class="tag">${vip ? L("входит в VIP", "VIPga kiradi") : "+" + fmt(VIP_HOUR_FEE)}</span></label>
+          <select class="sel" name="hour" id="fHour" style="margin-top:8px" aria-label="${L("Час доставки", "Yetkazish soati")}">${hours.map(h => `<option value="${h}" ${h === d.hour ? "selected" : ""}>${L("Завтра", "Ertaga")} ${h}:00–${String(+h + 1).padStart(2, "0")}:00</option>`).join("")}</select></span><span class="tag">${vip ? L("входит в VIP", "VIPga kiradi") : "+" + fmt(VIP_HOUR_FEE)}</span></label>`}
       </div>
     </fieldset>
     <fieldset><legend>${L("Оплата", "To‘lov")}</legend>
@@ -3027,12 +3085,13 @@ function dCheckout() {
       <div class="pay" id="payOpts">${payOptions(d).map(([val, n]) => `<label><input type="radio" name="pay" value="${val}" ${d.pay === val ? "checked" : ""}>${n}</label>`).join("")}</div>
       <p class="mu" id="payRule" style="font-size:13px;margin:0">${stage0() ? L("Оплата при получении — наличными или переводом магазину. Imorat Go деньги не принимает и комиссию с этого заказа не берёт.", "To‘lov olganda — naqd yoki do‘konga o‘tkazma. Imorat Go pul qabul qilmaydi va bu buyurtmadan komissiya olmaydi.", "Payment on receipt — cash or a transfer to the store. Imorat Go takes no money and no commission on this order.") : L("Оплата картой на сайте одной суммой — товар и доставка. Курьеру и магазину ничего платить не нужно; при отмене деньги возвращаются на карту.", "Saytda karta bilan bitta summa to‘lanadi — mahsulot va yetkazish. Kuryer va do‘konga hech narsa to‘lash shart emas; bekor qilinsa pul kartaga qaytadi.", "Pay by card on the site in one amount — goods and delivery. Nothing to pay the courier or the store; if cancelled, the money returns to your card.")}</p>
       <div class="note" id="cardPayNote" hidden>${ui("wallet", 14)} ${L("Списываем всю сумму сразу — товары и доставку. Курьеру и магазину ничего доплачивать не нужно. Магазин получит заказ, как только пройдёт оплата; не оплаченный за 30 минут заказ отменится сам.", "Butun summani — mahsulot va yetkazishni — birdan yechamiz. Kuryerga va do‘konga qo‘shimcha to‘lash shart emas. To‘lov o‘tishi bilan do‘kon buyurtmani oladi; 30 daqiqada to‘lanmagan buyurtma o‘zi bekor bo‘ladi.", "The whole amount — goods and delivery — is charged at once. Nothing to pay the courier or the store. The store receives the order as soon as the payment goes through; an order unpaid for 30 minutes cancels itself.")}</div>
-      <div class="note" id="storePayNote" hidden>${ui("store", 14)} ${stage0() && d.mode !== "pickup" ? L("Магазин подтвердит заказ, назовёт стоимость доставки и привезёт своим курьером; платите при получении. Если магазин не подтвердит вовремя — заказ отменится автоматически.", "Do‘kon buyurtmani tasdiqlaydi, yetkazish narxini aytadi va o‘z kuryeri bilan olib keladi; olganda to‘laysiz. Do‘kon o‘z vaqtida tasdiqlamasa — buyurtma avtomatik bekor bo‘ladi.", "The store confirms the order, names the delivery price and brings it with its own courier; you pay on receipt. If the store does not confirm in time, the order is cancelled automatically.") : L("Оплата наличными в магазине при получении. Магазин подтвердит заказ и соберёт его к вашему приходу; если не подтвердит вовремя — заказ отменится автоматически.", "Olganda do‘konda naqd to‘lov. Do‘kon buyurtmani tasdiqlab, kelishingizga yig‘ib qo‘yadi; o‘z vaqtida tasdiqlamasa — buyurtma avtomatik bekor bo‘ladi.", "Cash at the store on pickup. The store confirms the order and packs it for your arrival; if it does not confirm in time, the order cancels automatically.")}</div>
-      ${bonusOn() && bonusBalance() > 0 ? `<label class="check"><input type="checkbox" id="fPts" name="usePts" ${d.usePts ? "checked" : ""}><span>${ui("gift", 15)} ${L(`Оплатить бонусами — у вас ${fmtN(bonusBalance())}`, `Bonus bilan to‘lash — sizda ${fmtN(bonusBalance())}`, `Pay with points — you have ${fmtN(bonusBalance())}`)} <small class="mu">${L(`(до ${Math.round(bonusCfg().maxShare * 100)}% стоимости товаров)`, `(mahsulotlar narxining ${Math.round(bonusCfg().maxShare * 100)}% gacha)`, `(up to ${Math.round(bonusCfg().maxShare * 100)}% of the product total)`)}</small></span></label>` : ""}
-      <div class="f"><label for="fPromo">${L("Промокод", "Promokod")}</label><div class="promo-row"><input id="fPromo" value="${esc(promo)}" placeholder="IMORAT5" autocomplete="off" autocapitalize="characters"><button class="btn btn-line" type="button" data-act="promo">${L("Применить", "Qo‘llash")}</button></div><span class="promo-msg" id="promoMsg"></span></div>
+      <div class="note" id="storePayNote" hidden>${ui("store", 14)} <span id="storePayTxt">${storePayText(d)}</span></div>
+      ${payAtStore(d) ? `<p class="fine" id="atStoreNote">${L("При оплате магазину напрямую промокоды, бонусы, скидки за комплекты и установка не применяются — вы платите магазину ровно за товары.", "Do‘konga to‘g‘ridan-to‘g‘ri to‘laganda promokodlar, bonuslar, to‘plam chegirmalari va o‘rnatish qo‘llanilmaydi — do‘konga faqat mahsulotlar uchun to‘laysiz.", "When you pay the store directly, promo codes, points, kit discounts and installation do not apply — you pay the store for the goods only.")}</p>` : ""}
+      ${!payAtStore(d) && bonusOn() && bonusBalance() > 0 ? `<label class="check"><input type="checkbox" id="fPts" name="usePts" ${d.usePts ? "checked" : ""}><span>${ui("gift", 15)} ${L(`Оплатить бонусами — у вас ${fmtN(bonusBalance())}`, `Bonus bilan to‘lash — sizda ${fmtN(bonusBalance())}`, `Pay with points — you have ${fmtN(bonusBalance())}`)} <small class="mu">${L(`(до ${Math.round(bonusCfg().maxShare * 100)}% стоимости товаров)`, `(mahsulotlar narxining ${Math.round(bonusCfg().maxShare * 100)}% gacha)`, `(up to ${Math.round(bonusCfg().maxShare * 100)}% of the product total)`)}</small></span></label>` : ""}
+      ${payAtStore(d) ? "" : `<div class="f"><label for="fPromo">${L("Промокод", "Promokod")}</label><div class="promo-row"><input id="fPromo" value="${esc(promo)}" placeholder="IMORAT5" autocomplete="off" autocapitalize="characters"><button class="btn btn-line" type="button" data-act="promo">${L("Применить", "Qo‘llash")}</button></div><span class="promo-msg" id="promoMsg"></span></div>`}
       <div class="f"><label for="fComment">${L("Комментарий курьеру", "Kuryerga izoh")}</label><textarea id="fComment" name="comment" rows="2" placeholder="${L("Позвоните за 10 минут", "10 daqiqa oldin qo‘ng‘iroq qiling")}">${esc(d.comment)}</textarea></div>
     </fieldset>
-    ${vip ? "" : `<div class="note vipn">${ui("crown", 14)} <b>Imorat Go VIP</b> — ${L("бесплатная доставка курьером от 500 000 сум, грузовой −50%, точный час без доплаты.", "500 000 so‘mdan kuryer bepul, yuk mashinasi −50%, aniq soat qo‘shimcha to‘lovsiz.")} <button type="button" class="link" data-act="vip-on">${L("Подключить", "Ulash")}</button></div>`}
+    ${vip || storeDelivers() ? "" : `<div class="note vipn">${ui("crown", 14)} <b>Imorat Go VIP</b> — ${L("бесплатная доставка курьером от 500 000 сум, грузовой −50%, точный час без доплаты.", "500 000 so‘mdan kuryer bepul, yuk mashinasi −50%, aniq soat qo‘shimcha to‘lovsiz.")} <button type="button" class="link" data-act="vip-on">${L("Подключить", "Ulash")}</button></div>`}
     <div id="shipBox" style="display:grid;gap:8px"></div>
   </form>`;
   $("#dFoot").innerHTML = `<div id="totals" style="display:grid;gap:6px"></div><button class="btn btn-primary" type="submit" form="orderForm" id="payBtn" style="width:100%"></button>`;
@@ -3079,7 +3138,7 @@ function updateQuote() {
     const cargo = qt.ships.some(s => s.t && s.t.id !== "courier"), floors = d.private ? 0 : Math.max(0, (parseInt(d.floor, 10) || 1) - 1);
     const t1 = $('[data-help-tag="one"]'); if (t1) t1.textContent = storeDelivers() ? L("уточнит магазин", "do‘kon aniqlaydi", "store will confirm") : cargo ? "+" + fmt(LOADER * Math.max(1, floors)) : L("входит", "kiradi", "included");
   }
-  const spn = $("#storePayNote"); if (spn) spn.hidden = d.pay !== "store";
+  const spn = $("#storePayNote"); if (spn) { spn.hidden = d.pay !== "store"; const st = $("#storePayTxt"); if (st) st.textContent = storePayText(d); }
   const fe = $("#flatErr"); if (fe && !fe.hidden && (d.private || (String(d.flat || "").trim() && String(d.floor || "").trim()))) fe.hidden = true;
   const cpn = $("#cardPayNote"); if (cpn) cpn.hidden = !(API && (apiCfg?.payments || []).includes(d.pay));
   const byStoreQ = d.mode !== "pickup" && storeDelivers();
@@ -3145,7 +3204,7 @@ function dTrack() {
   const sched = o.d.when === "slot" ? L("Доставка завтра, 10:00–14:00", "Yetkazish ertaga, 10:00–14:00") : o.d.when === "vip" ? `VIP · ${L("завтра", "ertaga")} ${o.d.hour}:00–${String(+o.d.hour + 1).padStart(2, "0")}:00` : "";
   $("#dBody").innerHTML = `${o.api ? `<div class="note">${o.status === "cancelled" ? L("Заказ отменён.", "Buyurtma bekor qilindi.") : (o.d?.delivery_by === "store" || !apiCfg?.yandex ? L("Статусы обновляет магазин — страница обновляется сама.", "Holatlarni do‘kon yangilaydi — sahifa o‘zi yangilanadi.", "The store updates the statuses — the page refreshes by itself.") : L("Статусы обновляют магазин и Яндекс Доставка — страница обновляется сама.", "Holatlarni do‘kon va Yandex yangilaydi — sahifa o‘zi yangilanadi.", "The store and Yandex Delivery update the statuses — the page refreshes by itself."))}</div>` : `<div class="note">${L("Демо: статусы меняются каждые несколько секунд. В рабочей версии их присылает Яндекс Доставка, а клиент получает SMS или уведомление в Yandex Go.", "Demo: holatlar har necha soniyada o‘zgaradi. Ishchi versiyada ularni Yandex yuboradi, mijoz SMS yoki Yandex Go xabarini oladi.")}</div>`}
     ${payExtra(o)}
-    ${sched ? `<div class="note vipn">${ui("clock", 14)} ${sched}. ${L("Поиск курьера начнётся за 90 минут до интервала.", "Kuryer qidiruvi oraliqdan 90 daqiqa oldin boshlanadi.")}</div>` : ""}
+    ${sched && o.d?.delivery_by !== "store" ? `<div class="note vipn">${ui("clock", 14)} ${sched}. ${L("Поиск курьера начнётся за 90 минут до интервала.", "Kuryer qidiruvi oraliqdan 90 daqiqa oldin boshlanadi.")}</div>` : ""}
     ${o.d?.mode !== "pickup" && o.d?.street ? `<div class="addr-line">${ui("pin", 14)} <span>${esc(o.d.street)}${o.d.private ? ", " + L("частный дом", "xususiy uy", "private house") : [o.d.entrance ? L("подъезд ", "kirish ", "entrance ") + esc(o.d.entrance) : "", o.d.flat ? L("кв. ", "xonadon ", "flat ") + esc(o.d.flat) : "", +o.d.floor > 1 ? L("этаж ", "qavat ", "floor ") + esc(o.d.floor) : ""].filter(Boolean).map(x => ", " + x).join("")}<small>${(o.d?.delivery_by === "store" && (o.d.help || (o.d.lift ? "one" : "none")) !== "none" ? L("Просили помочь занести — условия уточнит магазин", "Olib kirishga yordam so‘ralgan — shartlarni do‘kon aniqlaydi", "Help carrying in requested — the store confirms the terms") : HELP_TXT()[o.d.help || (o.d.lift ? "one" : "none")])}</small></span></div>` : ""}
     ${o.ships.map((s, i) => {
       const st = STORE[s.store] || { id: s.store, name: s.store_name || L("Магазин", "Do‘kon", "Store"), d: "chil", addr: s.store_addr || "", addrUz: s.store_addr || "", hours: s.store_hours || "" }, t = TARIFFS.find(x => x.id === s.tariff), steps = STEPS_FOR(o, t), cur = stepOf(o, i, steps.length);
@@ -3224,9 +3283,11 @@ function dHomeSetup() {
       <span class="hw-c"><button class="ib" type="button" data-hw-move="${id}|-1" ${i === 0 ? "disabled" : ""} aria-label="${L("Выше", "Yuqoriga", "Move up")}">${ui("chev", 14).replace("<svg", '<svg style="transform:rotate(-90deg)"')}</button><button class="ib" type="button" data-hw-move="${id}|1" ${i === order.length - 1 ? "disabled" : ""} aria-label="${L("Ниже", "Pastga", "Move down")}">${ui("chev", 14).replace("<svg", '<svg style="transform:rotate(90deg)"')}</button>
       <label class="hw-sw" title="${on ? L("Скрыть", "Yashirish", "Hide") : L("Показать", "Ko‘rsatish", "Show")}"><input type="checkbox" data-hw-on="${id}" ${on ? "checked" : ""} ${w[4] ? "disabled" : ""}><i></i><span class="visually-hidden">${homeName(id)}</span></label></span></div>`; }).join("")}</div>`;
   $("#dFoot").innerHTML = `<div style="display:grid;grid-template-columns:auto 1fr;gap:8px"><button class="btn btn-line" type="button" data-act="home-reset" ${custom ? "" : "disabled"}>${L("Сбросить", "Tiklash", "Reset")}</button><button class="btn btn-dark" type="button" data-act="close-drawer">${L("Готово", "Tayyor", "Done")}</button></div>`;
-  $("#dBody").addEventListener("change", e => { const t = e.target.closest("[data-hw-on]"); if (!t) return; const { order, off } = homeLayout(); const id = t.dataset.hwOn, nOff = t.checked ? off.filter(x => x !== id) : [...new Set([...off, id])]; saveHome(order, nOff); dHomeSetup(); });
-  $("#dBody").addEventListener("click", e => { const t = e.target.closest("[data-hw-move]"); if (!t) return; const [id, d] = t.dataset.hwMove.split("|"), { order, off } = homeLayout(), i = order.indexOf(id), j = i + (+d); if (i < 0 || j < 0 || j >= order.length) return; order.splice(i, 1); order.splice(j, 0, id); saveHome(order, off); dHomeSetup(); const row = $(`.hw[data-hw="${id}"]`); row?.classList.add("moved"); row?.querySelector(`[data-hw-move="${id}|${d}"]`)?.focus(); });
+  // the handlers live on the document (below), registered once: listeners added here would stack on every re-render
 }
+/* home layout editor: one pair of document-level handlers (dHomeSetup re-renders the list after each change) */
+document.addEventListener("change", e => { const t = e.target.closest("[data-hw-on]"); if (!t || drawerView !== "homeSetup") return; const { order, off } = homeLayout(); const id = t.dataset.hwOn, nOff = t.checked ? off.filter(x => x !== id) : [...new Set([...off, id])]; saveHome(order, nOff); dHomeSetup(); });
+document.addEventListener("click", e => { const t = e.target.closest("[data-hw-move]"); if (!t || drawerView !== "homeSetup") return; const [id, d] = t.dataset.hwMove.split("|"), { order, off } = homeLayout(), i = order.indexOf(id), j = i + (+d); if (i < 0 || j < 0 || j >= order.length) return; order.splice(i, 1); order.splice(j, 0, id); saveHome(order, off); dHomeSetup(); const row = $(`.hw[data-hw="${id}"]`); row?.classList.add("moved"); row?.querySelector(`[data-hw-move="${id}|${d}"]`)?.focus(); });
 function dProfile() {
   fetchOrders();
   $("#dTitle").textContent = L("Профиль", "Profil");
@@ -3253,7 +3314,7 @@ function dProfile() {
       <button class="order-row" type="button" data-go="masters" data-mtabgo="mine"><b>${L("Заявки мастерам", "Ustalarga so‘rovlar")}</b>${ui("wrench", 18)}<small>${L("Плиточники, электрики, сантехники", "Kafelchi, elektrik, santexnik")}</small></button>
       <button class="order-row" type="button" data-act="ai"><b>Usta AI</b>${ui("spark", 18)}<small>${L("Подбор материалов и советы", "Material tanlash va maslahatlar")}</small></button>
       <button class="order-row" type="button" data-act="home-setup"><b>${L("Настроить главную", "Bosh sahifani sozlash", "Customize home")}</b>${ui("grid", 18)}<small>${L("Какие блоки показывать и в каком порядке", "Qaysi bloklar va qanday tartibda", "Which blocks to show and in what order")}</small></button>
-      ${user && user.store_id && myStore ? `<button class="order-row" type="button" data-go="seller"><b>${esc(myStore.name)}</b>${ui("store", 18)}<small>${L("Кабинет продавца", "Sotuvchi kabineti")} · ${(ST_STATUS()[myStore.status] || ST_STATUS().pending)[0]}</small></button>` : `<button class="order-row" type="button" data-act="store-reg"><b>${L("Добавить свой магазин", "Do‘konimni qo‘shish")}</b>${ui("store", 18)}<small>${L("Продавайте на Imorat Go: витрина, заказы, доставка Яндекс", "Imorat Go’da soting: vitrina, buyurtmalar, Yandex yetkazish")}</small></button>`}${API ? "" : `<button class="order-row" type="button" data-go="seller"><b>${L("Кабинет продавца", "Sotuvchi kabineti")}</b>${ui("chev", 18)}<small>${L("Для магазинов-партнёров", "Hamkor do‘konlar uchun")}</small></button>`}
+      ${user && user.store_id && myStore ? `<button class="order-row" type="button" data-go="seller"><b>${esc(myStore.name)}</b>${ui("store", 18)}<small>${L("Кабинет продавца", "Sotuvchi kabineti")} · ${(ST_STATUS()[myStore.status] || ST_STATUS().pending)[0]}</small></button>` : `<button class="order-row" type="button" data-act="store-reg"><b>${L("Добавить свой магазин", "Do‘konimni qo‘shish")}</b>${ui("store", 18)}<small>${stage0() ? L("Продавайте на Imorat Go: витрина, заказы онлайн, 0% комиссии", "Imorat Go’da soting: vitrina, onlayn buyurtmalar, 0% komissiya", "Sell on Imorat Go: a storefront, online orders, 0% commission") : L("Продавайте на Imorat Go: витрина, заказы, доставка Яндекс", "Imorat Go’da soting: vitrina, buyurtmalar, Yandex yetkazish")}</small></button>`}${API ? "" : `<button class="order-row" type="button" data-go="seller"><b>${L("Кабинет продавца", "Sotuvchi kabineti")}</b>${ui("chev", 18)}<small>${L("Для магазинов-партнёров", "Hamkor do‘konlar uchun")}</small></button>`}
     </div>`;
   $("#dFoot").innerHTML = `${API && user ? `<div style="display:flex;gap:14px;flex-wrap:wrap"><button class="lnk" type="button" data-act="logout-all" style="font-size:12px;color:var(--muted)">${L("Выйти на всех устройствах", "Barcha qurilmalardan chiqish")}</button><button class="lnk" type="button" data-act="del-account" style="font-size:12px;color:var(--muted)">${L("Удалить аккаунт", "Akkauntni o‘chirish", "Delete account")}</button></div>` : ""}<span style="font-size:12px;color:var(--muted)">${(API ? L("Аккаунт, заказы и магазин хранятся на сервере Imorat Go.", "Akkaunt, buyurtmalar va do‘kon Imorat Go serverida saqlanadi.") : L("Данные этого прототипа хранятся только в вашем браузере.", "Prototip ma’lumotlari faqat brauzeringizda saqlanadi."))}</span>`;
   $("#pDist").addEventListener("change", e => { setDistrict(e.target.value); renderHeader(); });
@@ -3528,7 +3589,7 @@ function pickMapHTML(key = "") {
 }
 function locStatus() {
   const l = auth.loc;
-  if (!l) return `<p class="loc-st" id="locSt" aria-live="polite">${L("Точка пока не выбрана. Покупатели увидят адрес и район, а точная точка помогает курьеру Яндекса быстрее найти магазин.", "Nuqta tanlanmagan. Xaridorlar manzil va tumanni ko‘radi, aniq nuqta esa Yandex kuryeriga do‘konni tezroq topishga yordam beradi.")}</p>`;
+  if (!l) return `<p class="loc-st" id="locSt" aria-live="polite">${storeDelivers() ? L("Точка пока не выбрана. Покупатели увидят адрес и район, а точная точка нужна для расчёта расстояния до покупателя.", "Nuqta tanlanmagan. Xaridorlar manzil va tumanni ko‘radi, aniq nuqta esa xaridorgacha masofani hisoblash uchun kerak.", "No point chosen yet. Buyers see the address and the district; the exact point is used for the distance to the buyer.") : L("Точка пока не выбрана. Покупатели увидят адрес и район, а точная точка помогает курьеру Яндекса быстрее найти магазин.", "Nuqta tanlanmagan. Xaridorlar manzil va tumanni ko‘radi, aniq nuqta esa Yandex kuryeriga do‘konni tezroq topishga yordam beradi.")}</p>`;
   return `<p class="loc-st ok" id="locSt" aria-live="polite">${ui("check", 14)} ${l.src === "gps" ? L("Определено автоматически", "Avtomatik aniqlandi") : L("Точка на карте", "Xaritadagi nuqta")}: <span class="mono">${l.la.toFixed(5)}, ${l.lo.toFixed(5)}</span>${l.acc ? ` · ${L("точность", "aniqlik")} ±${l.acc} ${L("м", "m")}` : ""} · <a href="${yaLink(l.la, l.lo)}" target="_blank" rel="noopener">${L("Проверить на Яндекс Картах", "Yandex Xaritalarda tekshirish")}</a></p>`;
 }
 function setLoc(la, lo, src, acc) {
@@ -3736,7 +3797,7 @@ function bindStoreForm() {
 const rolesHTML = (role, name = "role") => `<div class="roles opts">
   <label class="opt"><input type="radio" name="${name}" value="buyer" ${role === "buyer" ? "checked" : ""}><span><b>${L("Покупатель", "Xaridor")}</b><small>${L("Ремонт дома или квартиры", "Uy yoki kvartira ta’miri")}</small></span><span></span></label>
   <label class="opt"><input type="radio" name="${name}" value="pro" ${role === "pro" ? "checked" : ""}><span><b>${L("Мастер или прораб", "Usta yoki prorab")}</b><small>${L("Оптовая цена −3% на материалы с первой штуки", "Materiallarga birinchi donadan −3% ulgurji narx")}</small></span><span class="tag">−3%</span></label>
-  <label class="opt"><input type="radio" name="${name}" value="store" ${role === "store" ? "checked" : ""}><span><b>${L("Хочу добавить свой магазин", "Do‘konimni qo‘shmoqchiman")}</b><small>${L("Продавайте на Imorat Go: витрина, заказы и доставка Яндекс", "Imorat Go’da soting: vitrina, buyurtmalar va Yandex yetkazish")}</small></span><span class="tag">${ui("store", 14)}</span></label>
+  <label class="opt"><input type="radio" name="${name}" value="store" ${role === "store" ? "checked" : ""}><span><b>${L("Хочу добавить свой магазин", "Do‘konimni qo‘shmoqchiman")}</b><small>${stage0() ? L("Продавайте на Imorat Go: витрина, заказы онлайн, 0% комиссии", "Imorat Go’da soting: vitrina, onlayn buyurtmalar, 0% komissiya", "Sell on Imorat Go: a storefront, online orders, 0% commission") : L("Продавайте на Imorat Go: витрина, заказы и доставка Яндекс", "Imorat Go’da soting: vitrina, buyurtmalar va Yandex yetkazish")}</small></span><span class="tag">${ui("store", 14)}</span></label>
 </div>`;
 function renderAuth() {
   const b = $("#authBox"), st = auth.step;
@@ -3762,7 +3823,7 @@ function renderAuth() {
       ${API ? "" : `<p class="demo">${L("Демо-режим: отправка SMS и вход через Telegram заработают после подключения сервера.", "Demo rejim: SMS yuborish va Telegram orqali kirish server ulangandan keyin ishlaydi.", "Demo mode: SMS and Telegram sign-in work once the server is connected.")}</p>`}`;
   } else if (st === "tg") {
     h = `${back("start")}<h2>${L("Вход через Telegram", "Telegram orqali kirish", "Sign in with Telegram")}</h2>
-      <p>${L("Мы открыли Telegram. Нажмите в боте «Start» и, если он попросит, поделитесь номером телефона — страница войдёт сама.", "Telegramni ochdik. Botda «Start»ni bosing va so‘rasa telefon raqamingizni yuboring — sahifa o‘zi kiradi.", "We opened Telegram. Tap “Start” in the bot and share your phone number if asked — this page signs in by itself.")}</p>
+      <p>${L("Мы открыли Telegram. Нажмите в боте «Start», поделитесь номером, если он попросит, и подтвердите вход кнопкой «✅ Да, это я» — страница войдёт сама.", "Telegramni ochdik. Botda «Start»ni bosing, so‘rasa telefon raqamingizni yuboring va «✅ Ha, bu men» tugmasi bilan kirishni tasdiqlang — sahifa o‘zi kiradi.", "We opened Telegram. Tap “Start” in the bot, share your phone number if asked, and confirm with “✅ Yes, it’s me” — this page signs in by itself.")}</p>
       <a class="soc tg" href="${esc(auth.tgUrl || "#")}" target="_blank" rel="noopener">${ui("send", 20)} ${L("Открыть Telegram ещё раз", "Telegramni yana ochish", "Open Telegram again")}</a>
       <p class="demo" id="tgWait" aria-live="polite">${L("Ждём подтверждения в Telegram…", "Telegramda tasdiqlash kutilmoqda…", "Waiting for Telegram…")}</p>
       <span class="err" id="tgErr" role="alert" hidden></span>`;
@@ -4216,7 +4277,10 @@ async function syncCatalog() {
     try { LS.set("imorat.apiCat", { t: apiCatAt, cat: apiCat }); } catch (e) {} // the last real catalog, shown next time until the server answers
     buildProducts(); pruneCart();
     const busy = drawerView || $("#modal").classList.contains("on") || route.view === "seller";
-    if (!busy) { const y = window.scrollY; renderMain(); window.scrollTo(0, y); } else counts();
+    // a deep link (#p-<id> from an SEO page or the bot, #cat-… , #store-…) opened before the catalogue was here: resolve it now
+    const h = location.hash.slice(1), deep = (/^p-\d+$/.test(h) && PROD[+h.slice(2)]) || (h.startsWith("cat-") && CAT[h.slice(4)]) || (h.startsWith("store-") && STORE[h.slice(6)]);
+    if (deep && route.view === "home" && !busy) { route = parseHash(); renderMain(); window.scrollTo(0, 0); }
+    else if (!busy) { const y = window.scrollY; renderMain(); window.scrollTo(0, y); } else counts();
   } catch (e) { /* keep the saved catalog; the banner says the server is unreachable */ }
 }
 /* ---- server availability: a banner instead of pretend data. offline = no answer (orders and payment are locked, the saved
@@ -4227,8 +4291,14 @@ function setApiState(st) {
   apiState = st; renderApiBar();
   if (drawerView === "checkout" && $("#orderForm")) { try { updateQuote(); } catch (e) {} } // the pay button follows the state; the typed form stays
   clearTimeout(apiRetryTimer);
-  if (st === "offline") apiRetryTimer = setTimeout(() => { if (!document.hidden) apiBoot(); else setApiState(apiState); }, 30000);
+  if (st === "offline") scheduleApiRetry();
 }
+/* retry every 30 s while offline; a hidden tab waits and retries the moment it is shown again */
+function scheduleApiRetry() {
+  clearTimeout(apiRetryTimer);
+  apiRetryTimer = setTimeout(() => { if (apiState !== "offline") return; if (!document.hidden) apiBoot(); else scheduleApiRetry(); }, 30000);
+}
+document.addEventListener("visibilitychange", () => { if (!document.hidden && API && apiState === "offline") { clearTimeout(apiRetryTimer); apiBoot(); } });
 function renderApiBar() {
   const el = $("#apiBar"); if (!el) return;
   if (!API || apiState === "ok" || apiState === "loading") { el.hidden = true; el.innerHTML = ""; return; }
@@ -4257,7 +4327,13 @@ async function apiProbe() {
   if ((apiHealth.contract ?? 1) < API_CONTRACT || (apiHealth.min_client ?? 1) > API_CONTRACT) return "incompatible";
   return "ok";
 }
-async function apiBoot() {
+let apiBooting = null; // one boot at a time: a recovered call and the retry timer may both ask for it
+function apiBoot() {
+  if (apiBooting) return apiBooting;
+  apiBooting = apiBootRun().catch(e => console.warn("apiBoot", e)).finally(() => { apiBooting = null; });
+  return apiBooting;
+}
+async function apiBootRun() {
   if (window.IMORAT_SITE && "serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
   if (!API) return;
   const st = await apiProbe();
@@ -4283,17 +4359,17 @@ let expectTotal = null;
    (debounced, the previous request is abandoned); until the answer arrives the pay button says "counting" and cannot be
    pressed, so nobody pays on an estimate. A missing delivery price (the carrier gave none) is shown as unknown — "—",
    never 0 — and the order stays closed. The answer's total is what the order request must match (expected_total). ---- */
-let sq = { seq: 0, timer: 0, ac: null, key: "", quote: null };
+let sq = { seq: 0, timer: 0, ac: null, key: "", quote: null, problems: [] };
 const quoteKey = d => JSON.stringify([cart, services, bundlesOn, promo, d.mode, d.district, d.street, d.la, d.lo, d.floor, d.private, d.help, d.when, d.hour, d.pay, d.usePts]);
 function requestServerQuote(d, qt) {
   const key = quoteKey(d);
-  if (key === sq.key && sq.quote) { renderServerQuote(sq.quote, [], d); return; } // nothing that changes the price changed
-  sq.key = key; sq.quote = null; clearTimeout(sq.timer); sq.ac?.abort();
+  if (key === sq.key && sq.quote) { renderServerQuote(sq.quote, sq.problems, d); return; } // nothing that changes the price changed — the server's problems (stock) still stand
+  sq.key = key; sq.quote = null; sq.problems = []; clearTimeout(sq.timer); sq.ac?.abort();
   const seq = ++sq.seq, pb = $("#payBtn"); if (pb) { pb.disabled = true; pb.textContent = L("Считаем стоимость…", "Narx hisoblanmoqda…", "Calculating the cost…"); }
   sq.timer = setTimeout(async () => {
     const ac = sq.ac = new AbortController();
     const body = { lines: cartLines().map(l => ({ id: l.p.id, store: l.store, q: l.q })), services: Object.keys(services).map(Number), bundles: bundlesOn, form: d, promo, points: qt.pts || 0, lang };
-    try { const r = await api("POST", "/api/quote", body, { signal: ac.signal }); if (seq !== sq.seq) return; sq.quote = r.quote; renderServerQuote(r.quote, r.problems || [], d); }
+    try { const r = await api("POST", "/api/quote", body, { signal: ac.signal }); if (seq !== sq.seq) return; sq.quote = r.quote; sq.problems = r.problems || []; renderServerQuote(r.quote, sq.problems, d); }
     catch (e) { if (e.name === "AbortError" || seq !== sq.seq) return; const b = $("#payBtn"); if (b) { b.disabled = true; b.textContent = e.code === "offline" ? L("Нет связи с сервером", "Server bilan aloqa yo‘q", "No connection to the server") : L("Не удалось посчитать стоимость", "Narxni hisoblab bo‘lmadi", "Could not calculate the cost"); } if (e.code !== "offline") toast(apiErr(e)); }
   }, 350);
 }
@@ -4476,7 +4552,7 @@ function adminHTML() {
 function renderSellerApi() {
   const crumbs = `<nav class="crumbs"><button type="button" data-go="home">${L("Главная", "Asosiy")}</button>${ui("chev", 12)}<span>${L("Кабинет продавца", "Sotuvchi kabineti")}</span></nav>`;
   const cta = (title, text, btns) => `<div class="wrap">${crumbs}<div class="panel" style="margin:12px 0;display:grid;gap:12px;justify-items:start"><h1 class="h-l" style="margin:0">${title}</h1><p style="margin:0;color:var(--muted)">${text}</p><div style="display:flex;gap:8px;flex-wrap:wrap">${btns}</div></div>${adminHTML()}</div>`;
-  if (!user) { $("#app").innerHTML = cta(L("Кабинет продавца", "Sotuvchi kabineti"), L("Продавайте на Imorat Go: витрина для покупателей Ташкента, заказы онлайн и доставка Яндекс. Войдите и добавьте свой магазин — это займёт пару минут.", "Imorat Go’da soting: Toshkent xaridorlari uchun vitrina, onlayn buyurtmalar va Yandex yetkazish. Kiring va do‘koningizni qo‘shing — bir necha daqiqa."), `<button class="btn btn-primary" type="button" data-act="store-reg">${ui("store", 18)} ${L("Добавить свой магазин", "Do‘konimni qo‘shish")}</button><button class="btn btn-line" type="button" data-act="login">${L("Войти", "Kirish")}</button>`); return; }
+  if (!user) { $("#app").innerHTML = cta(L("Кабинет продавца", "Sotuvchi kabineti"), stage0() ? L("Продавайте на Imorat Go: витрина для покупателей Ташкента и заказы онлайн. Покупатели платят вам напрямую, комиссии нет. Войдите и добавьте свой магазин — это займёт пару минут.", "Imorat Go’da soting: Toshkent xaridorlari uchun vitrina va onlayn buyurtmalar. Xaridorlar sizga to‘g‘ridan-to‘g‘ri to‘laydi, komissiya yo‘q. Kiring va do‘koningizni qo‘shing — bir necha daqiqa.", "Sell on Imorat Go: a storefront for Tashkent buyers and online orders. Buyers pay you directly, no commission. Sign in and add your store — it takes a couple of minutes.") : L("Продавайте на Imorat Go: витрина для покупателей Ташкента, заказы онлайн и доставка Яндекс. Войдите и добавьте свой магазин — это займёт пару минут.", "Imorat Go’da soting: Toshkent xaridorlari uchun vitrina, onlayn buyurtmalar va Yandex yetkazish. Kiring va do‘koningizni qo‘shing — bir necha daqiqa."), `<button class="btn btn-primary" type="button" data-act="store-reg">${ui("store", 18)} ${L("Добавить свой магазин", "Do‘konimni qo‘shish")}</button><button class="btn btn-line" type="button" data-act="login">${L("Войти", "Kirish")}</button>`); return; }
   if (!user.store_id) { $("#app").innerHTML = cta(L("У вас пока нет магазина", "Sizda hali do‘kon yo‘q"), L("Заполните короткую анкету: название, описание, что продаёте, телефон и где находится магазин. Паспортные данные не нужны.", "Qisqa anketani to‘ldiring: nomi, tavsifi, nima sotasiz, telefon va do‘kon qayerda. Pasport ma’lumotlari kerak emas."), `<button class="btn btn-primary" type="button" data-act="store-reg">${ui("store", 18)} ${L("Добавить свой магазин", "Do‘konimni qo‘shish")}</button>`); return; }
   if (!sellerData) { $("#app").innerHTML = `<div class="wrap">${crumbs}<div class="panel" style="margin:12px 0">${L("Загружаем кабинет…", "Kabinet yuklanmoqda…")}</div></div>`; loadSeller(); return; }
   if (sellerData.error) { $("#app").innerHTML = cta(L("Не удалось открыть кабинет", "Kabinetni ochib bo‘lmadi"), esc(sellerData.error), `<button class="btn btn-primary" type="button" data-act="seller-reload">${L("Повторить", "Qayta urinish")}</button>`); return; }
@@ -4529,7 +4605,7 @@ function renderSellerApi() {
         <div class="f"><label for="aPrice">${L("Цена, сум", "Narx, so‘m")}</label><input id="aPrice" name="price" type="number" min="100" inputmode="numeric" placeholder="54000"></div>
         <div class="f"><label for="aKg">${L("Вес единицы, кг", "Birlik vazni, kg")}</label><input id="aKg" name="kg" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="25"></div>
         <div class="f"><label for="aStock">${L("Остаток", "Qoldiq")}</label><input id="aStock" name="stock" type="number" min="0" inputmode="numeric" placeholder="40"></div>
-        <div class="f"><label for="aLen">${L("Упаковка: длина × ширина × высота, см", "Qadoq: uzunlik × kenglik × balandlik, sm", "Package: length × width × height, cm")} <small class="mu">${L("— для длинных товаров: от этого зависит машина", "— uzun tovarlar uchun: mashina shunga bog‘liq", "— for long goods: decides the vehicle")}</small></label><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px"><input id="aLen" name="len_cm" type="number" min="1" max="1500" inputmode="numeric" placeholder="300" aria-label="${L("Длина, см", "Uzunlik, sm", "Length, cm")}"><input name="wid_cm" type="number" min="1" max="1500" inputmode="numeric" placeholder="10" aria-label="${L("Ширина, см", "Kenglik, sm", "Width, cm")}"><input name="hgt_cm" type="number" min="1" max="1500" inputmode="numeric" placeholder="5" aria-label="${L("Высота, см", "Balandlik, sm", "Height, cm")}"></div></div>
+        <div class="f"><label for="aLen">${L("Упаковка: длина × ширина × высота, см", "Qadoq: uzunlik × kenglik × balandlik, sm", "Package: length × width × height, cm")} <small class="mu">${L("— для длинных товаров: от длины зависит машина; достаточно указать только длину", "— uzun tovarlar uchun: mashina uzunlikka bog‘liq; faqat uzunlikni kiritish kifoya", "— for long goods: the length decides the vehicle; the length alone is enough")}</small></label><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px"><input id="aLen" name="len_cm" type="number" min="1" max="1500" inputmode="numeric" placeholder="300" aria-label="${L("Длина, см", "Uzunlik, sm", "Length, cm")}"><input name="wid_cm" type="number" min="1" max="1500" inputmode="numeric" placeholder="10" aria-label="${L("Ширина, см", "Kenglik, sm", "Width, cm")}"><input name="hgt_cm" type="number" min="1" max="1500" inputmode="numeric" placeholder="5" aria-label="${L("Высота, см", "Balandlik, sm", "Height, cm")}"></div></div>
         <div class="f wide"><label for="aDesc">${L("Описание", "Tavsif")}</label><input id="aDesc" name="desc" placeholder="${L("Для чего подходит, расход, особенности", "Nima uchun mos, sarfi, xususiyatlari")}"></div>
         <div class="f wide"><span>${L("Фото", "Rasm")}</span><button class="drop" type="button" data-photo="new" id="aPhotoPv">${ui("photo", 20)} ${L("Выбрать фото товара", "Mahsulot rasmini tanlash")}</button></div>
         <div class="f wide" style="grid-column:1/-1"><span class="err" id="addErr" hidden>${L("Заполните название, цену и вес — по весу подбирается тариф доставки.", "Nomi, narxi va vaznini kiriting — tarif vazn bo‘yicha tanlanadi.")}</span><button class="btn btn-primary" type="submit" style="justify-self:start">${ui("plus", 18)} ${L("Опубликовать", "Joylash")}</button></div>
@@ -4558,8 +4634,9 @@ function renderSellerApi() {
     const ok = d.ru.trim().length > 2 && price >= 100 && kg > 0; $("#addErr").hidden = ok; if (!ok) return;
     const btn = e.target.querySelector("[type=submit]"); btn.disabled = true;
     try {
-      const dims = [d.len_cm, d.wid_cm, d.hgt_cm].map(Number), hasDims = dims.every(x => x >= 1);
-      const r = await api("POST", "/api/seller/products", { ru: d.ru.trim(), uz: d.uz.trim(), cat: d.cat, sub: d.sub, unit: d.unit, price, kg, stock: parseInt(d.stock, 10) || 0, desc: d.desc.trim(), ...(hasDims ? { dims_cm: dims } : {}) });
+      // the length alone is enough (it decides the vehicle); width and height default to 10 cm on the server
+      const dims = [d.len_cm, d.wid_cm, d.hgt_cm].map(x => Number(x) || 0), hasDims = dims[0] >= 1;
+      const r = await api("POST", "/api/seller/products", { ru: d.ru.trim(), uz: d.uz.trim(), cat: d.cat, sub: d.sub, unit: d.unit, price, kg, stock: parseInt(d.stock, 10) || 0, desc: d.desc.trim(), ...(hasDims ? { len_cm: dims[0], ...(dims[1] >= 1 ? { wid_cm: dims[1] } : {}), ...(dims[2] >= 1 ? { hgt_cm: dims[2] } : {}) } : {}) });
       if (newPhoto) { const blob = await (await fetch(newPhoto)).blob(); await api("POST", `/api/seller/products/${r.product.id}/photo`, blob).catch(() => toast(L("Товар добавлен, но фото не загрузилось", "Mahsulot qo‘shildi, lekin rasm yuklanmadi"))); newPhoto = ""; }
       toast(s.status === "active" ? L("Товар опубликован на витрине", "Mahsulot vitrinaga joylandi") : L("Товар сохранён — появится в каталоге после проверки магазина", "Mahsulot saqlandi — do‘kon tekshirilgach katalogda chiqadi"));
       sellerData = null; renderSeller(); syncCatalog();
@@ -4585,7 +4662,7 @@ async function setVipApi(on) {
     const r = await api("POST", "/api/me/vip", { on });
     user = fromApiUser(r.user); LS.set("imorat.user", user); vip = !!user.vip; LS.set("imorat.vip", vip);
     toast(on ? L("VIP подключён: первый месяц бесплатно", "VIP ulandi: birinchi oy bepul") : L("VIP отключён", "VIP o‘chirildi"));
-    if (route.view === "home") $("#vip").innerHTML = vipBlock(); if (drawerView) renderDrawer();
+    if (route.view === "home" && $("#vip")) $("#vip").innerHTML = vipBlock(); if (drawerView) renderDrawer();
   } catch (e) { toast(apiErr(e)); }
 }
 
@@ -4671,6 +4748,10 @@ async function liveTick() {
   for (const m of maps) {
     const o = orders.find(x => x.num === m.dataset.num), i = o?.ships.findIndex(x => String(x.id) === m.dataset.ship), s = o?.ships[i]; if (!s) continue;
     const status = o.api ? s.status : ["new", "assembling", "searching", "to_store", "on_way", "delivered"][stepOf(o, i, 6)]; // demo shipments have no stored status
+    if (o.api && o.d?.delivery_by === "store") { // the store's own courier is not tracked: draw the bar once, poll nothing
+      if (!liveCache[s.id]) { const c0 = { pos: null, unavailable: true, status }; liveCache[s.id] = c0; const car = $("#lmcar" + s.id), bar = $("#lmbar" + s.id); if (car) car.style.display = "none"; if (bar) bar.innerHTML = liveBarHTML({ ...s, status }, c0, TARIFFS.find(x => x.id === s.tariff)); }
+      continue;
+    }
     let c; try { c = o.api ? (await api("GET", `/api/orders/${o.num}/courier?ship=${s.id}`)).courier : demoCourier(o, s, i, status); } catch (e) { continue; }
     if (!c) continue; liveCache[s.id] = c;
     const car = $("#lmcar" + s.id), bar = $("#lmbar" + s.id); if (!car) continue;
@@ -4791,7 +4872,19 @@ setInterval(async () => {
     lastNewIds = ids;
     const changed = JSON.stringify(d.orders.map(o => [o.ship_id, o.status])) !== JSON.stringify(sellerData.orders.map(o => [o.ship_id, o.status]));
     if (fresh) { beep(); toast(L("🆕 Новый заказ!", "🆕 Yangi buyurtma!")); }
-    if (changed && !document.activeElement?.matches("input,textarea,select")) { const y = window.scrollY; sellerData = d; renderSeller(); window.scrollTo(0, y); }
+    // complaints and questions come in without an order status change: refresh those lists on the same poll
+    let probChanged = false;
+    if (sellerProblems !== null && sellerProblems !== false) { try { const r = await api("GET", "/api/seller/problems"); const sig = x => JSON.stringify((x || []).map(p => [p.id, p.status, p.updated_at || p.at])); if (sig(r.problems) !== sig(sellerProblems)) { const hadOpen = new Set((sellerProblems || []).map(p => p.id)); if (r.problems.some(p => !hadOpen.has(p.id))) { beep(); toast(L("⚠️ Новая жалоба по заказу", "⚠️ Buyurtma bo‘yicha yangi shikoyat", "⚠️ New complaint about an order")); } sellerProblems = r.problems; probChanged = true; } } catch (e) {} }
+    if ((changed || probChanged) && !document.activeElement?.matches("input,textarea,select")) { const y = window.scrollY; sellerData = d; renderSeller(); window.scrollTo(0, y); }
+  } catch (e) {}
+}, 20000);
+/* the moderator's complaint list (shown on the seller page and the admin page) refreshes on its own: a moderator usually has no store */
+setInterval(async () => {
+  if (!API || !apiToken || !user?.admin || document.hidden || !["seller", "admin"].includes(route.view) || !Array.isArray(adminProblems)) return;
+  try {
+    const r = await adminApi("GET", "/api/admin/problems");
+    const sig = x => JSON.stringify((x || []).map(p => [p.id, p.status]));
+    if (sig(r.problems) !== sig(adminProblems) && !document.activeElement?.matches("input,textarea,select")) { adminProblems = r.problems; const y = window.scrollY; renderMain(); window.scrollTo(0, y); }
   } catch (e) {}
 }, 20000);
 function sellerExtraHTML(d) {
@@ -4809,14 +4902,17 @@ function sellerExtraHTML(d) {
       <div class="mini-kpis"><div><b>${rt?.done || 0}</b><small>${L("выполнено", "bajarildi")}</small></div><div><b>${rt?.fail || 0}</b><small>${L("сорвано", "buzildi")}</small></div><div><b>${rt?.reliability != null ? rt.reliability + "%" : "—"}</b><small>${L("надёжность", "ishonchlilik")}</small></div><div><b>${rt?.accept_min ? "~" + rt.accept_min : "—"}</b><small>${L("мин на принятие", "qabul, daq.")}</small></div></div>
       ${d.reviews?.length ? d.reviews.slice(0, 6).map(r => `<div class="rv-item"><span class="stars-ro">${"★".repeat(r.stars)}${"☆".repeat(5 - r.stars)}</span> <b>${esc(r.name || L("Покупатель", "Xaridor"))}</b> <small style="color:var(--muted)">${new Date(r.created_at).toLocaleDateString(LOCALE)}</small>${r.text ? `<p>${esc(r.text)}</p>` : ""}${r.reply ? `<small>${L("Ваш ответ", "Javobingiz")}: ${esc(r.reply)}</small>` : `<form class="reply-f" data-reply="${r.ship_id}"><label class="visually-hidden" for="rp${r.ship_id}">${L("Ответ", "Javob")}</label><input id="rp${r.ship_id}" maxlength="500" placeholder="${L("Ответить покупателю", "Xaridorga javob berish")}"><button class="btn btn-line" type="submit">${L("Ответить", "Javob")}</button></form>`}</div>`).join("") : `<small style="color:var(--muted)">${L("Отзывов пока нет. Покупатели оценивают магазин после получения заказа.", "Hozircha sharhlar yo‘q. Xaridorlar buyurtmani olgach baholaydi.")}</small>`}</div>
   </div>
-  <div class="panel" style="margin-top:12px"><div class="panel-h"><h2 class="h-m">${L("Финансы", "Moliya")} · ${esc(f.month)}</h2><span style="font-size:13px;color:var(--muted)">${L("С оплаты картой", "Karta to‘lovidan", "From card payments")}: ${esc(rateTxt)}</span></div>
+  ${stage0() ? `<div class="panel" style="margin-top:12px"><div class="panel-h"><h2 class="h-m">${L("Финансы", "Moliya")} · ${esc(f.month)}</h2><span style="font-size:13px;color:var(--muted)">${L("Комиссия 0%", "Komissiya 0%", "0% commission")}</span></div>
+    <div class="mini-kpis fin-kpis"><div><b>${fmt(f.goods)}</b><small>${L("продано за месяц", "oylik sotuv")}</small></div><div><b>${fmt(Math.max(0, (f.goods || 0) - (f.online_month || 0)))}</b><small>${L("получено от покупателей напрямую", "xaridorlardan to‘g‘ridan-to‘g‘ri olingan", "received from buyers directly")}</small></div><div><b>0</b><small>${L("удержано Imorat Go", "Imorat Go ushlab qoldi", "withheld by Imorat Go")}</small></div></div>
+    <p class="mu" style="margin:10px 0 0;font-size:13px">${L("Сейчас покупатели платят вам при получении — наличными или переводом, как договоритесь. Imorat Go деньги не принимает, ничего не удерживает и не выплачивает; выписка ниже — для сверки продаж. Условия изменятся только с вашего отдельного согласия.", "Hozir xaridorlar sizga olganda to‘laydi — naqd yoki o‘tkazma, kelishuvingizga ko‘ra. Imorat Go pul qabul qilmaydi, hech narsa ushlab qolmaydi va to‘lamaydi; quyidagi ko‘chirma sotuvlarni solishtirish uchun. Shartlar faqat sizning alohida roziligingiz bilan o‘zgaradi.", "Right now buyers pay you on receipt — cash or transfer, as you agree. Imorat Go takes no money, withholds nothing and pays nothing out; the statement below is for reconciling sales. The terms change only with your separate consent.")}</p>
+  </div>` : `  <div class="panel" style="margin-top:12px"><div class="panel-h"><h2 class="h-m">${L("Финансы", "Moliya")} · ${esc(f.month)}</h2><span style="font-size:13px;color:var(--muted)">${L("С оплаты картой", "Karta to‘lovidan", "From card payments")}: ${esc(rateTxt)}</span></div>
     <div class="mini-kpis fin-kpis"><div><b>${fmt(f.goods)}</b><small>${L("продано за месяц", "oylik sotuv")}</small></div><div><b>${fmt(f.commission)}</b><small>${L("комиссия Imorat Go за месяц", "oylik Imorat Go komissiyasi", "Imorat Go commission this month")}</small></div><div><b>${fmt(f.acquiring || 0)}</b><small>${L("эквайринг Payme/Click за месяц", "oylik Payme/Click ekvayringi", "Payme/Click acquiring this month")}</small></div><div><b>${fmt(f.settled)}</b><small>${L("оплачено Imorat Go", "Imorat Go’ga to‘langan")}</small></div><div><b style="color:${f.balance > 0 ? "var(--signal)" : "var(--ok)"}">${fmt(Math.abs(f.balance))}</b><small>${f.balance >= 0 ? L("к оплате Imorat Go", "Imorat Go’ga to‘lanishi kerak", "due to Imorat Go") : L("Imorat Go перечислит вам", "Imorat Go sizga o‘tkazadi", "Imorat Go pays you")}</small></div></div>
     ${f.delivery_due || f.payout_due ? `<div class="mini-kpis" style="margin-top:8px">${f.payout_due ? `<div><b>${fmt(f.payout_due)}</b><small>${L("оплачено картой — ваша доля за вычетом комиссии и эквайринга", "karta bilan to‘langan — komissiya va ekvayringsiz sizning ulushingiz", "paid by card — your share after commission and acquiring")}</small></div>` : ""}${f.delivery_due ? `<div><b>${fmt(f.delivery_due)}</b><small>${L("доставка, полученная от покупателей (платит Imorat Go Яндексу)", "xaridorlardan olingan yetkazish haqi (Imorat Go Yandexga to‘laydi)", "delivery fees collected from buyers (Imorat Go pays Yandex)")}</small></div>` : ""}</div>` : ""}
     <div class="payout-box" id="payoutBox">
       <div class="mini-kpis"><div><b>${fmt(f.payout_available || 0)}</b><small>${L("доступно к выводу", "yechib olish mumkin", "available to withdraw")}</small></div>${f.payout_pending ? `<div><b>${fmt(f.payout_pending)}</b><small>${L("в обработке", "qayta ishlanmoqda", "being processed")}</small></div>` : ""}${f.payout_paid ? `<div><b>${fmt(f.payout_paid)}</b><small>${L("уже выплачено", "to‘langan", "paid out so far")}</small></div>` : ""}</div>
       <form class="settle-f" id="payoutForm" style="margin-top:8px"><label class="visually-hidden" for="payoutTo">${L("Карта или счёт", "Karta yoki hisob", "Card or account")}</label><input id="payoutTo" value="${esc(d.store?.payout_to || "")}" placeholder="${L("Номер карты или расчётный счёт", "Karta raqami yoki hisob raqami", "Card number or bank account")}" autocomplete="off" style="flex:2;min-width:200px"><label class="visually-hidden" for="payoutAmt">${L("Сумма", "Summa")}</label><input id="payoutAmt" type="number" min="1" inputmode="numeric" placeholder="${L("Вся сумма", "Butun summa", "Everything")}"><button class="btn btn-primary" type="submit" ${(f.payout_available || 0) > 0 && !f.payout_pending ? "" : "disabled"}>${L("Вывести", "Yechib olish", "Withdraw")}</button></form>
       <small style="color:var(--muted)">${L("Деньги за заказы, оплаченные картой, доступны сразу после того, как покупатель получил заказ. Нажмите «Вывести» — переведём на карту или счёт в тот же рабочий день. Комиссия Imorat Go и эквайринг уже вычтены.", "Karta bilan to‘langan buyurtmalar puli xaridor buyurtmani olgan zahoti mavjud bo‘ladi. «Yechib olish»ni bosing — o‘sha ish kunida kartaga yoki hisobga o‘tkazamiz. Imorat Go komissiyasi va ekvayring allaqachon ayirilgan.", "Money for card-paid orders is available as soon as the buyer has received the order. Tap “Withdraw” and we transfer it to your card or account the same working day. The Imorat Go commission and the acquiring fee are already deducted.")}</small>
-    </div></div>
+    </div></div>`}
   ${statementHTML()}`;
 }
 /* ---- Monthly statement: what the seller sold, what came off (Imorat Go commission, the bank's acquiring fee, refunds,
@@ -4937,7 +5033,7 @@ document.addEventListener("submit", async e => {
   if (e.target.id === "mfaForm") {
     e.preventDefault();
     try { const r = await api("POST", "/api/admin/mfa/verify", { code: $("#mfaCode").value }); adminToken = r.token; LS.set("imorat.adminToken", adminToken); adminState = { need: null }; adminStores = null; adminFin = null; toast(L("Код принят", "Kod qabul qilindi")); renderMain(); }
-    catch (er) { toast(er.code === "mfa_wrong" ? L("Неверный код — проверьте время на телефоне", "Kod noto‘g‘ri — telefondagi vaqtni tekshiring") : apiErr(er)); }
+    catch (er) { toast(er.code === "mfa_wrong" ? L("Неверный код — проверьте время на телефоне", "Kod noto‘g‘ri — telefondagi vaqtni tekshiring", "Wrong code — check the time on your phone") : er.code === "mfa_reused" ? L("Этот код уже использован — подождите следующий (30 с)", "Bu kod allaqachon ishlatilgan — keyingisini kuting (30 s)", "This code was already used — wait for the next one (30 s)") : apiErr(er)); }
     return;
   }
   const f = e.target.closest("[data-settle]"); if (!f) return;
@@ -6574,7 +6670,7 @@ document.addEventListener("click", e => {
    Buyer → store answer → moderator decision. The demo keeps everything in this browser. */
 const P_REASONS = () => [["not_delivered", L("Не привезли", "Olib kelishmadi")], ["missing", L("Привезли не всё", "Hammasi kelmadi")], ["damaged", L("Повреждено / брак", "Shikastlangan / brak")], ["wrong", L("Не тот товар", "Boshqa mahsulot")], ["quality", L("Плохое качество", "Sifati yomon")], ["other", L("Другое", "Boshqa")]];
 const P_STATUS = () => ({ open: [L("На рассмотрении", "Ko‘rib chiqilmoqda"), "warn"], answered: [L("Магазин ответил", "Do‘kon javob berdi"), "acc"], resolved: [L("Решена", "Hal qilindi"), "ok"], rejected: [L("Отклонена", "Rad etildi"), "mute"] });
-let myProblems = null, sellerProblems = null, adminProblems = null, probPhotos = {}, probDraft = {};
+let myProblems = null, sellerProblems = null, adminProblems = null, probPhotos = {}, probDraft = {}, sellerProblemsAt = 0, adminProblemsAt = 0;
 const mediaSrc = u => (u && u.startsWith("/uploads/") && API ? API + u : u);
 let problemsDemo = LS.get("imorat.problems", []);
 const saveProblemsDemo = () => LS.set("imorat.problems", problemsDemo);
@@ -6645,7 +6741,12 @@ document.addEventListener("click", e => {
 /* Seller cabinet: complaints about this store */
 function sellerProblemsHTML(sid) {
   let list;
-  if (API) { if (sellerProblems === null) { sellerProblems = false; api("GET", "/api/seller/problems").then(r => { sellerProblems = r.problems; if (route.view === "seller") renderSeller(); }).catch(() => { sellerProblems = []; }); return ""; } list = sellerProblems || []; }
+  if (API) {
+    // fetched once, then re-fetched whenever the cabinet is rendered more than 20 s later (a complaint can arrive without any order status change)
+    const stale = Array.isArray(sellerProblems) && Date.now() - (sellerProblemsAt || 0) > 20000;
+    if (sellerProblems === null || stale) { if (!stale) sellerProblems = false; sellerProblemsAt = Date.now(); api("GET", "/api/seller/problems").then(r => { const was = JSON.stringify(sellerProblems); sellerProblems = r.problems; if (route.view === "seller" && JSON.stringify(r.problems) !== was) renderSeller(); }).catch(() => { if (!stale) sellerProblems = []; }); if (!stale) return ""; }
+    list = sellerProblems || [];
+  }
   else list = problemsDemo.filter(p => p.store === sid);
   if (!list.length) return "";
   const open = list.filter(p => ["open", "answered"].includes(p.status)).length;
@@ -6655,7 +6756,8 @@ function sellerProblemsHTML(sid) {
 }
 /* Moderator: all complaints */
 function adminProblemsHTML() {
-  if (adminProblems === null) { adminProblems = false; adminApi("GET", "/api/admin/problems").then(r => { adminProblems = r.problems; if (route.view === "seller" || route.view === "admin") renderMain(); }).catch(() => { adminProblems = []; }); return ""; }
+  const staleA = Array.isArray(adminProblems) && Date.now() - (adminProblemsAt || 0) > 20000;
+  if (adminProblems === null || staleA) { if (!staleA) adminProblems = false; adminProblemsAt = Date.now(); adminApi("GET", "/api/admin/problems").then(r => { const was = JSON.stringify(adminProblems); adminProblems = r.problems; if ((route.view === "seller" || route.view === "admin") && JSON.stringify(r.problems) !== was) renderMain(); }).catch(() => { if (!staleA) adminProblems = []; }); if (!staleA) return ""; }
   if (!adminProblems?.length) return "";
   const open = adminProblems.filter(p => ["open", "answered"].includes(p.status));
   return `<div class="panel" style="margin-top:12px;display:grid;gap:10px"><div class="panel-h"><h2 class="h-m">${ui("shield", 18)} ${L("Жалобы по заказам", "Buyurtmalar bo‘yicha shikoyatlar")}</h2><span class="pill ${open.length ? "warn" : "ok"}">${open.length} ${L("открыто", "ochiq")}</span></div>
@@ -7476,12 +7578,12 @@ document.addEventListener("click", e => {
       LS.set("imorat.promoCode", promo); return updateQuote(); }
     case "widgets": return widOpen ? closeWidgets() : openWidgets();
     case "close-wid": return closeWidgets();
-    case "w-calc": return openWidgets("calc", b.dataset.calc);
+    case "w-calc": return openWidgets("calc", ds.wcalcId || undefined);
     case "w-deliv": return openWidgets("deliv");
     case "home-setup": return openDrawer("homeSetup");
     case "tg-login": return tgLoginStart();
     case "home-reset": resetHome(); if (drawerView === "homeSetup") dHomeSetup(); return toast(L("Главная как по умолчанию", "Bosh sahifa standart holatda", "Home reset to default"));
-    case "stores-all": { const st = $(".stores"); if (st) st.classList.add("all"); b.closest(".stores-more")?.remove(); return; }
+    case "stores-all": { const st = $(".stores"); if (st) st.classList.add("all"); t.closest(".stores-more")?.remove(); return; }
     case "theme-toggle": return setLook(null, effTheme() === "dark" ? "light" : "dark");
     case "ai-calc": { const c = CALCS.find(x => x.id === wCalc), items = calcOut["w:" + wCalc] || []; const rows = [...document.querySelectorAll("#w-" + wCalc + "-res > div")].map(d => d.innerText.replace(/\s+/g, " ")).join("; "); return openAI(L(`Проверь мой расчёт «${c.ru}»: ${rows}. Материалы: ${items.map(([p, q]) => `[[${p.id}:${q}]]`).join(", ")}. Всё ли учтено и что ещё понадобится?`, `«${c.uz}» hisobimni tekshir: ${rows}. Materiallar: ${items.map(([p, q]) => `[[${p.id}:${q}]]`).join(", ")}. Hammasi hisobga olinganmi, yana nima kerak?`, `Check my “${L(c.ru, c.uz)}” estimate: ${rows}. Materials: ${items.map(([p, q]) => `[[${p.id}:${q}]]`).join(", ")}. Is everything accounted for, and what else will I need?`)); }
     case "close-modal": return closeModal();

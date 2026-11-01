@@ -7,5 +7,6 @@ table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 15px;
 .langs { display: flex; gap: 6px; margin-bottom: 8px; } .langs a { text-decoration: none; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; font-size: 13px; } .langs a.on { color: #fff; background: var(--teal); border-color: var(--teal); }
 .back { color: var(--teal); text-decoration: none; font-size: 14px; } .box { border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px; margin: 12px 0; } a { color: var(--teal); }
 [data-lang] { display: none; } [data-lang].on { display: block; }
+.note { border-left: 4px solid var(--teal); background: color-mix(in srgb, var(--teal) 8%, var(--bg)); border-radius: 0 10px 10px 0; padding: 10px 14px; margin: 14px 0 6px; font-size: 15px; }
 
 nav.docs { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 28px; padding-top: 14px; border-top: 1px solid var(--line); font-size: 14px; }
