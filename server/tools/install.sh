@@ -24,9 +24,10 @@ red() { echo -e "\033[31m$*\033[0m"; } ; grn() { echo -e "\033[32m$*\033[0m"; } 
 [ -n "$ADMIN" ] || { read -r -p "Your phone, digits only, it becomes the moderator (e.g. 998901234567): " ADMIN; }
 ADMIN=$(echo "$ADMIN" | tr -cd '0-9'); [ ${#ADMIN} -eq 12 ] || { red "The phone must be 12 digits starting with 998"; exit 1; }
 if [ -z "$BOT" ]; then
-  echo "Telegram bot token (from @BotFather). With it people can sign in through the bot before an SMS contract exists."
-  read -r -p "Token (Enter to skip for now): " BOT || true
+  echo "Telegram bot token (from @BotFather). Until an SMS contract exists it is the only way to sign in, so it is required."
+  read -r -p "Token: " BOT || true
 fi
+[ -n "$BOT" ] || { red "A Telegram bot token is required: without it nobody can sign in (SMS needs a contract with Eskiz). Create a bot in @BotFather and run again with --bot <token>."; exit 1; }
 run() { if [ "$DRY" = 1 ]; then echo "  [dry-run] $*"; else "$@"; fi; }
 sys() { if [ "$SKIP_SYSTEM" = 1 ]; then echo "  [skipped] $*"; else run "$@"; fi; }
 
@@ -61,7 +62,11 @@ else
     setv API_DOMAIN "$API"; setv PUBLIC_URL "https://$API"; setv JWT_SECRET "$SECRET"; setv ADMIN_PHONES "$ADMIN"
     setv ALLOWED_ORIGINS "https://$SITE,https://www.$SITE,https://usmonovm7777-crypto.github.io"
     setv SITE_URL "https://$SITE/"; setv DEMO_STORES 0; setv SITE_DOMAIN "$SITE"
-    if [ -n "$BOT" ]; then setv TELEGRAM_BOT_TOKEN "$BOT"; setv SMS_MODE telegram; else setv SMS_MODE telegram; fi
+    setv TELEGRAM_BOT_TOKEN "$BOT"; setv SMS_MODE telegram
+    # "stage 0": no payment provider yet → buyers pay the store on receipt, the store delivers itself, Imorat Go takes no
+    # commission and holds no money. Once Payme/Click keys are set, card payment switches on and pay-at-store narrows to
+    # pickup only by itself (set ALLOW_PAY_AT_STORE=0 to make the site card-only).
+    setv ALLOW_PAY_AT_STORE 1
   fi
 fi
 

@@ -8,7 +8,7 @@ const BUYER_TEXT = {
   assembling: (o, s) => `Магазин ${s.name} принял заказ ${o.num} и собирает его.`,
   searching: o => `Заказ ${o.num} собран, вызываем курьера Яндекс.`,
   to_store: o => `Курьер едет в магазин за заказом ${o.num}.`,
-  on_way: o => `Курьер забрал заказ ${o.num} и едет к вам.`,
+  on_way: (o, s, f) => f?.delivery_by === "store" ? `Курьер магазина ${s.name} выехал с заказом ${o.num} к вам.` : `Курьер забрал заказ ${o.num} и едет к вам.`,
   delivered: o => `Заказ ${o.num} доставлен. Оцените магазин на сайте — это помогает другим покупателям.`,
   ready: (o, s) => `Заказ ${o.num} готов к выдаче: ${s.name}, ${s.addr}. Часы работы: ${s.hours}.`,
   picked: o => `Заказ ${o.num} выдан. Спасибо! Оцените магазин на сайте.`
@@ -21,9 +21,10 @@ const CANCEL_TEXT = {
   unpaid: "оплата картой не поступила вовремя; товар снова в продаже, можно оформить заново",
   refund: "платёж отменён банком или вами, деньги вернутся на карту"
 };
-export const sellerButtons = s => {
+export const sellerButtons = (s, byStore = false) => {
   if (s.status === "new") return [[{ text: "✅ Принять · Qabul qilish", callback_data: `acc:${s.id}` }], [{ text: "❌ Нет в наличии · Mavjud emas", callback_data: `oos:${s.id}` }]];
-  if (s.status === "assembling") return [[s.tariff ? { text: "🚚 Готов, вызвать курьера · Kuryer chaqirish", callback_data: `rdy:${s.id}` } : { text: "📦 Готов к выдаче · Tayyor", callback_data: `rdy:${s.id}` }]];
+  if (s.status === "on_way" && byStore) return [[{ text: "✅ Доставлен · Yetkazildi", callback_data: `dlv:${s.id}` }]];
+  if (s.status === "assembling") return [[s.tariff ? (byStore ? { text: "🚚 Курьер выехал · Kuryer yo‘lda", callback_data: `rdy:${s.id}` } : { text: "🚚 Готов, вызвать курьера · Kuryer chaqirish", callback_data: `rdy:${s.id}` }) : { text: "📦 Готов к выдаче · Tayyor", callback_data: `rdy:${s.id}` }]];
   if (s.status === "ready") return [[{ text: "🤝 Выдан покупателю · Topshirildi", callback_data: `pick:${s.id}` }]];
   return [];
 };
@@ -43,7 +44,7 @@ export function createNotify({ db, cfg, tg, push, sms, ref, log = console }) {
   function sellerText({ s, o, st, f }) {
     const lines = JSON.parse(s.lines).map(l => `• ${h(l.name)} × ${l.q} — ${money(l.price * l.q)}`).join("\n");
     const goods = JSON.parse(s.lines).reduce((a, l) => a + l.price * l.q, 0);
-    const where = s.tariff ? `Яндекс Доставка → ${h(D[f.district]?.ru || "")} р-н, ${h(f.street)}${f.private ? ", частный дом" : `${f.entrance ? ", подъезд " + h(f.entrance) : ""}${f.flat ? ", кв. " + h(f.flat) : ""}${f.floor > 1 ? `, этаж ${f.floor}` : ""}${f.intercom ? ", домофон " + h(f.intercom) : ""}`}${f.help === "one" || (f.help == null && f.lift) ? "\n🏋️ Разгрузка: курьер поможет спустить и занести" : "\nРазгрузка: покупатель заберёт у машины"}` : "Самовывоз из магазина";
+    const where = s.tariff ? `${f.delivery_by === "store" ? "🚚 Доставка вашим курьером (цену доставки назовите покупателю при подтверждении)" : "Яндекс Доставка"} → ${h(D[f.district]?.ru || "")} р-н, ${h(f.street)}${f.private ? ", частный дом" : `${f.entrance ? ", подъезд " + h(f.entrance) : ""}${f.flat ? ", кв. " + h(f.flat) : ""}${f.floor > 1 ? `, этаж ${f.floor}` : ""}${f.intercom ? ", домофон " + h(f.intercom) : ""}`}${f.help === "one" || (f.help == null && f.lift) ? "\n🏋️ Разгрузка: курьер поможет спустить и занести" : "\nРазгрузка: покупатель заберёт у машины"}` : "Самовывоз из магазина";
     const deadline = s.status === "new" ? `\n⏱ Примите в течение ${cfg.timers.cancel} минут${s.start_at > Date.now() + 60000 ? ` (отсчёт с ${new Date(s.start_at + 5 * 3600000).toISOString().slice(11, 16)}, когда магазин откроется)` : ""}, иначе заказ отменится.` : "";
     return `<b>${STATUS_RU[s.status] || s.status} заказ ${h(o.num)}</b> · ${h(st.name)}\n\n${lines}\n<b>Итого: ${money(goods)}</b>\n\n${where}\nКогда: ${WHEN[f.when] || f.when}${f.when === "vip" ? ` (${f.hour}:00)` : ""}\nПокупатель: ${h(f.name)}, +${h(String(f.phone).replace(/\D/g, ""))}${f.comment ? `\nКомментарий: «${h(f.comment)}»` : ""}\nОплата: ${o.pay === "store" || o.pay === "cash" ? "покупатель платит магазину при получении" : o.pay_status === "paid" ? "💳 оплачен картой полностью, включая доставку — выдавайте без оплаты" : "ожидает оплаты"}${deadline}`;
   }
@@ -52,7 +53,7 @@ export function createNotify({ db, cfg, tg, push, sms, ref, log = console }) {
     async shipmentNew(shipId) {
       const c = ctx(shipId); if (!c.s || !c.st) return;
       if (c.owner?.tg_chat) {
-        const m = await safe(tg.send(c.owner.tg_chat, sellerText(c), sellerButtons(c.s)));
+        const m = await safe(tg.send(c.owner.tg_chat, sellerText(c), sellerButtons(c.s, c.f?.delivery_by === "store")));
         if (m?.message_id) db.run("UPDATE shipments SET tg_msg=? WHERE id=?", JSON.stringify({ chat: c.owner.tg_chat, id: m.message_id }), c.s.id);
       }
       if (c.owner) safe(push.toUser(c.owner.id, { title: `Новый заказ ${c.o.num}`, body: `${JSON.parse(c.s.lines).length} поз. · примите за ${cfg.timers.cancel} мин`, url: cabinet, tag: "ship-" + c.s.id }));
@@ -60,7 +61,7 @@ export function createNotify({ db, cfg, tg, push, sms, ref, log = console }) {
     async sellerRefresh(shipId) {
       const c = ctx(shipId); if (!c.s?.tg_msg) return;
       const m = JSON.parse(c.s.tg_msg);
-      await safe(tg.edit(m.chat, m.id, sellerText(c), sellerButtons(c.s)));
+      await safe(tg.edit(m.chat, m.id, sellerText(c), sellerButtons(c.s, c.f?.delivery_by === "store")));
     },
     async remind(shipId) {
       const c = ctx(shipId); if (!c.s || !c.owner) return;
@@ -85,7 +86,7 @@ export function createNotify({ db, cfg, tg, push, sms, ref, log = console }) {
       this.sellerRefresh(shipId);
       const text = c.s.status === "cancelled"
         ? `Заказ ${c.o.num} из магазина ${c.st.name} отменён: ${CANCEL_TEXT[c.s.cancel_reason] || "отмена"}.${c.s.cancel_reason !== "buyer" ? " Оплачивать ничего не нужно. Попробуйте заказать этот товар в другом магазине." : ""}`
-        : BUYER_TEXT[c.s.status]?.(c.o, c.st);
+        : BUYER_TEXT[c.s.status]?.(c.o, c.st, c.f);
       if (!text || !c.buyer || c.s.cancel_reason === "buyer") return;
       if (c.buyer.tg_chat) safe(tg.send(c.buyer.tg_chat, h(text)));
       safe(push.toUser(c.buyer.id, { title: `Imorat Go · ${c.o.num}`, body: text, url: `${cfg.siteUrl}#orders`, tag: "order-" + c.o.num }));

@@ -102,6 +102,11 @@ export function loadConfig(env = process.env) {
     payme: { id: env.PAYME_MERCHANT_ID || "", key: env.PAYME_KEY || "", testKey: env.PAYME_TEST_KEY || "", url: (env.PAYME_CHECKOUT_URL || "https://checkout.paycom.uz").replace(/\/$/, "") },
     click: { serviceId: env.CLICK_SERVICE_ID || "", merchantId: env.CLICK_MERCHANT_ID || "", secret: env.CLICK_SECRET_KEY || "", userId: env.CLICK_MERCHANT_USER_ID || "" },
     payTimeoutMin: Number(env.PAY_TIMEOUT_MIN || 30),
+    /* "stage 0": no payment provider yet and pay-at-store allowed — buyers pay the store on receipt, the platform holds no money */
+    get payOnReceipt() { return this.allowPayAtStore && !this.paymentsOnline.length; },
+    /* who delivers: Yandex when its token is set; in stage 0 (pay on receipt) the store itself with its own courier, price
+       agreed with the buyer; with card payments but no Yandex yet — Imorat Go arranges the courier by hand at the tariff price */
+    get deliveryBy() { return this.yandex.token ? "yandex" : this.payOnReceipt ? "store" : "platform"; },
     get paymentsOnline() { const have = [...(this.payme.id && this.payme.key ? ["payme"] : []), ...(this.click.serviceId && this.click.secret ? ["click"] : [])]; const want = list(env.PAYMENTS); return want.length ? have.filter(p => want.includes(p)) : have; }
   };
 }

@@ -1263,6 +1263,50 @@ test("SMS_MODE=telegram: production start without an SMS contract, sign-in only 
   } finally { a5.stopJobs(); a5.close(); a5.closeAllConnections(); a5.db.raw.close(); rmSync(d5, { recursive: true, force: true }); }
 });
 
+test("Stage 0: pay on receipt, the store delivers itself, no invented delivery price, no false debt, statuses and buttons", async () => {
+  const d0 = mkdtempSync(join(tmpdir(), "imorat-s0-"));
+  const cfg0 = loadConfig({ JWT_SECRET: "x", DB_PATH: join(d0, "s0.db"), UPLOADS_DIR: join(d0, "up"), ADMIN_PHONES: "998901111111", ADMIN_MFA: "0", SMS_MODE: "dev", OTP_PER_IP_HOUR: "500",
+    ALLOW_PAY_AT_STORE: "1", TELEGRAM_BOT_TOKEN: "TGTOKEN", TELEGRAM_API_URL: fakeBase + "/tg", TELEGRAM_POLL_TIMEOUT: "0" }); // no Payme/Click keys, no Yandex token
+  assert.equal(cfg0.payOnReceipt, true); assert.equal(cfg0.deliveryBy, "store");
+  const a0 = createApp(cfg0, { info() {}, warn() {}, error: console.error });
+  await new Promise(r => a0.listen(0, "127.0.0.1", r)); const b0 = `http://127.0.0.1:${a0.address().port}`;
+  const c = async (m, p, body, tok) => { const r = await fetch(b0 + p, { method: m, headers: { "content-type": "application/json", ...(tok ? { authorization: "Bearer " + tok } : {}) }, body: body ? JSON.stringify(body) : undefined }); return { status: r.status, data: await r.json().catch(() => ({})) }; };
+  const lg = async ph => (await c("POST", "/api/auth/otp/verify", { phone: ph, code: (await c("POST", "/api/auth/otp/send", { phone: ph })).data.dev_code })).data.token;
+  try {
+    const cf = (await c("GET", "/api/config")).data;
+    assert.deepEqual(cf.payments, []); assert.equal(cf.pay_at_store, true); assert.equal(cf.pay_on_receipt, true); assert.equal(cf.delivery_by, "store"); assert.equal(cf.yandex, false);
+    const t = await lg("998901234567"), seller = await lg("998901234568"), admin = await lg("998901111111");
+    const form = { name: "Нулевой", phone: "998901234567", mode: "yandex", district: "yunus", street: "ул. Амира Темура, 15", floor: "3", pay: "store", help: "none" };
+    // the quote: goods are priced, delivery is the store's business — no figure, not 0
+    const q = (await c("POST", "/api/quote", { lines: [{ id: 1, store: "usta", q: 2 }], form }, t)).data.quote;
+    assert.equal(q.delivery_by, "store"); assert.equal(q.del, null); assert.equal(q.ships[0].price, null); assert.equal(q.ships[0].source, "store"); assert.equal(q.ships[0].tariff, "cargo_s", "the vehicle class is still told to the store");
+    assert.equal(q.total, q.goods, "the total is the goods total"); assert.equal(q.unknown, false);
+    // a delivery order paid on receipt is accepted (no card provider needed) and carries no commission or acquiring
+    const o = await c("POST", "/api/orders", { lines: [{ id: 1, store: "usta", q: 2 }], form, expected_total: q.total }, t);
+    assert.equal(o.status, 200, JSON.stringify(o.data)); assert.equal(o.data.order.d.delivery_by, "store"); assert.equal(o.data.order.del, 0); assert.equal(o.data.order.pay_status, "to_store");
+    const sh = a0.db.get("SELECT * FROM shipments WHERE order_id=(SELECT id FROM orders WHERE num=?)", o.data.order.num);
+    assert.equal(sh.commission, 0); assert.equal(sh.acquiring, 0); assert.equal(sh.price, 0);
+    // the seller's Telegram message says the store delivers and asks it to name the delivery price; the button is "courier left"
+    a0.db.run("UPDATE stores SET owner_id=(SELECT id FROM users WHERE phone='998901234568') WHERE id='usta'"); a0.db.run("UPDATE users SET store_id='usta', tg_chat='4242' WHERE phone='998901234568'");
+    const n0 = tgSent.length; a0.notify.shipmentNew(sh.id); await until(() => tgSent.length > n0);
+    const msg = tgSent[tgSent.length - 1]; assert.match(msg.text, /Доставка вашим курьером/); assert.match(msg.text, /платит магазину при получении/); assert.ok(!/Яндекс/.test(msg.text));
+    // statuses: accept → assembling → "courier left" (on_way, no Yandex search) → delivered; the buyer hears about the store's courier
+    assert.equal((await c("PATCH", `/api/seller/shipments/${sh.id}`, { status: "assembling" }, seller)).status, 200);
+    assert.equal((await c("PATCH", `/api/seller/shipments/${sh.id}`, { status: "searching" }, seller)).data.error, "bad_status", "no Yandex search when the store delivers");
+    const n1 = tgSent.length;
+    assert.equal((await c("PATCH", `/api/seller/shipments/${sh.id}`, { status: "on_way" }, seller)).status, 200);
+    const ord = (await c("GET", `/api/orders/${o.data.order.num}`, null, t)).data.order; assert.equal(ord.ships[0].step, 2, "step 2 of the 4-step store flow");
+    const cr = (await c("GET", `/api/orders/${o.data.order.num}/courier?ship=${sh.id}`, null, t)).data.courier; assert.equal(cr.pos, null); assert.ok(cr.unavailable);
+    assert.equal((await c("PATCH", `/api/seller/shipments/${sh.id}`, { status: "delivered" }, seller)).status, 200);
+    // the store owes Imorat Go nothing for a delivery Imorat Go did not order
+    const f = (await c("GET", "/api/seller/summary", null, seller)).data.finance; assert.equal(f.delivery_due, 0); assert.equal(f.balance, 0); assert.equal(f.commission_total, 0);
+    const st = (await c("GET", "/api/seller/statement", null, seller)).data; assert.equal(st.totals.sales_store, st.totals.sales); assert.equal(st.totals.due, 0);
+    // pickup with cash still works too
+    const o2 = await c("POST", "/api/orders", { lines: [{ id: 1, store: "usta", q: 1 }], form: { ...form, mode: "pickup" } }, t); assert.equal(o2.status, 200); assert.equal(o2.data.order.d.delivery_by, undefined);
+    await new Promise(r => setTimeout(r, 400)); // let the status notifications finish before the database closes
+  } finally { a0.stopJobs(); a0.close(); a0.closeAllConnections(); a0.db.raw.close(); rmSync(d0, { recursive: true, force: true }); }
+});
+
 test("App: push tokens, order notifications through FCM and APNs, dead tokens dropped, reviewers' fixed code, account deletion", async () => {
   // reviewers' account: fixed code, no SMS, any SMS mode
   const n0 = sms.length;

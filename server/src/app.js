@@ -46,9 +46,11 @@ import { registerDashboard } from "./dashboard.js";
 
 export const STEPS = {
   yandex: ["new", "assembling", "searching", "to_store", "on_way", "delivered"],
+  store: ["new", "assembling", "on_way", "delivered"], // the store's own courier: no search, no "driving to the store"
   pickup: ["new", "assembling", "ready", "picked"]
 };
-const SELLER_MOVES = { new: ["assembling", "cancelled"], assembling: ["searching", "ready", "cancelled"], ready: ["picked"], searching: ["to_store"], to_store: ["on_way"], on_way: ["delivered"] };
+const SELLER_MOVES = { new: ["assembling", "cancelled"], assembling: ["searching", "ready", "on_way", "cancelled"], ready: ["picked"], searching: ["to_store"], to_store: ["on_way"], on_way: ["delivered"] };
+const flowOf = (sh, f) => sh.tariff ? (f?.delivery_by === "store" ? "store" : "yandex") : "pickup";
 const FAIL_REASONS = ["not_accepted", "out_of_stock", "not_shipped"];
 const SESSION_TTL = 60 * 86400;
 const MIME = { ".webp": "image/webp", ".jpg": "image/jpeg", ".png": "image/png" };
@@ -163,7 +165,8 @@ export function createApp(cfg, log = console) {
     payments: cfg.paymentsOnline, telegram_bot: tg.enabled ? tg.username || null : null, telegram_channel: /^@/.test(cfg.channel?.chat || "") ? cfg.channel.chat : null, push_key: push.publicKey,
     timers: cfg.timers, commission: cfg.commission, acquiring: cfg.acquiring, acquiring_by: cfg.acquiringBy, promo_months: cfg.promoMonths, demo: cfg.demoStores,
     ymaps_key: cfg.maps.jsKey || null, geo: geo.provider, bonus: cfg.bonus.enabled, // the site draws a Yandex map with the key; address search goes through /api/geo
-    site_url: cfg.siteUrl // the public website (SITE_URL): legal pages for the app, the bank's return address — an explicit setting, never derived from the API host
+    site_url: cfg.siteUrl, // the public website (SITE_URL): legal pages for the app, the bank's return address — an explicit setting, never derived from the API host
+    pay_on_receipt: cfg.payOnReceipt, delivery_by: cfg.deliveryBy // "stage 0": buyers pay the store on receipt; who delivers (yandex | store)
   }));
   /* ---------- address search for the checkout map ---------- */
   const langOf = url => (["ru", "uz", "en"].includes(url.searchParams.get("lang")) ? url.searchParams.get("lang") : "ru");
@@ -317,7 +320,7 @@ export function createApp(cfg, log = console) {
     const form = cleanForm(b.form || {});
     const { lines, problems } = loadLines(db, ref, b.lines, user);
     const yp = await yandexPrices(db, ref, cfg.yandex, lines, form, log);
-    const q = quote(db, ref, { lines, services: b.services || [], bundles: b.bundles || [], form, promo: b.promo, user, yandexPrices: yp, points: cfg.bonus.enabled ? b.points : 0, maxShare: cfg.bonus.maxShare, bonusOn: cfg.bonus.enabled, rateVip: cfg.bonus.rateVip });
+    const q = quote(db, ref, { lines, services: b.services || [], bundles: b.bundles || [], form, promo: b.promo, user, yandexPrices: yp, points: cfg.bonus.enabled ? b.points : 0, maxShare: cfg.bonus.maxShare, bonusOn: cfg.bonus.enabled, rateVip: cfg.bonus.rateVip, storeDelivery: cfg.deliveryBy === "store" });
     return { q, form, lines, problems };
   }
   r.post("/api/quote", async req => { lim.hit("quote-ip:" + req.ip, 120, 60_000); const b = await readJson(req); const { q, problems } = await computeQuote(req, b); return { quote: q, problems }; });
@@ -346,8 +349,8 @@ export function createApp(cfg, log = console) {
       if (q.pts && !db.run("UPDATE users SET points=points-? WHERE id=? AND points>=?", q.pts, u.id, q.pts).changes) throw new HttpError(409, "total_changed", "Bonus balance changed, check the new total", { quote: { ...q, pts: 0, total: q.total + q.pts } });
       const ins = db.run(`INSERT INTO orders(num,user_id,created_at,status,pay,pay_status,form,goods,del,svc,disc,promo_disc,total,cash,promo,services,points_used)
         VALUES(?,?,?,'active',?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-        "tmp-" + randomBytes(6).toString("hex"), u.id, now, form.pay, ["cash", "store"].includes(form.pay) ? "to_store" : "pending", JSON.stringify({ ...form, lang: String(b.lang || "ru").slice(0, 2), ...(b.app === true ? { app: true } : {}) }),
-        q.goods, q.del, q.svc, q.disc, q.pd, q.total, q.cash, q.promo, JSON.stringify(q.services), q.pts || 0);
+        "tmp-" + randomBytes(6).toString("hex"), u.id, now, form.pay, ["cash", "store"].includes(form.pay) ? "to_store" : "pending", JSON.stringify({ ...form, lang: String(b.lang || "ru").slice(0, 2), ...(b.app === true ? { app: true } : {}), ...(q.delivery_by === "store" ? { delivery_by: "store" } : {}) }),
+        q.goods, q.del ?? 0, q.svc, q.disc, q.pd, q.total, q.cash, q.promo, JSON.stringify(q.services), q.pts || 0);
       const id = Number(ins.lastInsertRowid), num = "IM-" + (100000 + id);
       if (q.pts) db.run("INSERT INTO points_log(user_id,delta,reason,ref,created_at) VALUES(?,?,?,?,?)", u.id, -q.pts, "spent", "order:" + id, now);
       db.run("UPDATE orders SET num=? WHERE id=?", num, id);
@@ -360,7 +363,7 @@ export function createApp(cfg, log = console) {
         const start = storeStartAt(st, now);
         const st0 = online ? "unpaid" : "new";
         db.run("INSERT INTO shipments(order_id,store_id,tariff,price,kg,dist,lines,status,status_at,history,goods,commission,acquiring,start_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-          id, s.store, s.tariff, s.price, s.kg, s.dist, JSON.stringify(s.lines), st0, now, JSON.stringify([{ s: st0, t: now }]), goods, commission, acquiring, start);
+          id, s.store, s.tariff, s.price ?? 0, s.kg, s.dist, JSON.stringify(s.lines), st0, now, JSON.stringify([{ s: st0, t: now }]), goods, commission, acquiring, start); // price 0 = "agreed with the store" when the store delivers (form.delivery_by)
       }
       if (q.promo) db.run("INSERT OR IGNORE INTO promo_uses(user_id,code,order_id) VALUES(?,?,?)", u.id, q.promo, id);
       return num;
@@ -386,7 +389,7 @@ export function createApp(cfg, log = console) {
       paid_at: o.paid_at || null, pay_url: o.pay_status === "pending" && !["store", "cash"].includes(o.pay) && o.status !== "cancelled" ? payments.payUrl(o) : null,
       pay_deadline: o.pay_status === "pending" && !["store", "cash"].includes(o.pay) ? o.created_at + cfg.payTimeoutMin * 60000 : null,
       ships: ships.map(s => ({ id: s.id, store: s.store_id, store_name: s.store_name, store_addr: s.store_addr, store_hours: s.store_hours, tariff: s.tariff, tracking_url: s.tracking_url || null, live: !!(s.claim_id && !String(s.claim_id).startsWith("sim-")), price: s.price, kg: s.kg, dist: s.dist, status: s.status, status_at: s.status_at,
-        step: (STEPS[s.tariff ? "yandex" : "pickup"].indexOf(s.status)), history: JSON.parse(s.history), lines: JSON.parse(s.lines), courier: s.courier,
+        step: (STEPS[flowOf(s, JSON.parse(o.form))].indexOf(s.status)), history: JSON.parse(s.history), lines: JSON.parse(s.lines), courier: s.courier,
         cancel_reason: s.cancel_reason, accept_by: s.status === "new" ? (s.start_at || s.status_at) + cfg.timers.cancel * 60000 : null,
         loaders_failed: !!s.loaders_failed, // the carrier refused the loader: the buyer meets the car at the entrance (see notify.loadersFailed)
         review: db.get("SELECT stars, text, reply FROM reviews WHERE ship_id=?", s.id) || null }))
@@ -564,7 +567,8 @@ export function createApp(cfg, log = console) {
         return { ship_id: x.id, num: x.num, t: x.oc, status: x.status, tariff: x.tariff, price: x.price, kg: x.kg, pay: x.pay, pay_status: x.pay_status,
           buyer: f.name, phone: f.phone, district: f.district, street: f.mode === "pickup" ? "" : f.street, floor: f.private ? null : f.floor, entrance: f.entrance || "", private: !!f.private, help: f.help || (f.lift ? "one" : "none"), access: f.access || "door", elevator: f.elevator ?? null, loaders_failed: !!x.loaders_failed, when: f.when, hour: f.hour, comment: f.comment, lines: JSON.parse(x.lines),
           cancel_reason: x.cancel_reason, accept_by: x.status === "new" ? (x.start_at || x.status_at) + cfg.timers.cancel * 60000 : null, commission: x.commission, acquiring: x.acquiring,
-          next: SELLER_MOVES[x.status]?.filter(n => (x.tariff ? n !== "ready" : !["searching"].includes(n))) || [] };
+          delivery_by: x.tariff ? (f.delivery_by === "store" ? "store" : "yandex") : null, // who delivers: the store's own courier (stage 0) or Yandex
+          next: SELLER_MOVES[x.status]?.filter(n => (x.tariff ? n !== "ready" && (f.delivery_by === "store" ? n !== "searching" : !(n === "on_way" && x.status === "assembling")) : !["searching", "on_way"].includes(n))) || [] };
       }),
       products
     };
@@ -672,7 +676,8 @@ export function createApp(cfg, log = console) {
     const { u, s } = needSeller(req), b = await readJson(req);
     const sh = db.get("SELECT * FROM shipments WHERE id=?", Number(p.id));
     if (!sh || (sh.store_id !== s.id && !adminOk(req))) throw new HttpError(404, "not_found", "Shipment not found");
-    if (!(SELLER_MOVES[sh.status] || []).includes(b.status) || (b.status === "ready" && sh.tariff) || (b.status === "searching" && !sh.tariff)) throw bad("bad_status", `Cannot move from ${sh.status} to ${b.status}`);
+    const fo = JSON.parse(db.get("SELECT form FROM orders WHERE id=?", sh.order_id)?.form || "{}"), byStore = sh.tariff && fo.delivery_by === "store";
+    if (!(SELLER_MOVES[sh.status] || []).includes(b.status) || (b.status === "ready" && sh.tariff) || (b.status === "searching" && (!sh.tariff || byStore)) || (b.status === "on_way" && sh.status === "assembling" && !byStore)) throw bad("bad_status", `Cannot move from ${sh.status} to ${b.status}`);
     moveShipment(sh, b.status, req);
     return { ok: true, status: b.status };
   });
@@ -798,10 +803,11 @@ export function createApp(cfg, log = console) {
     const st = sh && db.get("SELECT * FROM stores WHERE id=?", sh.store_id);
     const ow = st?.owner_id && db.get("SELECT * FROM users WHERE id=?", st.owner_id);
     if (!sh || !ow || ow.tg_chat !== String(q.message?.chat?.id)) return tg.answer(q.id, "Нет доступа к этому заказу");
-    const target = { acc: "assembling", oos: "cancelled", rdy: sh.tariff ? "searching" : "ready", pick: "picked" }[act];
+    const fo = JSON.parse(db.get("SELECT form FROM orders WHERE id=?", sh.order_id)?.form || "{}");
+    const target = { acc: "assembling", oos: "cancelled", rdy: sh.tariff ? (fo.delivery_by === "store" ? "on_way" : "searching") : "ready", pick: "picked", dlv: "delivered" }[act];
     if (!target || !(SELLER_MOVES[sh.status] || []).includes(target)) { await tg.answer(q.id, "Статус уже изменён"); return notify.sellerRefresh(sh.id); }
     moveShipment(sh, target, { user: ow, ip: "telegram" });
-    await tg.answer(q.id, { assembling: "Принято! Соберите заказ", cancelled: "Заказ отменён, товар скрыт из наличия", searching: "Вызываем курьера", ready: "Покупатель получит уведомление", picked: "Готово" }[target]);
+    await tg.answer(q.id, { on_way: "Покупателю сообщили, что курьер выехал", delivered: "Доставлено — спасибо!", assembling: "Принято! Соберите заказ", cancelled: "Заказ отменён, товар скрыт из наличия", searching: "Вызываем курьера", ready: "Покупатель получит уведомление", picked: "Готово" }[target]);
   });
 
   /* ---------- finance: commission ledger and settlements ---------- */
@@ -812,7 +818,7 @@ export function createApp(cfg, log = console) {
     const tot = db.get("SELECT COALESCE(SUM(commission),0) c, COALESCE(SUM(acquiring),0) q FROM shipments WHERE store_id=? AND status IN ('delivered','picked')", storeId), all = tot.c + tot.q;
     // Money that crossed sides: for orders paid to the store the buyer also handed it the delivery fee that Imorat Go paid to Yandex;
     // for orders paid by card online Imorat Go holds the goods money and owes the store its share (goods minus commission and the bank's fee).
-    const flow = db.get(`SELECT COALESCE(SUM(CASE WHEN o.pay IN ('store','cash') AND sh.tariff IS NOT NULL THEN sh.price ELSE 0 END),0) delivery_due,
+    const flow = db.get(`SELECT COALESCE(SUM(CASE WHEN o.pay IN ('store','cash') AND sh.tariff IS NOT NULL AND sh.claim_id IS NOT NULL AND sh.claim_id NOT LIKE 'sim-%' THEN sh.price ELSE 0 END),0) delivery_due,
         COALESCE(SUM(CASE WHEN o.pay NOT IN ('store','cash') AND o.pay_status IN ('paid','refund_due','refunded') THEN sh.goods - sh.commission - sh.acquiring ELSE 0 END),0) payout_due,
         COALESCE(SUM(CASE WHEN o.pay NOT IN ('store','cash') AND o.pay_status IN ('paid','refund_due','refunded') THEN sh.goods ELSE 0 END),0) online_held,
         COALESCE(SUM(CASE WHEN o.pay NOT IN ('store','cash') AND o.pay_status IN ('paid','refund_due','refunded') AND sh.status_at>=? AND sh.status_at<? THEN sh.goods ELSE 0 END),0) online_month
@@ -1080,5 +1086,6 @@ export function createApp(cfg, log = console) {
   server.channel = channel;
   server.stockSweep = () => cx.stockSweep();
   server.db = db;
+  server.notify = notify;
   return server;
 }

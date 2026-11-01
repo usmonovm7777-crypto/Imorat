@@ -9,7 +9,7 @@
 |---|---|---|
 | Сайт (RU / UZ / EN, PWA) | `index.html`, GitHub Pages `https://usmonovm7777-crypto.github.io/Imorat/` | готов; без сервера работает в демо-режиме |
 | SEO-страницы товаров и категорий | `p/`, `c/`, `uz/`, `sitemap.xml` | генерируются `tools/build_seo.py` |
-| Сервер (API, SQLite, без зависимостей) | `server/` | готов, 32 автотеста, Docker + HTTPS, установка одной командой (`DEPLOY.md`) |
+| Сервер (API, SQLite, без зависимостей) | `server/` | готов, 33 автотеста, Docker + HTTPS, установка одной командой (`DEPLOY.md`) |
 | Мобильное приложение (Capacitor 8) | `app/`, GitHub Actions | тестовый APK собирается; конвейер для Google Play (AAB) и проверка сборки iOS готовы; **публикация требует аккаунтов, ключей и проверки на телефонах** — `app/README.md` |
 | Юридические страницы | `legal/privacy.html`, `legal/terms.html`, `legal/delete-account.html` (RU/UZ/EN) | опубликованы на сайте; реквизиты ООО вписать после регистрации |
 | Telegram-бот (RU / UZ / EN) и канал | `server/src/bot.js`, `@imoratGo_bot`, `@imoratgo` | готов; включается токеном в `.env` |
