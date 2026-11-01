@@ -19,9 +19,9 @@ const fake = createServer(async (req, res) => {
   const json = (s, o) => { res.writeHead(s, { "content-type": "application/json" }); res.end(JSON.stringify(o)); };
   if (req.url === "/eskiz/auth/login") return json(200, { data: { token: "T" } });
   if (req.url === "/eskiz/message/sms/send") { sms.push(body); return json(200, { id: "1", status: "waiting" }); }
-  if (req.url === "/ya/b2b/cargo/integration/v2/check-price") { const b = JSON.parse(body); return json(200, { price: b.requirements.taxi_class === "express" ? "21000.00" : "99000.00", eta: 30 }); }
+  if (req.url === "/ya/b2b/cargo/integration/v2/check-price") { const b = JSON.parse(body); if (/NOPRICE/.test(b.route_points[1].fullname)) return json(400, { code: "bad_request", message: "route outside the zone" }); return json(200, { price: b.requirements.taxi_class === "express" ? "21000.00" : "99000.00", eta: 30 }); }
   // Yandex claims: create → accept → info (status advances on every call) → tracking link → performer position
-  if (req.url.startsWith("/ya/b2b/cargo/integration/v2/claims/create")) { yaClaims.push({ body: JSON.parse(body), infos: 0 }); return json(200, { id: "claim-" + yaClaims.length, version: 1, status: "new" }); }
+  if (req.url.startsWith("/ya/b2b/cargo/integration/v2/claims/create")) { const b = JSON.parse(body); if (b.client_requirements.cargo_loaders && /NOLOADER/.test(b.route_points[1].address.fullname)) return json(400, { code: "bad_request", message: "no loaders for this tariff" }); yaClaims.push({ body: b, infos: 0 }); return json(200, { id: "claim-" + yaClaims.length, version: 1, status: "new" }); }
   if (req.url.startsWith("/ya/b2b/cargo/integration/v2/claims/accept")) return json(200, { id: "x", status: "ready_for_approval" });
   if (req.url.startsWith("/ya/b2b/cargo/integration/v2/claims/cancel-info")) return json(200, { cancel_state: "paid" });
   if (req.url.startsWith("/ya/b2b/cargo/integration/v2/claims/cancel?")) { yaCancels.push({ url: req.url, body: JSON.parse(body) }); return json(200, { id: "x", status: "cancelled_with_payment" }); }
@@ -251,6 +251,26 @@ test("Eskiz SMS and Yandex prices when keys are set", async () => {
 const wait = ms => new Promise(r => setTimeout(r, ms));
 async function until(fn, ms = 3000) { const t = Date.now(); while (Date.now() - t < ms) { const v = await fn(); if (v) return v; await wait(50); } throw new Error("timeout"); }
 
+test("Bulky goods: the vehicle follows the longest item, not only the weight; sellers can give package sizes", async () => {
+  const t = (await login("993330001")).data.token;
+  const form = { name: "Длинный", phone: "998993330001", mode: "yandex", district: "yunus", street: "ул. Длинная, 1" };
+  const q = async lines => (await call("POST", "/api/quote", { lines, form }, t)).data.quote;
+  const cat = (await call("GET", "/api/catalog")).data.products, P = id => cat.find(p => p.id === id);
+  assert.deepEqual(P(13).dims, [6, 0.1, 0.05], "6-metre timber carries its package size"); assert.equal(P(1).dims, null, "a cement bag has none");
+  assert.equal((await q([{ id: 1, store: "usta", q: 1 }])).ships[0].tariff, "cargo_s", "50 kg → small van by weight");
+  assert.equal((await q([{ id: 8, store: "usta", q: 1 }])).ships[0].tariff, "cargo_s", "a 1.4 kg but 3-metre profile does not fit a car");
+  const long = await q([{ id: 13, store: "usta", q: 1 }]); assert.equal(long.ships[0].tariff, "cargo_l", "6-metre timber → large van"); assert.equal(long.ships[0].len, 6);
+  assert.equal((await q([{ id: 37, store: "santex", q: 1 }])).ships[0].tariff, "courier", "a fittings set is a small parcel even in the pipes subcategory");
+  // a seller's own product with its package size in centimetres
+  const seller = (await login("993330002")).data.token;
+  const st = await call("POST", "/api/seller/store", { name: "Uzun Mollar", descr: "Магазин длинных товаров для проверки габаритов", cats: ["build"], phone: "712003300", addr: "ул. Габаритная, 2", hours: "09:00–18:00", district: "chil" }, seller);
+  assert.equal((await call("PATCH", `/api/admin/stores/${st.data.store.id}`, { status: "active" }, globalThis.ADMIN)).status, 200);
+  const np = await call("POST", "/api/seller/products", { ru: "Плинтус МДФ 2,4 м", cat: "build", sub: "wood", unit: "pcs", price: 45000, stock: 20, kg: 0.8, dims_cm: [240, 8, 2] }, seller);
+  assert.equal(np.status, 200, JSON.stringify(np.data));
+  const own = (await call("GET", "/api/catalog")).data.products.find(p => p.id === np.data.product.id); assert.deepEqual(own.dims, [2.4, 0.08, 0.02]);
+  assert.equal((await q([{ id: np.data.product.id, store: st.data.store.id, q: 2 }])).ships[0].tariff, "cargo_s", "1.6 kg of skirting, 2.4 m long → small van");
+});
+
 test("Telegram: link seller, order arrives with buttons, accept from Telegram", async () => {
   const seller = (await login("991234567")).data.token;
   const st = await call("POST", "/api/seller/store", { name: "Tez Qurilish", descr: "Сухие смеси и инструмент рядом с метро", cats: ["build"], phone: "712223344", addr: "ул. Мукими, 7", hours: "00:00–00:00", district: "yunus" }, seller);
@@ -323,6 +343,21 @@ test("Seller deadlines: reminder, SMS, auto-cancel restores stock and lowers rel
   assert.equal(await stock(), 10);
   const r = (await call("GET", `/api/stores/${sid}/reviews`)).data.rating;
   assert.equal(r.fail, 1);
+  // Price freshness: every offer carries the date the seller last edited or confirmed it; a week of silence is "stale",
+  // the seller is reminded in Telegram once a week, and "Всё актуально" stamps the whole list without changing a price
+  const offer = async () => (await call("GET", "/api/catalog")).data.products.find(p => p.id === 3).offers.find(x => x.store === sid);
+  assert.ok((await offer()).upd > Date.now() / 1000 - 60, "a fresh offer shows today's confirmation");
+  let pf = (await call("GET", "/api/seller/summary", null, seller)).data.prices; assert.equal(pf.days, 0); assert.equal(pf.stale, false);
+  app.db.run("UPDATE offers SET updated_at=? WHERE store_id=?", Date.now() - 10 * 86400000, sid); app.db.setMeta("catalog_rev", Date.now());
+  pf = (await call("GET", "/api/seller/summary", null, seller)).data.prices; assert.equal(pf.days, 10); assert.equal(pf.stale, true);
+  app.db.run("UPDATE users SET tg_chat='777' WHERE phone='998990001111'");
+  const before = tgSent.length; app.sweep(Date.now()); app.sweep(Date.now());
+  await until(() => tgSent.slice(before).some(x => x.chat_id === "777" && /не подтверждались 10 дн/.test(x.text)));
+  await new Promise(r => setTimeout(r, 150));
+  assert.equal(tgSent.slice(before).filter(x => x.chat_id === "777" && /не подтверждались/.test(x.text)).length, 1, "one reminder, not one per sweep");
+  const cf = await call("POST", "/api/seller/offers/confirm", {}, seller); assert.equal(cf.status, 200);
+  assert.ok((await offer()).upd >= Math.floor(cf.data.prices_confirmed_at / 1000), "the confirmation date reaches the catalog"); assert.equal((await offer()).price, 60000, "confirming changes no price");
+  pf = (await call("GET", "/api/seller/summary", null, seller)).data.prices; assert.equal(pf.days, 0); assert.equal(pf.stale, false);
 });
 
 test("Web push: subscription gets an encrypted, VAPID-signed message", async () => {
@@ -1064,6 +1099,13 @@ test("Card only: no cash, the full address reaches the courier, the buyer watche
   // 3) with a Yandex token: the claim is created with porch/floor/flat/door code, statuses follow Yandex, position is live
   await run(mk({ PAYME_MERCHANT_ID: "5e730e8e0b852a417aa49ceb", PAYME_KEY: "PK", YANDEX_DELIVERY_TOKEN: "y", YANDEX_DELIVERY_URL: fakeBase + "/ya" }), async (c, lg, a) => {
     const t = await lg("998901234567"), admin = await lg("998901111111");
+    { // the carrier is connected but returns no price for this address: the cost is unknown — shown as unknown, never as 0 — and no order is taken
+      const q = (await c("POST", "/api/quote", { lines: [{ id: 1, store: "usta", q: 1 }], form: { ...form, street: "NOPRICE street 1" } }, t)).data.quote;
+      assert.equal(q.unknown, true); assert.equal(q.del, null); assert.equal(q.total, null); assert.equal(q.ships[0].source, "unavailable"); assert.equal(q.ships[0].price, null); assert.ok(q.goods > 0);
+      const bad = await c("POST", "/api/orders", { lines: [{ id: 1, store: "usta", q: 1 }], form: { ...form, street: "NOPRICE street 1" } }, t);
+      assert.equal(bad.status, 503); assert.equal(bad.data.error, "delivery_price_unavailable");
+      const ok = (await c("POST", "/api/quote", { lines: [{ id: 1, store: "usta", q: 1 }], form }, t)).data.quote; assert.equal(ok.ships[0].source, "yandex"); assert.equal(ok.unknown, false);
+    }
     const o = await c("POST", "/api/orders", { lines: [{ id: 1, store: "usta", q: 1 }], form }, t); assert.equal(o.status, 200, JSON.stringify(o.data));
     const rpc = (method, params) => fetch(`http://127.0.0.1:${a.address().port}/api/pay/payme`, { method: "POST", headers: { "content-type": "application/json", authorization: "Basic " + Buffer.from("Paycom:PK").toString("base64") }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }) }).then(r => r.json());
     await rpc("CreateTransaction", { id: "c2", time: Date.now(), amount: o.data.order.total * 100, account: { order: o.data.order.num } }); await rpc("PerformTransaction", { id: "c2" });
@@ -1075,6 +1117,18 @@ test("Card only: no cash, the full address reaches the courier, the buyer watche
     assert.deepEqual(dest.address.coordinates, [69.279, 41.311]); assert.equal(dest.contact.phone, "+998901234567"); assert.equal(dest.external_order_id, o.data.order.num);
     assert.ok(["express", "cargo"].includes(claim.client_requirements.taxi_class)); // a 50 kg bag of cement goes by cargo van
     assert.equal(claim.client_requirements.cargo_loaders, 1); assert.equal(claim.skip_door_to_door, false); // help was ordered at checkout
+    assert.deepEqual(claim.items[0].size, { length: 0.5, width: 0.4, height: 0.3 }, "a cement bag has no dims: the generic parcel size"); assert.match(claim.comment, /нужна помощь с разгрузкой/);
+    { // the carrier refuses the loader for this route: the trip is still ordered, without the help, and the order says so
+      const o2 = await c("POST", "/api/orders", { lines: [{ id: 1, store: "usta", q: 1 }], form: { ...form, street: "NOLOADER street 5", access: "far", elevator: false } }, t); assert.equal(o2.status, 200, JSON.stringify(o2.data));
+      await rpc("CreateTransaction", { id: "c2b", time: Date.now(), amount: o2.data.order.total * 100, account: { order: o2.data.order.num } }); await rpc("PerformTransaction", { id: "c2b" });
+      const sh2 = o2.data.order.ships[0].id, n1 = yaClaims.length;
+      for (const st of ["assembling", "searching"]) await c("PATCH", `/api/admin/shipments/${sh2}`, { status: st }, admin);
+      await until(() => yaClaims.length > n1);
+      const cl2 = yaClaims[yaClaims.length - 1].body;
+      assert.equal(cl2.client_requirements.cargo_loaders, undefined); assert.equal(cl2.skip_door_to_door, true); assert.match(cl2.comment, /Грузчика перевозчик не подтвердил/); assert.match(cl2.comment, /машина не подъедет/); assert.match(cl2.comment, /лифта нет/);
+      await until(async () => (await c("GET", `/api/orders/${o2.data.order.num}`, null, t)).data.order.ships[0].loaders_failed === true);
+      const d2 = (await c("GET", `/api/orders/${o2.data.order.num}`, null, t)).data.order.d; assert.equal(d2.access, "far"); assert.equal(d2.elevator, false);
+    }
     await until(async () => (await c("GET", `/api/orders/${o.data.order.num}`, null, t)).data.order.ships[0].tracking_url);
     // each sweep asks Yandex and moves the shipment: performer_found → to_store, pickuped → on_way, delivered_finish → delivered
     a.sweep(); await until(async () => (await c("GET", `/api/orders/${o.data.order.num}`, null, t)).data.order.ships[0].status === "to_store");

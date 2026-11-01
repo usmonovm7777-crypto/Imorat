@@ -7,7 +7,7 @@ import { openDb } from "./db.js";
 import { Router, HttpError, bad, readJson, readBody, send, cors, Limiter, clientIp, int, str } from "./http.js";
 import { signJwt, verifyJwt, parsePhone, issueOtp, checkOtp, verifyIdToken, newUserId, publicUser } from "./auth.js";
 import { createSms } from "./sms.js";
-import { loadLines, quote, assertNoProblems } from "./pricing.js";
+import { loadLines, quote, assertNoProblems, dimsOf } from "./pricing.js";
 import { yandexPrices } from "./delivery.js";
 import { createCourier } from "./courier.js";
 import { createGeo } from "./geo.js";
@@ -72,6 +72,8 @@ export function createApp(cfg, log = console) {
      acquiring fee — two separate lines in the cabinet. The end of the free months is set when a store is approved. */
   const addMonths = (t, n) => { const d = new Date(t); d.setUTCMonth(d.getUTCMonth() + n); return d.getTime(); };
   const inPromo = (s, at = Date.now()) => !!(s?.free_until && s.free_until > at);
+  /* how long ago the seller last confirmed or edited prices: the newest offer change or the store-wide confirmation */
+  const pricesFreshness = s => { const last = Math.max(s.prices_confirmed_at || 0, db.get("SELECT COALESCE(MAX(updated_at),0) m FROM offers WHERE store_id=?", s.id).m || 0); return { confirmed_at: last || null, days: last ? Math.floor((Date.now() - last) / 86400000) : null, stale: !last || Date.now() - last > 7 * 86400000 }; };
   const storeRates = s => ({ platform: cfg.commission, acquiring: cfg.acquiring, acquiring_by: cfg.acquiringBy, promo_months: cfg.promoMonths, free_until: s?.free_until || null, promo: inPromo(s) });
   // stores that were active before this rule arrived get their free months from the day they were created
   for (const s of db.all("SELECT id, created_at FROM stores WHERE free_until IS NULL AND status='active'")) db.run("UPDATE stores SET free_until=? WHERE id=?", addMonths(s.created_at, cfg.promoMonths), s.id);
@@ -142,7 +144,7 @@ export function createApp(cfg, log = console) {
     id: s.id, name: s.name, d: s.district, addr: s.addr, addrUz: s.addr_uz || s.addr, hours: s.hours, ru: s.ru || s.descr.slice(0, 80), uz: s.uz || s.ru || s.descr.slice(0, 80),
     descr: s.descr, cats: JSON.parse(s.cats || "[]"), phone: s.phone, telegram: s.telegram, verified: !!s.verified, landmark: s.landmark, la: s.la, lo: s.lo, status: s.status, loc_src: s.loc_src, note: s.review_note, created: s.created_at
   });
-  const ownerStore = s => ({ ...publicStore(s), payout_to: s.payout_to || "", free_until: s.free_until || null }); // the store's own view adds its payout details and free months
+  const ownerStore = s => ({ ...publicStore(s), payout_to: s.payout_to || "", free_until: s.free_until || null, prices_confirmed_at: s.prices_confirmed_at || null }); // the store's own view adds its payout details, free months, price confirmation
 
   /* ---------- meta ---------- */
   r.get("/api/health", () => ({ ok: true, time: Date.now(), name: "imorat-api", version: PKG_VERSION, contract: API_CONTRACT, min_client: MIN_CLIENT }));
@@ -267,12 +269,15 @@ export function createApp(cfg, log = console) {
     if (catCache && catCache.rev === rev && now - catCache.at < 60_000) return catCache;
     const stats = storeStats();
     const stores = db.all("SELECT * FROM stores WHERE status='active' ORDER BY created_at, id").map(s => ({ ...publicStore(s), note: undefined, loc_src: undefined, rating: stats[s.id] || { done: 0, fail: 0, reliability: null, stars: null, reviews: 0, accept_min: null } }));
-    const offers = db.all("SELECT o.product_id, o.store_id, o.price, o.stock FROM offers o JOIN stores s ON s.id=o.store_id AND s.status='active' ORDER BY o.product_id, o.price");
+    // upd = when the seller last touched this price/stock or confirmed the whole list ("prices are current"), whichever is later;
+    // the site shows it to the buyer and warns when it is old. Seconds, so the ETag does not change on every millisecond.
+    const offers = db.all("SELECT o.product_id, o.store_id, o.price, o.stock, MAX(COALESCE(o.updated_at,0), COALESCE(s.prices_confirmed_at,0)) upd FROM offers o JOIN stores s ON s.id=o.store_id AND s.status='active' ORDER BY o.product_id, o.price");
     const by = new Map();
-    for (const o of offers) { const a = by.get(o.product_id) || []; a.push({ store: o.store_id, price: o.price, stock: o.stock }); by.set(o.product_id, a); }
+    for (const o of offers) { const a = by.get(o.product_id) || []; a.push({ store: o.store_id, price: o.price, stock: o.stock, upd: o.upd ? Math.floor(o.upd / 1000) : 0 }); by.set(o.product_id, a); }
     const products = db.all("SELECT * FROM products WHERE active=1 ORDER BY id").filter(p => by.has(p.id)).map(p => ({
       id: p.id, cat: p.cat, sub: p.sub, icon: p.icon, ru: p.ru, uz: p.uz, unit: p.unit, kg: p.kg, img: mediaUrl(p.img), group: p.grp, hit: !!p.hit, isNew: !!p.is_new,
-      key: p.key, rating: p.rating, reviews: p.reviews, country: JSON.parse(p.country), warranty: p.warranty, desc: p.descr, offers: by.get(p.id)
+      key: p.key, rating: p.rating, reviews: p.reviews, country: JSON.parse(p.country), warranty: p.warranty, desc: p.descr, offers: by.get(p.id),
+      dims: dimsOf(ref, p) // package size [l,w,h] m (the seller's or typical for the subcategory); long goods need a cargo van whatever they weigh
     }));
     const json = JSON.stringify({ stores, products }), hash = createHash("sha1").update(json).digest("base64url").slice(0, 16);
     if (catCache && catCache.hash === hash) { catCache.rev = rev; catCache.at = now; return catCache; }
@@ -293,6 +298,7 @@ export function createApp(cfg, log = console) {
     name: str(f?.name, 80), phone: str(f?.phone, 30), district: D[f?.district] ? f.district : "mirob", street: str(f?.street, 160), flat: str(f?.flat, 30),
     entrance: str(f?.entrance, 20), intercom: str(f?.intercom, 30), private: !!f?.private, // full address for the Yandex courier: porch, intercom code, or a private house
     floor: String(int(f?.floor, 1, 60) || 1), help: f?.help === "none" ? "none" : f?.help || f?.lift ? "one" : "none", lift: f?.help ? f.help !== "none" : !!f?.lift, mode: f?.mode === "pickup" ? "pickup" : "yandex",
+    access: f?.access === "far" ? "far" : "door", elevator: f?.elevator === true || f?.elevator === "true" ? true : f?.elevator === false || f?.elevator === "false" ? false : null, // can the car reach the entrance; is there a lift (null = not asked)
     when: ["asap", "slot", "vip"].includes(f?.when) ? f.when : "asap", hour: String(int(f?.hour, 8, 20) ?? 9).padStart(2, "0"),
     pay: ["click", "payme", "uzum", "nasiya", "cash", "store"].includes(f?.pay) ? f.pay : "store", comment: str(f?.comment, 300),
     la: Number.isFinite(Number(f?.la)) && f?.la !== null && f?.la !== "" ? Number(f.la) : null, lo: Number.isFinite(Number(f?.lo)) && f?.lo !== null && f?.lo !== "" ? Number(f.lo) : null
@@ -312,6 +318,7 @@ export function createApp(cfg, log = console) {
     lim.hit("order:" + u.id, 30, 3600_000);
     const { q, form, lines, problems } = await computeQuote(req, b);
     assertNoProblems(problems);
+    if (q.unknown) throw new HttpError(503, "delivery_price_unavailable", "The carrier did not return a delivery price for this address — try again in a minute or choose pickup", { quote: q });
     const phone = form.phone.replace(/\D/g, "");
     if (!/^998\d{9}$/.test(phone)) throw bad("bad_phone", "Recipient phone must be +998 XX XXX XX XX");
     if (form.mode !== "pickup" && form.street.length < 4) throw bad("bad_address", "Street and house are required for delivery");
@@ -372,6 +379,7 @@ export function createApp(cfg, log = console) {
       ships: ships.map(s => ({ id: s.id, store: s.store_id, store_name: s.store_name, store_addr: s.store_addr, store_hours: s.store_hours, tariff: s.tariff, tracking_url: s.tracking_url || null, live: !!(s.claim_id && !String(s.claim_id).startsWith("sim-")), price: s.price, kg: s.kg, dist: s.dist, status: s.status, status_at: s.status_at,
         step: (STEPS[s.tariff ? "yandex" : "pickup"].indexOf(s.status)), history: JSON.parse(s.history), lines: JSON.parse(s.lines), courier: s.courier,
         cancel_reason: s.cancel_reason, accept_by: s.status === "new" ? (s.start_at || s.status_at) + cfg.timers.cancel * 60000 : null,
+        loaders_failed: !!s.loaders_failed, // the carrier refused the loader: the buyer meets the car at the entrance (see notify.loadersFailed)
         review: db.get("SELECT stars, text, reply FROM reviews WHERE ship_id=?", s.id) || null }))
     };
   }
@@ -538,18 +546,25 @@ export function createApp(cfg, log = console) {
       kpi: { revenue30: revenue, orders30: ships.filter(x => x.oc >= since).length, open: ships.filter(x => !["delivered", "picked", "cancelled"].includes(x.status)).length, products: products.length, out_of_stock: products.filter(p => p.stock <= 0).length },
       finance: storeFinance(s.id),
       rates: storeRates(s),
+      prices: pricesFreshness(s),
       telegram: !!req.user.tg_chat, bot: tg.enabled ? tg.username : null,
       rating: storeStats()[s.id] || null,
       reviews: db.all("SELECT r.ship_id, r.stars, r.text, r.reply, r.created_at, u.name FROM reviews r LEFT JOIN users u ON u.id=r.user_id WHERE r.store_id=? ORDER BY r.created_at DESC LIMIT 20", s.id).map(x => ({ ...x, name: (x.name || "").split(" ")[0] })),
       orders: ships.map(x => {
         const f = JSON.parse(x.form);
         return { ship_id: x.id, num: x.num, t: x.oc, status: x.status, tariff: x.tariff, price: x.price, kg: x.kg, pay: x.pay, pay_status: x.pay_status,
-          buyer: f.name, phone: f.phone, district: f.district, street: f.mode === "pickup" ? "" : f.street, floor: f.private ? null : f.floor, entrance: f.entrance || "", private: !!f.private, help: f.help || (f.lift ? "one" : "none"), when: f.when, hour: f.hour, comment: f.comment, lines: JSON.parse(x.lines),
+          buyer: f.name, phone: f.phone, district: f.district, street: f.mode === "pickup" ? "" : f.street, floor: f.private ? null : f.floor, entrance: f.entrance || "", private: !!f.private, help: f.help || (f.lift ? "one" : "none"), access: f.access || "door", elevator: f.elevator ?? null, loaders_failed: !!x.loaders_failed, when: f.when, hour: f.hour, comment: f.comment, lines: JSON.parse(x.lines),
           cancel_reason: x.cancel_reason, accept_by: x.status === "new" ? (x.start_at || x.status_at) + cfg.timers.cancel * 60000 : null, commission: x.commission, acquiring: x.acquiring,
           next: SELLER_MOVES[x.status]?.filter(n => (x.tariff ? n !== "ready" : !["searching"].includes(n))) || [] };
       }),
       products
     };
+  });
+  /* "Prices and stock are current": stamps the whole list, so buyers see a fresh confirmation date on every offer of the store */
+  r.post("/api/seller/offers/confirm", req => {
+    const { s } = needSeller(req), now = Date.now();
+    db.run("UPDATE stores SET prices_confirmed_at=? WHERE id=?", now, s.id); bumpCatalog(); audit(req, "offers.confirm", s.id);
+    return { prices_confirmed_at: now };
   });
   r.patch("/api/seller/offers/:pid", async (req, res, p) => {
     const { s } = needSeller(req), b = await readJson(req);
@@ -583,7 +598,7 @@ export function createApp(cfg, log = console) {
       .filter(x => { const good = x.pid && x.price && db.get("SELECT 1 FROM products WHERE id=? AND active=1 AND (store_id IS NULL OR store_id=?)", x.pid, s.id); if (!good) bad1.push(x.i); return good; }); // another store's own product cannot be listed
     const mk = create.map((x, i) => {
       const ru = str(x.ru, 140), c = ref.cats.find(k => k.id === x.cat), price = int(x.price, 100, 1e8), kg = Number(x.kg) > 0 && Number(x.kg) <= 5000 ? Number(x.kg) : 1;
-      return ru.length >= 3 && c && c.subs.some(k => k[0] === x.sub) && price ? { ru, uz: str(x.uz, 140) || ru, c, sub: x.sub, unit: subUnit(c.id, x.sub, x.unit), price, kg, stock: int(x.stock ?? 0, 0, 1e7) ?? 0 } : (bad1.push("n" + i), null);
+      return ru.length >= 3 && c && c.subs.some(k => k[0] === x.sub) && price ? { ru, uz: str(x.uz, 140) || ru, c, sub: x.sub, unit: subUnit(c.id, x.sub, x.unit), price, kg, stock: int(x.stock ?? 0, 0, 1e7) ?? 0, dims: dimsFrom(x) } : (bad1.push("n" + i), null);
     }).filter(Boolean);
     let updated = 0, added = 0, created = 0;
     db.tx(() => {
@@ -595,8 +610,8 @@ export function createApp(cfg, log = console) {
       }
       for (const x of mk) {
         const nid = Math.max(10000, (db.get("SELECT MAX(id) m FROM products")?.m || 0) + 1);
-        db.run(`INSERT INTO products(id,cat,sub,icon,ru,uz,unit,kg,img,hit,is_new,rating,reviews,country,warranty,descr,store_id,active,created_at)
-          VALUES(?,?,?,?,?,?,?,?,'',0,1,0,0,?,0,'',?,1,?)`, nid, x.c.id, x.sub, subIcon(x.c.id, x.sub), x.ru, x.uz, x.unit, x.kg, JSON.stringify(["Узбекистан", "O‘zbekiston"]), s.id, now);
+        db.run(`INSERT INTO products(id,cat,sub,icon,ru,uz,unit,kg,img,hit,is_new,rating,reviews,country,warranty,descr,store_id,active,created_at,dims)
+          VALUES(?,?,?,?,?,?,?,?,'',0,1,0,0,?,0,'',?,1,?,?)`, nid, x.c.id, x.sub, subIcon(x.c.id, x.sub), x.ru, x.uz, x.unit, x.kg, JSON.stringify(["Узбекистан", "O‘zbekiston"]), s.id, now, x.dims);
         db.run("INSERT INTO offers(product_id,store_id,price,stock,updated_at) VALUES(?,?,?,?,?)", nid, s.id, x.price, x.stock, now);
         created++;
       }
@@ -605,6 +620,8 @@ export function createApp(cfg, log = console) {
     audit(req, "seller.import", s.id, { updated, added, created, skipped: bad1.length });
     return { updated, added, created, skipped: bad1.length };
   });
+  /* package size given by the seller in centimetres ([length, width, height] or len_cm/wid_cm/hgt_cm) → metres, or null */
+  const dimsFrom = b => { const a = Array.isArray(b?.dims_cm) ? b.dims_cm : [b?.len_cm, b?.wid_cm, b?.hgt_cm]; const n = a.map(Number); return n.length === 3 && n.every(x => x >= 1 && x <= 1500) ? JSON.stringify(n.map(x => Math.round(x) / 100)) : null; };
   r.post("/api/seller/products", async req => {
     const { s } = needSeller(req), b = await readJson(req);
     lim.hit("prod-new:" + s.id, 500, 86400_000);
@@ -619,8 +636,8 @@ export function createApp(cfg, log = console) {
     if (!(kg > 0 && kg <= 5000)) throw bad("bad_weight", "Weight per unit (kg) is needed for delivery");
     const id = db.tx(() => {
       const nid = Math.max(10000, (db.get("SELECT MAX(id) m FROM products")?.m || 0) + 1);
-      db.run(`INSERT INTO products(id,cat,sub,icon,ru,uz,unit,kg,img,hit,is_new,rating,reviews,country,warranty,descr,store_id,active,created_at)
-        VALUES(?,?,?,?,?,?,?,?,'',0,1,0,0,?,?,?,?,1,?)`, nid, cat, sub, subIcon(cat, sub), ru, uz, unit, kg, JSON.stringify(["Узбекистан", "O‘zbekiston"]), int(b.warranty, 0, 120) || 0, str(b.desc, 1000), s.id, Date.now());
+      db.run(`INSERT INTO products(id,cat,sub,icon,ru,uz,unit,kg,img,hit,is_new,rating,reviews,country,warranty,descr,store_id,active,created_at,dims)
+        VALUES(?,?,?,?,?,?,?,?,'',0,1,0,0,?,?,?,?,1,?,?)`, nid, cat, sub, subIcon(cat, sub), ru, uz, unit, kg, JSON.stringify(["Узбекистан", "O‘zbekiston"]), int(b.warranty, 0, 120) || 0, str(b.desc, 1000), s.id, Date.now(), dimsFrom(b));
       db.run("INSERT INTO offers(product_id,store_id,price,stock,updated_at) VALUES(?,?,?,?,?)", nid, s.id, price, stock, Date.now());
       return nid;
     });
@@ -660,7 +677,7 @@ export function createApp(cfg, log = console) {
       } else setShipStatus(sh, status);
     });
     if (status === "cancelled") bumpCatalog();
-    if (status === "searching" && sh.tariff) courier.order(db.get("SELECT * FROM shipments WHERE id=?", sh.id)).catch(e => { log.warn("[courier] order", e.message); notify.admins(`🚚 Не удалось вызвать курьера Яндекса для отправления #${sh.id}: ${String(e.message).slice(0, 160).replace(/[<>&]/g, "")}`); });
+    if (status === "searching" && sh.tariff) courier.order(db.get("SELECT * FROM shipments WHERE id=?", sh.id)).then(r => { if (r?.loaders_failed) notify.loadersFailed(sh.id); }).catch(e => { log.warn("[courier] order", e.message); notify.admins(`🚚 Не удалось вызвать курьера Яндекса для отправления #${sh.id}: ${String(e.message).slice(0, 160).replace(/[<>&]/g, "")}`); });
     audit(req, "ship." + status, sh.id);
   }
   /* the buyer watches the courier: the live position from Yandex, or "unavailable" (real status, no invented coordinates) */
@@ -900,7 +917,7 @@ export function createApp(cfg, log = console) {
       setShipStatus(sh, b.status, b.status === "cancelled" ? "admin" : null);
     });
     if (b.status === "cancelled") bumpCatalog();
-    if (b.status === "searching" && sh.tariff) courier.order(db.get("SELECT * FROM shipments WHERE id=?", sh.id)).catch(e => log.warn("[courier] order", e.message));
+    if (b.status === "searching" && sh.tariff) courier.order(db.get("SELECT * FROM shipments WHERE id=?", sh.id)).then(r => { if (r?.loaders_failed) notify.loadersFailed(sh.id); }).catch(e => log.warn("[courier] order", e.message));
     audit(req, "admin.ship." + b.status, sh.id);
     return { ok: true };
   });
@@ -983,8 +1000,20 @@ export function createApp(cfg, log = console) {
       }
     }
     db.run("DELETE FROM tg_links WHERE expires_at<?", now); db.run("DELETE FROM tg_logins WHERE expires_at<?", now);
+    priceReminders(now);
     payments.sweep(now);
     courierSweep().catch(e => log.warn("[courier] sweep", e.message));
+  }
+  /* Sellers who have not touched or confirmed their prices for a week get a Telegram nudge, at most once a week per store */
+  function priceReminders(now = Date.now()) {
+    const week = 7 * 86400000;
+    for (const s of db.all("SELECT s.*, u.tg_chat, u.lang FROM stores s JOIN users u ON u.id=s.owner_id WHERE s.status='active' AND u.tg_chat IS NOT NULL AND COALESCE(s.prices_reminded_at,0)<?", now - week)) {
+      const f = pricesFreshness(s); if (!f.stale || (f.confirmed_at && now - f.confirmed_at < week)) continue;
+      db.run("UPDATE stores SET prices_reminded_at=? WHERE id=?", now, s.id);
+      const days = f.days != null ? f.days : null, link = `${cfg.siteUrl}#seller`;
+      tg.send(s.tg_chat, (s.lang || "ru") === "uz" ? `🏷 <b>${s.name.replace(/[<>&]/g, "")}</b>: narx va qoldiqlar ${days != null ? days + " kundan beri" : "hali"} tasdiqlanmagan. Xaridorlar eski narxni ko‘rmasligi uchun kabinetda «Hammasi dolzarb» tugmasini bosing yoki narxlarni yangilang: ${link}`
+        : `🏷 <b>${s.name.replace(/[<>&]/g, "")}</b>: цены и остатки не подтверждались ${days != null ? days + " дн." : "ещё ни разу"}. Чтобы покупатели не видели устаревшую цену, нажмите «Всё актуально» в кабинете или обновите прайс: ${link}`).catch(e => log.warn("[prices] remind", e.message));
+    }
   }
   /* Yandex drives the courier statuses once a claim exists; a failed search returns the shipment to the store */
   async function courierSweep() {

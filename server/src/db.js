@@ -94,6 +94,8 @@ export function openDb(path, catalogPath, opts = {}) {
   addCol("shipments", "goods", "INTEGER NOT NULL DEFAULT 0"); addCol("shipments", "commission", "INTEGER NOT NULL DEFAULT 0");
   // the bank's acquiring fee on a card-paid order (kept apart from Imorat Go's commission) and the end of a store's free months
   addCol("shipments", "acquiring", "INTEGER NOT NULL DEFAULT 0"); addCol("stores", "free_until", "INTEGER");
+  addCol("products", "dims", "TEXT"); addCol("shipments", "loaders_failed", "INTEGER NOT NULL DEFAULT 0"); // package size [l,w,h] m; the carrier refused the loader
+  addCol("stores", "prices_confirmed_at", "INTEGER"); addCol("stores", "prices_reminded_at", "INTEGER"); // the seller's "prices and stock are current" stamp and the last reminder
   addCol("users", "deleted_at", "INTEGER"); // account deleted by its owner: personal data wiped, the row keeps the orders' accounting trail
   addCol("orders", "paid_at", "INTEGER"); addCol("orders", "pay_ref", "TEXT");
   raw.exec(`CREATE TABLE IF NOT EXISTS payments(id INTEGER PRIMARY KEY AUTOINCREMENT, provider TEXT NOT NULL, pid TEXT NOT NULL, order_id INTEGER NOT NULL REFERENCES orders(id),
@@ -127,11 +129,14 @@ export function openDb(path, catalogPath, opts = {}) {
 function addNewProducts(db, ref, demo = true) {
   const have = new Set(db.all("SELECT id FROM products").map(r => r.id)), now = Date.now();
   const fresh = ref.products.filter(p => !have.has(p.id));
+  // package sizes added to catalog.json later reach catalog products that have none yet (a seller's own figures are kept)
+  const noDims = db.all("SELECT id FROM products WHERE dims IS NULL AND store_id IS NULL").map(r => r.id), withDims = ref.products.filter(p => p.dims && noDims.includes(p.id));
+  if (withDims.length) db.tx(() => { for (const p of withDims) db.run("UPDATE products SET dims=? WHERE id=?", JSON.stringify(p.dims), p.id); db.setMeta("catalog_rev", now); });
   if (!fresh.length) return;
   db.tx(() => {
     for (const p of fresh) {
-      db.run(`INSERT INTO products(id,cat,sub,icon,ru,uz,unit,kg,img,grp,hit,is_new,key,rating,reviews,country,warranty,active,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1,?)`,
-        p.id, p.cat, p.sub, p.icon, p.ru, p.uz, p.unit, p.kg, p.img, p.group, p.hit, p.isNew, p.key, p.rating, p.reviews, JSON.stringify(p.country), p.warranty, now);
+      db.run(`INSERT INTO products(id,cat,sub,icon,ru,uz,unit,kg,img,grp,hit,is_new,key,rating,reviews,country,warranty,active,created_at,dims) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1,?,?)`,
+        p.id, p.cat, p.sub, p.icon, p.ru, p.uz, p.unit, p.kg, p.img, p.group, p.hit, p.isNew, p.key, p.rating, p.reviews, JSON.stringify(p.country), p.warranty, now, p.dims ? JSON.stringify(p.dims) : null);
       if (demo) for (const o of p.offers) if (db.get("SELECT 1 FROM stores WHERE id=?", o.store)) db.run("INSERT OR IGNORE INTO offers(product_id,store_id,price,stock,updated_at) VALUES(?,?,?,?,?)", p.id, o.store, o.price, o.stock, now);
     }
     db.setMeta("catalog_rev", now);
@@ -148,9 +153,9 @@ function seed(db, ref, demo = true) {
         s.id, s.name, s.d, s.addr, s.addrUz, s.hours, s.ru, s.uz, D[s.d]?.la, D[s.d]?.lo, now);
     }
     for (const p of ref.products) {
-      db.run(`INSERT OR IGNORE INTO products(id,cat,sub,icon,ru,uz,unit,kg,img,grp,hit,is_new,key,rating,reviews,country,warranty,active,created_at)
-              VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1,?)`,
-        p.id, p.cat, p.sub, p.icon, p.ru, p.uz, p.unit, p.kg, p.img, p.group, p.hit, p.isNew, p.key, p.rating, p.reviews, JSON.stringify(p.country), p.warranty, now);
+      db.run(`INSERT OR IGNORE INTO products(id,cat,sub,icon,ru,uz,unit,kg,img,grp,hit,is_new,key,rating,reviews,country,warranty,active,created_at,dims)
+              VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1,?,?)`,
+        p.id, p.cat, p.sub, p.icon, p.ru, p.uz, p.unit, p.kg, p.img, p.group, p.hit, p.isNew, p.key, p.rating, p.reviews, JSON.stringify(p.country), p.warranty, now, p.dims ? JSON.stringify(p.dims) : null);
       if (demo) for (const o of p.offers) db.run("INSERT OR IGNORE INTO offers(product_id,store_id,price,stock,updated_at) VALUES(?,?,?,?,?)", p.id, o.store, o.price, o.stock, now);
     }
     db.setMeta("seeded", now);

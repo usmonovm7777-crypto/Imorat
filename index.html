@@ -1031,6 +1031,9 @@ html.fx .fx-btn.th-btn, .fx-btn.th-btn { background: var(--surface); color: var(
 .lm-bar { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; font-size: 13px; margin-top: 8px; }
 .lm-bar b { font-size: 15px; }
 .lm-nopos { display: inline-flex; align-items: center; gap: 4px; }
+.fresh { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); font-size: 12px; line-height: 1.3; } .fresh.stale { color: var(--signal); }
+.offer-fresh { grid-column: 1 / -1; }
+.fresh-panel { display: flex; gap: 10px 14px; align-items: center; flex-wrap: wrap; } .fresh-panel span { flex: 1 1 240px; } .fresh-panel.stale { border-color: color-mix(in srgb, var(--signal) 50%, var(--line)); background: color-mix(in srgb, var(--signal) 7%, var(--surface)); }
 .addr-line { display: flex; gap: 8px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; font-size: 14px; background: var(--bg); }
 .addr-line svg { flex: none; margin-top: 3px; color: var(--brand); }
 .addr-line small { display: block; color: var(--muted); margin-top: 2px; }
@@ -1393,6 +1396,16 @@ const feeInfo = () => ({ ours: apiCfg?.commission?.["*"] ?? 0.01, bank: apiCfg?.
 // the acquiring rate as text: one number, or each provider's contract rate when they differ ("Payme 2% / Click 1,8%")
 const bankPct = (f = feeInfo()) => { const e = Object.entries(f.bankBy).filter(([, v]) => v !== f.bank); return e.length ? e.map(([k, v]) => `${{ payme: "Payme", click: "Click" }[k] || k} ${pct(v)}`).concat(Object.keys(f.bankBy).length < 2 ? [L("остальные", "boshqalari", "others") + " " + pct(f.bank)] : []).join(" / ") : pct(f.bank); };
 const feeLine = () => { const f = feeInfo(); return L(`Imorat Go ${pct(f.ours)} + эквайринг Payme/Click ${bankPct(f)}`, `Imorat Go ${pct(f.ours)} + Payme/Click ekvayringi ${bankPct(f)}`, `Imorat Go ${pct(f.ours)} + Payme/Click acquiring ${bankPct(f)}`); };
+/* How fresh a store's price is: offers carry upd (seconds) = the seller's last edit or "prices are current" confirmation.
+   Older than a week = stale: the buyer is told the price may have changed and that the server re-checks before payment. */
+const FRESH_DAYS = 7;
+function freshness(upd) {
+  if (!API || !upd) return null;
+  const days = Math.max(0, Math.floor((Date.now() / 1000 - upd) / 86400)), stale = days > FRESH_DAYS;
+  const ago = days === 0 ? L("сегодня", "bugun", "today") : days === 1 ? L("вчера", "kecha", "yesterday") : L(`${days} дн. назад`, `${days} kun oldin`, `${days} days ago`);
+  return { days, stale, ago, text: stale ? L(`Цена не подтверждалась магазином ${ago} — проверим перед оплатой`, `Narx do‘kon tomonidan ${ago} tasdiqlanmagan — to‘lovdan oldin tekshiramiz`, `Price not confirmed by the store since ${ago} — re-checked before payment`) : L(`Цена подтверждена магазином ${ago}`, `Narx do‘kon tomonidan ${ago} tasdiqlangan`, `Price confirmed by the store ${ago}`) };
+}
+const freshHTML = (upd, cls = "") => { const f = freshness(upd); return f ? `<small class="fresh ${f.stale ? "stale" : ""} ${cls}">${ui(f.stale ? "clock" : "check", 11)} ${f.text}</small>` : ""; };
 const fmtKg = n => n < 1 ? Math.round(n * 1000) + L(" г", " g") : (n < 10 ? (Math.round(n * 10) / 10).toString().replace(".", DEC) : fmtN(n)) + L(" кг", " kg");
 
 /* ================= Icons ================= */
@@ -2005,7 +2018,10 @@ const TARIFFS = [
   { id: "cargo_s", ru: "Грузовой, малый кузов", uz: "Yuk tashish, kichik kuzov", maxKg: 500, base: 60000, perKm: 4000, eta: [60, 120], veh: "Chevrolet Labo", icon: "van" },
   { id: "cargo_l", ru: "Грузовой, большой кузов", uz: "Yuk tashish, katta kuzov", maxKg: 3000, base: 120000, perKm: 6000, eta: [120, 180], veh: "Isuzu NQR", icon: "truck" }
 ];
-const pickTariff = kg => TARIFFS.find(t => kg <= t.maxKg) || TARIFFS[2];
+/* the vehicle: by weight, then by the longest item (products carry dims [l,w,h] m from the server — a 3-metre pipe does not fit a car) */
+const LONG_S = 1.8, LONG_L = 4.5; // mirrors server catalog.json fees.LONG_S / LONG_L
+const pickTariff = (kg, len = 0) => { const byKg = TARIFFS.find(t => kg <= t.maxKg) || TARIFFS[2], min = len > LONG_L ? 2 : len > LONG_S ? 1 : 0; return TARIFFS.indexOf(byKg) < min ? TARIFFS[min] : byKg; };
+const lenOf = p => (Array.isArray(p?.dims) && p.dims[0] > 0 ? +p.dims[0] : 0);
 const tName = t => L(t.ru, t.uz);
 const etaStr = t => t.eta[1] <= 60 ? `${t.eta[0]}–${t.eta[1]} ${L("мин", "daq")}` : `${t.eta[0] / 60}–${t.eta[1] / 60} ${L("ч", "soat")}`;
 function km(a, b) {
@@ -2053,7 +2069,7 @@ const qtyOf = id => cartLines().filter(l => l.p.id === id).reduce((a, l) => a + 
 const cartCount = () => cartLines().reduce((a, l) => a + l.q, 0);
 function groups() {
   const g = {};
-  cartLines().forEach(l => { (g[l.store] ||= { store: STORE[l.store], lines: [], sum: 0, kg: 0 }); g[l.store].lines.push(l); g[l.store].sum += l.price * l.q; g[l.store].kg += l.p.kg * l.q; });
+  cartLines().forEach(l => { (g[l.store] ||= { store: STORE[l.store], lines: [], sum: 0, kg: 0, len: 0 }); g[l.store].lines.push(l); g[l.store].sum += l.price * l.q; g[l.store].kg += l.p.kg * l.q; g[l.store].len = Math.max(g[l.store].len, lenOf(l.p)); });
   return Object.values(g);
 }
 function svcLines() { return Object.keys(services).map(id => { const p = PROD[id], q = p ? qtyOf(p.id) : 0; return p && q && SERVICE[p.sub] ? { p, q, price: SERVICE[p.sub] } : null; }).filter(Boolean); }
@@ -2761,7 +2777,7 @@ function openProduct(id) {
   if (revDraft.pid !== p.id) revDraft = { stars: 0, photo: "", pid: p.id };
   viewed = [p.id, ...viewed.filter(x => x !== p.id)].slice(0, 10); LS.set("imorat.viewed", viewed); trackEv({ t: "view", id: p.id });
   const c = CAT[p.cat], offers = [...p.offers].sort((a, b) => a.price - b.price), fav = favs.includes(p.id);
-  const t = pickTariff(p.kg), near = offers[0], dist = km(STORE[near.store].d, district), mp = offers[0].price;
+  const t = pickTariff(p.kg, lenOf(p)), near = offers[0], dist = km(STORE[near.store].d, district), mp = offers[0].price;
   const stockTxt = n => n > 20 ? `<span class="pill ok">${L("Много", "Ko‘p")}</span>` : n > 0 ? `<span class="pill warn">${n} ${unitName("pcs")}</span>` : `<span class="pill mute">${L("Под заказ", "Buyurtma asosida")}</span>`;
   const svc = SERVICE[p.sub], svcOn = !!services[p.id];
   const rel = relatedOf(p);
@@ -2776,7 +2792,7 @@ function openProduct(id) {
       <p class="desc">${esc(pDesc(p))}</p>
       <dl class="specs"><dt>${L("Единица", "O‘lchov")}</dt><dd>${unitName(p.unit)}</dd><dt>${L("Вес", "Vazn")}</dt><dd>${fmtKg(p.kg)}</dd><dt>${L("Страна", "Mamlakat")}</dt><dd>${L(...p.country)}</dd><dt>${L("Гарантия", "Kafolat")}</dt><dd>${p.warranty ? `${p.warranty} ${L("мес.", "oy")}` : L("по закону о защите прав потребителей", "iste’molchilar huquqlari qonuni bo‘yicha")}</dd><dt>${L("Цена", "Narx")}</dt><dd>${offers.length > 1 ? `${fmt(offers[0].price)} – ${fmt(offers[offers.length - 1].price)}` : fmt(mp)}</dd></dl>
       <div><h3 class="h-m" style="margin-bottom:10px">${L("Цены в магазинах", "Do‘konlardagi narxlar")}</h3>
-      <div class="offers">${offers.map((o, i) => { const s = STORE[o.store], st = stockOf(p, o.store); return `<div class="offer ${i === 0 && offers.length > 1 ? "best" : ""}"><div><button type="button" class="slink" data-go="store-${s.id}"><b>${esc(s.name)}</b>${isVerified(s) ? ` <span class="vmini" title="${L("Проверенный магазин", "Tekshirilgan do‘kon")}">${ui("shield", 12)}</span>` : ""}</button><small>${dName(s.d)} · ${openState(s).text}</small><small>${ratingHTML(s)}</small>${i === 0 && offers.length > 1 ? `<small style="color:var(--accent);font-weight:600">${L("Лучшая цена", "Eng yaxshi narx")}</small>` : ""}</div><div style="display:grid;justify-items:end;gap:4px"><span class="pr">${fmt(o.price)}</span>${stockTxt(st)}</div><button class="btn btn-primary" type="button" data-addo="${p.id}|${o.store}">${L("В корзину", "Savatga")}</button></div>`; }).join("")}</div></div>
+      <div class="offers">${offers.map((o, i) => { const s = STORE[o.store], st = stockOf(p, o.store); return `<div class="offer ${i === 0 && offers.length > 1 ? "best" : ""}"><div><button type="button" class="slink" data-go="store-${s.id}"><b>${esc(s.name)}</b>${isVerified(s) ? ` <span class="vmini" title="${L("Проверенный магазин", "Tekshirilgan do‘kon")}">${ui("shield", 12)}</span>` : ""}</button><small>${dName(s.d)} · ${openState(s).text}</small><small>${ratingHTML(s)}</small>${i === 0 && offers.length > 1 ? `<small style="color:var(--accent);font-weight:600">${L("Лучшая цена", "Eng yaxshi narx")}</small>` : ""}</div><div style="display:grid;justify-items:end;gap:4px"><span class="pr">${fmt(o.price)}</span>${stockTxt(st)}</div><button class="btn btn-primary" type="button" data-addo="${p.id}|${o.store}">${L("В корзину", "Savatga")}</button>${freshHTML(o.upd, "offer-fresh")}</div>`; }).join("")}</div></div>
       ${stockWatchHTML(p)}
       ${svc ? `<label class="infobox" for="svcChk">${ui("wrench", 20)}<span><b>${L("Установка мастером", "Usta o‘rnatishi")}</b><small>${fmt(svc)} ${L("за", "har")} ${unitAcc(p.unit)} · ${L("мастер приедет после доставки", "usta yetkazilgandan keyin keladi")}</small></span><span class="check"><input type="checkbox" id="svcChk" data-svc="${p.id}" ${svcOn ? "checked" : ""}></span></label>` : ""}
       ${SUB_SPEC[p.sub] ? `<button class="infobox lnkbox" type="button" data-mfind="${SUB_SPEC[p.sub]}">${ui("wrench", 20)}<span><b>${L("Найти мастера", "Usta topish")}: ${esc(mSpecName(SUB_SPEC[p.sub]).toLowerCase())}</b><small>${L("С отзывами покупателей, в вашем районе", "Xaridorlar sharhlari bilan, tumaningizda")}</small></span>${ui("chev", 16)}</button>` : ""}
@@ -2846,7 +2862,7 @@ function dCart() {
     $("#dBody").innerHTML = `<div class="empty"><b>${L("Корзина пуста", "Savat bo‘sh")}</b><span>${L("Добавьте товары из каталога или попросите Usta AI собрать корзину под вашу задачу.", "Katalogdan mahsulot qo‘shing yoki Usta AI dan vazifangizga savat yig‘ishni so‘rang.")}</span><button class="btn btn-ai" type="button" data-act="ai">${ui("spark", 16)} Usta AI</button></div>`;
     $("#dFoot").innerHTML = `<div style="display:grid;gap:8px"><button class="btn btn-primary" type="button" data-go="catalog">${L("Перейти в каталог", "Katalogga o‘tish")}</button><button class="btn btn-line" type="button" data-go="list">${ui("camera", 16)} ${L("Есть список от прораба?", "Prorab ro‘yxati bormi?")}</button></div>`; return;
   }
-  $("#dBody").innerHTML = gs.map(g => { const t = pickTariff(g.kg); return `<div>
+  $("#dBody").innerHTML = gs.map(g => { const t = pickTariff(g.kg, g.len); return `<div>
     <div class="gh"><span><button type="button" class="slink" data-go="store-${g.store.id}"><b>${esc(g.store.name)}</b></button> · ${dName(g.store.d)}</span><span class="pill acc">${ui(t.icon, 14)} ${fmtKg(g.kg)}</span></div>
     ${g.lines.map(l => `<div class="line">${mini(l.p)}<div class="nm"><button type="button" data-open="${l.p.id}" style="text-align:left">${esc(pName(l.p))}</button><small>${fmt(l.price)} · ${unitName(l.p.unit)}${l.tier ? ` · <span class="ws">${L("опт", "ulgurji")} −${Math.round(l.tier * 100)}%</span>` : ""}</small></div>
       <div class="rt"><div class="qty"><button type="button" data-dec="${l.k}" aria-label="${L("Меньше", "Kamroq")}">−</button><span>${l.q}</span><button type="button" data-inc="${l.k}" aria-label="${L("Больше", "Ko‘proq")}">+</button></div><b class="num" style="font-size:14px">${fmt(l.price * l.q)}</b></div></div>`).join("")}
@@ -2859,13 +2875,14 @@ function dCart() {
   const goods = gs.reduce((a, g) => a + g.sum, 0), svc = svcSum(), disc = bundleDisc();
   const est = quote({ mode: form.mode || "yandex", district: form.district || district, when: form.when || "asap", floor: form.floor || "1", lift: false });
   $("#dFoot").innerHTML = totalsHTML(goods, svc, disc) + ((form.mode || "yandex") !== "pickup" ? `<div class="sumrow"><span class="mu">${L("Доставка Яндекс", "Yandex yetkazish", "Yandex delivery")} <small>· ${esc(dName(form.district || district))}${est.ships.length > 1 ? ` · ${est.ships.length} ${L(plural(est.ships.length, ["магазин", "магазина", "магазинов"]), "do‘kon", "stores")}` : ""}</small></span><span class="num">${est.del ? "≈ " + fmt(est.del) : L("Бесплатно", "Bepul", "Free")}</span></div>` : "") +
-    `<div class="sumrow total"><span>${(form.mode || "yandex") !== "pickup" ? L("Итого с доставкой", "Yetkazish bilan jami", "Total with delivery") : L("Итого", "Jami")}</span><span class="num">${fmt(goods + svc - disc + ((form.mode || "yandex") !== "pickup" ? est.del : 0))}</span></div>
+    `<div class="sumrow total"><span>${(form.mode || "yandex") !== "pickup" ? L("Итого с доставкой", "Yetkazish bilan jami", "Total with delivery") : L("Итого", "Jami")}${(form.mode || "yandex") !== "pickup" ? ` <small class="mu" style="font-weight:400">${L("предварительно", "taxminiy", "preliminary")}</small>` : ""}</span><span class="num">${(form.mode || "yandex") !== "pickup" ? "≈ " : ""}${fmt(goods + svc - disc + ((form.mode || "yandex") !== "pickup" ? est.del : 0))}</span></div>
     <div style="display:grid;grid-template-columns:auto 1fr;gap:8px"><button class="btn btn-line" type="button" data-act="ai-cart" title="${L("Проверить корзину с AI", "Savatni AI bilan tekshirish")}">${ui("spark", 18)} ${L("Проверить", "Tekshirish")}</button><button class="btn btn-primary" type="button" data-act="checkout">${L("Оформить заказ", "Buyurtma berish")}</button></div>`;
 }
 function readForm() {
   const el = $("#orderForm"); if (!el) return form;
   const d = Object.fromEntries(new FormData(el).entries()); d.help = d.help === "none" ? "none" : "one"; d.lift = d.help !== "none"; d.usePts = el.usePts?.checked || false; d.private = el.private?.checked || false;
-  d.la = d.la === "" || d.la == null ? null : +d.la; d.lo = d.lo === "" || d.lo == null ? null : +d.lo; return d;
+  d.la = d.la === "" || d.la == null ? null : +d.la; d.lo = d.lo === "" || d.lo == null ? null : +d.lo;
+  d.access = d.access === "far" ? "far" : "door"; d.elevator = d.elevator === "true" ? true : d.elevator === "false" ? false : null; return d;
 }
 /* unloading help chosen at checkout: none — the buyer takes the goods at the car; one — the courier/driver helps unload and carries to the door (old orders may say "two") */
 const helpers = d => d?.help === "one" || d?.help === "two" || (d?.help == null && d?.lift) ? 1 : 0;
@@ -2874,7 +2891,7 @@ function quote(d) {
   const gs = groups();
   const ships = gs.map(g => {
     if (d.mode === "pickup") return { g, t: null, dist: 0, price: 0, full: 0 };
-    const t = pickTariff(g.kg), dist = km(g.store.d, d.district || district);
+    const t = pickTariff(g.kg, g.len), dist = km(g.store.d, d.district || district);
     let p = t.base + t.perKm * dist;
     const floors = d.private ? 0 : Math.max(0, (parseInt(d.floor, 10) || 1) - 1), loaders = helpers(d);
     if (loaders && t.id !== "courier") p += LOADER * loaders * Math.max(1, floors); // a loader costs LOADER per floor, at least one (truck → door)
@@ -2912,7 +2929,7 @@ function dCheckout() {
       <div class="f"><label for="fPhone">${L("Телефон", "Telefon")}</label><input id="fPhone" name="phone" value="${esc(d.phone)}" inputmode="tel" autocomplete="tel" placeholder="+998 90 123 45 67"><span class="err" id="phoneErr" hidden>${L("Введите номер в формате +998 XX XXX XX XX", "Raqamni +998 XX XXX XX XX formatida kiriting")}</span></div>
     </fieldset>
     <fieldset><legend>${L("Способ получения", "Olish usuli")}</legend><div class="opts">
-      <label class="opt"><input type="radio" name="mode" value="yandex" ${d.mode === "yandex" ? "checked" : ""}><span><b>${L("Яндекс Доставка", "Yandex Yetkazib berish")}</b><small>${L("Курьер или грузовое авто — по весу заказа", "Buyurtma vazniga qarab kuryer yoki yuk mashinasi")}</small></span><span></span></label>
+      <label class="opt"><input type="radio" name="mode" value="yandex" ${d.mode === "yandex" ? "checked" : ""}><span><b>${L("Яндекс Доставка", "Yandex Yetkazib berish")}</b><small>${L("Курьер или грузовое авто — по весу и длине товаров", "Tovarlar vazni va uzunligiga qarab kuryer yoki yuk mashinasi", "A courier car or a cargo van — by the weight and length of the goods")}</small></span><span></span></label>
       <label class="opt"><input type="radio" name="mode" value="pickup" ${d.mode === "pickup" ? "checked" : ""}><span><b>${L("Самовывоз из магазина", "Do‘kondan olib ketish")}</b><small>${L("Соберём за 30 минут", "30 daqiqada yig‘amiz")}</small></span><span class="tag">0 ${L("сум", "so‘m")}</span></label>
     </div></fieldset>
     <fieldset id="addrSet" ${d.mode === "pickup" ? "hidden" : ""}><legend>${L("Адрес и время", "Manzil va vaqt")}</legend>
@@ -2924,10 +2941,12 @@ function dCheckout() {
       <div class="f"><span style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><label>${L("Дом на карте", "Uy xaritada", "Your house on the map")} <small class="mu">${L("— курьер приедет точно к метке", "— kuryer aynan belgiga keladi", "— the courier comes right to the pin")}</small></label><button type="button" class="btn btn-line" data-act="my-loc" style="padding:6px 10px">${ui("pin", 14)} ${L("Где я", "Men qayerdaman", "Locate me")}</button></span>
         ${pickMapHTML("addr")}<p class="loc-st ${d.la != null ? "ok" : ""}" id="addrLocSt" aria-live="polite">${d.la != null ? `${ui("check", 14)} ${L("Метка стоит", "Belgi qo‘yilgan", "Pin set")}` : L("Введите адрес выше и выберите из подсказок — или передвиньте карту так, чтобы метка встала на ваш дом. Адрес подставится сам.", "Yuqorida manzilni yozib, taklifdan tanlang — yoki xaritani belgi uyingizga tushguncha suring. Manzil o‘zi to‘ladi.", "Type the address above and pick a suggestion — or move the map until the pin stands on your house. The address fills in by itself.")}</p>
         <input type="hidden" name="la" id="fLa" value="${d.la ?? ""}"><input type="hidden" name="lo" id="fLo" value="${d.lo ?? ""}"></div>
+      <div class="two" id="accessRow"><div class="f"><label for="fAccess">${L("Подъезд для машины", "Mashina kirishi", "Vehicle access")}</label><select class="sel" id="fAccess" name="access"><option value="door" ${d.access !== "far" ? "selected" : ""}>${L("Машина подъедет к подъезду / воротам", "Mashina kirish / darvozagacha keladi", "The car can reach the entrance / gate")}</option><option value="far" ${d.access === "far" ? "selected" : ""}>${L("Не подъедет: узкий двор, шлагбаум, стройка", "Kelolmaydi: tor hovli, shlagbaum, qurilish", "It cannot: narrow yard, barrier, building site")}</option></select></div>
+        <div class="f" id="liftRow" ${d.private || !(parseInt(d.floor, 10) > 1) ? "hidden" : ""}><label for="fElevator">${L("Лифт", "Lift", "Lift")}</label><select class="sel" id="fElevator" name="elevator"><option value="" ${d.elevator == null ? "selected" : ""}>${L("Не знаю", "Bilmayman", "Not sure")}</option><option value="true" ${d.elevator === true ? "selected" : ""}>${L("Есть, грузовой или обычный", "Bor, yuk yoki oddiy", "Yes, goods or passenger")}</option><option value="false" ${d.elevator === false ? "selected" : ""}>${L("Нет лифта", "Lift yo‘q", "No lift")}</option></select></div></div>
       <div class="f" id="helpSet"><label>${L("Разгрузка", "Tushirish", "Unloading")} <small class="mu">${L("— нужна ли помощь курьера", "— kuryer yordami kerakmi", "— do you need the courier’s help")}</small></label><div class="opts">
         <label class="opt"><input type="radio" name="help" value="none" ${d.help === "none" ? "checked" : ""}><span><b>${L("Не нужна", "Kerak emas", "Not needed")}</b><small>${L("Заберёте заказ у машины или у подъезда", "Buyurtmani mashina yoki kirish oldidan olasiz", "You take the order at the car or the entrance")}</small></span><span class="tag" data-help-tag="none">0 ${L("сум", "so‘m", "UZS")}</span></label>
         <label class="opt"><input type="radio" name="help" value="one" ${d.help === "one" ? "checked" : ""}><span><b>${L("Курьер поможет спустить и занести", "Kuryer tushirib, olib kirishga yordam beradi", "The courier helps unload and carry it in")}</b><small>${L("Донесёт до двери и поднимет на этаж", "Eshikkacha olib keladi va qavatga ko‘taradi", "Carries it to the door and up the stairs")}</small></span><span class="tag" data-help-tag="one"></span></label>
-      </div></div>
+      </div>${API && apiCfg?.yandex ? `<small class="mu" style="display:block;margin-top:6px">${L("Грузчика подтверждает перевозчик при назначении машины. Если на ваш рейс его не окажется, мы сразу сообщим, курьер привезёт заказ к подъезду, а плату за помощь вернём.", "Yuk tashuvchini mashina tayinlanganda tashuvchi tasdiqlaydi. Reysingizga topilmasa, darhol xabar beramiz, kuryer buyurtmani kirishgacha olib keladi, yordam haqini qaytaramiz.", "The carrier confirms the loader when a car is assigned. If none is available for your trip we tell you at once, the courier brings the order to the entrance and the help fee is refunded.")}</small>` : ""}</div>
       <div class="opts">
         <label class="opt"><input type="radio" name="when" value="asap" ${d.when === "asap" ? "checked" : ""}><span><b>${L("Как можно скорее", "Imkon qadar tez")}</b><small>${L("Ищем исполнителя сразу после оплаты", "To‘lovdan so‘ng darhol ijrochi qidiramiz")}</small></span><span></span></label>
         <label class="opt"><input type="radio" name="when" value="slot" ${d.when === "slot" ? "checked" : ""}><span><b>${L("Завтра, 10:00–14:00", "Ertaga, 10:00–14:00")}</b><small>${L("Скидка 10% на доставку", "Yetkazishga 10% chegirma")}</small></span><span class="tag">−10%</span></label>
@@ -2959,7 +2978,7 @@ function dCheckout() {
       $("#payOpts").innerHTML = opts.map(([val, n]) => `<label><input type="radio" name="pay" value="${val}" ${cur === val ? "checked" : ""}>${n}</label>`).join("");
 
     }
-    if (e.target.id === "fPrivate") { $("#aptRow").hidden = e.target.checked; $("#aptRow2").hidden = e.target.checked; }
+    if (e.target.id === "fPrivate") { $("#aptRow").hidden = e.target.checked; $("#aptRow2").hidden = e.target.checked; const lr = $("#liftRow"); if (lr) lr.hidden = e.target.checked || !(parseInt($("#fFloor")?.value, 10) > 1); }
     if (e.target.id === "fHour") el.querySelector('[name=when][value=vip]').checked = true; updateQuote(); });
   initPickMap("addr", form.la != null && form.lo != null ? { la: +form.la, lo: +form.lo } : null, (la, lo, item) => {
     $("#fLa").value = la.toFixed(6); $("#fLo").value = lo.toFixed(6);
@@ -2977,11 +2996,16 @@ function dCheckout() {
 function updateQuote() {
   expectTotal = null;
   const d = readForm(); form = d; LS.set("imorat.form2", d);
+  { const lr = $("#liftRow"); if (lr) lr.hidden = d.private || !(parseInt(d.floor, 10) > 1); }
   const qt = quote(d);
-  $("#shipBox").innerHTML = `<legend>${L("Доставки", "Yetkazishlar")}</legend>` + qt.ships.map(s => `<div class="ship">
-    <div class="t"><b>${esc(s.g.store.name)}</b><span class="num" style="font-weight:700">${s.t ? (s.full > s.price ? `<s>${fmt(s.full)}</s>` : "") + (s.price ? fmt(s.price) : L("Бесплатно", "Bepul")) : L("Самовывоз", "Olib ketish")}</span></div>
-    <small>${s.t ? `${tName(s.t)} · ${s.t.veh} · ${fmtKg(s.g.kg)} · ~${s.dist.toFixed(1).replace(".", DEC)} ${L("км", "km")} · ${d.when === "slot" ? L("завтра 10–14", "ertaga 10–14") : d.when === "vip" ? `${L("завтра", "ertaga")} ${d.hour}:00–${String(+d.hour + 1).padStart(2, "0")}:00` : etaStr(s.t)}` : `${esc(L(s.g.store.addr, s.g.store.addrUz))} · ${esc(s.g.store.hours || "")}`}</small></div>`).join("") +
-    (d.mode === "yandex" ? `<div class="note">${L("Цена доставки — оценка прототипа. В рабочей версии цену и время вернёт API Яндекс Доставки по точным координатам.", "Yetkazish narxi taxminiy. Ishchi versiyada narx va vaqtni Yandex API aniq koordinatalar bo‘yicha qaytaradi.")}</div>` : "");
+  $("#shipBox").innerHTML = `<legend>${L("Доставки", "Yetkazishlar")}</legend>` + qt.ships.map(s => `<div class="ship" data-ship-store="${esc(s.g.store.id)}">
+    <div class="t"><b>${esc(s.g.store.name)}</b><span class="num" style="font-weight:700" data-ship-price>${s.t ? (s.full > s.price ? `<s>${fmt(s.full)}</s>` : "") + (s.price ? fmt(s.price) : L("Бесплатно", "Bepul")) : L("Самовывоз", "Olib ketish")}</span></div>
+    <small class="ship-goods">${L("Товары", "Mahsulotlar")} ${s.g.lines.length} ${L("поз.", "pozitsiya", s.g.lines.length === 1 ? "item" : "items")} · <span class="num">${fmt(s.g.sum)}</span></small>
+    <small>${s.t ? `${tName(s.t)} · ${s.t.veh} · ${fmtKg(s.g.kg)} · ~${s.dist.toFixed(1).replace(".", DEC)} ${L("км", "km")} · ${d.when === "slot" ? L("завтра 10–14", "ertaga 10–14") : d.when === "vip" ? `${L("завтра", "ertaga")} ${d.hour}:00–${String(+d.hour + 1).padStart(2, "0")}:00` : etaStr(s.t)}` : `${esc(L(s.g.store.addr, s.g.store.addrUz))} · ${esc(s.g.store.hours || "")}`}</small>
+    ${(u => freshHTML(Number.isFinite(u) ? u : 0))(Math.min(...s.g.lines.map(l => l.p.offers.find(o => o.store === l.store)?.upd || Infinity)))}</div>`).join("") +
+    (d.mode === "yandex" ? `<div class="note" id="delNote">${!API ? L("Демо: цена доставки — оценка. В рабочей версии её считает сервер по тарифу или по данным Яндекс Доставки.", "Demo: yetkazish narxi taxminiy. Ishchi versiyada uni server tarif yoki Yandex ma’lumotlari bo‘yicha hisoblaydi.", "Demo: the delivery price is an estimate. In the working version the server calculates it from the tariff or Yandex Delivery data.")
+      : apiCfg?.yandex ? L("Стоимость доставки считает Яндекс Доставка по вашему адресу; итог ниже подтверждён сервером.", "Yetkazish narxini manzilingiz bo‘yicha Yandex Delivery hisoblaydi; quyidagi jami server tomonidan tasdiqlangan.", "Yandex Delivery prices the trip to your address; the total below is confirmed by the server.")
+      : L("Стоимость доставки — по тарифу Imorat Go (вес, расстояние, разгрузка); итог ниже подтверждён сервером.", "Yetkazish narxi — Imorat Go tarifi bo‘yicha (vazn, masofa, tushirish); quyidagi jami server tomonidan tasdiqlangan.", "Delivery is priced by the Imorat Go tariff (weight, distance, unloading); the total below is confirmed by the server.")}</div>` : "");
   { // unloading help: the price tag follows the floor and the tariff (free with a courier, LOADER per floor with a cargo van)
     const cargo = qt.ships.some(s => s.t && s.t.id !== "courier"), floors = d.private ? 0 : Math.max(0, (parseInt(d.floor, 10) || 1) - 1);
     const t1 = $('[data-help-tag="one"]'); if (t1) t1.textContent = cargo ? "+" + fmt(LOADER * Math.max(1, floors)) : L("входит", "kiradi", "included");
@@ -2997,6 +3021,7 @@ function updateQuote() {
     `<div class="sumrow total"><span>${L("Итого", "Jami")}</span><span class="num">${fmt(qt.total)}</span></div>`;
   const pb = $("#payBtn"); pb.textContent = d.pay === "cash" || d.pay === "store" ? L("Подтвердить заказ", "Buyurtmani tasdiqlash") : `${L("Оплатить картой", "Karta bilan to‘lash", "Pay by card")} ${fmt(qt.total)}`;
   pb.disabled = paymentsOff(); if (pb.disabled) pb.textContent = L("Оплата скоро", "To‘lov tez orada", "Payment coming soon");
+  if (API && !pb.disabled) requestServerQuote(d, qt); // the numbers above are the local estimate; the server's figures replace them before anyone can pay
   // no server = no order: the button says so instead of sending a form into the void (the banner at the top explains)
   if (API && apiState !== "ok") { pb.disabled = true; pb.textContent = apiState === "incompatible" ? (window.IMORAT_APP ? L("Обновите приложение", "Ilovani yangilang", "Update the app") : L("Обновите страницу", "Sahifani yangilang", "Reload the page")) : L("Нет связи с сервером", "Server bilan aloqa yo‘q", "No connection to the server"); }
 }
@@ -3109,7 +3134,7 @@ function dCompare() {
     ${row(L("Страна", "Mamlakat"), p => L(...p.country))}
     ${row(L("Гарантия", "Kafolat"), p => p.warranty ? `${p.warranty} ${L("мес.", "oy")}` : "—")}
     ${row(L("Магазины", "Do‘konlar"), p => p.offers.map(o => esc(STORE[o.store].name)).join("<br>"))}
-    ${row(L("Доставка", "Yetkazish"), p => tName(pickTariff(p.kg)))}
+    ${row(L("Доставка", "Yetkazish"), p => tName(pickTariff(p.kg, lenOf(p))))}
     ${row(L("Установка", "O‘rnatish"), p => SERVICE[p.sub] ? fmt(SERVICE[p.sub]) : "—")}
     ${row("", p => `<button class="btn btn-primary" type="button" data-add="${p.id}" style="padding:8px 10px;font-size:13px;width:100%">${L("В корзину", "Savatga")}</button>`)}
   </tbody></table></div>`;
@@ -4103,7 +4128,7 @@ function applyApiCatalog() {
   apiCat.products.forEach(x => {
     seen.add(x.id);
     const p = PROD[x.id];
-    if (p) { p.offers = x.offers; if (x.img && x.img.startsWith("/uploads/")) p.img = abs(x.img); if (x.desc) p.descRu = x.desc; }
+    if (p) { p.offers = x.offers; p.dims = x.dims || null; if (x.img && x.img.startsWith("/uploads/")) p.img = abs(x.img); if (x.desc) p.descRu = x.desc; }
     else PRODUCTS.push({ ...x, img: abs(x.img), descRu: x.desc || "", group: x.group || undefined, key: x.key || undefined, mine: false });
   });
   PRODUCTS = PRODUCTS.filter(p => seen.has(p.id));
@@ -4180,6 +4205,46 @@ async function apiBoot() {
 }
 
 let expectTotal = null;
+/* ---- The full cost comes from the server. In working mode every change of the cart or the address asks /api/quote
+   (debounced, the previous request is abandoned); until the answer arrives the pay button says "counting" and cannot be
+   pressed, so nobody pays on an estimate. A missing delivery price (the carrier gave none) is shown as unknown — "—",
+   never 0 — and the order stays closed. The answer's total is what the order request must match (expected_total). ---- */
+let sq = { seq: 0, timer: 0, ac: null, key: "", quote: null };
+const quoteKey = d => JSON.stringify([cart, services, bundlesOn, promo, d.mode, d.district, d.street, d.la, d.lo, d.floor, d.private, d.help, d.when, d.hour, d.pay, d.usePts]);
+function requestServerQuote(d, qt) {
+  const key = quoteKey(d);
+  if (key === sq.key && sq.quote) { renderServerQuote(sq.quote, [], d); return; } // nothing that changes the price changed
+  sq.key = key; sq.quote = null; clearTimeout(sq.timer); sq.ac?.abort();
+  const seq = ++sq.seq, pb = $("#payBtn"); if (pb) { pb.disabled = true; pb.textContent = L("Считаем стоимость…", "Narx hisoblanmoqda…", "Calculating the cost…"); }
+  sq.timer = setTimeout(async () => {
+    const ac = sq.ac = new AbortController();
+    const body = { lines: cartLines().map(l => ({ id: l.p.id, store: l.store, q: l.q })), services: Object.keys(services).map(Number), bundles: bundlesOn, form: d, promo, points: qt.pts || 0, lang };
+    try { const r = await api("POST", "/api/quote", body, { signal: ac.signal }); if (seq !== sq.seq) return; sq.quote = r.quote; renderServerQuote(r.quote, r.problems || [], d); }
+    catch (e) { if (e.name === "AbortError" || seq !== sq.seq) return; const b = $("#payBtn"); if (b) { b.disabled = true; b.textContent = e.code === "offline" ? L("Нет связи с сервером", "Server bilan aloqa yo‘q", "No connection to the server") : L("Не удалось посчитать стоимость", "Narxni hisoblab bo‘lmadi", "Could not calculate the cost"); } if (e.code !== "offline") toast(apiErr(e)); }
+  }, 350);
+}
+function renderServerQuote(q, problems, d) {
+  const dash = `<span class="num mu" title="${L("Стоимость доставки пока неизвестна", "Yetkazish narxi hali noma’lum", "Delivery price not known yet")}">—</span>`;
+  for (const sh of q.ships || []) { // per-store lines: the server's vehicle and delivery price, or "unknown"
+    const box = document.querySelector(`.ship[data-ship-store="${CSS.escape(sh.store)}"]`), row = box?.querySelector("[data-ship-price]"); if (!row) continue;
+    if (!sh.tariff) row.textContent = L("Самовывоз", "Olib ketish");
+    else if (sh.price == null) row.innerHTML = dash + ` <small class="mu">${L("перевозчик не дал цену", "tashuvchi narx bermadi", "no price from the carrier")}</small>`;
+    else row.innerHTML = (sh.full > sh.price ? `<s>${fmt(sh.full)}</s> ` : "") + (sh.price ? fmt(sh.price) : L("Бесплатно", "Bepul"));
+    const t = TARIFFS.find(x => x.id === sh.tariff), info = box.querySelector("small:not(.ship-goods):not(.fresh)");
+    if (t && info) info.innerHTML = `${tName(t)} · ${t.veh} · ${fmtKg(sh.kg)}${sh.len > LONG_S ? ` · ${L("длина до", "uzunlik", "length up to")} ${String(sh.len).replace(".", DEC)} ${L("м", "m")}` : ""} · ~${Number(sh.dist).toFixed(1).replace(".", DEC)} ${L("км", "km")} · ${d.when === "slot" ? L("завтра 10–14", "ertaga 10–14") : d.when === "vip" ? `${L("завтра", "ertaga")} ${d.hour}:00–${String(+d.hour + 1).padStart(2, "0")}:00` : etaStr(t)}${sh.source === "yandex" ? ` · ${L("цена Яндекс Доставки", "Yandex Delivery narxi", "Yandex Delivery price")}` : ""}`;
+  }
+  $("#totals").innerHTML = totalsHTML(q.goods, q.svc, q.disc, `<div class="sumrow"><span class="mu">${L("Доставка", "Yetkazish")}</span>${q.del == null ? dash : `<span class="num">${fmt(q.del)}</span>`}</div>`) +
+    (q.pd ? `<div class="sumrow disc"><span>${L("Промокод", "Promokod")} ${esc(q.promo || "")}</span><span class="num">−${fmt(q.pd)}</span></div>` : "") +
+    (q.pts ? `<div class="sumrow disc"><span>${L("Бонусами", "Bonus bilan")}</span><span class="num">−${fmt(q.pts)}</span></div>` : "") +
+    (q.cash ? `<div class="sumrow cash"><span>${L(`Кешбэк VIP ${pct(bonusCfg().rateVip)}`, `VIP keshbek ${pct(bonusCfg().rateVip)}`, `VIP cashback ${pct(bonusCfg().rateVip)}`)}</span><span class="num">+${fmt(q.cash)}</span></div>` : "") +
+    `<div class="sumrow total"><span>${L("Итого", "Jami")}</span>${q.total == null ? dash : `<span class="num">${fmt(q.total)}</span>`}</div>`;
+  const pb = $("#payBtn"); if (!pb) return;
+  const bad = problems.find(p => p.reason === "stock" || p.reason === "unavailable");
+  if (bad) { pb.disabled = true; pb.textContent = L("Проверьте корзину", "Savatni tekshiring", "Check the cart"); toast(L("Не хватает товара: ", "Mahsulot yetmaydi: ") + (problems.map(p => `${PROD[p.id] ? pName(PROD[p.id]) : "#" + p.id}${p.reason === "stock" ? ` — ${L("в наличии", "mavjud", "in stock")} ${p.stock}` : ""}`).join("; "))); expectTotal = null; return; }
+  if (q.unknown) { pb.disabled = true; pb.textContent = L("Стоимость доставки недоступна", "Yetkazish narxi mavjud emas", "Delivery price unavailable"); const n = $("#delNote"); if (n) n.innerHTML = `${ui("clock", 14)} ${L("Перевозчик не вернул цену доставки по этому адресу. Попробуйте через минуту, уточните адрес на карте или выберите самовывоз.", "Tashuvchi bu manzil uchun yetkazish narxini qaytarmadi. Bir daqiqadan keyin urinib ko‘ring, manzilni xaritada aniqlang yoki olib ketishni tanlang.", "The carrier returned no delivery price for this address. Try again in a minute, refine the address on the map or choose pickup.")}`; expectTotal = null; return; }
+  expectTotal = q.total;
+  pb.disabled = false; pb.textContent = d.pay === "cash" || d.pay === "store" ? L("Подтвердить заказ", "Buyurtmani tasdiqlash") : `${L("Оплатить картой", "Karta bilan to‘lash", "Pay by card")} ${fmt(q.total)}`;
+}
 function showServerTotals(q) {
   $("#totals").innerHTML = totalsHTML(q.goods, q.svc, q.disc, `<div class="sumrow"><span class="mu">${L("Доставка", "Yetkazish")}</span><span class="num">${fmt(q.del)}</span></div>`) +
     (q.pd ? `<div class="sumrow disc"><span>${L("Промокод", "Promokod")} ${esc(q.promo || "")}</span><span class="num">−${fmt(q.pd)}</span></div>` : "") +
@@ -4355,7 +4420,7 @@ function renderSellerApi() {
     </div>
     <div class="panel" style="margin-top:12px"><div class="panel-h"><h2 class="h-m">${L("Заказы", "Buyurtmalar")}</h2><button class="btn btn-line" type="button" data-act="seller-reload">${ui("repeat", 16)} ${L("Обновить", "Yangilash")}</button></div>
       ${ords.length ? `<div class="tbl-wrap"><table><thead><tr><th>${L("Заказ", "Buyurtma")}</th><th>${L("Состав", "Tarkibi")}</th><th class="r">${L("Сумма", "Summa")}</th><th>${L("Статус", "Holat")}</th><th></th></tr></thead><tbody>
-      ${ords.map(o => { const [lb, c] = lab[o.status] || [o.status, "mute"]; return `<tr><td><b class="mono">${esc(o.num)}</b><br><small style="color:var(--muted)">${esc(o.buyer || "")} · ${esc(o.phone || "")}<br>${o.tariff ? `${L(DIST[o.district]?.ru || "", DIST[o.district]?.uz || "")}, ${esc(o.street)}${o.private ? ", " + L("частный дом", "xususiy uy", "private house") : `${o.entrance ? ", " + L("подъезд", "kirish", "entrance") + " " + esc(o.entrance) : ""}${+o.floor > 1 ? ", " + L("этаж", "qavat", "floor") + " " + esc(o.floor) : ""}`}${o.help === "one" || o.help === "two" ? ` · <b>${L("курьер поможет спустить и занести", "kuryer tushirib, olib kirishga yordam beradi", "courier helps unload and carry in")}</b>` : o.help === "none" ? ` · ${L("покупатель заберёт у машины", "xaridor mashina oldidan oladi", "buyer takes it at the car")}` : ""}` : L("Самовывоз", "Olib ketish")}${o.when === "vip" ? ` · ${L("завтра", "ertaga")} ${o.hour}:00` : o.when === "slot" ? ` · ${L("завтра 10–14", "ertaga 10–14")}` : ""}</small>${o.comment ? `<br><small>«${esc(o.comment)}»</small>` : ""}</td>
+      ${ords.map(o => { const [lb, c] = lab[o.status] || [o.status, "mute"]; return `<tr><td><b class="mono">${esc(o.num)}</b><br><small style="color:var(--muted)">${esc(o.buyer || "")} · ${esc(o.phone || "")}<br>${o.tariff ? `${L(DIST[o.district]?.ru || "", DIST[o.district]?.uz || "")}, ${esc(o.street)}${o.private ? ", " + L("частный дом", "xususiy uy", "private house") : `${o.entrance ? ", " + L("подъезд", "kirish", "entrance") + " " + esc(o.entrance) : ""}${+o.floor > 1 ? ", " + L("этаж", "qavat", "floor") + " " + esc(o.floor) : ""}`}${o.help === "one" || o.help === "two" ? ` · <b>${L("курьер поможет спустить и занести", "kuryer tushirib, olib kirishga yordam beradi", "courier helps unload and carry in")}</b>` : o.help === "none" ? ` · ${L("покупатель заберёт у машины", "xaridor mashina oldidan oladi", "buyer takes it at the car")}` : ""}${o.access === "far" ? ` · <b style="color:var(--signal)">${L("машина не подъедет к подъезду", "mashina kirishgacha kelolmaydi", "no vehicle access to the entrance")}</b>` : ""}${+o.floor > 1 && !o.private && o.elevator != null ? ` · ${o.elevator ? L("есть лифт", "lift bor", "lift available") : L("без лифта", "liftsiz", "no lift")}` : ""}${o.loaders_failed ? ` · <b style="color:var(--signal)">${L("перевозчик не дал грузчика", "tashuvchi yuk tashuvchi bermadi", "carrier gave no loader")}</b>` : ""}` : L("Самовывоз", "Olib ketish")}${o.when === "vip" ? ` · ${L("завтра", "ertaga")} ${o.hour}:00` : o.when === "slot" ? ` · ${L("завтра 10–14", "ertaga 10–14")}` : ""}</small>${o.comment ? `<br><small>«${esc(o.comment)}»</small>` : ""}</td>
         <td style="min-width:180px;font-size:13px">${o.lines.map(l => `${esc(PROD[l.id] ? pName(PROD[l.id]) : l.name)} × ${l.q}`).join("<br>")}<br><small style="color:var(--muted)">${o.tariff ? `${tName(TARIFFS.find(t => t.id === o.tariff) || TARIFFS[0])} · ${fmtKg(o.kg)}` : ""}</small></td>
         <td class="r">${fmt(o.lines.reduce((a, l) => a + l.price * l.q, 0))}<br><small style="color:var(--muted)">${["cash", "store"].includes(o.pay) ? L("оплата при получении", "olganda to‘lov", "paid on receipt") : o.pay_status === "paid" ? L("оплачен картой — выдавайте без оплаты", "karta bilan to‘langan — to‘lovsiz bering", "paid by card — hand over without payment") : L("ждёт оплаты", "to‘lov kutilmoqda")}</small></td>
         <td><span class="pill ${c}">${lb}</span>${o.status === "new" && o.accept_by ? `<br><small data-until="${o.accept_by}"></small>` : ""}${o.status === "cancelled" && o.cancel_reason ? `<br><small style="color:var(--muted)">${CANCEL_TXT()[o.cancel_reason] || ""}</small>` : ""}</td><td style="white-space:nowrap">${o.next.map(n => `<button class="btn ${n === "cancelled" ? "btn-line" : "btn-primary"}" type="button" data-shipst="${o.ship_id}|${n}" style="margin:2px 0">${nx[n]}</button>`).join(" ")}</td></tr>`; }).join("")}
@@ -4364,6 +4429,7 @@ function renderSellerApi() {
     ${sellerStatsHTML(s.id)}
     <div style="margin-top:12px">${storeCardHTML(s)}</div>
     ${importHTML(s.id)}
+    ${(pf => pf ? `<div class="panel fresh-panel ${pf.stale ? "stale" : ""}" style="margin-top:12px">${ui(pf.stale ? "clock" : "check", 20)}<span><b>${pf.confirmed_at ? L(`Цены и остатки подтверждены ${pf.days === 0 ? "сегодня" : pf.days === 1 ? "вчера" : pf.days + " дн. назад"}`, `Narx va qoldiqlar ${pf.days === 0 ? "bugun" : pf.days === 1 ? "kecha" : pf.days + " kun oldin"} tasdiqlangan`, `Prices and stock confirmed ${pf.days === 0 ? "today" : pf.days === 1 ? "yesterday" : pf.days + " days ago"}`) : L("Цены и остатки ещё не подтверждались", "Narx va qoldiqlar hali tasdiqlanmagan", "Prices and stock have not been confirmed yet")}</b><br><small style="color:var(--muted)">${L("Покупатели видят дату подтверждения у каждой цены; старше недели — с предупреждением. Нажмите, если всё актуально, или поправьте цены в таблице ниже.", "Xaridorlar har bir narx yonida tasdiqlash sanasini ko‘radi; bir haftadan eski — ogohlantirish bilan. Hammasi dolzarb bo‘lsa bosing yoki quyidagi jadvalda narxlarni to‘g‘rilang.", "Buyers see the confirmation date next to every price; older than a week shows a warning. Press if everything is current, or fix the prices in the table below.")}</small></span><button class="btn ${pf.stale ? "btn-primary" : "btn-line"}" type="button" data-act="prices-confirm">${ui("check", 16)} ${L("Всё актуально", "Hammasi dolzarb", "All current")}</button></div>` : "")(sellerData.prices)}
     <div class="panel" style="margin-top:12px"><div class="panel-h"><h2 class="h-m">${L("Товары, цены и остатки", "Mahsulotlar, narxlar va qoldiqlar")}</h2><span style="font-size:13px;color:var(--muted)">${L("Изменения сразу видны покупателям", "O‘zgarishlar darhol xaridorlarga ko‘rinadi")}</span></div>
       ${products.length ? `<div class="tbl-wrap"><table><thead><tr><th>${L("Товар", "Mahsulot")}</th><th class="r">${L("Цена, сум", "Narx, so‘m")}</th><th class="r">${L("Остаток", "Qoldiq")}</th></tr></thead><tbody>
       ${shown.map(p => { const lp = PROD[p.id]; return `<tr><td><div class="pcell">${lp ? mini(lp) : ""}<span>${esc(p.ru)}${p.own ? ` <span class="pill acc">${L("ваш", "sizniki")}</span><br><button class="ph-btn" type="button" data-sphoto="${p.id}">${ui("photo", 14)} ${p.img ? L("Заменить фото", "Rasmni almashtirish") : L("Загрузить фото", "Rasm yuklash")}</button>` : ""}</span></div></td>
@@ -4387,6 +4453,7 @@ function renderSellerApi() {
         <div class="f"><label for="aPrice">${L("Цена, сум", "Narx, so‘m")}</label><input id="aPrice" name="price" type="number" min="100" inputmode="numeric" placeholder="54000"></div>
         <div class="f"><label for="aKg">${L("Вес единицы, кг", "Birlik vazni, kg")}</label><input id="aKg" name="kg" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="25"></div>
         <div class="f"><label for="aStock">${L("Остаток", "Qoldiq")}</label><input id="aStock" name="stock" type="number" min="0" inputmode="numeric" placeholder="40"></div>
+        <div class="f"><label for="aLen">${L("Упаковка: длина × ширина × высота, см", "Qadoq: uzunlik × kenglik × balandlik, sm", "Package: length × width × height, cm")} <small class="mu">${L("— для длинных товаров: от этого зависит машина", "— uzun tovarlar uchun: mashina shunga bog‘liq", "— for long goods: decides the vehicle")}</small></label><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px"><input id="aLen" name="len_cm" type="number" min="1" max="1500" inputmode="numeric" placeholder="300" aria-label="${L("Длина, см", "Uzunlik, sm", "Length, cm")}"><input name="wid_cm" type="number" min="1" max="1500" inputmode="numeric" placeholder="10" aria-label="${L("Ширина, см", "Kenglik, sm", "Width, cm")}"><input name="hgt_cm" type="number" min="1" max="1500" inputmode="numeric" placeholder="5" aria-label="${L("Высота, см", "Balandlik, sm", "Height, cm")}"></div></div>
         <div class="f wide"><label for="aDesc">${L("Описание", "Tavsif")}</label><input id="aDesc" name="desc" placeholder="${L("Для чего подходит, расход, особенности", "Nima uchun mos, sarfi, xususiyatlari")}"></div>
         <div class="f wide"><span>${L("Фото", "Rasm")}</span><button class="drop" type="button" data-photo="new" id="aPhotoPv">${ui("photo", 20)} ${L("Выбрать фото товара", "Mahsulot rasmini tanlash")}</button></div>
         <div class="f wide" style="grid-column:1/-1"><span class="err" id="addErr" hidden>${L("Заполните название, цену и вес — по весу подбирается тариф доставки.", "Nomi, narxi va vaznini kiriting — tarif vazn bo‘yicha tanlanadi.")}</span><button class="btn btn-primary" type="submit" style="justify-self:start">${ui("plus", 18)} ${L("Опубликовать", "Joylash")}</button></div>
@@ -4415,7 +4482,8 @@ function renderSellerApi() {
     const ok = d.ru.trim().length > 2 && price >= 100 && kg > 0; $("#addErr").hidden = ok; if (!ok) return;
     const btn = e.target.querySelector("[type=submit]"); btn.disabled = true;
     try {
-      const r = await api("POST", "/api/seller/products", { ru: d.ru.trim(), uz: d.uz.trim(), cat: d.cat, sub: d.sub, unit: d.unit, price, kg, stock: parseInt(d.stock, 10) || 0, desc: d.desc.trim() });
+      const dims = [d.len_cm, d.wid_cm, d.hgt_cm].map(Number), hasDims = dims.every(x => x >= 1);
+      const r = await api("POST", "/api/seller/products", { ru: d.ru.trim(), uz: d.uz.trim(), cat: d.cat, sub: d.sub, unit: d.unit, price, kg, stock: parseInt(d.stock, 10) || 0, desc: d.desc.trim(), ...(hasDims ? { dims_cm: dims } : {}) });
       if (newPhoto) { const blob = await (await fetch(newPhoto)).blob(); await api("POST", `/api/seller/products/${r.product.id}/photo`, blob).catch(() => toast(L("Товар добавлен, но фото не загрузилось", "Mahsulot qo‘shildi, lekin rasm yuklanmadi"))); newPhoto = ""; }
       toast(s.status === "active" ? L("Товар опубликован на витрине", "Mahsulot vitrinaga joylandi") : L("Товар сохранён — появится в каталоге после проверки магазина", "Mahsulot saqlandi — do‘kon tekshirilgach katalogda chiqadi"));
       sellerData = null; renderSeller(); syncCatalog();
@@ -4541,6 +4609,10 @@ async function liveTick() {
 }
 setInterval(() => { if (drawerView === "track" && !document.hidden) liveTick(); }, API ? 10000 : 2500);
 function shipExtra(o, s) {
+  if (s.loaders_failed && !["cancelled", "delivered"].includes(s.status)) return `<div class="note warnn">${ui("clock", 14)} ${L("Перевозчик не смог выделить грузчика на этот рейс: курьер привезёт заказ к подъезду, разгрузка у машины. Плату за помощь вернём; если нужен подъём — напишите в поддержку.", "Tashuvchi bu reysga yuk tashuvchi ajrata olmadi: kuryer buyurtmani kirishgacha olib keladi, tushirish mashina oldida. Yordam haqini qaytaramiz; ko‘tarish kerak bo‘lsa — qo‘llab-quvvatlashga yozing.", "The carrier could not assign a loader for this trip: the courier brings the order to the entrance, unloading at the car. The help fee is refunded; if you need it carried up, write to support.")}</div>` + shipExtra2(o, s);
+  return shipExtra2(o, s);
+}
+function shipExtra2(o, s) {
   if (s.status === "cancelled") return `<div class="note warnn">${ui("close", 14)} ${L("Отменено", "Bekor qilindi")}: ${CANCEL_TXT()[s.cancel_reason] || ""}${s.cancel_reason && s.cancel_reason !== "buyer" ? ". " + L("Платить ничего не нужно — закажите у другого магазина.", "Hech narsa to‘lash shart emas — boshqa do‘kondan buyurtma bering.") : ""}</div>`;
   if (s.status === "new" && s.accept_by && o.pay_status === "paid") return `<div class="note">${ui("clock", 14)} ${L(`Магазин подтвердит заказ до ${hhmm(s.accept_by)}. Не успеет — заказ отменится, а деньги вернутся на карту.`, `Do‘kon buyurtmani ${hhmm(s.accept_by)} gacha tasdiqlaydi. Ulgurmasa — buyurtma bekor bo‘ladi, pul kartaga qaytadi.`, `The store confirms the order by ${hhmm(s.accept_by)}. If it does not, the order is cancelled and the money returns to your card.`)}</div>`;
   if (s.status === "new" && s.accept_by) return `<div class="note">${ui("clock", 14)} ${L(`Магазин подтвердит заказ до ${hhmm(s.accept_by)}. Не успеет — заказ отменится автоматически, платить ничего не нужно.`, `Do‘kon buyurtmani ${hhmm(s.accept_by)} gacha tasdiqlaydi. Ulgurmasa — buyurtma avtomatik bekor qilinadi, to‘lash shart emas.`, `The store will confirm the order by ${hhmm(s.accept_by)}. If it doesn't, the order is cancelled automatically and you pay nothing.`)}</div>`;
@@ -5560,11 +5632,11 @@ function impStock(v) {
 function impTable(rows) {
   rows = rows.map(r => r.map(c => String(c ?? "").trim())).filter(r => r.some(Boolean));
   if (!rows.length) return [];
-  const H = { name: /наимен|назван|товар|продукц|nomi|mahsulot|tovar|name|product/i, price: /цена|стоим|narx|price|сум|so.?m/i, stock: /остат|кол-?во|количеств|наличи|qoldiq|soni|miqdor|stock|qty/i };
+  const H = { name: /наимен|назван|товар|продукц|nomi|mahsulot|tovar|name|product/i, price: /цена|стоим|narx|price|сум|so.?m/i, stock: /остат|кол-?во|количеств|наличи|qoldiq|soni|miqdor|stock|qty/i, len: /длин|uzunlik|length|габарит/i };
   let head = -1, cols = {};
   for (let i = 0; i < Math.min(8, rows.length) && head < 0; i++) {
     const r = rows[i], c = {};
-    r.forEach((t, j) => { for (const k of ["name", "price", "stock"]) if (c[k] == null && H[k].test(t) && !(k === "name" && H.price.test(t))) c[k] = j; });
+    r.forEach((t, j) => { for (const k of ["name", "price", "stock", "len"]) if (c[k] == null && H[k].test(t) && !(k === "name" && H.price.test(t))) c[k] = j; });
     if (c.name != null && c.price != null) { head = i; cols = c; }
   }
   const body = rows.slice(head + 1);
@@ -5578,7 +5650,9 @@ function impTable(rows) {
     cols.price = numCols[0]?.j; cols.stock = numCols.find(s => s.med < 100000 && s.j !== cols.price)?.j;
   }
   if (cols.name == null || cols.price == null) return [];
-  return body.map(r => ({ name: r[cols.name] || "", price: impMoney(r[cols.price]), stock: impStock(cols.stock != null ? r[cols.stock] : "") }))
+  // an optional "Длина, см" column: long goods need a cargo van; values under 20 are read as metres
+  const lenCm = v => { const n = parseFloat(String(v || "").replace(",", ".")); return n > 0 ? Math.round(n < 20 ? n * 100 : n) : null; };
+  return body.map(r => ({ name: r[cols.name] || "", price: impMoney(r[cols.price]), stock: impStock(cols.stock != null ? r[cols.stock] : ""), len: cols.len != null ? lenCm(r[cols.len]) : null }))
     .filter(x => x.name.length > 2 && x.price >= 100);
 }
 /* Text pasted from Telegram: "Цемент М400 50кг — 58 000 сум (есть 40 шт)" per line */
@@ -5647,7 +5721,7 @@ async function impApply(sid) {
   const rows = imp.rows.filter(x => x.pick !== "skip");
   const offers = rows.filter(x => PROD[x.pick]).map(x => ({ product_id: +x.pick, price: x.price, stock: x.stock }));
   const create = rows.filter(x => x.pick === "new").map(x => { const like = PROD[x.cands[0]?.id], st = API ? sellerData?.store : STORE[sid], cat = like?.cat || st?.cats?.[0] || "build", sub = like?.sub || CAT[cat].subs[0][0];
-    return { ru: x.name.slice(0, 140), uz: x.name.slice(0, 140), cat, sub, unit: like?.unit || "pcs", kg: like?.kg || 1, price: x.price, stock: x.stock ?? 10 }; });
+    return { ru: x.name.slice(0, 140), uz: x.name.slice(0, 140), cat, sub, unit: like?.unit || "pcs", kg: like?.kg || 1, price: x.price, stock: x.stock ?? 10, ...(x.len ? { dims_cm: [x.len, 10, 10] } : {}) }; });
   if (API) {
     try { const r = await api("POST", "/api/seller/import", { offers, create }); toast(L(`Готово: обновлено ${r.updated}, добавлено ${r.added}, новых товаров ${r.created}`, `Tayyor: yangilandi ${r.updated}, qo‘shildi ${r.added}, yangi mahsulotlar ${r.created}`, `Done: updated ${r.updated}, added ${r.added}, new products ${r.created}`)); imp = null; sellerData = null; renderSeller(); syncCatalog(); }
     catch (e) { toast(apiErr(e)); }
@@ -6221,9 +6295,9 @@ document.addEventListener("click", e => {
    and compares goods + delivery with the current cart. */
 function cartCost(assign, mode, dist) {
   const g = {};
-  for (const a of assign) { const o = a.p.offers.find(x => x.store === a.store); if (!o) return Infinity; const tr = tierOf(a.p, a.q), pr = tr ? round(o.price * (1 - tr)) : o.price; const x = (g[a.store] ||= { sum: 0, kg: 0 }); x.sum += pr * a.q; x.kg += a.p.kg * a.q; }
+  for (const a of assign) { const o = a.p.offers.find(x => x.store === a.store); if (!o) return Infinity; const tr = tierOf(a.p, a.q), pr = tr ? round(o.price * (1 - tr)) : o.price; const x = (g[a.store] ||= { sum: 0, kg: 0, len: 0 }); x.sum += pr * a.q; x.kg += a.p.kg * a.q; x.len = Math.max(x.len, lenOf(a.p)); }
   let goods = 0, del = 0;
-  for (const [sid, x] of Object.entries(g)) { goods += x.sum; if (mode !== "pickup") { const t = pickTariff(x.kg); del += round(t.base + t.perKm * km(STORE[sid].d, dist)); } }
+  for (const [sid, x] of Object.entries(g)) { goods += x.sum; if (mode !== "pickup") { const t = pickTariff(x.kg, x.len); del += round(t.base + t.perKm * km(STORE[sid].d, dist)); } }
   return { goods, del, total: goods + del, stores: Object.keys(g).length };
 }
 function cartPlan() {
@@ -7239,6 +7313,7 @@ document.addEventListener("click", e => {
     case "order-cancel": { const num = drawerOrder; api("POST", `/api/orders/${encodeURIComponent(num)}/cancel`).then(r => { const o = orders.find(x => x.num === num); Object.assign(o, mapOrder(r.order)); LS.set("imorat.orders", orders.slice(0, 30)); toast(L("Заказ отменён", "Buyurtma bekor qilindi")); renderDrawer(); syncCatalog(); }).catch(e => toast(e.code === "too_late" ? L("Заказ уже в пути — отменить нельзя", "Buyurtma yo‘lda — bekor qilib bo‘lmaydi") : apiErr(e))); return; }
     case "close-auth": return closeAuth();
     case "logout": return logout();
+    case "prices-confirm": { const b = e.target.closest("button"); if (b) b.disabled = true; return api("POST", "/api/seller/offers/confirm").then(() => { toast(L("Спасибо! Покупатели видят сегодняшнюю дату подтверждения", "Rahmat! Xaridorlar bugungi tasdiqlash sanasini ko‘radi", "Thanks! Buyers now see today's confirmation date")); sellerData = null; renderSeller(); syncCatalog(); }).catch(er => { if (b) b.disabled = false; toast(apiErr(er)); }); }
     case "api-retry": { const b = e.target.closest("button"); if (b) { b.disabled = true; b.textContent = L("Проверяем…", "Tekshirilmoqda…", "Checking…"); } return apiBoot().then(() => { if (apiState !== "ok") renderApiBar(); }); }
     case "auth-resend": return sendCode();
     case "more": shownN += 36; return renderList(true);

@@ -1,16 +1,18 @@
 /* Yandex Delivery: price check per store (POST /b2b/cargo/integration/v2/check-price).
    Works only when YANDEX_DELIVERY_TOKEN is set; otherwise the tariff formula is used. */
+import { dimsOf, pickTariff } from "./pricing.js";
+
 export async function yandexPrices(db, ref, cfg, lines, form, log = console) {
   if (!cfg.token || form.mode === "pickup") return null;
   const D = Object.fromEntries(ref.districts.map(d => [d.id, d]));
   const dest = form.la != null && form.lo != null ? { la: Number(form.la), lo: Number(form.lo) } : D[form.district] || D.mirob;
   const destName = ["Ташкент", form.street || D[form.district]?.ru || ""].filter(Boolean).join(", ");
   const byStore = new Map();
-  for (const l of lines) { const g = byStore.get(l.store) || { kg: 0 }; g.kg += l.p.kg * l.q; byStore.set(l.store, g); }
+  for (const l of lines) { const g = byStore.get(l.store) || { kg: 0, len: 0 }; g.kg += l.p.kg * l.q; g.len = Math.max(g.len, dimsOf(ref, l.p)?.[0] || 0); byStore.set(l.store, g); }
   const out = {};
   await Promise.all([...byStore].map(async ([sid, g]) => {
     const s = db.get("SELECT * FROM stores WHERE id=?", sid);
-    const t = ref.tariffs.find(x => g.kg <= x.maxKg) || ref.tariffs[ref.tariffs.length - 1];
+    const t = pickTariff(ref, g.kg, g.len);
     const requirements = t.id === "courier" ? { taxi_class: "express" }
       : { taxi_class: "cargo", cargo_type: t.id === "cargo_s" ? "lcv_m" : "lcv_l" };
     // the price is asked without loaders on purpose: unloading help is priced by our own LOADER fee in pricing.quote,
@@ -20,7 +22,7 @@ export async function yandexPrices(db, ref, cfg, lines, form, log = console) {
         { id: 1, coordinates: [s.lo ?? D[s.district].lo, s.la ?? D[s.district].la], fullname: `Ташкент, ${s.addr || D[s.district].ru}` },
         { id: 2, coordinates: [dest.lo, dest.la], fullname: destName }
       ],
-      items: [{ weight: Math.max(0.1, Math.round(g.kg * 100) / 100), quantity: 1, pickup_point: 1, dropoff_point: 2 }],
+      items: [{ weight: Math.max(0.1, Math.round(g.kg * 100) / 100), quantity: 1, pickup_point: 1, dropoff_point: 2, ...(g.len ? { size: { length: g.len, width: 0.5, height: 0.5 } } : {}) }],
       requirements
     };
     try {

@@ -90,6 +90,14 @@ export function createNotify({ db, cfg, tg, push, sms, ref, log = console }) {
       if (c.buyer.tg_chat) safe(tg.send(c.buyer.tg_chat, h(text)));
       safe(push.toUser(c.buyer.id, { title: `Imorat Go · ${c.o.num}`, body: text, url: `${cfg.siteUrl}#orders`, tag: "order-" + c.o.num }));
     },
+    /* the carrier could not give a loader for this trip: the buyer hears it before the car arrives, the admins settle the fee */
+    async loadersFailed(shipId) {
+      const c = ctx(shipId); if (!c.s || !c.buyer) return;
+      const text = `Заказ ${c.o.num}: перевозчик не смог выделить грузчика на этот рейс — водитель привезёт заказ к подъезду, разгрузка у машины. Плату за помощь мы вернём; если нужна помощь с подъёмом, напишите в поддержку.`;
+      if (c.buyer.tg_chat) safe(tg.send(c.buyer.tg_chat, h(text)));
+      safe(push.toUser(c.buyer.id, { title: `Imorat Go · ${c.o.num}`, body: text, url: `${cfg.siteUrl}#orders`, tag: "order-" + c.o.num }));
+      this.admins(`🧰 Отправление #${c.s.id} (заказ ${c.o.num}): Яндекс не принял заявку с грузчиком, курьер заказан без него. Верните покупателю плату за разгрузку и при необходимости организуйте подъём.`);
+    },
     async admins(text) {
       for (const a of db.all(`SELECT * FROM users WHERE tg_chat IS NOT NULL AND phone IN (${cfg.admins.map(() => "?").join(",") || "''"})`, ...cfg.admins)) safe(tg.send(a.tg_chat, text));
     }

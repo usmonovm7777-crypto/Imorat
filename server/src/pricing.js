@@ -40,6 +40,21 @@ export function loadLines(db, ref, rawLines, user) {
 
 /* unloading help chosen at checkout: none (the buyer takes the goods at the car) or one (the courier/driver carries to the door and up the stairs) */
 export const helpers = f => f?.help === "one" || f?.help === "two" || (f?.help == null && f?.lift) ? 1 : 0;
+
+/* Package size of a product in metres [length, width, height]: the seller's own figures (products.dims) win; otherwise the
+   typical size of that subcategory from catalog.json "bulky" (long goods: pipes, boards, sheets, doors…); null when unknown. */
+export function dimsOf(ref, p) {
+  if (p?.dims) { try { const d = typeof p.dims === "string" ? JSON.parse(p.dims) : p.dims; if (Array.isArray(d) && d.length === 3 && d.every(x => x > 0)) return d.map(Number); } catch {} }
+  const t = ref.bulky?.[p?.sub]; return Array.isArray(t) ? t : null;
+}
+/* The vehicle: by weight, then by the longest item — a 3-metre pipe does not fit a Cobalt whatever it weighs */
+export function pickTariff(ref, kg, len = 0) {
+  const T = ref.tariffs, byKg = T.find(x => kg <= x.maxKg) || T[T.length - 1];
+  const min = len > (ref.fees.LONG_L ?? 3) ? "cargo_l" : len > (ref.fees.LONG_S ?? 1.8) ? "cargo_s" : null;
+  if (!min) return byKg;
+  const need = T.findIndex(x => x.id === min), have = T.indexOf(byKg);
+  return need > have ? T[need] : byKg;
+}
 export function quote(db, ref, { lines, services = [], bundles = [], form = {}, promo = "", user = null, yandexPrices = null, points = 0, maxShare = 0.2, bonusOn = true, rateVip = 0.03 }) {
   const D = Object.fromEntries(ref.districts.map(d => [d.id, d]));
   const dest = D[form.district] || D[user?.district] || D.mirob;
@@ -49,19 +64,22 @@ export function quote(db, ref, { lines, services = [], bundles = [], form = {}, 
     let g = groups.get(l.store);
     if (!g) {
       const s = db.get("SELECT id,name,district,la,lo FROM stores WHERE id=?", l.store);
-      g = { store: s, lines: [], sum: 0, kg: 0 }; groups.set(l.store, g);
+      g = { store: s, lines: [], sum: 0, kg: 0, len: 0 }; groups.set(l.store, g);
     }
-    g.lines.push(l); g.sum += l.price * l.q; g.kg += l.p.kg * l.q;
+    g.lines.push(l); g.sum += l.price * l.q; g.kg += l.p.kg * l.q; g.len = Math.max(g.len, dimsOf(ref, l.p)?.[0] || 0);
   }
   const floors = form.private ? 0 : Math.max(0, (parseInt(form.floor, 10) || 1) - 1);
   const loaders = helpers(form);
   const ships = [...groups.values()].map(g => {
     if (form.mode === "pickup") return { g, t: null, dist: 0, price: 0, full: 0 };
-    const t = ref.tariffs.find(x => g.kg <= x.maxKg) || ref.tariffs[ref.tariffs.length - 1];
+    const t = pickTariff(ref, g.kg, g.len);
     const from = g.store.la != null ? { la: g.store.la, lo: g.store.lo } : D[g.store.district];
     const to = form.la != null && form.lo != null ? { la: Number(form.la), lo: Number(form.lo) } : dest;
     const dist = distanceKm(from, to);
     const yp = yandexPrices?.[g.store.id];
+    // Yandex is connected but gave no price for this route (timeout, address outside the zone): the cost is unknown, not
+    // "the formula" — the carrier would charge its own price. The quote says so and the order is refused until it is known.
+    if (yandexPrices && yp == null) return { g, t, dist, price: null, full: null, source: "unavailable" };
     let p = yp != null ? yp : t.base + t.perKm * dist;
     if (loaders && t.id !== "courier") p += ref.fees.LOADER * loaders * Math.max(1, floors); // a loader costs LOADER per floor, at least one (truck → door)
     if (form.when === "slot") p *= 0.9;
@@ -72,7 +90,8 @@ export function quote(db, ref, { lines, services = [], bundles = [], form = {}, 
   });
   const qtyOf = id => lines.filter(l => l.p.id === id).reduce((a, l) => a + l.q, 0);
   const goods = ships.reduce((a, s) => a + s.g.sum, 0);
-  const del = ships.reduce((a, s) => a + s.price, 0);
+  const unknown = ships.some(s => s.price == null);
+  const del = unknown ? null : ships.reduce((a, s) => a + s.price, 0);
 
   const svcLines = [...new Set((Array.isArray(services) ? services : []).map(Number))].map(id => {
     const l = lines.find(x => x.p.id === id); const price = l && ref.service[l.p.sub];
@@ -99,11 +118,11 @@ export function quote(db, ref, { lines, services = [], bundles = [], form = {}, 
     if (!used) { pd = Math.min(pr.cap, Math.round(goods * pr.pct / 1000) * 1000); promoCode = code; }
   }
   const pts = user ? Math.max(0, Math.min(Math.floor(Number(points) || 0), user.points || 0, Math.floor(goods * maxShare))) : 0;
-  const total = goods + del + svc - disc - pd - pts;
+  const total = unknown ? null : goods + del + svc - disc - pd - pts;
   return {
-    goods, del, svc, disc, pd, pts, total, cash: vip && bonusOn ? Math.round(goods * rateVip) : 0, /* the VIP cashback promised at checkout (cfg.bonus.rateVip; bonus.js credits the same rate) */ promo: promoCode, bundles: bundlesApplied, services: svcLines,
+    goods, del, svc, disc, pd, pts, total, unknown, /* unknown: a delivery price is missing, so del and total are null (never 0) */ cash: vip && bonusOn ? Math.round(goods * rateVip) : 0, /* the VIP cashback promised at checkout (cfg.bonus.rateVip; bonus.js credits the same rate) */ promo: promoCode, bundles: bundlesApplied, services: svcLines,
     ships: ships.map(s => ({
-      store: s.g.store.id, store_name: s.g.store.name, tariff: s.t?.id || null, price: s.price, full: s.full, kg: Math.round(s.g.kg * 100) / 100,
+      store: s.g.store.id, store_name: s.g.store.name, tariff: s.t?.id || null, price: s.price, full: s.full, kg: Math.round(s.g.kg * 100) / 100, len: s.g.len || 0,
       dist: Math.round(s.dist * 10) / 10, source: s.source || null,
       lines: s.g.lines.map(l => ({ id: l.p.id, name: l.p.ru, q: l.q, price: l.price, base: l.base, tier: l.tier }))
     }))

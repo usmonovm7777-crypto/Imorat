@@ -3,6 +3,7 @@
    Claims API v2: https://yandex.ru/support2/delivery-profile/ru/api/  (b2b/cargo/integration/v2/claims/*)
    Without YANDEX_DELIVERY_TOKEN the statuses come from the store and the buyer's map has no courier position
    ("location unavailable"); only a test server with COURIER_SIMULATION=1 moves a pretend courier along the route. */
+import { dimsOf } from "./pricing.js";
 const H = (cfg, lang = "ru") => ({ Authorization: "Bearer " + cfg.token, "Content-Type": "application/json", "Accept-Language": lang });
 const STATUS_MAP = {
   performer_lookup: "searching", performer_draft: "searching", performer_found: "to_store", pickup_arrived: "to_store",
@@ -24,6 +25,8 @@ export function createCourier({ db, cfg, ref, log = console }) {
   const storePt = s => ({ la: s.la ?? D[s.district].la, lo: s.lo ?? D[s.district].lo });
   const destPt = f => (f.la != null && f.lo != null ? { la: Number(f.la), lo: Number(f.lo) } : { la: D[f.district]?.la ?? D.mirob.la, lo: D[f.district]?.lo ?? D.mirob.lo });
   const tariffOf = sh => ref.tariffs.find(t => t.id === sh.tariff) || ref.tariffs[0];
+  // item size for the claim: the product's own or typical dimensions; a generic small parcel only when nothing is known
+  const sizeOf = p => { const d = dimsOf(ref, p); return d ? { length: d[0], width: d[1], height: d[2] } : { length: 0.5, width: 0.4, height: 0.3 }; };
 
   /* order a courier for a packed shipment; stores claim id and tracking link on the shipment */
   async function order(sh) {
@@ -34,11 +37,13 @@ export function createCourier({ db, cfg, ref, log = console }) {
     const loaders = f.help === "one" || (f.help == null && f.lift) ? 1 : 0; // unloading help chosen at checkout
     const requirements = t.id === "courier" ? { taxi_class: "express" } : { taxi_class: "cargo", cargo_type: t.id === "cargo_s" ? "lcv_m" : "lcv_l", ...(loaders ? { cargo_loaders: loaders } : {}) };
     const sp = storePt(s), dp = destPt(f);
-    const names = db.all(`SELECT id, ru FROM products WHERE id IN (${lines.map(() => "?").join(",") || "0"})`, ...lines.map(l => l.id));
+    const prods = db.all(`SELECT id, ru, sub, dims FROM products WHERE id IN (${lines.map(() => "?").join(",") || "0"})`, ...lines.map(l => l.id));
+    // what the driver needs to know besides the address: whether the car can reach the entrance and whether there is a lift
+    const notes = [f.access === "far" ? "машина не подъедет к подъезду — разгрузка у ближайшей точки" : "", Number(f.floor) > 1 && !f.private ? (f.elevator === false ? "лифта нет" : f.elevator === true ? "есть лифт" : "") : "", loaders ? "нужна помощь с разгрузкой" : "покупатель принимает у машины"].filter(Boolean);
     const body = {
-      comment: `Imorat Go, заказ ${o.num}${f.comment ? ". " + f.comment : ""}`,
+      comment: `Imorat Go, заказ ${o.num}. ${notes.join("; ")}${f.comment ? ". " + f.comment : ""}`,
       emergency_contact: { name: "Imorat Go", phone: cfg.supportPhone || f.phone },
-      items: lines.map((l, i) => ({ pickup_point: 1, droppof_point: 2, title: names.find(n => n.id === l.id)?.ru || "Товар", quantity: l.q, cost_value: String(l.price), cost_currency: "UZS", weight: Math.max(0.1, Math.round((l.kg || 1) * 100) / 100), size: { length: 0.5, width: 0.4, height: 0.3 }, extra_id: String(l.id) })),
+      items: lines.map((l, i) => ({ pickup_point: 1, droppof_point: 2, title: prods.find(n => n.id === l.id)?.ru || "Товар", quantity: l.q, cost_value: String(l.price), cost_currency: "UZS", weight: Math.max(0.1, Math.round((l.kg || 1) * 100) / 100), size: sizeOf(prods.find(n => n.id === l.id)), extra_id: String(l.id) })),
       route_points: [
         { point_id: 1, visit_order: 1, type: "source", address: { fullname: `Ташкент, ${s.addr || D[s.district]?.ru || ""}`, coordinates: [sp.lo, sp.la], comment: s.landmark || "" }, contact: { name: s.name, phone: "+" + s.phone }, skip_confirmation: true },
         { point_id: 2, visit_order: 2, type: "destination", address: { fullname: ["Ташкент", f.street].filter(Boolean).join(", "), coordinates: [dp.lo, dp.la], porch: f.entrance || undefined, sfloor: f.private ? undefined : String(f.floor || ""), sflat: f.private ? undefined : (f.flat || undefined), door_code: f.intercom || undefined, comment: f.comment || "" }, contact: { name: f.name, phone: "+" + f.phone.replace(/\D/g, "") }, external_order_id: o.num }
@@ -46,12 +51,19 @@ export function createCourier({ db, cfg, ref, log = console }) {
       // no help → the buyer meets the courier at the car / entrance
       client_requirements: requirements, skip_door_to_door: !loaders, skip_client_notify: false, optional_return: false
     };
-    const c = await api(`claims/create?request_id=${encodeURIComponent(`imorat-${sh.id}-${Date.now()}`)}`, body);
-    db.run("UPDATE shipments SET claim_id=?, courier_at=? WHERE id=?", c.id, Date.now(), sh.id);
+    let c, loadersFailed = false;
+    try { c = await api(`claims/create?request_id=${encodeURIComponent(`imorat-${sh.id}-${Date.now()}`)}`, body); }
+    catch (e) {
+      // the carrier has no car with a loader for this route: order the trip without the help rather than no trip at all, and say so
+      if (!(loaders && e.status === 400)) throw e;
+      loadersFailed = true; delete requirements.cargo_loaders; body.skip_door_to_door = true; body.comment += ". Грузчика перевозчик не подтвердил";
+      c = await api(`claims/create?request_id=${encodeURIComponent(`imorat-${sh.id}-nl-${Date.now()}`)}`, body);
+    }
+    db.run("UPDATE shipments SET claim_id=?, courier_at=?, loaders_failed=? WHERE id=?", c.id, Date.now(), loadersFailed ? 1 : 0, sh.id);
     // the price was accepted at checkout; accept the claim so the search starts
     try { await api(`claims/accept?claim_id=${encodeURIComponent(c.id)}`, { version: c.version || 1 }); } catch (e) { log.warn("[yandex] accept", e.message); }
     try { const tl = await api(`claims/tracking-links?claim_id=${encodeURIComponent(c.id)}`, null, "GET"); const url = tl.route_points?.find(p => p.type === "destination")?.sharing_url || tl.route_points?.[0]?.sharing_url; if (url) db.run("UPDATE shipments SET tracking_url=? WHERE id=?", url, sh.id); } catch (e) { log.warn("[yandex] tracking link", e.message); }
-    return { claim_id: c.id };
+    return { claim_id: c.id, loaders_failed: loadersFailed };
   }
 
   /* current claim status mapped to a shipment status (live) — null when nothing changed or unknown */
