@@ -4828,12 +4828,10 @@ function renderSellerApi() {
   /* The cabinet is four short screens instead of one long page: orders, goods, the store itself, money.
      A new store without goods opens on «Товары»; everyone else on «Заказы». */
   const TABS = [["orders", L("Заказы", "Buyurtmalar", "Orders"), kpi.open || 0, "warn"], ["goods", L("Товары", "Mahsulotlar", "Goods"), products.length ? kpi.out_of_stock || 0 : "!", products.length ? "mute" : "warn"], ["store", L("Магазин", "Do‘kon", "Store"), 0, ""], ["money", L("Финансы", "Moliya", "Money"), 0, ""]];
-  if (!TABS.some(t => t[0] === sellerTab)) sellerTab = products.length ? "orders" : "goods";
+  if (!TABS.some(t => t[0] === sellerTab)) sellerTab = products.length ? "orders" : "goods"; // the first time in this session: goods for an empty store, orders otherwise; after that the seller's own choice stays
   const tabsHTML = `<nav class="stabs" role="tablist" aria-label="${L("Разделы кабинета", "Kabinet bo‘limlari", "Cabinet sections")}">${TABS.map(([id, t, badge, cls]) => `<button type="button" role="tab" id="stab-${id}" aria-selected="${sellerTab === id}" aria-controls="stp-${id}" data-seltab="${id}">${t}${badge ? `<span class="stab-b ${cls}">${badge}</span>` : ""}</button>`).join("")}</nav>`;
   const sec = (id, html) => `<section class="stp" id="stp-${id}" role="tabpanel" aria-labelledby="stab-${id}"${sellerTab === id ? "" : " hidden"}>${html}</section>`;
   const ordersTab = `${notifyNudgeHTML("seller")}
-    ${sellerProblemsHTML(s.id)}
-    ${sellerQuestionsHTML(s.id)}
     <div class="kpis">
       <div class="kpi"><span>${L("Открытых заказов", "Ochiq buyurtmalar")}</span><b>${kpi.open}</b><small style="color:${kpi.open ? "var(--signal)" : "var(--ok)"}">${kpi.open ? L("Ждут действий", "Ko‘rib chiqish kerak") : L("Всё обработано", "Hammasi bajarilgan")}</small></div>
       <div class="kpi"><span>${L("Выручка за 30 дней", "30 kunlik tushum")}</span><b>${fmtN(kpi.revenue30 / 1000)} ${L("тыс", "ming")}</b><small>${L("сум", "so‘m")}</small></div>
@@ -4886,6 +4884,8 @@ function renderSellerApi() {
     <div class="s-head" style="padding-top:4px"><div><h1 class="h-l">${esc(s.name)}</h1><p>${dName(s.d)}, ${esc(s.addr)} · ${esc(s.hours)}</p></div><div class="s-head-a"><button class="btn btn-line" type="button" data-act="seller-reload" aria-label="${L("Обновить", "Yangilash", "Refresh")}" title="${L("Обновить", "Yangilash", "Refresh")}">${ui("repeat", 16)}</button>${s.status === "active" ? `<button class="btn btn-line" type="button" data-go="store-${esc(s.id)}">${ui("store", 16)} ${L("Моя витрина", "Vitrinam", "My storefront")}</button>` : ""}</div></div>
     ${storeBanner(s)}
     ${sellerNextHTML(s, sellerData)}
+    ${sellerProblemsHTML(s.id)}
+    ${sellerQuestionsHTML(s.id)}
     ${tabsHTML}
     ${sec("orders", ordersTab)}${sec("goods", goodsTab)}${sec("store", storeTab)}${sec("money", moneyTab)}
     ${adminHTML()}
