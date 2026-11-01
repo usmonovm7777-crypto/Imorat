@@ -14,6 +14,7 @@ import { createGeo } from "./geo.js";
 import { buildRequest, streamChat } from "./ai.js";
 import { createTelegram } from "./telegram.js";
 import { createPush } from "./push.js";
+import { createNativePush } from "./push_native.js";
 import { createNotify } from "./notify.js";
 import { newSecret, checkTotp, otpauthUrl } from "./totp.js";
 import { registerMasters } from "./masters.js";
@@ -50,7 +51,9 @@ export function createApp(cfg, log = console) {
   mkdirSync(cfg.uploadsDir, { recursive: true });
   const bumpCatalog = () => db.setMeta("catalog_rev", Date.now());
   const tg = createTelegram(cfg.telegram, log);
-  const push = createPush(db, cfg.pushSubject, log);
+  const webPush = createPush(db, cfg.pushSubject, log), nativePush = createNativePush({ db, cfg, log });
+  // one door for notifications: the installed site (Web Push) and the app (FCM / APNs) both hang on push.toUser
+  const push = { publicKey: webPush.publicKey, native: nativePush.enabled, async toUser(uid, data) { const [a, b] = await Promise.all([webPush.toUser(uid, data), nativePush.toUser(uid, data)]); return a + b; } };
   const notify = createNotify({ db, cfg, tg, push, sms, ref, log });
   const bonus = createBonus({ db, cfg, log });
   const courier = createCourier({ db, cfg, ref, log });
@@ -151,9 +154,11 @@ export function createApp(cfg, log = console) {
 
   /* ---------- auth ---------- */
   r.post("/api/auth/otp/send", async req => {
-    if (sms.mode === "telegram") throw new HttpError(503, "sms_off", "Sign in through the Telegram bot — SMS codes are not connected yet");
     const b = await readJson(req);
     const phone = parsePhone(b.phone);
+    // app-store reviewers' account: a fixed code from REVIEW_ACCOUNTS, nothing is sent (works in every SMS mode)
+    if (cfg.reviewAccounts[phone]) { lim.hit("otp-ip:" + req.ip, cfg.otpPerIpHour, 3600_000); issueOtp(db, cfg.jwtSecret, phone, cfg.reviewAccounts[phone]); return { sent: true, retry_in: 60 }; }
+    if (sms.mode === "telegram") throw new HttpError(503, "sms_off", "Sign in through the Telegram bot — SMS codes are not connected yet");
     lim.hit("otp-ip:" + req.ip, cfg.otpPerIpHour, 3600_000);
     const code = issueOtp(db, cfg.jwtSecret, phone);
     const out = await sms.sendCode(phone, code);
@@ -693,6 +698,37 @@ export function createApp(cfg, log = console) {
     db.run("INSERT INTO tg_links(token,user_id,expires_at) VALUES(?,?,?)", token, u.id, Date.now() + 30 * 60000);
     return { url: `https://t.me/${tg.username}?start=${token}` };
   });
+  /* Delete my account (App Store 5.1.1(v) / Google Play user-data policy): personal data is wiped at once, the orders stay
+     anonymised for the stores' accounting and tax records. A store owner must first hand over or finish open orders and
+     withdraw the balance; the store itself is hidden and left without an owner. */
+  r.del("/api/me", async req => {
+    const u = need(req), b = await readJson(req).catch(() => ({}));
+    if (b.confirm !== true) throw bad("confirm", "Send {\"confirm\": true} to delete the account");
+    if (db.get("SELECT COUNT(*) n FROM shipments sh JOIN orders o ON o.id=sh.order_id WHERE o.user_id=? AND sh.status NOT IN ('delivered','picked','cancelled')", u.id).n) throw new HttpError(409, "active_orders", "Finish or cancel your active orders first");
+    const st = u.store_id ? db.get("SELECT * FROM stores WHERE id=?", u.store_id) : null;
+    if (st && st.owner_id === u.id) {
+      if (db.get("SELECT COUNT(*) n FROM shipments WHERE store_id=? AND status NOT IN ('delivered','picked','cancelled','unpaid')", st.id).n) throw new HttpError(409, "store_orders", "The store still has open orders — finish them first");
+      if (storeFinance(st.id).payout_available > 0) throw new HttpError(409, "payout_due", "Withdraw the store's balance first");
+    }
+    const stamp = Date.now();
+    db.tx(() => {
+      if (st && st.owner_id === u.id) db.run("UPDATE stores SET status='blocked', owner_id=NULL, review_note='owner deleted the account' WHERE id=?", st.id);
+      db.run("UPDATE users SET phone=?, name='', email='', google_sub=NULL, apple_sub=NULL, tg_chat=NULL, district='mirob', token_ver=token_ver+1, ref_code=NULL, totp_secret=NULL, totp_on=0, store_id=NULL, role='buyer', vip=0, points=0, deleted_at=? WHERE id=?", `deleted:${stamp}:${u.id}`, stamp, u.id);
+      db.run("DELETE FROM push_subs WHERE user_id=?", u.id); db.run("DELETE FROM devices WHERE user_id=?", u.id);
+      if (u.phone) db.run("DELETE FROM otp WHERE phone=?", u.phone);
+      db.run("UPDATE masters SET status='deleted', phone=NULL, about='', name='' WHERE user_id=?", u.id);
+      db.run("DELETE FROM team_members WHERE user_id=?", u.id);
+      for (const o of db.all("SELECT id, form FROM orders WHERE user_id=?", u.id)) {
+        const f = JSON.parse(o.form || "{}");
+        for (const k of ["name", "phone", "street", "flat", "entrance", "intercom", "comment", "landmark"]) if (k in f) f[k] = "";
+        for (const k of ["la", "lo"]) if (k in f) f[k] = null;
+        f.deleted = true; db.run("UPDATE orders SET form=? WHERE id=?", JSON.stringify(f), o.id);
+      }
+    });
+    audit(req, "account.delete", u.id);
+    log.info(`[account] ${u.id} deleted by its owner`);
+    return { ok: true };
+  });
   r.del("/api/me/telegram", req => { const u = need(req); db.run("UPDATE users SET tg_chat=NULL WHERE id=?", u.id); return { ok: true }; });
   r.post("/api/push/subscribe", async req => {
     const u = need(req), b = await readJson(req);
@@ -701,11 +737,21 @@ export function createApp(cfg, log = console) {
     db.run("INSERT INTO push_subs(endpoint,user_id,p256dh,auth,created_at) VALUES(?,?,?,?,?) ON CONFLICT(endpoint) DO UPDATE SET user_id=excluded.user_id, p256dh=excluded.p256dh, auth=excluded.auth", ep, u.id, p256, au, Date.now());
     return { ok: true };
   });
+  /* the Android / iPhone app registers its push token for the signed-in person (one row per install) */
+  r.post("/api/me/devices", async req => {
+    const u = need(req), b = await readJson(req);
+    const platform = ["android", "ios"].includes(b.platform) ? b.platform : null, token = str(b.token, 4096);
+    if (!platform || !token || token.length < 16) throw bad("bad_device", "platform (android|ios) and token are required");
+    db.run("INSERT INTO devices(token,user_id,platform,lang,app_ver,created_at,seen_at) VALUES(?,?,?,?,?,?,?) ON CONFLICT(token) DO UPDATE SET user_id=excluded.user_id, platform=excluded.platform, lang=excluded.lang, app_ver=excluded.app_ver, seen_at=excluded.seen_at",
+      token, u.id, platform, ["ru", "uz", "en"].includes(b.lang) ? b.lang : "ru", str(b.app_ver, 40) || "", Date.now(), Date.now());
+    return { ok: true, push: push.native[platform] };
+  });
+  r.del("/api/me/devices", async req => { const u = need(req), b = await readJson(req); db.run("DELETE FROM devices WHERE token=? AND user_id=?", str(b.token, 4096), u.id); return { ok: true }; });
   r.post("/api/push/unsubscribe", async req => { const u = need(req), b = await readJson(req); db.run("DELETE FROM push_subs WHERE endpoint=? AND user_id=?", str(b.endpoint, 1000), u.id); return { ok: true }; });
   r.post("/api/push/test", async req => { const u = need(req); const n = await push.toUser(u.id, { title: "Imorat Go", body: "Уведомления работают ✅", url: cfg.siteUrl }); return { sent: n }; });
   r.post("/api/me/logout-all", req => {
     const u = need(req);
-    db.run("UPDATE users SET token_ver=token_ver+1 WHERE id=?", u.id); db.run("DELETE FROM push_subs WHERE user_id=?", u.id);
+    db.run("UPDATE users SET token_ver=token_ver+1 WHERE id=?", u.id); db.run("DELETE FROM push_subs WHERE user_id=?", u.id); db.run("DELETE FROM devices WHERE user_id=?", u.id);
     audit(req, "logout_all", u.id);
     return { ok: true };
   });

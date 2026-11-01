@@ -42,6 +42,7 @@ CREATE TABLE IF NOT EXISTS reviews(
 CREATE TABLE IF NOT EXISTS settlements(id INTEGER PRIMARY KEY AUTOINCREMENT, store_id TEXT NOT NULL, amount INTEGER NOT NULL, note TEXT NOT NULL DEFAULT '', admin_id TEXT, created_at INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS audit(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT, action TEXT NOT NULL, target TEXT, details TEXT, ip TEXT, created_at INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS push_subs(endpoint TEXT PRIMARY KEY, user_id TEXT NOT NULL, p256dh TEXT NOT NULL, auth TEXT NOT NULL, created_at INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS devices(token TEXT PRIMARY KEY, user_id TEXT NOT NULL, platform TEXT NOT NULL, lang TEXT NOT NULL DEFAULT 'ru', app_ver TEXT NOT NULL DEFAULT '', created_at INTEGER NOT NULL, seen_at INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS masters(id TEXT PRIMARY KEY, user_id TEXT NOT NULL UNIQUE, name TEXT NOT NULL, specs TEXT NOT NULL, districts TEXT NOT NULL, exp INTEGER NOT NULL DEFAULT 0, price INTEGER NOT NULL DEFAULT 0, price_unit TEXT NOT NULL DEFAULT 'job', about TEXT NOT NULL DEFAULT '', phone TEXT, status TEXT NOT NULL DEFAULT 'pending', note TEXT, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS master_requests(id INTEGER PRIMARY KEY AUTOINCREMENT, master_id TEXT NOT NULL, user_id TEXT NOT NULL, text TEXT NOT NULL, when_txt TEXT NOT NULL, district TEXT, street TEXT, phone TEXT NOT NULL, name TEXT, status TEXT NOT NULL DEFAULT 'new', stars INTEGER, review TEXT, created_at INTEGER NOT NULL, status_at INTEGER NOT NULL);
 CREATE INDEX IF NOT EXISTS master_requests_m ON master_requests(master_id);
@@ -93,6 +94,7 @@ export function openDb(path, catalogPath, opts = {}) {
   addCol("shipments", "goods", "INTEGER NOT NULL DEFAULT 0"); addCol("shipments", "commission", "INTEGER NOT NULL DEFAULT 0");
   // the bank's acquiring fee on a card-paid order (kept apart from Imorat Go's commission) and the end of a store's free months
   addCol("shipments", "acquiring", "INTEGER NOT NULL DEFAULT 0"); addCol("stores", "free_until", "INTEGER");
+  addCol("users", "deleted_at", "INTEGER"); // account deleted by its owner: personal data wiped, the row keeps the orders' accounting trail
   addCol("orders", "paid_at", "INTEGER"); addCol("orders", "pay_ref", "TEXT");
   raw.exec(`CREATE TABLE IF NOT EXISTS payments(id INTEGER PRIMARY KEY AUTOINCREMENT, provider TEXT NOT NULL, pid TEXT NOT NULL, order_id INTEGER NOT NULL REFERENCES orders(id),
     amount INTEGER NOT NULL, state INTEGER NOT NULL, create_time INTEGER NOT NULL, perform_time INTEGER, cancel_time INTEGER, reason INTEGER, UNIQUE(provider, pid));

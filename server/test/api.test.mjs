@@ -13,7 +13,7 @@ import { createECDH, createDecipheriv, hkdfSync } from "node:crypto";
 /* ---- fake external services: Eskiz, Yandex, Anthropic, Google JWKS ---- */
 const { privateKey, publicKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
 const jwk = { ...publicKey.export({ format: "jwk" }), kid: "k1", alg: "RS256", use: "sig" };
-const sms = [], tgSent = [], tgUpdates = [], pushes = [], yaClaims = [], geoHits = [];
+const sms = [], tgSent = [], tgUpdates = [], pushes = [], yaClaims = [], geoHits = [], fcmSent = [], apnsSent = [];
 const fake = createServer(async (req, res) => {
   const chunks = []; for await (const c of req) chunks.push(c); const raw = Buffer.concat(chunks), body = raw.toString("utf8");
   const json = (s, o) => { res.writeHead(s, { "content-type": "application/json" }); res.end(JSON.stringify(o)); };
@@ -31,6 +31,9 @@ const fake = createServer(async (req, res) => {
   if (req.url.startsWith("/nom/reverse")) { geoHits.push(req.url); return json(200, { lat: "41.311", lon: "69.279", display_name: "15, проспект Амира Темура", address: { road: "проспект Амира Темура", house_number: "15", suburb: "Юнусабад" } }); }
   if (req.url.startsWith("/geocode/1.x/")) { geoHits.push(req.url); const g = decodeURIComponent(req.url.match(/geocode=([^&]*)/)[1]); return json(200, { response: { GeoObjectCollection: { featureMember: [{ GeoObject: { name: /,/.test(g) && !/[а-я]/i.test(g) ? "проспект Амира Темура, 15" : "улица Навои, 10", description: "Ташкент", Point: { pos: "69.2401 41.3115" }, metaDataProperty: { GeocoderMetaData: { kind: "house", text: "Узбекистан, Ташкент, улица Навои, 10", Address: { formatted: "Ташкент, улица Навои, 10", Components: [{ kind: "locality", name: "Ташкент" }, { kind: "district", name: "Шайхантахурский район" }, { kind: "street", name: "улица Навои" }, { kind: "house", name: "10" }] } } } } }] } } }); }
   if (req.url === "/jwks") return json(200, { keys: [jwk] });
+  // Firebase Cloud Messaging v1: the OAuth token exchange and the send endpoint
+  if (req.url === "/fcm/token") { const p = new URLSearchParams(body); assert.equal(p.get("grant_type"), "urn:ietf:params:oauth:grant-type:jwt-bearer"); assert.equal(p.get("assertion").split(".").length, 3); return json(200, { access_token: "fcm-access", expires_in: 3600 }); }
+  if (req.url === "/fcm/v1/projects/test-proj/messages:send") { assert.equal(req.headers.authorization, "Bearer fcm-access"); const m = JSON.parse(body).message; fcmSent.push(m); return m.token === "android-dead-token-0000000000" ? json(404, { error: { status: "NOT_FOUND", details: [{ errorCode: "UNREGISTERED" }] } }) : json(200, { name: "projects/test-proj/messages/1" }); }
   if (req.url.startsWith("/tg/botTGTOKEN/")) {
     const m = req.url.split("/").pop(), b = body ? JSON.parse(body) : {};
     if (m === "getMe") return json(200, { ok: true, result: { username: "imorat_test_bot" } });
@@ -51,7 +54,9 @@ const fake = createServer(async (req, res) => {
   json(404, {});
 });
 
-let app, base, fakeBase, dir;
+let app, base, fakeBase, dir, apns, apnsBase;
+import { createServer as createH2 } from "node:http2";
+const apnsKey = generateKeyPairSync("ec", { namedCurve: "prime256v1" }).privateKey.export({ type: "pkcs8", format: "pem" });
 const idToken = claims => {
   const enc = o => Buffer.from(JSON.stringify(o)).toString("base64url");
   const h = enc({ alg: "RS256", kid: "k1", typ: "JWT" }), p = enc({ iss: "https://accounts.google.com", aud: "gid", exp: Math.floor(Date.now() / 1000) + 600, ...claims });
@@ -73,18 +78,24 @@ async function login(phone, codeFrom = "dev") {
 before(async () => {
   await new Promise(r => fake.listen(0, r));
   fakeBase = `http://127.0.0.1:${fake.address().port}`;
+  // a plain HTTP/2 server standing in for api.push.apple.com
+  apns = createH2(); apns.on("stream", (st, h) => { let b = ""; st.on("data", c => { b += c; }); st.on("end", () => { apnsSent.push({ path: h[":path"], topic: h["apns-topic"], auth: h.authorization, type: h["apns-push-type"], body: JSON.parse(b) }); const dead = h[":path"].endsWith("/ios-dead-token-00000000000000"); st.respond({ ":status": dead ? 410 : 200 }); st.end(dead ? JSON.stringify({ reason: "Unregistered" }) : ""); }); });
+  await new Promise(r => apns.listen(0, "127.0.0.1", r)); apnsBase = `http://127.0.0.1:${apns.address().port}`;
   dir = mkdtempSync(join(tmpdir(), "imorat-"));
   const cfg = loadConfig({
     JWT_SECRET: "test-secret", DB_PATH: join(dir, "t.db"), UPLOADS_DIR: join(dir, "up"), ADMIN_PHONES: "998901111111",
     GOOGLE_CLIENT_ID: "gid", GOOGLE_JWKS_URL: fakeBase + "/jwks", ANTHROPIC_API_KEY: "sk-test", ANTHROPIC_URL: fakeBase + "/ai", SMS_MODE: "dev",
     TELEGRAM_BOT_TOKEN: "TGTOKEN", TELEGRAM_API_URL: fakeBase + "/tg", TELEGRAM_POLL_TIMEOUT: "0", PAYME_MERCHANT_ID: "5e730e8e0b852a417aa49ceb", PAYME_KEY: "PAYME_SECRET", CLICK_SERVICE_ID: "12345", CLICK_MERCHANT_ID: "777", CLICK_SECRET_KEY: "CLICK_SECRET", PAY_TIMEOUT_MIN: "30", BACKUP_DIR: join(dir, "bk"), OTP_PER_IP_HOUR: "200", TELEGRAM_CHANNEL: "@imorat_test", CHANNEL_HOUR: "25",
-    ALLOW_PAY_AT_STORE: "1", BONUS_ON: "1", PROMO_MONTHS: "0" // most scenarios below pay the store on pickup; the card-only default and the free months have their own checks
+    ALLOW_PAY_AT_STORE: "1", BONUS_ON: "1", PROMO_MONTHS: "0", // most scenarios below pay the store on pickup; the card-only default and the free months have their own checks
+    REVIEW_ACCOUNTS: "998900000001:246810",
+    FCM_SERVICE_ACCOUNT_JSON: JSON.stringify({ client_email: "svc@test-proj.iam.gserviceaccount.com", private_key: privateKey.export({ type: "pkcs8", format: "pem" }), project_id: "test-proj", token_uri: fakeBase + "/fcm/token" }), FCM_URL: fakeBase + "/fcm",
+    APNS_KEY_P8: apnsKey, APNS_KEY_ID: "KEY123", APNS_TEAM_ID: "TEAM42", APNS_URL: apnsBase
   });
   app = createApp(cfg, { info() {}, warn() {}, error: console.error });
   await new Promise(r => app.listen(0, "127.0.0.1", r));
   base = `http://127.0.0.1:${app.address().port}`;
 });
-after(() => { app.stopJobs(); app.close(); app.closeAllConnections(); fake.close(); fake.closeAllConnections(); app.db.raw.close(); rmSync(dir, { recursive: true, force: true }); });
+after(() => { app.stopJobs(); app.close(); app.closeAllConnections(); fake.close(); fake.closeAllConnections(); apns.close(); app.db.raw.close(); rmSync(dir, { recursive: true, force: true }); });
 
 test("catalog is seeded from the website", async () => {
   const r = await call("GET", "/api/catalog");
@@ -459,6 +470,54 @@ test("Bonus points: referral code, welcome after the first delivery, capped cash
   const sh3 = (await call("GET", "/api/seller/summary", null, seller)).data.orders.find(x => x.num === big.data.order.num).ship_id;
   for (const s of ["assembling", "ready", "picked"]) await call("PATCH", `/api/seller/shipments/${sh3}`, { status: s }, seller);
   assert.equal((await call("GET", "/api/me/bonus", null, c)).data.points, 200000, "cashback capped at 200 000 per shipment");
+  // points cannot breed points: the part of an order paid with points earns no cashback
+  await call("PATCH", "/api/seller/offers/1", { price: 100000, stock: 500 }, seller);
+  const o4 = await call("POST", "/api/orders", { lines: [{ id: 1, store: sid, q: 10 }], form: { ...form, name: "Крупный", phone: "998996660044" }, points: 200000 }, c); // 10 × 97 000 (−3% wholesale tier) = 970 000 goods, 194 000 (20%) in points
+  assert.equal(o4.status, 200, JSON.stringify(o4.data)); assert.equal(o4.data.order.pts, 194000); await payNow(o4.data.order);
+  const sh4 = (await call("GET", "/api/seller/summary", null, seller)).data.orders.find(x => x.num === o4.data.order.num).ship_id;
+  for (const s of ["assembling", "ready", "picked"]) await call("PATCH", `/api/seller/shipments/${sh4}`, { status: s }, seller);
+  assert.equal((await call("GET", "/api/me/bonus", null, c)).data.points, 6000 + 7760, "1% of the 776 000 actually paid, not of 970 000 (6 000 left after spending)");
+  // the same status event twice never pays twice (the shipment is already handed over, the API refuses; the ledger holds one entry)
+  assert.equal((await call("PATCH", `/api/seller/shipments/${sh4}`, { status: "picked" }, seller)).status, 400);
+  assert.equal((await call("GET", "/api/me/bonus", null, c)).data.log.filter(x => x.ref === "ship:" + sh4).length, 1);
+  // an order whose card payment never arrived cannot be handed over, so it never earns points
+  const o5 = await call("POST", "/api/orders", { lines: [{ id: 1, store: sid, q: 1 }], form: { ...form, name: "Крупный", phone: "998996660044" } }, c);
+  assert.equal(o5.status, 200); assert.equal(await (async () => (await call("GET", "/api/seller/summary", null, seller)).data.orders.find(x => x.num === o5.data.order.num))(), undefined, "the store does not see an unpaid order");
+  const unpaidShip = (await call("GET", `/api/orders/${o5.data.order.num}`, null, c)).data.order.ships[0].id;
+  assert.equal((await call("PATCH", `/api/admin/shipments/${unpaidShip}`, { status: "picked" }, globalThis.ADMIN)).data.error, "unpaid");
+  assert.equal((await call("GET", "/api/me/bonus", null, c)).data.points, 13760);
+});
+
+test("Bonus budget: a monthly cap stops new accruals, refunds of spent points still work", async () => {
+  const d6 = mkdtempSync(join(tmpdir(), "imorat-budget-"));
+  const cfg6 = loadConfig({ JWT_SECRET: "x", DB_PATH: join(d6, "b.db"), UPLOADS_DIR: join(d6, "up"), ADMIN_PHONES: "998901111111", SMS_MODE: "dev", ALLOW_PAY_AT_STORE: "1", BONUS_ON: "1", BONUS_MONTHLY_BUDGET: "1500", PAYME_MERCHANT_ID: "5e730e8e0b852a417aa49ceb", PAYME_KEY: "PAYME_SECRET", PROMO_MONTHS: "0" });
+  assert.equal(cfg6.bonus.monthlyBudget, 1500);
+  const a6 = createApp(cfg6, { info() {}, warn() {}, error: console.error });
+  await new Promise(r => a6.listen(0, "127.0.0.1", r)); const b6 = `http://127.0.0.1:${a6.address().port}`;
+  const c = async (method, path, body, token) => { const r = await fetch(b6 + path, { method, headers: { "content-type": "application/json", ...(token ? { authorization: "Bearer " + token } : {}) }, body: body ? JSON.stringify(body) : undefined }); return { status: r.status, data: await r.json() }; };
+  const lg = async phone => { const s = await c("POST", "/api/auth/otp/send", { phone }); return (await c("POST", "/api/auth/otp/verify", { phone, code: s.data.dev_code })).data.token; };
+  const rpc = (method, params) => fetch(b6 + "/api/pay/payme", { method: "POST", headers: { "content-type": "application/json", authorization: "Basic " + Buffer.from("Paycom:PAYME_SECRET").toString("base64") }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }) }).then(r => r.json());
+  const payNow = async (o, id) => { await rpc("CreateTransaction", { id, time: Date.now(), amount: o.total * 100, account: { order: o.num } }); const r = await rpc("PerformTransaction", { id }); assert.equal(r.result?.state, 2, JSON.stringify(r)); };
+  try {
+    const buyer = await lg("998905550011"), form = { name: "Бюджет", phone: "998905550011", mode: "pickup", pay: "payme" };
+    const sid = "usta"; // a seeded demo store with product 1 in stock
+    const seller = (() => { const u = a6.db.get("SELECT owner_id FROM stores WHERE id=?", sid); return u; })();
+    assert.ok(a6.db.get("SELECT 1 FROM offers WHERE store_id=? AND product_id=1", sid));
+    const run = async () => { const o = await c("POST", "/api/orders", { lines: [{ id: 1, store: sid, q: 1 }], form }, buyer); assert.equal(o.status, 200, JSON.stringify(o.data)); await payNow(o.data.order, "bud-" + o.data.order.num);
+      const sh = (await c("GET", `/api/orders/${o.data.order.num}`, null, buyer)).data.order.ships[0].id;
+      for (const s of ["assembling", "ready", "picked"]) assert.equal((await c("PATCH", `/api/admin/shipments/${sh}`, { status: s }, admin)).status, 200, s); return o.data.order; };
+    const adminRaw = await lg("998901111111"); const setup = await c("POST", "/api/admin/mfa/setup", null, adminRaw); const admin = (await c("POST", "/api/admin/mfa/verify", { code: totp(setup.data.secret) }, adminRaw)).data.token;
+    const o1 = await run(); const p1 = (await c("GET", "/api/me/bonus", null, buyer)).data.points; assert.ok(p1 > 0 && p1 <= 1500, "first order earns within the budget: " + p1);
+    let last = p1; for (let i = 0; i < 3 && last < 1500; i++) { await run(); last = (await c("GET", "/api/me/bonus", null, buyer)).data.points; }
+    assert.ok(last <= 1500, "accruals never exceed the monthly budget: " + last);
+    const before = last; await run(); assert.equal((await c("GET", "/api/me/bonus", null, buyer)).data.points, before, "budget spent: nothing more is issued this month");
+    // spent points still come back on a cancellation even when the budget is spent (that is a refund, not an accrual)
+    const o = await c("POST", "/api/orders", { lines: [{ id: 1, store: sid, q: 1 }], form, points: 500 }, buyer); assert.equal(o.data.order.pts, 500);
+    assert.equal((await c("GET", "/api/me/bonus", null, buyer)).data.points, before - 500);
+    assert.equal((await c("POST", `/api/orders/${o.data.order.num}/cancel`, null, buyer)).status, 200);
+    assert.equal((await c("GET", "/api/me/bonus", null, buyer)).data.points, before);
+    void o1; void seller;
+  } finally { a6.stopJobs(); a6.close(); a6.closeAllConnections(); a6.db.raw.close(); rmSync(d6, { recursive: true, force: true }); }
 });
 
 test("Seller statistics: anonymous views and cart adds, orders, price position", async () => {
@@ -1075,4 +1134,50 @@ test("SMS_MODE=telegram: production start without an SMS contract, sign-in only 
     assert.equal(s.status, 503); assert.equal(s.data.error, "sms_off"); assert.equal(s.data.dev_code, undefined);
     const t = await c("POST", "/api/auth/tg/start", {}); assert.equal(t.status, 200); assert.match(t.data.url, /t\.me\/.*start=login_/, "Telegram sign-in still works");
   } finally { a5.stopJobs(); a5.close(); a5.closeAllConnections(); a5.db.raw.close(); rmSync(d5, { recursive: true, force: true }); }
+});
+
+test("App: push tokens, order notifications through FCM and APNs, dead tokens dropped, reviewers' fixed code, account deletion", async () => {
+  // reviewers' account: fixed code, no SMS, any SMS mode
+  const n0 = sms.length;
+  assert.equal((await call("POST", "/api/auth/otp/send", { phone: "998900000001" })).data.dev_code, undefined, "the fixed code is never returned");
+  assert.equal(sms.length, n0, "nothing was sent");
+  assert.equal((await call("POST", "/api/auth/otp/verify", { phone: "998900000001", code: "000000" })).data.error, "otp_wrong");
+  const rv = await call("POST", "/api/auth/otp/verify", { phone: "998900000001", code: "246810" }); assert.equal(rv.status, 200); assert.ok(rv.data.token);
+  // a buyer registers two phones (Android + iPhone) and a dead one of each
+  const buyer = (await login("998907000011")).data.token;
+  assert.equal((await call("POST", "/api/me/devices", { platform: "web", token: "x".repeat(20) }, buyer)).status, 400);
+  for (const [platform, token] of [["android", "android-token-1234567890abcdef"], ["ios", "ios-token-1234567890abcdef1234"], ["android", "android-dead-token-0000000000"], ["ios", "ios-dead-token-00000000000000"]])
+    assert.equal((await call("POST", "/api/me/devices", { platform, token, lang: "uz", app_ver: "1.0.0" }, buyer)).data.push, true, platform);
+  assert.equal(app.db.get("SELECT COUNT(*) n FROM devices WHERE user_id=(SELECT id FROM users WHERE phone='998907000011')").n, 4);
+  // the same token moving to another person is re-bound, not duplicated
+  const other = (await login("998907000022")).data.token;
+  await call("POST", "/api/me/devices", { platform: "android", token: "android-token-1234567890abcdef" }, other);
+  assert.equal(app.db.get("SELECT COUNT(*) n FROM devices WHERE token='android-token-1234567890abcdef'").n, 1);
+  await call("POST", "/api/me/devices", { platform: "android", token: "android-token-1234567890abcdef" }, buyer);
+  // a card-paid order → the "paid" notification reaches both phones with a link to the order; dead tokens are dropped
+  const sid = app.db.get("SELECT id FROM stores WHERE status='active' AND id IN (SELECT store_id FROM offers WHERE product_id=1 AND stock>0) LIMIT 1").id;
+  const f0 = fcmSent.length, a0 = apnsSent.length;
+  const o = await call("POST", "/api/orders", { lines: [{ id: 1, store: sid, q: 1 }], form: { name: "Пуш", phone: "998907000011", mode: "pickup", pay: "payme" } }, buyer); assert.equal(o.status, 200, JSON.stringify(o.data));
+  const rpc = (method, params) => fetch(base + "/api/pay/payme", { method: "POST", headers: { "content-type": "application/json", authorization: "Basic " + Buffer.from("Paycom:PAYME_SECRET").toString("base64") }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }) }).then(r => r.json());
+  await rpc("CreateTransaction", { id: "push-1", time: Date.now(), amount: o.data.order.total * 100, account: { order: o.data.order.num } }); assert.equal((await rpc("PerformTransaction", { id: "push-1" })).result?.state, 2);
+  await new Promise(r => setTimeout(r, 400));
+  const fc = fcmSent.slice(f0), ap = apnsSent.slice(a0);
+  assert.ok(fc.some(m => m.token === "android-token-1234567890abcdef" && m.notification.title.includes(o.data.order.num) && m.data.url.endsWith("#orders") && m.android.notification.channel_id === "orders"), JSON.stringify(fc));
+  assert.ok(ap.some(m => m.path === "/3/device/ios-token-1234567890abcdef1234" && m.topic === "uz.imorat.app" && m.type === "alert" && m.body.aps.alert.title.includes(o.data.order.num) && m.body.url.endsWith("#orders") && /^bearer /.test(m.auth)), JSON.stringify(ap));
+  assert.equal(app.db.get("SELECT COUNT(*) n FROM devices WHERE token LIKE '%dead%'").n, 0, "tokens the providers rejected are gone");
+  // sign out everywhere clears the phones; deleting the account wipes personal data but keeps the order's accounting trail
+  assert.equal((await call("DELETE", "/api/me/devices", { token: "ios-token-1234567890abcdef1234" }, buyer)).status, 200);
+  assert.equal(app.db.get("SELECT COUNT(*) n FROM devices WHERE user_id=(SELECT id FROM users WHERE phone='998907000011')").n, 1);
+  assert.equal((await call("DELETE", "/api/me", {}, buyer)).data.error, "confirm");
+  assert.equal((await call("DELETE", "/api/me", { confirm: true }, buyer)).data.error, "active_orders", "a paid order is still with the store");
+  const sh = (await call("GET", `/api/orders/${o.data.order.num}`, null, buyer)).data.order.ships[0].id;
+  for (const st of ["assembling", "ready", "picked"]) assert.equal((await call("PATCH", `/api/admin/shipments/${sh}`, { status: st }, globalThis.ADMIN)).status, 200);
+  assert.equal((await call("DELETE", "/api/me", { confirm: true }, buyer)).status, 200);
+  assert.equal((await call("GET", "/api/me", null, buyer)).status, 401, "old sessions are dead");
+  const row = app.db.get("SELECT * FROM users WHERE id=(SELECT user_id FROM orders WHERE num=?)", o.data.order.num);
+  assert.match(row.phone, /^deleted:/); assert.equal(row.name, ""); assert.ok(row.deleted_at);
+  const of = JSON.parse(app.db.get("SELECT form FROM orders WHERE num=?", o.data.order.num).form); assert.equal(of.phone, ""); assert.equal(of.name, ""); assert.equal(of.deleted, true);
+  assert.equal(app.db.get("SELECT goods FROM orders WHERE num=?", o.data.order.num).goods, o.data.order.goods, "sums stay for the accounting");
+  assert.equal(app.db.get("SELECT COUNT(*) n FROM devices WHERE user_id=?", row.id).n, 0);
+  const again = (await login("998907000011")).data; assert.ok(again.token); assert.equal(again.is_new, true, "the same phone starts a fresh account");
 });

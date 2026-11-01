@@ -41,14 +41,14 @@ export const prettyPhone = d => `+${d.slice(0, 3)} ${d.slice(3, 5)} ${d.slice(5,
 const OTP_TTL = 5 * 60_000, RESEND_MS = 60_000, MAX_PER_HOUR = 5, MAX_ATTEMPTS = 5;
 const hashCode = (secret, phone, code) => createHash("sha256").update(`${secret}:${phone}:${code}`).digest("hex");
 
-export function issueOtp(db, secret, phone) {
+export function issueOtp(db, secret, phone, fixedCode = null) {
   const now = Date.now();
   const row = db.get("SELECT * FROM otp WHERE phone=?", phone);
   if (row && now - row.sent_at < RESEND_MS) throw new HttpError(429, "otp_wait", "Wait before requesting a new code", { retry_in: Math.ceil((RESEND_MS - (now - row.sent_at)) / 1000) });
   let ws = row ? row.window_start : now, wc = row ? row.window_count : 0;
   if (now - ws > 3600_000) { ws = now; wc = 0; }
   if (wc >= MAX_PER_HOUR) throw new HttpError(429, "otp_hourly", "Too many codes for this number, try again in an hour", { retry_in: Math.ceil((ws + 3600_000 - now) / 1000) });
-  const code = String(randomInt(100000, 1000000));
+  const code = fixedCode || String(randomInt(100000, 1000000)); // fixedCode: the reviewers' account from REVIEW_ACCOUNTS
   db.run(`INSERT INTO otp(phone,code_hash,expires_at,attempts,sent_at,window_start,window_count) VALUES(?,?,?,?,?,?,?)
           ON CONFLICT(phone) DO UPDATE SET code_hash=excluded.code_hash, expires_at=excluded.expires_at, attempts=0,
           sent_at=excluded.sent_at, window_start=excluded.window_start, window_count=excluded.window_count`,

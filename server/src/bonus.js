@@ -3,7 +3,14 @@ import { randomBytes } from "node:crypto";
 
 /* Bonus points: 1 point = 1 so'm.
    Earned when a shipment reaches the buyer (more for masters/foremen), spent at checkout up to a share of the goods.
-   Referral: a friend who enters your code gets a welcome bonus; you get a bonus when the friend's first order arrives. */
+   Referral: a friend who enters your code gets a welcome bonus; you get a bonus when the friend's first order arrives.
+   Who pays: Imorat Go. The store always receives the full price of the goods (see storeFinance); points spent by the
+   buyer, the welcome and referral bonuses and the cashback all come out of the platform's own money. Safety rails:
+   - points are earned only for orders paid through the platform and confirmed by the bank (pay_status paid / refund_due);
+   - cashback is counted on what the buyer actually paid for the goods — the part covered by points, a promo code or a
+     bundle discount earns nothing, so points cannot breed points;
+   - every accrual carries a unique ref, so a repeated status event never pays twice;
+   - BONUS_MONTHLY_BUDGET (points per calendar month, 0 = no cap) stops new accruals when the month's budget is spent. */
 export function createBonus({ db, cfg, log = console }) {
   const B = cfg.bonus;
   const add = (userId, delta, reason, ref = null) => {
@@ -12,6 +19,9 @@ export function createBonus({ db, cfg, log = console }) {
     db.run("INSERT INTO points_log(user_id,delta,reason,ref,created_at) VALUES(?,?,?,?,?)", userId, delta, reason, ref, Date.now());
   };
   const has = (userId, ref) => !!db.get("SELECT 1 FROM points_log WHERE user_id=? AND ref=?", userId, ref);
+  /* points handed out this calendar month (Tashkent time) — cashback, welcome and referral, not refunds of spent points */
+  const issuedThisMonth = () => { const d = new Date(Date.now() + 5 * 3600000), from = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1) - 5 * 3600000; return db.get("SELECT COALESCE(SUM(delta),0) s FROM points_log WHERE delta>0 AND reason IN ('cashback','welcome','referral') AND created_at>=?", from).s; };
+  const budgetLeft = () => (B.monthlyBudget > 0 ? Math.max(0, B.monthlyBudget - issuedThisMonth()) : Infinity);
   function codeFor(u) {
     if (u.ref_code) return u.ref_code;
     const A = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -33,15 +43,19 @@ export function createBonus({ db, cfg, log = console }) {
       const ref = "ship:" + ship.id;
       // No cashback on a store's own orders (the owner cannot "sell to himself" for points), and never more than the cap per shipment
       const own = db.get("SELECT owner_id FROM stores WHERE id=?", ship.store_id)?.owner_id === u.id;
-      // Only orders paid through the platform earn points: a reservation paid at the store brings Imorat Go nothing to share
-      const paidHere = !["store", "cash"].includes(o.pay);
+      // Only orders paid through the platform and confirmed by the bank earn points: a reservation paid at the store brings
+      // Imorat Go nothing to share, and an order whose payment never arrived cannot be a delivered one
+      const paidHere = !["store", "cash"].includes(o.pay) && ["paid", "refund_due"].includes(o.pay_status);
       if (!paidHere) return;
       if (!has(u.id, ref) && !own) {
         const goods = JSON.parse(ship.lines).reduce((a, l) => a + l.price * l.q, 0);
-        add(u.id, Math.min(B.maxCashback, Math.floor(goods * (u.role === "pro" ? B.ratePro : B.rate))), "cashback", ref);
+        // the buyer paid the goods minus this shipment's share of the order-level discounts (points, promo code, bundle)
+        const paidShare = o.goods ? Math.max(0, o.goods - (o.points_used || 0) - (o.promo_disc || 0) - (o.disc || 0)) / o.goods : 1;
+        const earned = Math.min(B.maxCashback, Math.floor(goods * paidShare * (u.role === "pro" ? B.ratePro : B.rate)), budgetLeft());
+        if (earned > 0) add(u.id, earned, "cashback", ref); else if (budgetLeft() <= 0) log.warn(`[bonus] monthly budget spent: no cashback for ${ref}`);
       }
       // Referral: the friend's welcome bonus and the inviter's reward arrive with the friend's first real delivery
-      if (u.ref_by && !u.ref_paid && !own) {
+      if (u.ref_by && !u.ref_paid && !own && budgetLeft() >= B.welcome + B.referral) {
         db.run("UPDATE users SET ref_paid=1 WHERE id=?", u.id);
         add(u.id, B.welcome, "welcome", "welcome:" + u.ref_by);
         add(u.ref_by, B.referral, "referral", "ref:" + u.id);
@@ -74,7 +88,7 @@ export function createBonus({ db, cfg, log = console }) {
         const u = need(req), code = codeFor(u);
         const fresh = db.get("SELECT points, ref_by FROM users WHERE id=?", u.id);
         return {
-          enabled: B.enabled, points: fresh.points, code, rate: B.rate, rate_pro: B.ratePro, referral: B.referral, welcome: B.welcome, max_share: B.maxShare,
+          enabled: B.enabled, points: fresh.points, code, rate: B.rate, rate_pro: B.ratePro, referral: B.referral, welcome: B.welcome, max_share: B.maxShare, max_cashback: B.maxCashback,
           invited: db.get("SELECT COUNT(*) n FROM users WHERE ref_by=?", u.id).n, invited_paid: db.get("SELECT COUNT(*) n FROM users WHERE ref_by=? AND ref_paid=1", u.id).n,
           has_ref: !!fresh.ref_by, can_enter: !fresh.ref_by && !db.get("SELECT 1 FROM orders WHERE user_id=?", u.id),
           log: db.all("SELECT delta, reason, ref, created_at FROM points_log WHERE user_id=? ORDER BY id DESC LIMIT 30", u.id)
