@@ -31,7 +31,7 @@ setString("CFBundleShortVersionString", version.versionName);
 setString("CFBundleVersion", String(version.versionCode));
 setString("NSCameraUsageDescription", "Imorat Go использует камеру, чтобы сфотографировать товар для поиска или для сообщения о проблеме с заказом. Imorat Go tovarni qidirish yoki buyurtma muammosi haqida xabar berish uchun kameradan foydalanadi.");
 setString("NSPhotoLibraryUsageDescription", "Imorat Go открывает фото, чтобы найти товар по снимку или приложить его к заказу. Imorat Go rasm bo‘yicha tovar topish yoki uni buyurtmaga qo‘shish uchun suratlarni ochadi.");
-setString("NSLocationWhenInUseUsageDescription", "Imorat Go определяет ваше местоположение только по нажатию «Определить автоматически», чтобы заполнить адрес доставки. Imorat Go joylashuvingizni faqat «Avtomatik aniqlash» bosilganda, yetkazish manzilini to‘ldirish uchun aniqlaydi.");
+setString("NSLocationWhenInUseUsageDescription", "Imorat Go определяет ваше местоположение, когда вы открываете карту адреса доставки или магазина, чтобы поставить метку туда, где вы находитесь. Imorat Go yetkazish manzili yoki do‘kon xaritasini ochganingizda belgini turgan joyingizga qo‘yish uchun joylashuvingizni aniqlaydi.");
 setRaw("ITSAppUsesNonExemptEncryption", "<false/>");
 setRaw("CFBundleURLTypes", `<array>\n\t\t<dict>\n\t\t\t<key>CFBundleURLName</key>\n\t\t\t<string>uz.imorat.app</string>\n\t\t\t<key>CFBundleURLSchemes</key>\n\t\t\t<array>\n\t\t\t\t<string>imoratgo</string>\n\t\t\t</array>\n\t\t</dict>\n\t</array>`);
 writeFileSync(plistPath, plist);

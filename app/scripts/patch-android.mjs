@@ -34,6 +34,8 @@ edit("app/src/main/AndroidManifest.xml", m => {
     m = m.replace(/(\n(\s*)<\/activity>)/, `\n$2    <!-- the way back into the app from the bank page: imoratgo://paid/IM-123456 -->\n$2    <intent-filter>\n$2        <action android:name="android.intent.action.VIEW" />\n$2        <category android:name="android.intent.category.DEFAULT" />\n$2        <category android:name="android.intent.category.BROWSABLE" />\n$2        <data android:scheme="imoratgo" />\n$2    </intent-filter>$1`);
   }
   if (!/android\.permission\.POST_NOTIFICATIONS/.test(m)) m = m.replace(/(\n\s*)<\/manifest>/, `$1<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />$1</manifest>`);
+  // the address map asks where the person is (navigator.geolocation in the WebView needs the location permission declared)
+  if (!/android\.permission\.ACCESS_FINE_LOCATION/.test(m)) m = m.replace(/(\n\s*)<\/manifest>/, `$1<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />$1<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />$1</manifest>`);
   return m;
 });
 

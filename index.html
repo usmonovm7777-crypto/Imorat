@@ -3551,6 +3551,13 @@ const PIN = `<svg class="pin" viewBox="0 0 24 24" aria-hidden="true"><path d="M1
    through the Yandex geocoder, /api/geo on our server, or Nominatim straight from the browser in the demo. ---- */
 const GEO_HOME = { la: 41.311, lo: 69.24 }, GEO_BOX = [[41.1, 68.95], [41.52, 69.55]];
 const pickMaps = {};
+/* Geolocation is asked for automatically when a map opens with no pin, but never nags: a refusal (or a dismissed prompt)
+   is remembered for 24 hours, a grant means every later map just positions itself. The Permissions API, where it exists,
+   stops the question from being asked again after a hard "block". */
+let geoPerm = null; try { navigator.permissions?.query({ name: "geolocation" }).then(p => { geoPerm = p.state; p.onchange = () => { geoPerm = p.state; }; }).catch(() => {}); } catch (e) {}
+const geoShouldAsk = () => { if (!navigator.geolocation) return false; if (geoPerm === "denied") return false; if (geoPerm === "granted") return true; return Date.now() - (LS.get("imorat.geoAsk", 0) || 0) > 86400000; };
+const geoOK = () => { LS.set("imorat.geoAsk", 0); };
+const geoFail = err => { LS.set("imorat.geoAsk", Date.now()); if (err?.code === 1) geoPerm = geoPerm === "granted" ? geoPerm : "denied"; };
 const ymapsKey = () => String(window.IMORAT_YMAPS_KEY || apiCfg?.ymaps_key || "");
 const ymLocale = () => (lang === "uz" ? "uz_UZ" : lang === "en" ? "en_US" : "ru_RU");
 let ymapsLoad = null;
@@ -3673,13 +3680,17 @@ function initPickMap(key, initial, onPick) {
     if (ya) { const c = ya.getCenter(); ya.setCenter([c[0] - k[1] * 0.0006 * 2 ** (16 - z), c[1] + k[0] * 0.0008 * 2 ** (16 - z)]); return; }
     const c = proj(z)(la, lo), p = unproj(z, c.x + k[0] * 48 / T, c.y + k[1] * 48 / T); la = p.la; lo = p.lo; render(); changed("drag");
   });
-  pm.closest("form, .d-body, .acc-body, body")?.querySelector("[data-act='my-loc']")?.addEventListener("click", () => {
+  /* "Где я": the phone's position becomes the pin (only inside Uzbekistan). auto = the map just opened without a pin: the
+     browser asks for the permission once; a refusal is remembered for the session and the map simply waits for a drag. */
+  const locate = (auto = false) => {
     const st = $("#addrLocSt");
-    if (!navigator.geolocation) { if (st) { st.className = "loc-st bad"; st.textContent = L("Браузер не умеет определять местоположение — передвиньте карту вручную.", "Brauzer joylashuvni aniqlay olmaydi — xaritani qo‘lda suring.", "The browser cannot locate you — move the map by hand."); } return; }
-    if (st) { st.className = "loc-st"; st.textContent = L("Определяем местоположение…", "Joylashuv aniqlanmoqda…", "Locating…"); }
-    navigator.geolocation.getCurrentPosition(pos => { const gla = pos.coords.latitude, glo = pos.coords.longitude; if (!inUz(gla, glo)) { if (st) { st.className = "loc-st bad"; st.textContent = L("Похоже, вы не в Узбекистане — передвиньте карту вручную.", "Siz O‘zbekistonda emassiz shekilli — xaritani qo‘lda suring.", "You seem to be outside Uzbekistan — move the map by hand."); } return; } set(gla, glo, { zoom: 17 }); },
-      () => { if (st) { st.className = "loc-st bad"; st.textContent = L("Не удалось определить местоположение — передвиньте карту вручную.", "Joylashuvni aniqlab bo‘lmadi — xaritani qo‘lda suring.", "Could not locate you — move the map by hand."); } }, { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 });
-  });
+    if (!navigator.geolocation) { if (st && !auto) { st.className = "loc-st bad"; st.textContent = L("Браузер не умеет определять местоположение — передвиньте карту вручную.", "Brauzer joylashuvni aniqlay olmaydi — xaritani qo‘lda suring.", "The browser cannot locate you — move the map by hand."); } return; }
+    if (st) { st.className = "loc-st"; st.textContent = auto ? L("Определяем, где вы, чтобы поставить метку на ваш дом. Если браузер спросит — нажмите «Разрешить».", "Belgini uyingizga qo‘yish uchun qayerdaligingizni aniqlayapmiz. Brauzer so‘rasa — «Ruxsat berish»ni bosing.", "Locating you to put the pin on your house. If the browser asks, tap “Allow”.") : L("Определяем местоположение…", "Joylashuv aniqlanmoqda…", "Locating…"); }
+    navigator.geolocation.getCurrentPosition(pos => { geoOK(); const gla = pos.coords.latitude, glo = pos.coords.longitude; if (!inUz(gla, glo)) { if (st) { st.className = "loc-st bad"; st.textContent = L("Похоже, вы не в Узбекистане — передвиньте карту вручную.", "Siz O‘zbekistonda emassiz shekilli — xaritani qo‘lda suring.", "You seem to be outside Uzbekistan — move the map by hand."); } return; } set(gla, glo, { zoom: 17 }); if (st) { st.className = "loc-st ok"; st.innerHTML = `${ui("check", 14)} ${L("Метка стоит там, где вы сейчас. Если дом не здесь — передвиньте карту.", "Belgi hozir turgan joyingizda. Uy bu yerda bo‘lmasa — xaritani suring.", "The pin is where you are now. If the house is elsewhere, move the map.")}`; } },
+      err => { geoFail(err); if (st) { st.className = "loc-st" + (auto ? "" : " bad"); st.textContent = err?.code === 1 ? L("Доступ к геолокации не дан — передвиньте карту так, чтобы метка встала на ваш дом, или выберите адрес из подсказок.", "Joylashuvga ruxsat berilmadi — xaritani belgi uyingizga tushguncha suring yoki manzilni takliflardan tanlang.", "Location access was not given — move the map until the pin is on your house, or pick an address from the suggestions.") : L("Не удалось определить местоположение — передвиньте карту вручную.", "Joylashuvni aniqlab bo‘lmadi — xaritani qo‘lda suring.", "Could not locate you — move the map by hand."); } }, { enableHighAccuracy: true, timeout: auto ? 9000 : 12000, maximumAge: 60000 });
+  };
+  pm.closest("form, .d-body, .acc-body, body")?.querySelector("[data-act='my-loc']")?.addEventListener("click", () => locate(false));
+  if (key === "addr" && !initial && geoShouldAsk()) setTimeout(() => locate(true), 400);
   render();
   new ResizeObserver(() => { if (!ya) render(); }).observe(pm);
   /* --- Yandex Maps, when the site has a key: the same behaviour on the real Yandex map --- */
@@ -3706,8 +3717,9 @@ function bindAddrSuggest(inp, key) {
   const pick = i => { const it = items[i]; if (!it) return; inp.value = it.street || it.label; inp.dataset.auto = "1"; close(); pickMaps[key]?.set(it.la, it.lo, { zoom: 17 }); inp.dispatchEvent(new Event("input", { bubbles: true })); };
   box.addEventListener("pointerdown", e => { const b = e.target.closest("[data-gi]"); if (b) { e.preventDefault(); pick(+b.dataset.gi); } });
 }
-function gpsLocate() {
-  const st = $("#locSt");
+function gpsLocate(auto = false) {
+  const st = $("#locSt"); if (!st) return;
+  if (auto && !geoShouldAsk()) return;
   if (!navigator.geolocation) { st.className = "loc-st bad"; st.textContent = L("Браузер не умеет определять местоположение — укажите точку на карте.", "Brauzer joylashuvni aniqlay olmaydi — xaritada nuqtani belgilang."); return; }
   st.className = "loc-st"; st.textContent = L("Определяем местоположение… Если браузер спросит разрешение, нажмите «Разрешить».", "Joylashuv aniqlanmoqda… Brauzer ruxsat so‘rasa, «Ruxsat berish»ni bosing.");
   navigator.geolocation.getCurrentPosition(pos => {
@@ -3718,9 +3730,9 @@ function gpsLocate() {
       if (!auth.mapOpen) toggleMap(true);
       return;
     }
-    setLoc(la, lo, "gps", Math.round(pos.coords.accuracy));
+    geoOK(); setLoc(la, lo, "gps", Math.round(pos.coords.accuracy));
   }, err => {
-    const s = $("#locSt"); if (!s) return; s.className = "loc-st bad";
+    geoFail(err); const s = $("#locSt"); if (!s) return; s.className = auto && err.code === 1 ? "loc-st" : "loc-st bad";
     s.textContent = err.code === 1 ? L("Доступ к местоположению запрещён. Разрешите его в настройках браузера или укажите точку на карте.", "Joylashuvga ruxsat berilmagan. Brauzer sozlamalarida ruxsat bering yoki xaritada nuqtani belgilang.")
       : L("Не удалось определить местоположение. Попробуйте ещё раз на улице или укажите точку на карте.", "Joylashuvni aniqlab bo‘lmadi. Ochiq joyda qayta urinib ko‘ring yoki xaritada belgilang.");
   }, { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 });
@@ -3767,7 +3779,8 @@ function bindStoreForm() {
   const f = $("#storeForm"); if (!f) return;
   const ph = $("#sPhone"); ph.addEventListener("input", () => { ph.value = fmtPhone(digitsOf(ph.value).slice(0, 9)); });
   f.addEventListener("input", () => { auth.st = { ...auth.st, ...readStoreForm() }; });
-  $("#locGps").addEventListener("click", gpsLocate);
+  $("#locGps").addEventListener("click", () => gpsLocate(false));
+  if (!auth.loc && !auth.edit) setTimeout(() => gpsLocate(true), 500); // a new store: the map pin starts where the person stands (one permission question, never repeated after a refusal)
   $("#locMap").addEventListener("click", () => toggleMap());
   f.addEventListener("submit", async e => {
     e.preventDefault();
