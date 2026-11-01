@@ -802,6 +802,45 @@ input, select, textarea { font-size: 16px !important; }
 .phone-in span { padding: 12px 12px 12px 14px; font-weight: 600; border-right: 1px solid var(--line); color: var(--muted); font-variant-numeric: tabular-nums; }
 .phone-in input { flex: 1; min-width: 0; border: 0; background: transparent; padding: 12px; font-size: 17px; letter-spacing: .03em; outline: none; font-variant-numeric: tabular-nums; }
 .code-in { font: 600 28px var(--f-mono); letter-spacing: .45em; text-align: center; border: 1.5px solid var(--line); border-radius: 12px; padding: 12px 0 12px .45em; background: var(--raised); width: 100%; }
+.otp { position: relative; --otp-ok: var(--ok); --otp-bad: var(--signal); }
+.otp-stage { position: relative; height: 196px; display: flex; align-items: center; justify-content: center; }
+.otp-slots { display: flex; gap: 8px; position: relative; z-index: 2; }
+.otp-slot { width: 46px; height: 56px; border-radius: 14px; border: 1.5px solid var(--line); background: var(--raised); display: grid; place-items: center; font: 600 24px var(--f-mono); color: var(--ink); position: relative; transition: border-color .18s, box-shadow .18s, background .18s; will-change: transform; }
+.otp-slot.filled { border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); background: color-mix(in srgb, var(--accent) 7%, var(--raised)); }
+.otp-slot.cur { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent); }
+.otp-slot .d { display: block; } .otp-slot.cur .d:empty::after { content: ""; display: block; width: 1.5px; height: 24px; background: var(--accent); animation: otpCaret 1s steps(2) infinite; }
+@keyframes otpCaret { 50% { opacity: 0; } }
+.otp[data-state="verify"] .otp-slot { border-color: color-mix(in srgb, var(--accent) 70%, var(--line)); box-shadow: 0 0 18px color-mix(in srgb, var(--accent) 22%, transparent); }
+.otp[data-state="ok"] .otp-slot { border-color: var(--otp-ok); }
+.otp[data-state="bad"] .otp-slot { border-color: var(--otp-bad); background: color-mix(in srgb, var(--otp-bad) 8%, var(--raised)); animation: otpShake .45s; }
+@keyframes otpShake { 15%, 45%, 75% { transform: translateX(-6px); } 30%, 60%, 90% { transform: translateX(6px); } }
+.otp-input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; border: 0; padding: 0; margin: 0; font-size: 16px; color: transparent; caret-color: transparent; background: transparent; z-index: 3; }
+.otp-input:focus { outline: none; }
+.otp:not([data-state="idle"]) .otp-input { pointer-events: none; }
+.otp-ring { position: absolute; left: 50%; top: 50%; width: 164px; height: 164px; transform: translate(-50%, -50%); opacity: 0; transition: opacity .3s; }
+.otp-ring circle { fill: none; stroke: color-mix(in srgb, var(--accent) 55%, var(--line)); stroke-width: 1.5; stroke-dasharray: 2 8; stroke-linecap: round; vector-effect: non-scaling-stroke; transform-origin: 50% 50%; }
+.otp[data-state="verify"] .otp-ring { opacity: 1; } .otp[data-state="verify"] .otp-ring circle { animation: otpSpin 6s linear infinite; }
+@keyframes otpSpin { to { transform: rotate(360deg); } }
+.otp-hub { position: absolute; left: 50%; top: 50%; width: 8px; height: 8px; margin: -4px; border-radius: 50%; background: var(--accent); opacity: 0; transition: opacity .3s; }
+.otp[data-state="verify"] .otp-hub { opacity: 1; }
+.otp-check { position: absolute; left: 50%; top: 50%; width: 92px; height: 92px; margin: -46px; border-radius: 26px; background: color-mix(in srgb, var(--otp-ok) 14%, var(--raised)); border: 2px solid var(--otp-ok); color: var(--otp-ok); display: grid; place-items: center; opacity: 0; transform: scale(.4); box-shadow: 0 0 32px color-mix(in srgb, var(--otp-ok) 30%, transparent); z-index: 4; }
+.otp[data-state="ok"] .otp-check { animation: otpPop .6s cubic-bezier(.34, 1.56, .64, 1) forwards; }
+@keyframes otpPop { to { opacity: 1; transform: scale(1); } }
+.otp-glow { position: absolute; left: 50%; top: 50%; border: 1.5px solid color-mix(in srgb, var(--otp-ok) 45%, transparent); border-radius: 34%; opacity: 0; translate: -50% -50%; }
+.otp-glow.g1 { width: 150px; height: 150px; } .otp-glow.g2 { width: 196px; height: 196px; border-color: color-mix(in srgb, var(--otp-ok) 25%, transparent); }
+.otp[data-state="ok"] .otp-glow { animation: otpGlow 1.6s ease-out forwards; } .otp[data-state="ok"] .otp-glow.g2 { animation-delay: .12s; }
+@keyframes otpGlow { 0% { opacity: 0; scale: .6; } 35% { opacity: 1; } 100% { opacity: .55; scale: 1; } }
+.otp-dot { position: absolute; left: 50%; top: 50%; width: 5px; height: 5px; margin: -2.5px; border-radius: 50%; background: var(--otp-ok); opacity: 0; }
+.otp[data-state="ok"] .otp-dot { animation: otpDot 1.4s ease-out forwards; animation-delay: var(--d, 0s); }
+@keyframes otpDot { 0% { opacity: 0; transform: translate(0, 0) scale(.4); } 30% { opacity: 1; } 100% { opacity: .35; transform: translate(var(--x), var(--y)) scale(1); } }
+.otp-status { text-align: center; min-height: 22px; font-size: 14px; color: var(--muted); margin: -6px 0 0; }
+.otp-status b { color: var(--otp-ok); font-weight: 600; } .otp-status.ok { display: flex; gap: 6px; align-items: center; justify-content: center; color: var(--otp-ok); }
+.otp-msg { display: flex; align-items: center; gap: 10px; background: var(--raised); border: 1px solid var(--line); border-radius: 16px; padding: 10px 12px; font-size: 13px; color: var(--muted); }
+.otp-msg .mi { width: 32px; height: 32px; border-radius: 10px; background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); display: grid; place-items: center; flex: none; }
+.otp-msg small { display: block; font-size: 10px; letter-spacing: .08em; text-transform: uppercase; } .otp-msg b.mono { color: var(--ink); font-size: 15px; } .otp-msg .btn { margin-left: auto; padding: 6px 12px; flex: none; }
+.otp-title h2 { transition: opacity .25s; }
+@media (max-width: 380px) { .otp-slot { width: 42px; height: 52px; font-size: 22px; } .otp-slots { gap: 6px; } }
+@media (prefers-reduced-motion: reduce) { .otp-slot, .otp-check, .otp-glow, .otp-dot, .otp-ring circle { animation: none !important; } .otp[data-state="ok"] .otp-check { opacity: 1; transform: none; } }
 .code-in:focus { border-color: var(--accent); outline: none; }
 .fine { font-size: 12px; color: var(--muted); margin: 0; }
 .demo { font-size: 12.5px; margin: 0; background: var(--signal-soft); color: var(--ink); padding: 9px 11px; border-radius: 9px; }
@@ -1451,6 +1490,7 @@ const UI = {
   photo: '<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>',
   wrench: '<path d="M15 4a4.5 4.5 0 0 0-4.3 5.8L4 16.5 7.5 20l6.7-6.7A4.5 4.5 0 0 0 20 9l-3 1-2-2 1-3z"/>',
   wallet: '<rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M16 14h2"/>',
+  lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
   shield: '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/>',
   gift: '<rect x="3" y="8" width="18" height="13" rx="1"/><path d="M3 12h18M12 8v13M12 8S10 3 7.5 4.5 9 8 12 8zM12 8s2-5 4.5-3.5S15 8 12 8z"/>',
   trash: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
@@ -3187,6 +3227,38 @@ function openAuth(then, step = "start") {
 const openStoreReg = () => (user ? openAuth("store", "store") : openAuth("store"));
 function closeAuth() { setPanel($("#authM"), false); clearInterval(authTimer); clearInterval(tgLoginTimer); syncLock(); }
 const loadScript = src => new Promise((res, rej) => { if (document.querySelector(`script[src="${src}"]`)) return res(); const s = document.createElement("script"); s.src = src; s.async = true; s.onload = res; s.onerror = rej; document.head.appendChild(s); });
+/* The code slots spin into an orbit around the hub while the code is checked (origin at the hub, rotate + translate so the
+   path is an exact circle, with a wind-up/brake easing), collapse onto the hub when the code is right, or fly back when it is not. */
+const OTP_EASE = "cubic-bezier(.65,-.35,.25,1.2)", OTP_R = 66;
+function otpGeom(otp, slots) {
+  const st = otp.querySelector(".otp-stage").getBoundingClientRect(), hub = { x: st.left + st.width / 2, y: st.top + st.height / 2 };
+  return slots.map((sl, i) => { const r = sl.getBoundingClientRect(); const dx0 = r.left + r.width / 2 - hub.x, dy0 = r.top + r.height / 2 - hub.y, a = (-90 + i * 60) * Math.PI / 180; return { dx0, dy0, tx: Math.cos(a) * OTP_R, ty: Math.sin(a) * OTP_R, w: r.width, h: r.height }; });
+}
+function otpOrbit(otp, slots) {
+  if (mqReduce.matches || !slots[0]?.animate) return new Promise(r => setTimeout(r, 350));
+  const g = otpGeom(otp, slots), turn = 450 * Math.PI / 180;
+  return Promise.all(slots.map((sl, i) => {
+    const { dx0, dy0, tx, ty, w, h } = g[i];
+    sl.style.transformOrigin = `${w / 2 - dx0}px ${h / 2 - dy0}px`; // the hub, in the slot's own coordinates
+    // rotate(φ) · translate(t): the slot ends on the circle; t is the target seen from the un-rotated frame
+    const ex = Math.cos(-turn) * tx - Math.sin(-turn) * ty - dx0, ey = Math.sin(-turn) * tx + Math.cos(-turn) * ty - dy0;
+    sl._orbit = { dx: ex, dy: ey, end: { x: tx, y: ty } };
+    sl.firstElementChild.animate([{ transform: "rotate(0deg)" }, { transform: "rotate(-450deg)" }], { duration: 820, delay: i * 35, easing: OTP_EASE, fill: "forwards" }); // the digit stays upright
+    return sl.animate([{ transform: "rotate(0deg) translate(0px, 0px)" }, { transform: `rotate(450deg) translate(${ex}px, ${ey}px)` }], { duration: 820, delay: i * 35, easing: OTP_EASE, fill: "forwards" }).finished.catch(() => {});
+  }));
+}
+function otpCollapse(otp, slots) {
+  if (mqReduce.matches || !slots[0]?.animate) { slots.forEach(sl => { sl.style.opacity = "0"; }); return Promise.resolve(); }
+  return Promise.all(slots.map((sl, i) => { const o = sl._orbit; if (!o) return Promise.resolve(); const from = `rotate(450deg) translate(${o.dx}px, ${o.dy}px)`;
+    return sl.animate([{ transform: from, opacity: 1 }, { transform: `rotate(450deg) translate(${o.dx - Math.cos(-450 * Math.PI / 180) * o.end.x + Math.sin(-450 * Math.PI / 180) * o.end.y}px, ${o.dy - Math.sin(-450 * Math.PI / 180) * o.end.x - Math.cos(-450 * Math.PI / 180) * o.end.y}px) scale(.3)`, opacity: 0 }], { duration: 420, delay: i * 20, easing: "cubic-bezier(.4,0,.2,1)", fill: "forwards" }).finished.catch(() => {}); }));
+}
+function otpReturn(otp, slots) {
+  if (mqReduce.matches || !slots[0]?.animate) return Promise.resolve();
+  return Promise.all(slots.map((sl, i) => { const o = sl._orbit; if (!o) return Promise.resolve();
+    sl.firstElementChild.animate([{ transform: "rotate(-450deg)" }, { transform: "rotate(-360deg)" }], { duration: 520, delay: (5 - i) * 25, easing: "cubic-bezier(.3,0,.2,1)", fill: "forwards" });
+    return sl.animate([{ transform: `rotate(450deg) translate(${o.dx}px, ${o.dy}px)` }, { transform: "rotate(360deg) translate(0px, 0px)" }], { duration: 520, delay: (5 - i) * 25, easing: "cubic-bezier(.3,0,.2,1)", fill: "forwards" }).finished.catch(() => {}).then(() => { sl.getAnimations({ subtree: true }).forEach(a => a.cancel()); sl.style.transform = ""; sl.style.transformOrigin = ""; sl._orbit = null; }); }));
+}
+const shownCodeNow = () => (!API ? auth.code : auth.devCode) || "";
 function authBusy() { document.querySelectorAll("#authBox button[type=submit]").forEach(b => { b.disabled = true; b.textContent = L("Подождите…", "Kuting…"); }); }
 async function sendCode() {
   auth.err = "";
@@ -3591,16 +3663,28 @@ function renderAuth() {
   } else if (st === "phone") {
     h = back(API ? "start" : "oauth") + phoneForm(L("Добавьте номер телефона", "Telefon raqamini qo‘shing"), L("Курьер Яндекса и магазин свяжутся с вами по этому номеру. Подтвердим его кодом из SMS.", "Yandex kuryeri va do‘kon shu raqam orqali bog‘lanadi. Uni SMS kod bilan tasdiqlaymiz."));
   } else if (st === "code") {
-    const demoNote = !API ? `<p class="demo">${L("Демо: SMS не отправляется. Ваш код:", "Demo: SMS yuborilmaydi. Sizning kodingiz:")} <b class="mono">${auth.code}</b></p>`
-      : auth.devCode ? `<p class="demo">${L("Тестовый режим сервера: SMS пока не отправляется. Код:", "Server test rejimida: SMS hali yuborilmaydi. Kod:")} <b class="mono">${auth.devCode}</b></p>` : "";
-    h = `${back(auth.via ? "phone" : "start")}<h2>${L("Введите код из SMS", "SMS koddagi raqamlarni kiriting")}</h2>
-      <p>${L("Отправили 6 цифр на", "6 xonali kod yuborildi:")} <b class="num">${fullPhone(auth.phone)}</b></p>
+    // without a real SMS the code is shown as a "message" card with a Fill button (demo site, server test mode)
+    const shownCode = !API ? auth.code : auth.devCode;
+    const demoNote = shownCode ? `<div class="demo otp-msg"><span class="mi">${ui("send", 16)}</span><span><small>${L("Сообщение · код", "Xabar · kod", "Message · code")}</small><b class="mono">${shownCode}</b> ${L("— ваш код подтверждения", "— tasdiqlash kodingiz", "— your verification code")}<br><small style="text-transform:none;letter-spacing:0">${!API ? L("Демо: SMS не отправляется", "Demo: SMS yuborilmaydi", "Demo: no SMS is sent") : L("Тестовый режим сервера: SMS пока не отправляется", "Server test rejimi: SMS hali yuborilmaydi", "Server test mode: no SMS yet")}</small></span><button class="btn btn-line" type="button" id="otpFill">${L("Заполнить", "To‘ldirish", "Fill")}</button></div>` : "";
+    const dots = [...Array(10)].map((_, i) => { const a = i * 36 + 12, r = 84 + (i % 3) * 14; return `<i class="otp-dot" style="--x:${Math.round(Math.cos(a * Math.PI / 180) * r)}px;--y:${Math.round(Math.sin(a * Math.PI / 180) * r)}px;--d:${(i * 0.06).toFixed(2)}s"></i>`; }).join("");
+    h = `${back(auth.via ? "phone" : "start")}<div class="otp-title"><h2 id="otpH">${L("Введите код из SMS", "SMS koddagi raqamlarni kiriting")}</h2>
+      <p id="otpP">${L("Отправили 6 цифр на", "6 xonali kod yuborildi:")} <b class="num">${fullPhone(auth.phone)}</b></p></div>
       <form id="authCode" novalidate style="display:grid;gap:10px">
         <label class="visually-hidden" for="aCode">${L("Код из SMS", "SMS kod")}</label>
-        <input class="code-in" id="aCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="••••••">
+        <div class="otp" id="otp" data-state="idle">
+          <div class="otp-stage">
+            <svg class="otp-ring" viewBox="0 0 200 200" aria-hidden="true"><circle cx="100" cy="100" r="80"/></svg>
+            <span class="otp-hub" aria-hidden="true"></span>
+            <span class="otp-glow g1" aria-hidden="true"></span><span class="otp-glow g2" aria-hidden="true"></span>${dots}
+            <div class="otp-slots" id="otpSlots" aria-hidden="true">${[0, 1, 2, 3, 4, 5].map(i => `<span class="otp-slot" data-i="${i}"><span class="d"></span></span>`).join("")}</div>
+            <span class="otp-check" aria-hidden="true">${ui("check", 40)}</span>
+          </div>
+          <input class="otp-input" id="aCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" aria-describedby="aCodeErr">
+        </div>
+        <p class="otp-status" id="otpStatus" aria-live="polite"></p>
         <span class="err" id="aCodeErr" role="alert" hidden>${L("Код не подходит. Проверьте цифры или отправьте код снова.", "Kod mos kelmadi. Raqamlarni tekshiring yoki kodni qayta yuboring.")}</span>
         ${demoNote}
-        <button class="btn btn-primary" type="submit">${L("Подтвердить", "Tasdiqlash")}</button>
+        <button class="btn btn-primary" type="submit" id="otpSubmit">${L("Подтвердить", "Tasdiqlash")}</button>
         <button class="lnk" type="button" id="aResend" data-act="auth-resend" style="justify-self:center" disabled></button>
       </form>`;
   } else if (st === "profile") {
@@ -3641,15 +3725,12 @@ function renderAuth() {
   if (st === "code") {
     const ci = $("#aCode"), tick = () => { const left = 59 - Math.floor((Date.now() - auth.sentAt) / 1000); const r = $("#aResend"); if (!r) return clearInterval(authTimer); r.disabled = left > 0; r.textContent = left > 0 ? L(`Отправить снова через 0:${String(left).padStart(2, "0")}`, `0:${String(left).padStart(2, "0")} dan keyin qayta yuborish`, `Resend in 0:${String(left).padStart(2, "0")}`) : L("Отправить код снова", "Kodni qayta yuborish"); };
     clearInterval(authTimer); authTimer = setInterval(tick, 1000); tick();
-    const showErr = msg => { const er = $("#aCodeErr"); er.textContent = msg; er.hidden = false; ci.setAttribute("aria-invalid", "true"); ci.select(); };
-    const check = async () => {
-      if (API) {
-        if (auth.busy) return; auth.busy = true;
-        try { const r = await api("POST", "/api/auth/otp/verify", { phone: "998" + auth.phone, code: digitsOf(ci.value), ticket: auth.ticket || undefined }); auth.busy = false; afterLogin(r); }
-        catch (e) { auth.busy = false; showErr(apiErr(e)); }
-        return;
-      }
-      if (digitsOf(ci.value) !== auth.code) return showErr(L("Код не подходит. Проверьте цифры или отправьте код снова.", "Kod mos kelmadi. Raqamlarni tekshiring yoki kodni qayta yuboring."));
+    const otp = $("#otp"), slots = [...otp.querySelectorAll(".otp-slot")], status = $("#otpStatus");
+    const paint = () => { const v = ci.value, idle = otp.dataset.state === "idle"; slots.forEach((sl, i) => { sl.firstElementChild.textContent = v[i] || ""; sl.classList.toggle("filled", !!v[i]); sl.classList.toggle("cur", idle && document.activeElement === ci && i === Math.min(v.length, 5)); }); };
+    const showErr = msg => { const er = $("#aCodeErr"); er.textContent = msg; er.hidden = false; ci.setAttribute("aria-invalid", "true"); };
+    /* what happens after a correct code: the API session, or the demo accounts */
+    const proceed = r => {
+      if (API) return afterLogin(r);
       const acc = accounts[auth.phone];
       if (acc) {
         if (auth.then === "store" && !acc.store_id) { auth.pending = acc; auth.name = acc.name; auth.step = "store"; return renderAuth(); }
@@ -3657,9 +3738,40 @@ function renderAuth() {
       }
       auth.step = "profile"; renderAuth();
     };
-    ci.addEventListener("input", () => { ci.value = digitsOf(ci.value).slice(0, 6); $("#aCodeErr").hidden = true; if (ci.value.length === 6) check(); });
-    $("#authCode").addEventListener("submit", e => { e.preventDefault(); check(); });
-    setTimeout(() => ci.focus(), 60);
+    let done = false;
+    const check = async () => {
+      if (otp.dataset.state !== "idle" || auth.busy) return;
+      const code = digitsOf(ci.value);
+      if (code.length < 6) { showErr(L("Введите все 6 цифр", "Barcha 6 raqamni kiriting", "Enter all 6 digits")); ci.focus(); return; }
+      $("#aCodeErr").hidden = true; ci.removeAttribute("aria-invalid"); ci.blur();
+      otp.dataset.state = "verify"; paint(); status.textContent = L("Проверяем код…", "Kod tekshirilmoqda…", "Checking the code…");
+      $("#otpSubmit").disabled = true;
+      const spin = otpOrbit(otp, slots);
+      let result;
+      if (API) { auth.busy = true; try { result = { ok: true, r: await api("POST", "/api/auth/otp/verify", { phone: "998" + auth.phone, code, ticket: auth.ticket || undefined }) }; } catch (e) { result = { ok: false, msg: apiErr(e) }; } auth.busy = false; }
+      else result = code === auth.code ? { ok: true } : { ok: false, msg: L("Код не подходит. Проверьте цифры или отправьте код снова.", "Kod mos kelmadi. Raqamlarni tekshiring yoki kodni qayta yuboring.") };
+      await spin; if (result.ok) await new Promise(r => setTimeout(r, mqReduce.matches ? 0 : 420)); // a beat with the ring settled, so the eye catches it
+      if (!otp.isConnected) return proceed(result.r); // the step was re-rendered meanwhile (resend)
+      if (result.ok) {
+        await otpCollapse(otp, slots); otp.dataset.state = "ok";
+        $("#otpH").textContent = L("Номер подтверждён", "Raqam tasdiqlandi", "Verified successfully"); $("#otpP").textContent = L("Ваш номер телефона проверен.", "Telefon raqamingiz tekshirildi.", "Your phone number has been verified.");
+        status.className = "otp-status ok"; status.innerHTML = `${ui("lock", 14)} ${L("Проверено и защищено", "Tekshirildi va himoyalangan", "Verified and secure")}`;
+        const go = $("#otpSubmit"); go.disabled = false; go.textContent = L("Продолжить", "Davom etish", "Continue"); for (const el of [$("#aResend"), document.querySelector(".otp-msg")]) if (el) el.style.visibility = "hidden"; // kept in the layout so the sheet does not jump
+        const finish = () => { if (done) return; done = true; proceed(result.r); };
+        go.onclick = e => { e.preventDefault(); finish(); };
+        setTimeout(finish, 1100);
+      } else {
+        await otpReturn(otp, slots); otp.dataset.state = "bad"; status.textContent = "";
+        showErr(result.msg); $("#otpSubmit").disabled = false;
+        setTimeout(() => { if (!otp.isConnected) return; otp.dataset.state = "idle"; ci.value = ""; paint(); ci.focus(); }, 480);
+      }
+    };
+    ci.addEventListener("input", () => { ci.value = digitsOf(ci.value).slice(0, 6); $("#aCodeErr").hidden = true; paint(); if (ci.value.length === 6) check(); });
+    ci.addEventListener("focus", paint); ci.addEventListener("blur", paint);
+    otp.addEventListener("click", () => { if (otp.dataset.state === "idle") ci.focus(); });
+    $("#otpFill")?.addEventListener("click", () => { ci.value = digitsOf(shownCodeNow()); paint(); check(); });
+    $("#authCode").addEventListener("submit", e => { e.preventDefault(); if (otp.dataset.state === "ok") return; check(); });
+    paint(); setTimeout(() => ci.focus(), 60);
   }
   if (st === "profile") {
     const pf = $("#authProfile");
