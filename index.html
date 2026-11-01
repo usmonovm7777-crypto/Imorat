@@ -356,6 +356,9 @@ mask: linear-gradient(180deg, #000, rgba(0,0,0,.55)); -webkit-mask: linear-gradi
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
 .rail { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(200px, 230px); gap: 12px; overflow-x: auto; padding: 12px 12px 36px; margin: -12px -12px -28px; scroll-padding-inline: 12px; scroll-snap-type: x mandatory; scrollbar-width: thin; }
 .rail > * { scroll-snap-align: start; }
+.bought-card { display: grid; gap: 8px; align-content: start; }
+.bought-card .card { height: 100%; }
+.bought-card .bought-add { width: 100%; padding: 9px 10px; font-size: 13.5px; }
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); position: relative; display: flex; flex-direction: column; overflow: hidden; transition: box-shadow .2s, border-color .2s, transform .2s; }
 .card:hover { box-shadow: var(--shadow-sm); border-color: var(--line-strong); transform: translateY(-2px); }
 .thumb { display: block; aspect-ratio: 1 / 1; width: 100%; max-width: 100%; position: relative; overflow: hidden; }
@@ -545,6 +548,17 @@ legend { font-family: var(--f-display); font-size: 15px; font-weight: 600; margi
 .steps .d { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--line-strong); margin-top: 4px; background: var(--surface); position: relative; z-index: 1; }
 .steps li.done { color: var(--ink); }
 .steps li.done .d { background: var(--accent); border-color: var(--accent); }
+.sel-steps li { grid-template-columns: 18px 1fr; padding: 10px 0; color: var(--ink); }
+.sel-steps li:not(.done) .d { border-color: var(--accent); }
+.sel-steps li:not(.done) ~ li:not(.done) .d { border-color: var(--line-strong); }
+.sel-steps li > span:last-child { display: grid; gap: 4px; }
+.sel-steps li small { color: var(--muted); font-size: 13px; line-height: 1.4; }
+.sel-steps li.done small { color: var(--ok); }
+.sel-steps li .act { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+.sel-steps .d svg { width: 10px; height: 10px; color: #fff; position: absolute; left: -1px; top: -1px; }
+.sel-steps .d { font: 700 9px/8px var(--f-body); color: #fff; text-align: center; }
+.flash { animation: flash 1.6s ease-out; }
+@keyframes flash { 0% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 55%, transparent); } 100% { box-shadow: 0 0 0 0 transparent; } }
 .steps li.now { color: var(--ink); font-weight: 600; }
 .steps li.now .d { border-color: var(--accent); animation: pulse 1.2s infinite; }
 @keyframes pulse { 50% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--accent) 25%, transparent); } }
@@ -2164,6 +2178,7 @@ function setLook(fx, theme) {
 const HOME_W = [
   ["hero", "Главный экран и Usta AI", "Bosh ekran va Usta AI", "Hero and Usta AI", true],
   ["tools", "Инструменты: калькуляторы, AI, дизайнер", "Asboblar: kalkulyatorlar, AI, dizayner", "Tools: calculators, AI, designer"],
+  ["bought", "Вы заказывали", "Siz buyurtma qilgansiz", "Ordered before"],
   ["cats", "Категории", "Toifalar", "Categories"],
   ["hits", "Хиты недели", "Hafta xitlari", "Hits of the week"],
   ["bundles", "Комплекты под ключ", "Tayyor to‘plamlar", "Ready kits"],
@@ -2180,7 +2195,7 @@ const HOME_W = [
   ["vip", "Imorat Go VIP", "Imorat Go VIP", "Imorat Go VIP"],
   ["seller", "Для магазинов", "Do‘konlar uchun", "For stores"]
 ];
-const DESK_ORDER = ["hero", "tools", "trust", "marquee", "cats", "designer", "masters", "bundles", "recent", "hits", "delivery", "fresh", "winter", "calc", "vip", "stores", "seller"];
+const DESK_ORDER = ["hero", "tools", "trust", "marquee", "bought", "cats", "designer", "masters", "bundles", "recent", "hits", "delivery", "fresh", "winter", "calc", "vip", "stores", "seller"];
 const PHONE_OFF = ["trust", "marquee", "delivery", "fresh", "winter", "vip"];
 const DESK_OFF = ["tools"]; // computers have the header rail and the ☰ panel; phones get the row of tools under the hero
 const mqPhone = matchMedia("(max-width: 760px)");
@@ -2354,6 +2369,27 @@ function openMega() {
 function closeMega() { setPanel($("#mega"), false); syncLock(); }
 
 /* ================= Product card ================= */
+/* What this person ordered before: one entry per product, latest first, with the quantity and the store of the last order.
+   Lines whose product is no longer in the catalogue are skipped; the store is used again only while it still sells the item. */
+function boughtBefore(limit = 12) {
+  const seen = new Set(), out = [];
+  for (const o of [...orders].sort((a, b) => b.t - a.t)) {
+    if (o.status === "cancelled") continue;
+    for (const sh of o.ships || []) { if (sh.status === "cancelled") continue; for (const l of sh.lines || []) { const p = PROD[l.id]; if (!p || seen.has(p.id)) continue; seen.add(p.id); out.push({ p, q: l.q || 1, store: p.offers.some(x => x.store === sh.store) ? sh.store : null, num: o.num, t: o.t }); if (out.length >= limit) return out; } }
+  }
+  return out;
+}
+/* the rail: the usual product card plus a one-tap "× N в корзину" with the last quantity */
+function boughtCard(b) {
+  const inCart = qtyOf(b.p.id), av = shopAvail(b.p, b.q);
+  return `<div class="bought-card">${card(b.p)}<button class="btn ${inCart ? "btn-line" : "btn-primary"} bought-add" type="button" data-bought="${b.p.id}|${b.q}|${b.store || ""}" ${av.max ? "" : "disabled"}>${ui(inCart ? "check" : "repeat", 15)} ${inCart ? L("В корзине", "Savatda", "In the cart") : av.max ? L(`Снова × ${b.q}`, `Yana × ${b.q}`, `Again × ${b.q}`) : L("Нет в наличии", "Mavjud emas", "Out of stock")}</button></div>`;
+}
+function boughtRailHTML() {
+  const list = boughtBefore(); if (!list.length) return "";
+  const last = orders.filter(o => o.status !== "cancelled").sort((a, b) => b.t - a.t)[0];
+  return `<section class="sec" data-w="bought" id="bought"><div class="sec-head"><div><h2 class="h-l">${L("Вы заказывали", "Siz buyurtma qilgansiz", "Ordered before")}</h2><p>${L("Те же товары в одно касание — количество как в прошлый раз", "O‘sha mahsulotlar bir bosishda — miqdor o‘tgan safargidek", "The same goods in one tap — the quantity as last time")}</p></div>${last ? `<button class="link" type="button" data-repeat="${esc(last.num)}">${ui("repeat", 14)} ${L("Повторить последний заказ", "Oxirgi buyurtmani takrorlash", "Repeat the last order")}</button>` : ""}</div>
+    <div class="rail">${list.map(boughtCard).join("")}</div></section>`;
+}
 function card(p) {
   const n = p.offers.length, fav = favs.includes(p.id), q = qtyOf(p.id), mp = minPrice(p);
   const from = n > 1 ? L("от " + fmt(mp), fmt(mp) + "dan", "from " + fmt(mp)) : fmt(mp);
@@ -2506,6 +2542,7 @@ function renderHome() {
     </section>
 
     ${recent.length ? `<section class="sec" data-w="recent"><div class="sec-head"><div><h2 class="h-l">${L("Вы смотрели", "Siz ko‘rganlar")}</h2></div></div><div class="rail">${recent.map(card).join("")}</div></section>` : ""}
+    ${boughtRailHTML()}
 
     <section class="sec" data-w="hits">
       <div class="sec-head"><div><h2 class="h-l">${L("Хиты недели", "Hafta xitlari")}</h2><p>${L("Чаще всего заказывают в Ташкенте", "Toshkentda eng ko‘p buyurtma qilinadi")}</p></div><button class="link" type="button" data-go="catalog">${L("Смотреть все", "Hammasini ko‘rish")} ${ui("chev", 16)}</button></div>
@@ -2911,7 +2948,7 @@ function addBundle(bid) {
 /* ================= Drawer ================= */
 function showScrim() { $("#scrim").classList.toggle("on", !!drawerView || aiOpen || (typeof widOpen !== "undefined" && widOpen)); }
 function openDrawer(vw, extra) { if (aiOpen) closeAI(); if (widOpen) closeWidgets(); closeModal(); drawerView = vw; if (extra) drawerOrder = extra; setPanel($("#drawer"), true); showScrim(); renderDrawer(); renderTabbar(); syncLock(); }
-function closeDrawer() { drawerView = null; setPanel($("#drawer"), false); showScrim(); renderTabbar(); syncLock(); }
+function closeDrawer() { drawerView = null; setPanel($("#drawer"), false); showScrim(); renderTabbar(); syncLock(); setTimeout(refreshBoughtRail, 0); }
 function renderDrawer() {
   $("#dBack").innerHTML = ui("back", 16); $("#dClose").innerHTML = ui("close", 16);
   $("#dBack").hidden = !["checkout", "track", "orders", "watch", "projects"].includes(drawerView);
@@ -2981,7 +3018,7 @@ function dCart() {
   $("#dTitle").textContent = L("Корзина", "Savat");
   const gs = groups(), sv = svcLines();
   if (!gs.length) {
-    $("#dBody").innerHTML = `<div class="empty"><b>${L("Корзина пуста", "Savat bo‘sh")}</b><span>${L("Добавьте товары из каталога или попросите Usta AI собрать корзину под вашу задачу.", "Katalogdan mahsulot qo‘shing yoki Usta AI dan vazifangizga savat yig‘ishni so‘rang.")}</span><button class="btn btn-ai" type="button" data-act="ai">${ui("spark", 16)} Usta AI</button></div>`;
+    $("#dBody").innerHTML = `<div class="empty"><b>${L("Корзина пуста", "Savat bo‘sh")}</b><span>${L("Добавьте товары из каталога или попросите Usta AI собрать корзину под вашу задачу.", "Katalogdan mahsulot qo‘shing yoki Usta AI dan vazifangizga savat yig‘ishni so‘rang.")}</span><button class="btn btn-ai" type="button" data-act="ai">${ui("spark", 16)} Usta AI</button></div>${(b => b.length ? `<div class="bought-list"><div class="gh" style="margin-top:14px"><span><b>${L("Вы заказывали", "Siz buyurtma qilgansiz", "Ordered before")}</b></span>${(l => l ? `<button class="link" type="button" data-repeat="${esc(l.num)}">${ui("repeat", 13)} ${L("Повторить последний заказ", "Oxirgi buyurtmani takrorlash", "Repeat the last order")}</button>` : "")(orders.filter(o => o.status !== "cancelled").sort((x, y) => y.t - x.t)[0])}</div>${b.slice(0, 6).map(x => `<div class="line">${mini(x.p)}<div class="nm"><button type="button" data-open="${x.p.id}">${esc(pName(x.p))}</button><small>${L("в прошлый раз", "o‘tgan safar", "last time")} × ${x.q}${x.store && STORE[x.store] ? " · " + esc(STORE[x.store].name) : ""}</small></div><div class="rt"><button class="btn btn-line" type="button" data-bought="${x.p.id}|${x.q}|${x.store || ""}" style="padding:7px 10px;font-size:13px" ${shopAvail(x.p, x.q).max ? "" : "disabled"}>${ui("plus", 14)} ${x.q}</button></div></div>`).join("")}</div>` : "")(boughtBefore(6))}`;
     $("#dFoot").innerHTML = `<div style="display:grid;gap:8px"><button class="btn btn-primary" type="button" data-go="catalog">${L("Перейти в каталог", "Katalogga o‘tish")}</button><button class="btn btn-line" type="button" data-go="list">${ui("camera", 16)} ${L("Есть список от прораба?", "Prorab ro‘yxati bormi?")}</button></div>`; return;
   }
   $("#dBody").innerHTML = gs.map(g => { const t = pickTariff(g.kg, g.len); return `<div>
@@ -3515,6 +3552,7 @@ function afterLogin(r) {
   const u = fromApiUser(r.user);
   if (u.staff?.must_change) { user = u; LS.set("imorat.user", u); auth.pwForced = true; auth.step = "pw"; return renderAuth(); } // the temporary password is used once
   if (u.staff) { user = u; LS.set("imorat.user", u); adminToken = ""; LS.set("imorat.adminToken", ""); adminState.need = null; closeAuth(); renderHeader(); renderTabbar(); toast(u.owner ? L("Вы вошли как владелец", "Egasi sifatida kirdingiz", "Signed in as the owner") : L("Вы вошли как сотрудник", "Xodim sifatida kirdingiz", "Signed in as staff")); if (route.view !== "admin") location.hash = "admin"; else renderMain(); return; }
+  ordersFetched = false; setTimeout(fetchOrders, 50); // the person's orders: "Вы заказывали" and the status watcher
   if (r.is_new) { auth.pending = u; auth.name = u.name || auth.name; auth.step = "profile"; return renderAuth(); }
   if (auth.then === "store" && !u.store_id) { auth.pending = u; auth.name = u.name; auth.dist = u.district; auth.step = "store"; return renderAuth(); }
   finishAuth(u, r.token);
@@ -3733,7 +3771,7 @@ function gpsLocate(auto = false) {
     geoOK(); setLoc(la, lo, "gps", Math.round(pos.coords.accuracy));
   }, err => {
     geoFail(err); const s = $("#locSt"); if (!s) return; s.className = auto && err.code === 1 ? "loc-st" : "loc-st bad";
-    s.textContent = err.code === 1 ? L("Доступ к местоположению запрещён. Разрешите его в настройках браузера или укажите точку на карте.", "Joylashuvga ruxsat berilmagan. Brauzer sozlamalarida ruxsat bering yoki xaritada nuqtani belgilang.")
+    s.textContent = err.code === 1 ? (auto ? L("Без геолокации тоже можно: укажите точку на карте, либо оставьте центр района и уточните позже в кабинете.", "Geolokatsiyasiz ham bo‘ladi: xaritada nuqtani belgilang yoki tuman markazini qoldirib, keyin kabinetda aniqlashtiring.", "Works without geolocation too: set the point on the map, or keep the district centre and refine it later in the cabinet.") : L("Доступ к местоположению запрещён. Разрешите его в настройках браузера или укажите точку на карте.", "Joylashuvga ruxsat berilmagan. Brauzer sozlamalarida ruxsat bering yoki xaritada nuqtani belgilang."))
       : L("Не удалось определить местоположение. Попробуйте ещё раз на улице или укажите точку на карте.", "Joylashuvni aniqlab bo‘lmadi. Ochiq joyda qayta urinib ko‘ring yoki xaritada belgilang.");
   }, { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 });
 }
@@ -4418,7 +4456,8 @@ async function apiBootRun() {
     } catch (e) { if (e.status === 401) { user = null; try { localStorage.removeItem("imorat.user"); } catch (er) {} } }
   } else if (user && !user.api) { user = null; try { localStorage.removeItem("imorat.user"); } catch (er) {} }
   renderHeader(); renderTabbar(); renderFooter(); if (route.view === "seller") renderSeller(); // the footer and the landing follow the server's mode (stage 0 texts)
-  syncCatalog();
+  await syncCatalog();
+  if (apiToken && user && !user.staff) fetchOrders(); // past orders feed "Вы заказывали" and the status watcher
 }
 
 let expectTotal = null;
@@ -4507,7 +4546,15 @@ function fetchOrders() {
     orders = [...srv, ...orders.filter(o => !o.api && !nums.has(o.num))].sort((a, b) => b.t - a.t);
     LS.set("imorat.orders", orders.slice(0, 30));
     if (drawerView === "orders" || drawerView === "profile") renderDrawer();
+    // the home rail "Вы заказывали" appears once the orders are known (a new device, a first sign-in)
+    refreshBoughtRail();
   }).catch(() => { ordersFetched = false; });
+}
+/* the home rail appears or updates once past orders are known; waits while a drawer or the product sheet is open */
+function refreshBoughtRail() {
+  if (route.view !== "home" || drawerView || $("#modal").classList.contains("on")) return;
+  const had = !!$("#bought"), html = boughtRailHTML();
+  if (html && !had) { const y = window.scrollY; renderMain(); window.scrollTo(0, y); } else if (had) $("#bought").outerHTML = html;
 }
 /* a status in words, for the in-app notice when an order moves (the server's Telegram/push texts say the same) */
 function shipStatusText(o, sh) {
@@ -4581,6 +4628,36 @@ async function loadAdmin() {
   try { adminStores = (await adminApi("GET", "/api/admin/stores")).stores; adminMasters = (await adminApi("GET", "/api/admin/masters").catch(() => ({ masters: [] }))).masters; } catch (e) { adminStores = adminState.need ? null : []; }
   adminState.loading = false; if (route.view === "seller" || route.view === "admin") renderMain();
 }
+/* First steps for a store: what is done, what is next, with a button for each. Hidden once prices, Telegram and the map
+   point are all in place — then the cabinet starts with the orders. */
+function sellerStepsHTML(s, d) {
+  const hasGoods = (d.kpi?.products || 0) > 0, hasTg = !!d.telegram, hasLoc = !!(s.la != null && s.loc_src && s.loc_src !== "district"), active = s.status === "active";
+  const hadOrder = (d.orders || []).length > 0;
+  if (hasGoods && hasTg && hasLoc && hadOrder) return "";
+  const step = (ok, title, text, btn) => `<li class="${ok ? "done" : ""}"><span class="d">${ok ? ui("check", 14) : ""}</span><span><b>${title}</b><small>${text}</small>${!ok && btn ? `<span class="act">${btn}</span>` : ""}</span></li>`;
+  const n = [true, hasGoods, hasTg, hasLoc, hadOrder].filter(Boolean).length;
+  return `<div class="panel steps-panel" style="margin-top:12px"><div class="panel-h"><h2 class="h-m">${L("Первые шаги", "Birinchi qadamlar", "First steps")}</h2><span class="mu" style="font-size:13px">${n} / 5</span></div>
+    <ol class="steps sel-steps">
+      ${step(true, active ? L("Магазин одобрен", "Do‘kon tasdiqlandi", "Store approved") : L("Анкета отправлена", "Anketa yuborildi", "Form sent"), active ? L("Покупатели видят вас в каталоге", "Xaridorlar sizni katalogda ko‘radi", "Buyers see you in the catalogue") : L("Модератор проверит в течение дня; товары можно добавлять уже сейчас", "Moderator bir kun ichida tekshiradi; mahsulotlarni hozir qo‘shsa bo‘ladi", "A moderator checks within a day; goods can be added now"))}
+      ${step(hasGoods, L("Товары и цены", "Mahsulotlar va narxlar", "Goods and prices"), hasGoods ? L(`${d.kpi.products} ${plural(d.kpi.products, ["товар", "товара", "товаров"])} на витрине`, `${d.kpi.products} ta mahsulot vitrinada`, `${d.kpi.products} products on the shelf`) : L("Загрузите прайс файлом Excel или текстом из Telegram, либо добавьте товары по одному. Без цен заказов не будет.", "Narx ro‘yxatini Excel fayl yoki Telegramdagi matn bilan yuklang, yoki mahsulotlarni bittalab qo‘shing. Narxsiz buyurtma bo‘lmaydi.", "Upload a price list as an Excel file or as text from Telegram, or add goods one by one. No prices — no orders."), `<button class="btn btn-primary" type="button" data-scrollto="impPanel" style="padding:7px 11px">${ui("file", 15)} ${L("Загрузить прайс", "Narxlarni yuklash", "Upload prices")}</button> <button class="btn btn-line" type="button" data-scrollto="addForm" style="padding:7px 11px">${L("Добавить товар", "Mahsulot qo‘shish", "Add a product")}</button>`)}
+      ${step(hasTg, L("Telegram для заказов", "Buyurtmalar uchun Telegram", "Telegram for orders"), hasTg ? L("Заказы приходят в Telegram с кнопками", "Buyurtmalar Telegramga tugmalar bilan keladi", "Orders arrive in Telegram with buttons") : L("Заказ придёт в Telegram с кнопками «Принять» и «Нет в наличии». Без этого легко пропустить заказ, а через 20 минут он отменится.", "Buyurtma Telegramga «Qabul qilish» va «Mavjud emas» tugmalari bilan keladi. Busiz buyurtmani o‘tkazib yuborish oson, 20 daqiqadan keyin bekor bo‘ladi.", "An order arrives in Telegram with “Accept” and “Out of stock”. Without it an order is easy to miss, and after 20 minutes it is cancelled."), apiCfg?.telegram_bot ? `<button class="btn btn-primary" type="button" data-act="tg-link" style="padding:7px 11px">${ui("send", 15)} ${L("Подключить Telegram", "Telegramni ulash", "Connect Telegram")}</button>` : `<small class="mu">${L("бот подключится после запуска сервера", "bot server ishga tushgach ulanadi", "the bot connects once the server is live")}</small>`)}
+      ${step(hasLoc, L("Точка на карте", "Xaritadagi nuqta", "Map point"), hasLoc ? L("Покупатели видят расстояние до вас", "Xaridorlar sizgacha masofani ko‘radi", "Buyers see the distance to you") : L("Сейчас стоит центр района. Точная точка нужна для расстояния до покупателя и чтобы курьер нашёл вход.", "Hozir tuman markazi turibdi. Aniq nuqta xaridorgacha masofa va kuryer kirishni topishi uchun kerak.", "The district centre stands in for now. The exact point gives the distance to the buyer and helps a courier find the entrance."), `<button class="btn btn-line" type="button" data-act="store-edit" style="padding:7px 11px">${ui("pin", 15)} ${L("Указать на карте", "Xaritada ko‘rsatish", "Set on the map")}</button>`)}
+      ${step(hadOrder, L("Первый заказ", "Birinchi buyurtma", "First order"), hadOrder ? L("Есть!", "Bor!", "Done!") : L("Сделайте пробный заказ с телефона на свой товар: увидите, как он приходит и какие кнопки нажимать. Покупатель платит вам при получении, комиссии нет.", "Telefondan o‘z mahsulotingizga sinov buyurtma bering: qanday kelishini va qaysi tugmalarni bosishni ko‘rasiz. Xaridor olganda sizga to‘laydi, komissiya yo‘q.", "Place a test order from your phone for your own product: you will see how it arrives and which buttons to press. The buyer pays you on receipt, no commission."), active ? `<button class="btn btn-line" type="button" data-go="store-${esc(s.id)}" style="padding:7px 11px">${L("Открыть свою витрину", "Vitrinamni ochish", "Open my storefront")}</button>` : "")}
+    </ol></div>`;
+}
+/* What a store gets and how it starts — shown under the sign-in / add-store panel to someone without a store yet */
+function sellerPitchHTML() {
+  const s0 = stage0();
+  const steps = [
+    [L("Анкета — 2 минуты", "Anketa — 2 daqiqa", "Form — 2 minutes"), L("Название, что продаёте, телефон, адрес и точка на карте. Паспорт и договор не нужны.", "Nomi, nima sotasiz, telefon, manzil va xaritadagi nuqta. Pasport va shartnoma kerak emas.", "Name, what you sell, phone, address and a map point. No passport, no contract.")],
+    [L("Прайс", "Narxlar", "Price list"), L("Файл Excel или текст из Telegram — сайт сам сопоставит с каталогом. Можно добавлять товары по одному, с фото.", "Excel fayl yoki Telegramdagi matn — sayt o‘zi katalog bilan solishtiradi. Mahsulotlarni bittalab, rasm bilan qo‘shish mumkin.", "An Excel file or text from Telegram — the site matches it to the catalogue itself. Or add goods one by one, with photos.")],
+    [L("Заказы в Telegram", "Buyurtmalar Telegramda", "Orders in Telegram"), L("Заказ приходит с кнопками «Принять» и «Нет в наличии»; покупатель видит статусы сам.", "Buyurtma «Qabul qilish» va «Mavjud emas» tugmalari bilan keladi; xaridor holatlarni o‘zi ko‘radi.", "An order arrives with “Accept” and “Out of stock”; the buyer follows the statuses by themselves.")],
+    [s0 ? L("Деньги — вам напрямую", "Pul — to‘g‘ridan-to‘g‘ri sizga", "Money — straight to you") : L("Оплата картой на сайте", "Saytda karta bilan to‘lov", "Card payment on the site"), s0 ? L("Покупатель платит при получении: вашему курьеру или в магазине. Imorat Go комиссию не берёт и деньги не принимает.", "Xaridor olganda to‘laydi: kuryeringizga yoki do‘konda. Imorat Go komissiya olmaydi va pul qabul qilmaydi.", "The buyer pays on receipt — to your courier or at the store. Imorat Go takes no commission and no money.") : L("Товар и доставка одним платежом; выплаты из кабинета.", "Mahsulot va yetkazish bir to‘lovda; to‘lovlar kabinetdan.", "Goods and delivery in one payment; payouts from the cabinet.")]
+  ];
+  return `<div class="panel" style="margin:12px 0"><div class="panel-h"><h2 class="h-m">${L("Как это работает", "Bu qanday ishlaydi", "How it works")}</h2></div>
+    <ol class="steps sel-steps">${steps.map(([t, d], i) => `<li class="done"><span class="d">${i + 1}</span><span><b>${t}</b><small style="color:var(--muted)">${d}</small></span></li>`).join("")}</ol>
+    <p class="mu" style="margin:10px 0 0;font-size:13px">${L("Что нужно от магазина: отвечать на заказ в течение 20 минут в рабочее время и держать цены свежими — раз в неделю бот напомнит. Условия не меняются без вашего отдельного согласия.", "Do‘kondan nima kerak: ish vaqtida buyurtmaga 20 daqiqa ichida javob berish va narxlarni yangilab turish — haftada bir bot eslatadi. Shartlar sizning alohida roziligingizsiz o‘zgarmaydi.", "What the store does: answer an order within 20 minutes in working hours and keep prices fresh — the bot reminds once a week. The terms never change without your separate consent.")}</p></div>`;
+}
 function storeBanner(s, demo) {
   const [lbl, cls] = ST_STATUS()[s.status] || ST_STATUS().pending;
   const msg = s.status === "pending" ? L("Модератор Imorat Go проверит данные магазина, обычно в течение дня. Добавляйте товары уже сейчас — они появятся в каталоге после одобрения.", "Imorat Go moderatori do‘kon ma’lumotlarini odatda bir kun ichida tekshiradi. Mahsulotlarni hozirdan qo‘shing — tasdiqlangach katalogda chiqadi.")
@@ -4647,7 +4724,7 @@ function adminHTML() {
 }
 function renderSellerApi() {
   const crumbs = `<nav class="crumbs"><button type="button" data-go="home">${L("Главная", "Asosiy")}</button>${ui("chev", 12)}<span>${L("Кабинет продавца", "Sotuvchi kabineti")}</span></nav>`;
-  const cta = (title, text, btns) => `<div class="wrap">${crumbs}<div class="panel" style="margin:12px 0;display:grid;gap:12px;justify-items:start"><h1 class="h-l" style="margin:0">${title}</h1><p style="margin:0;color:var(--muted)">${text}</p><div style="display:flex;gap:8px;flex-wrap:wrap">${btns}</div></div>${adminHTML()}</div>`;
+  const cta = (title, text, btns) => `<div class="wrap">${crumbs}<div class="panel" style="margin:12px 0;display:grid;gap:12px;justify-items:start"><h1 class="h-l" style="margin:0">${title}</h1><p style="margin:0;color:var(--muted)">${text}</p><div style="display:flex;gap:8px;flex-wrap:wrap">${btns}</div></div>${user?.store_id ? "" : sellerPitchHTML()}${adminHTML()}</div>`;
   if (!user) { $("#app").innerHTML = cta(L("Кабинет продавца", "Sotuvchi kabineti"), stage0() ? L("Продавайте на Imorat Go: витрина для покупателей Ташкента и заказы онлайн. Покупатели платят вам напрямую, комиссии нет. Войдите и добавьте свой магазин — это займёт пару минут.", "Imorat Go’da soting: Toshkent xaridorlari uchun vitrina va onlayn buyurtmalar. Xaridorlar sizga to‘g‘ridan-to‘g‘ri to‘laydi, komissiya yo‘q. Kiring va do‘koningizni qo‘shing — bir necha daqiqa.", "Sell on Imorat Go: a storefront for Tashkent buyers and online orders. Buyers pay you directly, no commission. Sign in and add your store — it takes a couple of minutes.") : L("Продавайте на Imorat Go: витрина для покупателей Ташкента, заказы онлайн и доставка Яндекс. Войдите и добавьте свой магазин — это займёт пару минут.", "Imorat Go’da soting: Toshkent xaridorlari uchun vitrina, onlayn buyurtmalar va Yandex yetkazish. Kiring va do‘koningizni qo‘shing — bir necha daqiqa."), `<button class="btn btn-primary" type="button" data-act="store-reg">${ui("store", 18)} ${L("Добавить свой магазин", "Do‘konimni qo‘shish")}</button><button class="btn btn-line" type="button" data-act="login">${L("Войти", "Kirish")}</button>`); return; }
   if (!user.store_id) { $("#app").innerHTML = cta(L("У вас пока нет магазина", "Sizda hali do‘kon yo‘q"), L("Заполните короткую анкету: название, описание, что продаёте, телефон и где находится магазин. Паспортные данные не нужны.", "Qisqa anketani to‘ldiring: nomi, tavsifi, nima sotasiz, telefon va do‘kon qayerda. Pasport ma’lumotlari kerak emas."), `<button class="btn btn-primary" type="button" data-act="store-reg">${ui("store", 18)} ${L("Добавить свой магазин", "Do‘konimni qo‘shish")}</button>`); return; }
   if (!sellerData) { $("#app").innerHTML = `<div class="wrap">${crumbs}<div class="panel" style="margin:12px 0">${L("Загружаем кабинет…", "Kabinet yuklanmoqda…")}</div></div>`; loadSeller(); return; }
@@ -4658,6 +4735,7 @@ function renderSellerApi() {
   $("#app").innerHTML = `<div class="wrap">${crumbs}
     <div class="s-head" style="padding-top:4px"><div><h1 class="h-l">${esc(s.name)}</h1><p>${dName(s.d)}, ${esc(s.addr)} · ${esc(s.hours)}</p></div></div>
     ${storeBanner(s)}
+    ${sellerStepsHTML(s, sellerData)}
     ${notifyNudgeHTML("seller")}
     ${sellerProblemsHTML(s.id)}
     ${sellerQuestionsHTML(s.id)}
@@ -7659,7 +7737,7 @@ document.addEventListener("change", e => {
   if (t.dataset && t.dataset.svc) { const id = +t.dataset.svc; if (t.checked) { services[id] = true; if (!qtyOf(id)) addToCart(id, null, 1, true); toast(L("Установка мастером добавлена в корзину", "Usta o‘rnatishi savatga qo‘shildi")); } else delete services[id]; LS.set("imorat.svc", services); }
 });
 document.addEventListener("click", e => {
-  const t = e.target.closest("[data-go],[data-act],[data-open],[data-add],[data-addo],[data-fav],[data-inc],[data-dec],[data-lang],[data-sub],[data-store],[data-q],[data-scroll],[data-calc],[data-clear],[data-order],[data-sst],[data-bundle],[data-ask],[data-askp],[data-aiadd],[data-aiall],[data-svcoff],[data-photo],[data-photodel],[data-cmp],[data-oauth],[data-authstep],[data-wview],[data-wcalc],[data-watch],[data-repeat],[data-rp-store],[data-rp-ok],[data-projload],[data-projdel],[data-calccopy],[data-calcproj]");
+  const t = e.target.closest("[data-go],[data-act],[data-open],[data-add],[data-addo],[data-fav],[data-inc],[data-dec],[data-lang],[data-sub],[data-store],[data-q],[data-scroll],[data-scrollto],[data-bought],[data-calc],[data-clear],[data-order],[data-sst],[data-bundle],[data-ask],[data-askp],[data-aiadd],[data-aiall],[data-svcoff],[data-photo],[data-photodel],[data-cmp],[data-oauth],[data-authstep],[data-wview],[data-wcalc],[data-watch],[data-repeat],[data-rp-store],[data-rp-ok],[data-projload],[data-projdel],[data-calccopy],[data-calcproj]");
   if (!t) return;
   const ds = t.dataset;
   if (ds.go !== undefined) return go(ds.go, ds.sub);
@@ -7688,10 +7766,12 @@ document.addEventListener("click", e => {
   if (ds.store) { f.stores = [ds.store]; f.q = ""; f.sub = null; f.max = 0; if (location.hash === "#catalog") { route = parseHash(); renderMain(); } else location.hash = "catalog"; return window.scrollTo(0, 0); }
   if (ds.q) { f.q = ds.q; route = { view: "catalog", cat: null }; history.replaceState(null, "", "#catalog"); renderMain(); $("#q").value = f.q; return window.scrollTo(0, 0); }
   if (ds.scroll) return scrollToSec(ds.scroll);
+  if (ds.scrollto) { const el = document.getElementById(ds.scrollto); if (el) { el.scrollIntoView({ behavior: motionOK() ? "smooth" : "auto", block: "start" }); el.classList.add("flash"); setTimeout(() => el.classList.remove("flash"), 1600); (el.querySelector("input, select, textarea, button") || el).focus?.({ preventScroll: true }); } return; }
   if (ds.calc) { const items = calcOut[ds.calc] || []; items.forEach(([p, q]) => q > 0 && addToCart(p.id, null, q, true)); toast(L("Материалы добавлены в корзину", "Materiallar savatga qo‘shildi")); return; }
   if (ds.clear) { const c = ds.clear; if (c === "photo") f.photo = null; else if (c === "q") { f.q = ""; $("#q").value = ""; } else if (c === "stock") f.inStock = false; else if (c.startsWith("store:")) f.stores = f.stores.filter(x => x !== c.slice(6)); return renderCatalog(); }
   if (ds.order) return openDrawer("track", ds.order);
   if (ds.bundle) return addBundle(ds.bundle);
+  if (ds.bought) { const [id, q, store] = ds.bought.split("|"); const p = PROD[+id]; if (!p) return; const st = store && p.offers.some(x => x.store === store) && stockOf(p, store) >= +q ? store : null; addToCart(p.id, st, Math.max(1, Math.min(+q || 1, shopAvail(p, +q).max || 1))); fly(t); toast(L(`${pName(p)} × ${q} — в корзине`, `${pName(p)} × ${q} — savatda`, `${pName(p)} × ${q} — in the cart`)); if (drawerView === "cart") dCart(); else if (route.view === "home") { const sec = $("#bought"); if (sec) sec.outerHTML = boughtRailHTML(); } return; }
   if (ds.ask) return openAI(ds.ask);
   if (ds.askp) { const p = PROD[ds.askp]; return openAI(L(`Расскажи про [[${p.id}]]: для чего подходит, сколько обычно нужно и что купить вместе? Есть ли варианты лучше?`, `[[${p.id}]] haqida ayt: nima uchun mos, odatda qancha kerak va birga nima olish kerak? Yaxshiroq variantlar bormi?`, `Tell me about [[${p.id}]]: what it's for, how much is usually needed and what to buy with it. Are there better options?`)); }
   if (ds.aiadd) { const [id, q] = ds.aiadd.split("|"); fly(t); addToCart(+id, null, +q || 1); return; }
