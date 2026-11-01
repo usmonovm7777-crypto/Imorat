@@ -6,7 +6,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { loadConfig } from "../src/config.js";
-import { createApp } from "../src/app.js";
+import { createApp, addMonthsClamped } from "../src/app.js";
 import { totp } from "../src/totp.js";
 import { createECDH, createDecipheriv, hkdfSync } from "node:crypto";
 
@@ -860,6 +860,9 @@ test("Card payment: Payme and Click callbacks, store sees the order only after t
   const sv = (await call("GET", "/api/seller/summary", null, seller)).data.orders.find(x => x.num === num);
   assert.ok(sv, "the store sees the order once it is paid"); assert.equal(sv.status, "new"); assert.equal(sv.pay_status, "paid");
   assert.equal((await rpc("PerformTransaction", { id: "pm-1" })).result.state, 2, "idempotent perform");
+  // a second payment for an order that is already paid is refused, whatever the transaction id
+  assert.equal((await rpc("CheckPerformTransaction", { amount: total * 100, account: { order: num } })).error?.code, -31008, "a paid order cannot be paid again");
+  assert.equal((await rpc("CreateTransaction", { id: "pm-dup", time: Date.now(), amount: total * 100, account: { order: num } })).error?.code, -31008, "no second transaction for a paid order");
   assert.equal((await rpc("CheckTransaction", { id: "pm-1" })).result.state, 2);
   const stt = await rpc("GetStatement", { from: t1 - 1000, to: Date.now() + 1000 });
   assert.equal(stt.result.transactions.length, 1); assert.equal(stt.result.transactions[0].account.order, num);
@@ -887,6 +890,13 @@ test("Card payment: Payme and Click callbacks, store sees the order only after t
   const sh2 = (await call("GET", "/api/seller/summary", null, seller)).data.orders.find(x => x.num === num2);
   assert.ok(sh2, "the store sees the Click order once paid");
   assert.equal((await call("PATCH", `/api/seller/shipments/${sh2.ship_id}`, { status: "assembling" }, seller)).status, 200);
+  { // Click sends the same complete again, and then a brand-new prepare for the paid order: once paid stays once paid
+    const again = await post({ click_trans_id: "9001", service_id: "12345", click_paydoc_id: "1", merchant_trans_id: num2, merchant_prepare_id: String(prep.merchant_prepare_id), amount, action: "1", error: "0", error_note: "", sign_time: signTime, sign_string: md5(`9001` + `12345` + "CLICK_SECRET" + num2 + String(prep.merchant_prepare_id) + amount + "1" + signTime) });
+    assert.ok(again.error === 0 || again.error === -4, "a repeated complete is idempotent or says already paid: " + JSON.stringify(again));
+    const dup = await post({ click_trans_id: "9777", service_id: "12345", click_paydoc_id: "1", merchant_trans_id: num2, amount, action: "0", error: "0", error_note: "", sign_time: signTime, sign_string: md5(`9777` + `12345` + "CLICK_SECRET" + num2 + amount + "0" + signTime) });
+    assert.equal(dup.error, -4, "no second payment for a paid order");
+    assert.equal((await call("GET", `/api/orders/${num2}`, null, buyer)).data.order.pay_status, "paid");
+  }
   // --- an unpaid order expires after PAY_TIMEOUT_MIN and frees the stock
   const o3 = await call("POST", "/api/orders", { lines: [{ id: 1, store: sid, q: 5 }], form }, buyer);
   assert.equal(o3.status, 200, JSON.stringify(o3.data)); const num3 = o3.data.order.num;
@@ -973,6 +983,20 @@ test("Finance with card payments: money held once, a partner's share survives an
   await pay(o5, "fin-5"); await advance(sellerB, o5.num, ["assembling", "ready", "picked"]);
   f = await fin(sellerB); assert.equal(f.commission_total, 1000); assert.equal(f.acquiring_total, 4000); assert.equal(f.payout_due, 98000 + 97000);
   assert.ok((await call("GET", "/api/admin/stores", null, globalThis.ADMIN)).data.stores.some(x => x.id === B && x.promo === false && x.free_until <= Date.now()));
+  { // the free-period boundary: an order placed while free_until is still ahead carries 0% Imorat Go commission, one placed
+    // the moment it has passed carries the full rate — and the three months are counted date to date, clamped to month ends
+    const soon = Date.now() + 1500;
+    app.db.run("UPDATE stores SET free_until=? WHERE id=?", soon, B);
+    const inside = (await call("POST", "/api/orders", { lines: [{ id: 2, store: B, q: 1 }], form }, buyer)).data.order;
+    assert.equal(app.db.get("SELECT commission, acquiring FROM shipments WHERE order_id=(SELECT id FROM orders WHERE num=?)", inside.num).commission, 0, "still inside the free period");
+    assert.equal(app.db.get("SELECT acquiring FROM shipments WHERE order_id=(SELECT id FROM orders WHERE num=?)", inside.num).acquiring, 2000, "the bank's fee applies in the free period too");
+    await new Promise(r => setTimeout(r, 1600));
+    const after = (await call("POST", "/api/orders", { lines: [{ id: 2, store: B, q: 1 }], form }, buyer)).data.order;
+    assert.equal(app.db.get("SELECT commission FROM shipments WHERE order_id=(SELECT id FROM orders WHERE num=?)", after.num).commission, 1000, "the first order after the boundary pays the full rate");
+    const iso = t => new Date(t).toISOString().slice(0, 10);
+    assert.equal(iso(addMonthsClamped(Date.UTC(2026, 0, 15), 3)), "2026-04-15"); assert.equal(iso(addMonthsClamped(Date.UTC(2026, 0, 31), 3)), "2026-04-30", "31 Jan + 3 months ends on 30 Apr, not 1 May");
+    assert.equal(iso(addMonthsClamped(Date.UTC(2026, 10, 30), 3)), "2027-02-28"); assert.equal(iso(addMonthsClamped(Date.UTC(2026, 11, 31), 3)), "2027-03-31");
+  }
   // 5) the seller's statement: every sale with its two deductions, the refund, payouts, the sum due — and the same balance as the cabinet
   const stA = (await call("GET", "/api/seller/statement", null, sellerA)).data;
   assert.equal(stA.sales.length, 2, "two completed sales for A this month"); assert.ok(stA.sales.every(x => x.paid === "card" && x.net === x.goods - x.commission - x.acquiring));

@@ -23,6 +23,15 @@ import { registerMasters } from "./masters.js";
    breaks older clients; MIN_CLIENT is the oldest client contract this server still serves. The app's release build checks
    /api/health against its own number before it is allowed to ship, and the running app shows "update the app" on a mismatch. */
 export const API_CONTRACT = 1, MIN_CLIENT = 1;
+/* t + n months, date to date: 15 Jan → 15 Apr. A day the target month lacks lands on its last day (31 Jan + 3 → 30 Apr,
+   30 Nov + 3 → 28/29 Feb) instead of spilling into the next month as Date.setMonth would. */
+export function addMonthsClamped(t, n) {
+  const d = new Date(t), day = d.getUTCDate();
+  d.setUTCDate(1); d.setUTCMonth(d.getUTCMonth() + n);
+  const last = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).getUTCDate();
+  d.setUTCDate(Math.min(day, last));
+  return d.getTime();
+}
 const PKG_VERSION = (() => { try { return JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version || "0"; } catch { return "0"; } })();
 import { registerBot } from "./bot.js";
 import { createBonus } from "./bonus.js";
@@ -70,7 +79,7 @@ export function createApp(cfg, log = console) {
   const rateOf = cat => cfg.commission[cat] ?? cfg.commission["*"] ?? 0;
   /* What a store pays from a card-paid order: Imorat Go's commission (0% during the store's first free months) and the bank's
      acquiring fee — two separate lines in the cabinet. The end of the free months is set when a store is approved. */
-  const addMonths = (t, n) => { const d = new Date(t); d.setUTCMonth(d.getUTCMonth() + n); return d.getTime(); };
+  const addMonths = addMonthsClamped;
   const inPromo = (s, at = Date.now()) => !!(s?.free_until && s.free_until > at);
   /* how long ago the seller last confirmed or edited prices: the newest offer change or the store-wide confirmation */
   const pricesFreshness = s => { const last = Math.max(s.prices_confirmed_at || 0, db.get("SELECT COALESCE(MAX(updated_at),0) m FROM offers WHERE store_id=?", s.id).m || 0); return { confirmed_at: last || null, days: last ? Math.floor((Date.now() - last) / 86400000) : null, stale: !last || Date.now() - last > 7 * 86400000 }; };
