@@ -35,7 +35,12 @@ EOF
 }
 sync_site() { # a copy of the repository without the server, sources and tools is what Caddy serves
   mkdir -p "$SRV/site"
-  rsync -a --delete --exclude .git --exclude server --exclude src --exclude tools --exclude app --exclude '*.py' --exclude '*.md' "$REPO_DIR/" "$SRV/site/"
+  if command -v rsync >/dev/null 2>&1; then
+    rsync -a --delete --exclude .git --exclude server --exclude src --exclude tools --exclude app --exclude '*.py' --exclude '*.md' "$REPO_DIR/" "$SRV/site/"
+  else # no rsync: a fresh copy without the private folders
+    local tmp; tmp=$(mktemp -d "$SRV/site.XXXX"); (cd "$REPO_DIR" && git archive HEAD | tar -x -C "$tmp"); rm -rf "$tmp/server" "$tmp/src" "$tmp/tools" "$tmp/app"; find "$tmp" -name '*.py' -o -name '*.md' | xargs -r rm -f
+    rm -rf "$SRV/site.old"; [ -d "$SRV/site" ] && mv "$SRV/site" "$SRV/site.old"; mv "$tmp" "$SRV/site"; rm -rf "$SRV/site.old"
+  fi
   write_site_config
 }
 git_pull() { (cd "$REPO_DIR" && git fetch -q origin && git reset -q --hard "origin/$(git rev-parse --abbrev-ref HEAD)"); }
