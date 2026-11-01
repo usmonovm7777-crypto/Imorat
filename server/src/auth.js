@@ -133,7 +133,7 @@ export function publicUser(u, admins = [], staff = null) {
   const role = staff && !staff.disabled ? staff.role : (!!u.phone && admins.includes(u.phone) ? "owner" : null);
   return {
     id: u.id, name: u.name, phone: u.phone ? prettyPhone(u.phone) : "", email: u.email, role: u.role, district: u.district,
-    vip: !!u.vip, store_id: u.store_id || null, via: staff ? "password" : u.google_sub ? "google" : u.apple_sub ? "apple" : "phone",
+    store_id: u.store_id || null, via: staff ? "password" : u.google_sub ? "google" : u.apple_sub ? "apple" : "phone",
     admin: !!role, owner: role === "owner", staff: staff ? { login: staff.login, role: staff.role, must_change: !!staff.must_change, env: !!staff.from_env } : null,
     created: u.created_at, points: u.points || 0
   };

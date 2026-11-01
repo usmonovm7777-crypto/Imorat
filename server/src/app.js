@@ -196,7 +196,7 @@ export function createApp(cfg, log = console) {
   r.get("/api/health", () => ({ ok: true, time: Date.now(), name: "imorat-api", version: PKG_VERSION, contract: API_CONTRACT, min_client: MIN_CLIENT }));
   r.get("/api/config", () => ({
     sms: sms.mode, google_client_id: cfg.google.clientId || null, apple_client_id: cfg.apple.clientId || null,
-    apple_redirect_uri: cfg.apple.redirectUri || null, ai: !!cfg.ai.key, yandex: !!cfg.yandex.token, vip_free: cfg.vipFree, pay_at_store: cfg.allowPayAtStore,
+    apple_redirect_uri: cfg.apple.redirectUri || null, ai: !!cfg.ai.key, yandex: !!cfg.yandex.token, pay_at_store: cfg.allowPayAtStore,
     payments: cfg.paymentsOnline, telegram_bot: tg.enabled ? tg.username || null : null, telegram_channel: /^@/.test(cfg.channel?.chat || "") ? cfg.channel.chat : null, push_key: push.publicKey,
     timers: cfg.timers, commission: cfg.commission, acquiring: cfg.acquiring, acquiring_by: cfg.acquiringBy, promo_months: cfg.promoMonths, demo: cfg.demoStores,
     ymaps_key: cfg.maps.jsKey || null, geo: geo.provider, bonus: cfg.bonus.enabled, // the site draws a Yandex map with the key; address search goes through /api/geo
@@ -368,10 +368,12 @@ export function createApp(cfg, log = console) {
     db.run("UPDATE users SET name=?, district=?, role=?, email=? WHERE id=?", name, district, role, email, u.id);
     return { user: publicUser(db.get("SELECT * FROM users WHERE id=?", u.id), cfg.admins, staffOf(u)) };
   });
+  /* The VIP plan was dropped (owner's decision): nobody can turn it on, and the quote gives no VIP benefits. Old app builds that still
+     send "off" get a plain answer; users.vip stays in the schema but nothing reads it. */
   r.post("/api/me/vip", async req => {
     const u = need(req), b = await readJson(req);
-    if (b.on && !cfg.vipFree) throw new HttpError(402, "payment_required", "VIP is paid; payments are not connected yet");
-    db.run("UPDATE users SET vip=? WHERE id=?", b.on ? 1 : 0, u.id);
+    if (b.on) throw new HttpError(410, "vip_removed", "The VIP plan is no longer offered");
+    db.run("UPDATE users SET vip=0 WHERE id=?", u.id);
     return { user: publicUser(db.get("SELECT * FROM users WHERE id=?", u.id), cfg.admins, staffOf(u)) };
   });
 
@@ -423,7 +425,7 @@ export function createApp(cfg, log = console) {
     const form = cleanForm(b.form || {});
     const { lines, problems } = loadLines(db, ref, b.lines, user);
     const yp = await yandexPrices(db, ref, cfg.yandex, lines, form, log);
-    const q = quote(db, ref, { lines, services: b.services || [], bundles: b.bundles || [], form, promo: b.promo, user, yandexPrices: yp, points: cfg.bonus.enabled ? b.points : 0, maxShare: cfg.bonus.maxShare, bonusOn: cfg.bonus.enabled, rateVip: cfg.bonus.rateVip, storeDelivery: cfg.deliveryBy === "store" });
+    const q = quote(db, ref, { lines, services: b.services || [], bundles: b.bundles || [], form, promo: b.promo, user, yandexPrices: yp, points: cfg.bonus.enabled ? b.points : 0, maxShare: cfg.bonus.maxShare, bonusOn: cfg.bonus.enabled, storeDelivery: cfg.deliveryBy === "store" });
     return { q, form, lines, problems };
   }
   r.post("/api/quote", async req => { lim.hit("quote-ip:" + req.ip, 120, 60_000); const b = await readJson(req); const { q, problems } = await computeQuote(req, b); return { quote: q, problems }; });

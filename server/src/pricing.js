@@ -56,7 +56,7 @@ export function pickTariff(ref, kg, len = 0) {
   const need = T.findIndex(x => x.id === min), have = T.indexOf(byKg);
   return need > have ? T[need] : byKg;
 }
-export function quote(db, ref, { lines, services = [], bundles = [], form = {}, promo = "", user = null, yandexPrices = null, points = 0, maxShare = 0.2, bonusOn = true, rateVip = 0.03, storeDelivery = false }) {
+export function quote(db, ref, { lines, services = [], bundles = [], form = {}, promo = "", user = null, yandexPrices = null, points = 0, maxShare = 0.2, bonusOn = true, storeDelivery = false }) {
   const D = Object.fromEntries(ref.districts.map(d => [d.id, d]));
   const dest = (Object.hasOwn(D, form.district) && D[form.district]) || (Object.hasOwn(D, user?.district ?? "") && D[user.district]) || D.mirob;
   /* The buyer pays the store directly (stage 0 / cash on pickup): no money passes through Imorat Go, so nothing the platform
@@ -71,7 +71,6 @@ export function quote(db, ref, { lines, services = [], bundles = [], form = {}, 
     if (Number(points) > 0) dropped.push("points");
     services = []; bundles = []; promo = ""; points = 0;
   }
-  const vip = !!user?.vip;
   const groups = new Map();
   for (const l of lines) {
     let g = groups.get(l.store);
@@ -99,9 +98,8 @@ export function quote(db, ref, { lines, services = [], bundles = [], form = {}, 
     let p = yp != null ? yp : t.base + t.perKm * dist;
     if (loaders && t.id !== "courier") p += ref.fees.LOADER * loaders * Math.max(1, floors); // a loader costs LOADER per floor, at least one (truck → door)
     if (form.when === "slot") p *= 0.9;
-    const full = round(p) + (form.when === "vip" ? ref.fees.VIP_HOUR_FEE : 0);
-    if (vip) { if (t.id === "courier" && g.sum >= ref.fees.VIP_FREE_FROM) p = 0; else if (t.id !== "courier") p *= 0.5; }
-    const price = round(p) + (form.when === "vip" && !vip ? ref.fees.VIP_HOUR_FEE : 0);
+    // when "vip" is the exact-hour delivery option (the key predates dropping the VIP plan): everyone pays VIP_HOUR_FEE for it
+    const price = round(p) + (form.when === "vip" ? ref.fees.VIP_HOUR_FEE : 0), full = price;
     return { g, t, dist, price, full, source: yp != null ? "yandex" : "estimate" };
   });
   const qtyOf = id => lines.filter(l => l.p.id === id).reduce((a, l) => a + l.q, 0);
@@ -137,7 +135,7 @@ export function quote(db, ref, { lines, services = [], bundles = [], form = {}, 
   // with store delivery the total is the goods total: delivery is agreed with and paid to the store on receipt
   const total = unknown ? null : goods + (byStore ? 0 : del) + svc - disc - pd - pts;
   return {
-    goods, del, svc, disc, pd, pts, total, unknown, pay_at_store: payAtStore, not_applied: dropped, delivery_by: byStore ? "store" : form.mode === "pickup" ? null : "yandex", /* unknown: a delivery price is missing, so del and total are null (never 0) */ cash: vip && bonusOn && !payAtStore ? Math.round(goods * rateVip) : 0, /* the VIP cashback promised at checkout (cfg.bonus.rateVip; bonus.js credits the same rate) */ promo: promoCode, bundles: bundlesApplied, services: svcLines,
+    goods, del, svc, disc, pd, pts, total, unknown, pay_at_store: payAtStore, not_applied: dropped, delivery_by: byStore ? "store" : form.mode === "pickup" ? null : "yandex", /* unknown: a delivery price is missing, so del and total are null (never 0) */ cash: 0, /* was the VIP cashback; the VIP plan is gone, the field stays for older app builds */ promo: promoCode, bundles: bundlesApplied, services: svcLines,
     ships: ships.map(s => ({
       store: s.g.store.id, store_name: s.g.store.name, tariff: s.t?.id || null, price: s.price, full: s.full, kg: Math.round(s.g.kg * 100) / 100, len: s.g.len || 0,
       dist: Math.round(s.dist * 10) / 10, source: s.source || null,

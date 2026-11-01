@@ -51,7 +51,7 @@ export function createBonus({ db, cfg, log = console }) {
         const goods = JSON.parse(ship.lines).reduce((a, l) => a + l.price * l.q, 0);
         // the buyer paid the goods minus this shipment's share of the order-level discounts (points, promo code, bundle)
         const paidShare = o.goods ? Math.max(0, o.goods - (o.points_used || 0) - (o.promo_disc || 0) - (o.disc || 0)) / o.goods : 1;
-        // the rate the buyer was shown at checkout: VIP orders carry the promised VIP cashback (o.cash > 0), masters earn the pro rate
+        // the rate the buyer was shown at checkout: orders placed while the VIP plan existed carry the promised VIP cashback (o.cash > 0), masters earn the pro rate
         const rate = o.cash > 0 ? Math.max(B.rateVip, u.role === "pro" ? B.ratePro : B.rate) : u.role === "pro" ? B.ratePro : B.rate;
         const earned = Math.min(B.maxCashback, Math.floor(goods * paidShare * rate), budgetLeft());
         if (earned > 0) add(u.id, earned, "cashback", ref); else if (budgetLeft() <= 0) log.warn(`[bonus] monthly budget spent: no cashback for ${ref}`);
@@ -90,7 +90,7 @@ export function createBonus({ db, cfg, log = console }) {
         const u = need(req), code = codeFor(u);
         const fresh = db.get("SELECT points, ref_by FROM users WHERE id=?", u.id);
         return {
-          enabled: B.enabled, points: fresh.points, code, rate: B.rate, rate_pro: B.ratePro, rate_vip: B.rateVip, referral: B.referral, welcome: B.welcome, max_share: B.maxShare, max_cashback: B.maxCashback,
+          enabled: B.enabled, points: fresh.points, code, rate: B.rate, rate_pro: B.ratePro, referral: B.referral, welcome: B.welcome, max_share: B.maxShare, max_cashback: B.maxCashback,
           invited: db.get("SELECT COUNT(*) n FROM users WHERE ref_by=?", u.id).n, invited_paid: db.get("SELECT COUNT(*) n FROM users WHERE ref_by=? AND ref_paid=1", u.id).n,
           has_ref: !!fresh.ref_by, can_enter: !fresh.ref_by && !db.get("SELECT 1 FROM orders WHERE user_id=?", u.id),
           log: db.all("SELECT delta, reason, ref, created_at FROM points_log WHERE user_id=? ORDER BY id DESC LIMIT 30", u.id)

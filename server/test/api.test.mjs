@@ -532,17 +532,20 @@ test("Bonus points: referral code, welcome after the first delivery, capped cash
   const unpaidShip = (await call("GET", `/api/orders/${o5.data.order.num}`, null, c)).data.order.ships[0].id;
   assert.equal((await call("PATCH", `/api/admin/shipments/${unpaidShip}`, { status: "picked" }, globalThis.ADMIN)).data.error, "unpaid");
   assert.equal((await call("GET", "/api/me/bonus", null, c)).data.points, 13760);
-  // VIP cashback: the rate the checkout shows (BONUS_RATE_VIP, 3%) is the rate that is credited — one setting, not two
+  // the VIP plan is gone: it cannot be turned on, the checkout promises no VIP cashback, and an order earns the ordinary 1%
   const v = (await login("996660055")).data.token;
-  assert.equal((await call("POST", "/api/me/vip", { on: true }, v)).status, 200);
-  const qv = (await call("POST", "/api/quote", { lines: [{ id: 1, store: sid, q: 2 }], form: { ...form, name: "VIP", phone: "998996660055" } }, v)).data.quote;
-  assert.ok(qv.goods > 0); assert.equal(qv.cash, Math.round(qv.goods * 0.03), "the checkout promises 3% of the goods");
-  assert.equal((await call("GET", "/api/me/bonus", null, v)).data.rate_vip, 0.03);
-  const ov = await call("POST", "/api/orders", { lines: [{ id: 1, store: sid, q: 2 }], form: { ...form, name: "VIP", phone: "998996660055" } }, v);
+  const von = await call("POST", "/api/me/vip", { on: true }, v);
+  assert.equal(von.status, 410); assert.equal(von.data.error, "vip_removed");
+  assert.equal((await call("POST", "/api/me/vip", { on: false }, v)).status, 200, "older app builds may still send off");
+  assert.equal((await call("GET", "/api/me", null, v)).data.user.vip, undefined);
+  const qv = (await call("POST", "/api/quote", { lines: [{ id: 1, store: sid, q: 2 }], form: { ...form, name: "Без VIP", phone: "998996660055" } }, v)).data.quote;
+  assert.ok(qv.goods > 0); assert.equal(qv.cash, 0, "no VIP cashback is promised");
+  assert.equal((await call("GET", "/api/me/bonus", null, v)).data.rate_vip, undefined);
+  const ov = await call("POST", "/api/orders", { lines: [{ id: 1, store: sid, q: 2 }], form: { ...form, name: "Без VIP", phone: "998996660055" } }, v);
   assert.equal(ov.status, 200, JSON.stringify(ov.data)); await payNow(ov.data.order);
   const shv = (await call("GET", "/api/seller/summary", null, seller)).data.orders.find(x => x.num === ov.data.order.num).ship_id;
   for (const st of ["assembling", "ready", "picked"]) assert.equal((await call("PATCH", `/api/seller/shipments/${shv}`, { status: st }, seller)).status, 200);
-  assert.equal((await call("GET", "/api/me/bonus", null, v)).data.points, Math.floor(qv.goods * 0.03), "3% of the goods is credited — the same number the buyer saw");
+  assert.equal((await call("GET", "/api/me/bonus", null, v)).data.points, Math.floor(qv.goods * 0.01), "the ordinary 1% of the goods is credited");
 });
 
 test("Bonus budget: a monthly cap stops new accruals, refunds of spent points still work", async () => {
