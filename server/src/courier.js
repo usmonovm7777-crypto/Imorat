@@ -1,8 +1,8 @@
 /* Yandex Delivery claims: the courier for a shipment is ordered when the store has packed it ("searching"),
    its status is polled every sweep, the buyer gets the live position and a tracking link.
    Claims API v2: https://yandex.ru/support2/delivery-profile/ru/api/  (b2b/cargo/integration/v2/claims/*)
-   Without YANDEX_DELIVERY_TOKEN the module simulates a courier (the statuses still come from the store,
-   the position moves along the straight line between the store and the address), so the site can be tried end to end. */
+   Without YANDEX_DELIVERY_TOKEN the statuses come from the store and the buyer's map has no courier position
+   ("location unavailable"); only a test server with COURIER_SIMULATION=1 moves a pretend courier along the route. */
 const H = (cfg, lang = "ru") => ({ Authorization: "Bearer " + cfg.token, "Content-Type": "application/json", "Accept-Language": lang });
 const STATUS_MAP = {
   performer_lookup: "searching", performer_draft: "searching", performer_found: "to_store", pickup_arrived: "to_store",
@@ -64,19 +64,21 @@ export function createCourier({ db, cfg, ref, log = console }) {
     return { status: st, raw: j.status, courier, eta: j.eta || null };
   }
 
-  /* where the courier is right now: live from Yandex, otherwise simulated along the route */
+  /* where the courier is right now: live from Yandex; without a claim the position is simply unavailable (no coordinates
+     are invented) unless this is a test server with COURIER_SIMULATION=1 */
   async function position(sh) {
     const o = db.get("SELECT * FROM orders WHERE id=?", sh.order_id), s = db.get("SELECT * FROM stores WHERE id=?", sh.store_id);
     if (!o || !s) return null;
     const f = JSON.parse(o.form), from = storePt(s), to = destPt(f), km = dist(from, to);
     const base = { from, to, km: Math.round(km * 10) / 10, tracking_url: sh.tracking_url || null, courier: sh.courier || null, status: sh.status };
-    if (!["searching", "to_store", "on_way"].includes(sh.status)) return { ...base, pos: sh.status === "delivered" ? to : null };
+    if (!["searching", "to_store", "on_way"].includes(sh.status)) return { ...base, pos: null };
     if (live && sh.claim_id && !sh.claim_id.startsWith("sim-")) {
       try { const p = await api(`claims/performer-position?claim_id=${encodeURIComponent(sh.claim_id)}`, null, "GET"); if (p.position) return { ...base, pos: { la: p.position.lat, lo: p.position.lon }, speed: p.position.speed, direction: p.position.direction, updated: (p.position.timestamp || 0) * 1000 || Date.now(), eta_min: p.position.dist_to_point ? Math.max(1, Math.round(p.position.dist_to_point / 400)) : null, live: true }; }
       catch (e) { if (e.status !== 404) log.warn("[yandex] position", e.message); }
-      return { ...base, pos: null, live: true };
+      return { ...base, pos: null, live: true, unavailable: true };
     }
-    // simulation: a courier 3 km away drives to the store in ~8 minutes, then to the address at ~25 km/h
+    if (!cfg.courierSim) return { ...base, pos: null, unavailable: true }; // the store moves the statuses; nobody knows where the courier is
+    // simulation (test servers): a courier 3 km away drives to the store in ~8 minutes, then to the address at ~25 km/h
     const t0 = sh.courier_at || sh.status_at, el = (Date.now() - t0) / 60000;
     const start = { la: from.la + 0.012, lo: from.lo - 0.016 };
     const lerp = (a, b, k) => ({ la: a.la + (b.la - a.la) * k, lo: a.lo + (b.lo - a.lo) * k });

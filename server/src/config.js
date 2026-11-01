@@ -27,6 +27,7 @@ export function loadConfig(env = process.env) {
   if (smsMode === "telegram" && !env.TELEGRAM_BOT_TOKEN) throw new Error("SMS_MODE=telegram needs TELEGRAM_BOT_TOKEN: sign-in goes through the bot");
   // In production a forgotten ESKIZ_* would hand out sign-in codes in API responses; refuse to start unless this is a declared test server
   if (prod && smsMode === "dev" && env.ALLOW_DEV_SMS !== "1") throw new Error("SMS is in dev mode: set ESKIZ_EMAIL/ESKIZ_PASSWORD, or ALLOW_DEV_SMS=1 on a test server only");
+  if (prod && env.COURIER_SIMULATION === "1") throw new Error("COURIER_SIMULATION is for test servers only: a production server shows real courier coordinates or none");
   return {
     prod,
     port: Number(env.PORT) || 8787,
@@ -62,6 +63,9 @@ export function loadConfig(env = process.env) {
       dailyGuest: Number(env.AI_GUEST_DAILY_LIMIT) || 15
     },
     yandex: { token: env.YANDEX_DELIVERY_TOKEN || "", url: (env.YANDEX_DELIVERY_URL || "https://b2b.taxi.yandex.net").replace(/\/$/, "") },
+    /* COURIER_SIMULATION=1 (test servers only): without a Yandex token the buyer's map shows a pretend courier moving along the route.
+       Off by default — a working server shows only real coordinates and says "courier location unavailable" when there are none. */
+    courierSim: env.COURIER_SIMULATION === "1",
     /* maps on the site: the Yandex "JavaScript API и HTTP Геокодер" key draws the real Yandex map and finds addresses;
        without it the site shows OpenStreetMap tiles and asks Nominatim for addresses */
     maps: { jsKey: env.YANDEX_MAPS_KEY || "", geocoderKey: env.YANDEX_GEOCODER_KEY || env.YANDEX_MAPS_KEY || "", geocoderUrl: (env.YANDEX_GEOCODER_URL || "https://geocode-maps.yandex.ru/1.x/").replace(/\/$/, "") + "/", nominatim: (env.NOMINATIM_URL || "https://nominatim.openstreetmap.org").replace(/\/$/, "") },
@@ -74,8 +78,10 @@ export function loadConfig(env = process.env) {
        - Imorat Go's own commission by category, %: "*:1" (a category may differ: "build:1,*:2")
        - the Payme/Click acquiring fee that the bank charges on the payment, passed on as it is: 2%
        - a new store's first PROMO_MONTHS after approval: Imorat Go's part is 0%, the acquiring fee stays */
-    commission: Object.fromEntries(String(env.COMMISSION || "*:1").split(",").map(x => x.split(":")).filter(x => x.length === 2).map(([k, v]) => [k.trim(), Number(v) / 100])),
-    acquiring: Math.max(0, Number(env.ACQUIRING_PERCENT ?? 2) || 0) / 100,
+    commission: Object.fromEntries(String(env.COMMISSION || "*:1").split(",").map(x => x.split(":")).filter(x => x.length === 2).map(([k, v]) => [k.trim(), Math.round(Math.max(0, Number(v) || 0) * 1e4) / 1e6])),
+    // "2" = the same for every provider; "payme:2,click:1.8" = each provider's contract rate (the one without a name is the default)
+    ...(() => { const by = {}; let def = null; for (const x of String(env.ACQUIRING_PERCENT ?? "2").split(",").map(v => v.trim()).filter(Boolean)) { const [k, v] = x.includes(":") ? x.split(":") : ["*", x]; const n = Math.round(Math.max(0, Number(v) || 0) * 1e4) / 1e6; if (k.trim() === "*") def = n; else by[k.trim()] = n; }
+      const acquiring = def ?? (Object.keys(by).length ? Math.max(...Object.values(by)) : 0.02); return { acquiring, acquiringBy: by, acquiringOf: p => by[p] ?? acquiring }; })(),
     promoMonths: Math.max(0, Math.round(Number(env.PROMO_MONTHS ?? 3) || 0)),
     adminMfa: env.ADMIN_MFA !== "0",
     backupDir: env.BACKUP_DIR || "",
@@ -90,7 +96,7 @@ export function loadConfig(env = process.env) {
     otpPerIpHour: Number(env.OTP_PER_IP_HOUR || 150),
     ratePerIpMin: Number(env.RATE_PER_IP_MIN || 3000),
     /* the points programme is switched off until the owner turns it on (BONUS_ON=1): no cashback, no spending, no referral rewards */
-    bonus: { enabled: env.BONUS_ON === "1", rate: Number(env.BONUS_RATE ?? 0.01), ratePro: Number(env.BONUS_RATE_PRO ?? 0.02), maxShare: Number(env.BONUS_MAX_SHARE ?? 0.2), referral: Number(env.BONUS_REFERRAL ?? 30000), welcome: Number(env.BONUS_WELCOME ?? 30000), maxCashback: Number(env.BONUS_MAX_CASHBACK ?? 200000), maxInvites: Number(env.BONUS_MAX_INVITES ?? 20), monthlyBudget: Math.max(0, Number(env.BONUS_MONTHLY_BUDGET ?? 0) || 0) },
+    bonus: { enabled: env.BONUS_ON === "1", rate: Number(env.BONUS_RATE ?? 0.01), ratePro: Number(env.BONUS_RATE_PRO ?? 0.02), rateVip: Number(env.BONUS_RATE_VIP ?? 0.03), maxShare: Number(env.BONUS_MAX_SHARE ?? 0.2), referral: Number(env.BONUS_REFERRAL ?? 30000), welcome: Number(env.BONUS_WELCOME ?? 30000), maxCashback: Number(env.BONUS_MAX_CASHBACK ?? 200000), maxInvites: Number(env.BONUS_MAX_INVITES ?? 20), monthlyBudget: Math.max(0, Number(env.BONUS_MONTHLY_BUDGET ?? 0) || 0) },
     smsMasterTemplate: env.SMS_MASTER_TEMPLATE ?? "Imorat Go: sizga ustalik uchun yangi so‘rov keldi. Saytda qabul qiling.",
     // Online card payment: a provider is offered once its keys are set; PAYMENTS (e.g. "payme") can narrow the list
     payme: { id: env.PAYME_MERCHANT_ID || "", key: env.PAYME_KEY || "", testKey: env.PAYME_TEST_KEY || "", url: (env.PAYME_CHECKOUT_URL || "https://checkout.paycom.uz").replace(/\/$/, "") },

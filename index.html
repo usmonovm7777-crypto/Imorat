@@ -115,6 +115,10 @@ linear-gradient(180deg, hsl(var(--h) var(--tile-s) var(--tile-l)) 0 70%, hsl(var
 .art .hl { stroke: var(--art-hl); }
 .photo { width: 100%; height: 100%; object-fit: cover; display: block; }
 .demo-badge { font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--signal); border: 1px solid currentColor; border-radius: 999px; padding: 2px 7px; margin-left: 6px; align-self: center; }
+.api-bar { position: relative; z-index: 32; display: flex; gap: 10px 14px; align-items: center; flex-wrap: wrap; padding: 9px 16px; font-size: 14px; line-height: 1.35; background: #3b2f12; color: #fde9b5; border-bottom: 1px solid #6e5a1f; }
+.api-bar[data-kind="incompatible"] { background: #3a1d1a; color: #ffd9d3; border-bottom-color: #7a3b33; }
+.api-bar b { font-weight: 700; } .api-bar span { flex: 1 1 260px; min-width: 0; } .api-bar small { display: block; opacity: .8; margin-top: 2px; }
+.api-bar .btn { padding: 6px 12px; font-size: 13px; border-color: currentColor; color: inherit; background: transparent; }
 .hdr { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 30; background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
 .hdr-row { display: flex; align-items: center; gap: 12px; padding-block: 12px; }
 .logo { display: flex; align-items: center; gap: 9px; flex: none; }
@@ -1026,6 +1030,7 @@ html.fx .fx-btn.th-btn, .fx-btn.th-btn { background: var(--surface); color: var(
 .livemap .attr { position: absolute; right: 6px; bottom: 6px; font-size: 11px; background: color-mix(in srgb, var(--surface) 85%, transparent); padding: 2px 6px; border-radius: 6px; color: var(--muted); }
 .lm-bar { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; font-size: 13px; margin-top: 8px; }
 .lm-bar b { font-size: 15px; }
+.lm-nopos { display: inline-flex; align-items: center; gap: 4px; }
 .addr-line { display: flex; gap: 8px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; font-size: 14px; background: var(--bg); }
 .addr-line svg { flex: none; margin-top: 3px; color: var(--brand); }
 .addr-line small { display: block; color: var(--muted); margin-top: 2px; }
@@ -1308,6 +1313,7 @@ html[data-theme="dark"] .pickmap .pm-tiles img { filter: brightness(.82) contras
 .calc .row3 .f label, .calc .row2 .f label { min-height: 2.6em; display: flex; align-items: end; line-height: 1.25; }</style>
 
 <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs><radialGradient id="artsh"><stop offset="0" stop-color="#0d1513"/><stop offset=".5" stop-color="#0d1513" stop-opacity=".8"/><stop offset="1" stop-color="#0d1513" stop-opacity="0"/></radialGradient></defs></svg>
+<div class="api-bar" id="apiBar" role="alert" hidden></div>
 <header class="hdr" id="hdr"></header>
 <main id="app"></main>
 <footer id="foot"></footer>
@@ -1379,10 +1385,14 @@ const fmt = n => fmtN(n) + L(" сум", " so‘m");
 /* What a store pays from a card-paid order: Imorat Go's commission and the bank's acquiring fee, two separate lines.
    The rates come from /api/config; the defaults are the server's own defaults, so the demo shows the same numbers. */
 const pct = v => String(Math.round(v * 1000) / 10).replace(".", DEC) + "%";
-/* the legal pages live on the website; inside the app they open in the browser */
-const legalUrl = name => `${window.IMORAT_APP && window.IMORAT_SITE_URL ? String(window.IMORAT_SITE_URL).replace(/\/?$/, "/") : ""}legal/${name}.html?lang=${lang}`;
-const feeInfo = () => ({ ours: apiCfg?.commission?.["*"] ?? 0.01, bank: apiCfg?.acquiring ?? 0.02, months: apiCfg?.promo_months ?? 3 });
-const feeLine = () => { const f = feeInfo(); return L(`Imorat Go ${pct(f.ours)} + эквайринг Payme/Click ${pct(f.bank)}`, `Imorat Go ${pct(f.ours)} + Payme/Click ekvayringi ${pct(f.bank)}`, `Imorat Go ${pct(f.ours)} + Payme/Click acquiring ${pct(f.bank)}`); };
+/* the legal pages live on the website; inside the app they open in the browser. The website address is an explicit setting
+   (config.js IMORAT_SITE_URL, else the server's SITE_URL from /api/config) — never guessed from the API domain */
+const publicSiteUrl = () => String(window.IMORAT_SITE_URL || apiCfg?.site_url || "").replace(/\/?$/, "/");
+const legalUrl = name => `${window.IMORAT_APP ? publicSiteUrl() : ""}legal/${name}.html?lang=${lang}`;
+const feeInfo = () => ({ ours: apiCfg?.commission?.["*"] ?? 0.01, bank: apiCfg?.acquiring ?? 0.02, bankBy: apiCfg?.acquiring_by || {}, months: apiCfg?.promo_months ?? 3 });
+// the acquiring rate as text: one number, or each provider's contract rate when they differ ("Payme 2% / Click 1,8%")
+const bankPct = (f = feeInfo()) => { const e = Object.entries(f.bankBy).filter(([, v]) => v !== f.bank); return e.length ? e.map(([k, v]) => `${{ payme: "Payme", click: "Click" }[k] || k} ${pct(v)}`).concat(Object.keys(f.bankBy).length < 2 ? [L("остальные", "boshqalari", "others") + " " + pct(f.bank)] : []).join(" / ") : pct(f.bank); };
+const feeLine = () => { const f = feeInfo(); return L(`Imorat Go ${pct(f.ours)} + эквайринг Payme/Click ${bankPct(f)}`, `Imorat Go ${pct(f.ours)} + Payme/Click ekvayringi ${bankPct(f)}`, `Imorat Go ${pct(f.ours)} + Payme/Click acquiring ${bankPct(f)}`); };
 const fmtKg = n => n < 1 ? Math.round(n * 1000) + L(" г", " g") : (n < 10 ? (Math.round(n * 10) / 10).toString().replace(".", DEC) : fmtN(n)) + L(" кг", " kg");
 
 /* ================= Icons ================= */
@@ -1513,7 +1523,14 @@ const ui = (k, s = 20) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" f
    Without it the page runs as a self-contained demo: data stays in this browser. */
 const API = String(window.IMORAT_API || "").replace(/\/+$/, "");
 const NATIVE = !!(window.Capacitor && typeof window.Capacitor.isNativePlatform === "function" && window.Capacitor.isNativePlatform()); // inside the Android / iPhone app
-let apiToken = LS.get("imorat.token", ""), apiCfg = null, apiCat = null, myStore = LS.get("imorat.myStore", null), sellerData = null, adminStores = null, adminMasters = null;
+/* API contract: the server reports its number in /api/health (server/src/app.js API_CONTRACT). It changes only when a change
+   breaks older clients; the app's release build is refused on a mismatch, and a running client shows "update" instead of guessing. */
+const API_CONTRACT = 1;
+/* In working mode the page never shows the built-in sample catalog: it starts from the last real catalog saved in this browser
+   (or from an empty one) and the server fills it in. apiState: loading | ok | offline | incompatible. */
+const API_CACHE = API ? LS.get("imorat.apiCat", null) : null;
+let apiState = API ? "loading" : "ok", apiHealth = null, apiCatAt = API_CACHE?.t || 0;
+let apiToken = LS.get("imorat.token", ""), apiCfg = null, apiCat = API ? (API_CACHE?.cat || { rev: 0, stores: [], products: [], empty: true }) : null, myStore = LS.get("imorat.myStore", null), sellerData = null, adminStores = null, adminMasters = null;
 async function api(method, path, body, opts = {}) {
   const isBlob = typeof Blob !== "undefined" && body instanceof Blob;
   const headers = {};
@@ -1521,7 +1538,8 @@ async function api(method, path, body, opts = {}) {
   if (apiToken) headers.Authorization = "Bearer " + apiToken;
   let r;
   try { r = await fetch(API + path, { method, headers, body: body === undefined ? undefined : isBlob ? body : JSON.stringify(body), signal: opts.signal }); }
-  catch (e) { if (e.name === "AbortError") throw e; const er = new Error("offline"); er.code = "offline"; throw er; }
+  catch (e) { if (e.name === "AbortError") throw e; if (!opts.probe && apiState !== "incompatible") setApiState("offline"); const er = new Error("offline"); er.code = "offline"; throw er; }
+  if (apiState === "offline" && !opts.probe) setApiState("ok");
   if (r.status === 401 && apiToken && !path.startsWith("/api/auth/")) { apiToken = ""; LS.set("imorat.token", ""); }
   if (opts.raw && r.ok) return r;
   const j = await r.json().catch(() => ({}));
@@ -2513,7 +2531,7 @@ function vipBlock() {
   const perks = [["clock", L("VIP-время", "VIP-vaqt"), L("Доставка в выбранный вами час, а не «в течение дня»", "Kun davomida emas, siz tanlagan soatda yetkazish")],
     ["bolt", L("Курьер в приоритете", "Ustuvor kuryer"), L("Ваш заказ Яндекс назначает первым", "Buyurtmangizga birinchi kuryer biriktiriladi")],
     ["truck", L("Доставка бесплатно", "Bepul yetkazish"), L(`Курьером от ${fmt(VIP_FREE_FROM)}, грузовой со скидкой 50%`, `${fmt(VIP_FREE_FROM)}dan kuryer bepul, yuk mashinasi 50% chegirma`, `Courier free from ${fmt(VIP_FREE_FROM)}, cargo 50% off`)],
-    bonusOn() ? ["percent", L("Кешбэк 3%", "3% keshbek"), L("Баллами на следующие покупки", "Keyingi xaridlar uchun ballar")] : ["shield", L("Поддержка без очереди", "Navbatsiz yordam", "Priority support"), L("Вопросы по заказу решаем первыми", "Buyurtma bo‘yicha savollar birinchi hal qilinadi", "Your order questions come first")]];
+    bonusOn() ? ["percent", L(`Кешбэк ${pct(bonusCfg().rateVip)}`, `${pct(bonusCfg().rateVip)} keshbek`, `${pct(bonusCfg().rateVip)} cashback`), L("Баллами на следующие покупки", "Keyingi xaridlar uchun ballar")] : ["shield", L("Поддержка без очереди", "Navbatsiz yordam", "Priority support"), L("Вопросы по заказу решаем первыми", "Buyurtma bo‘yicha savollar birinchi hal qilinadi", "Your order questions come first")]];
   return `<div class="vip"><div>
     <span class="eyebrow">${ui("crown", 14)} Imorat Go VIP</span>
     <h2 class="h-l" style="margin-top:10px">${L("Привезём ровно к нужному часу", "Kerakli soatga aniq yetkazamiz")}</h2>
@@ -2869,7 +2887,7 @@ function quote(d) {
   const goods = gs.reduce((a, g) => a + g.sum, 0), del = ships.reduce((a, s) => a + s.price, 0), svc = svcSum(), disc = bundleDisc();
   const pd = promoDisc(goods);
   const pts = d.usePts && bonusOn() ? Math.max(0, Math.min(bonusBalance(), Math.floor(goods * bonusCfg().maxShare))) : 0;
-  return { ships, goods, del, svc, disc, pd, pts, total: goods + del + svc - disc - pd - pts, cash: vip && bonusOn() ? Math.round(goods * 0.03) : 0 };
+  return { ships, goods, del, svc, disc, pd, pts, total: goods + del + svc - disc - pd - pts, cash: vip && bonusOn() ? Math.round(goods * bonusCfg().rateVip) : 0 };
 }
 /* Payment rules: delivery → card on the site only (the courier takes no money); pickup → card or cash at the store */
 /* Every order is paid by card on the site — goods and delivery in one amount; neither the courier nor the store takes money.
@@ -2975,10 +2993,12 @@ function updateQuote() {
     (qt.pd ? `<div class="sumrow disc"><span>${L("Промокод", "Promokod")} ${esc(promo)}</span><span class="num">−${fmt(qt.pd)}</span></div>` : "") +
     (qt.pts ? `<div class="sumrow disc"><span>${L("Бонусами", "Bonus bilan")}</span><span class="num">−${fmt(qt.pts)}</span></div>` : "") +
     (!bonusOn() || API && !user || ["cash", "store"].includes(d.pay) ? "" : `<div class="sumrow cash"><span>${L("Начислим бонусов после получения", "Olgandan keyin bonus beriladi")}</span><span class="num">+${fmtN(Math.floor(qt.goods * bonusRate()))}</span></div>`) +
-    (qt.cash ? `<div class="sumrow cash"><span>${L("Кешбэк VIP 3%", "VIP keshbek 3%")}</span><span class="num">+${fmt(qt.cash)}</span></div>` : "") +
+    (qt.cash ? `<div class="sumrow cash"><span>${L(`Кешбэк VIP ${pct(bonusCfg().rateVip)}`, `VIP keshbek ${pct(bonusCfg().rateVip)}`, `VIP cashback ${pct(bonusCfg().rateVip)}`)}</span><span class="num">+${fmt(qt.cash)}</span></div>` : "") +
     `<div class="sumrow total"><span>${L("Итого", "Jami")}</span><span class="num">${fmt(qt.total)}</span></div>`;
   const pb = $("#payBtn"); pb.textContent = d.pay === "cash" || d.pay === "store" ? L("Подтвердить заказ", "Buyurtmani tasdiqlash") : `${L("Оплатить картой", "Karta bilan to‘lash", "Pay by card")} ${fmt(qt.total)}`;
   pb.disabled = paymentsOff(); if (pb.disabled) pb.textContent = L("Оплата скоро", "To‘lov tez orada", "Payment coming soon");
+  // no server = no order: the button says so instead of sending a form into the void (the banner at the top explains)
+  if (API && apiState !== "ok") { pb.disabled = true; pb.textContent = apiState === "incompatible" ? (window.IMORAT_APP ? L("Обновите приложение", "Ilovani yangilang", "Update the app") : L("Обновите страницу", "Sahifani yangilang", "Reload the page")) : L("Нет связи с сервером", "Server bilan aloqa yo‘q", "No connection to the server"); }
 }
 const NAMES = ["Шерзод", "Бобур", "Жасур", "Отабек", "Дилшод", "Сардор"];
 const LET = "ABCDEFHKMOPTXYZ";
@@ -2996,6 +3016,7 @@ function submitOrder(e) {
   if (!okS) return $("#fStreet").focus();
   if (!okA) return (String(d.flat || "").trim() ? $("#fFloor") : $("#fFlat")).focus();
   if (paymentsOff()) return toast(L("Онлайн-оплата ещё не подключена", "Onlayn to‘lov hali ulanmagan", "Online payment is not connected yet"));
+  if (API && apiState !== "ok") { toast(apiState === "incompatible" ? L("Обновите приложение, чтобы оформить заказ", "Buyurtma berish uchun ilovani yangilang", "Update the app to place an order") : apiErr({ code: "offline" })); apiBoot(); return; }
   if (API) return submitOrderApi(d, quote(d));
   const qt = quote(d), now = Date.now();
   const o = {
@@ -3010,7 +3031,7 @@ function submitOrder(e) {
   if (vip && qt.cash) toast(L(`Начислим ${fmt(qt.cash)} кешбэка`, `${fmt(qt.cash)} keshbek beriladi`, `You'll earn ${fmt(qt.cash)} cashback`));
   if (qt.pts) { bonusAdd(-qt.pts, "spent"); form.usePts = false; LS.set("imorat.form2", form); }
   if (bonusOn()) { bonusAdd(Math.min(200000, Math.floor(qt.goods * bonusRate())), "cashback"); // the demo credits at once; the real site after the order arrives
-    const bs = bonusDemoState(); if (bs.welcomePending) { bs.welcomePending = false; LS.set("imorat.bonus", bs); bonusAdd(BONUS.welcome, "welcome"); } }
+    const bs = bonusDemoState(); if (bs.welcomePending) { bs.welcomePending = false; LS.set("imorat.bonus", bs); bonusAdd(bonusCfg().welcome, "welcome"); } }
   cart = {}; services = {}; bundlesOn = []; LS.set("imorat.svc", services); LS.set("imorat.bundles", bundlesOn); saveCart(); refreshCards();
   openDrawer("track", o.num);
 }
@@ -3118,7 +3139,7 @@ function dProfile() {
     ${notifyRows()}
     <div class="vip-card"><span class="eyebrow" style="color:var(--signal)">${ui("crown", 14)} Imorat Go VIP</span>
       <b style="font-size:17px">${vip ? L("VIP подключён", "VIP ulangan") : L("Доставка в точный час и бесплатно", "Aniq soatda va bepul yetkazish")}</b>
-      <small>${vip ? (bonusOn() ? L("Точный час без доплаты, курьер в приоритете, кешбэк 3%.", "Aniq soat bepul, ustuvor kuryer, 3% keshbek.") : L("Точный час без доплаты, курьер в приоритете.", "Aniq soat bepul, ustuvor kuryer.", "Exact hour at no extra cost, priority courier.")) : L(`${fmt(VIP_FEE)} в месяц, первый месяц бесплатно.`, `Oyiga ${fmt(VIP_FEE)}, birinchi oy bepul.`, `${fmt(VIP_FEE)} per month, first month free.`)}</small>
+      <small>${vip ? (bonusOn() ? L(`Точный час без доплаты, курьер в приоритете, кешбэк ${pct(bonusCfg().rateVip)}.`, `Aniq soat bepul, ustuvor kuryer, ${pct(bonusCfg().rateVip)} keshbek.`, `Exact hour at no extra charge, priority courier, ${pct(bonusCfg().rateVip)} cashback.`) : L("Точный час без доплаты, курьер в приоритете.", "Aniq soat bepul, ustuvor kuryer.", "Exact hour at no extra cost, priority courier.")) : L(`${fmt(VIP_FEE)} в месяц, первый месяц бесплатно.`, `Oyiga ${fmt(VIP_FEE)}, birinchi oy bepul.`, `${fmt(VIP_FEE)} per month, first month free.`)}</small>
       <button class="btn ${vip ? "btn-line" : "btn-primary"}" type="button" data-act="${vip ? "vip-off" : "vip-on"}" style="${vip ? "border-color:color-mix(in srgb,var(--vip-fg) 35%,transparent)" : "background:var(--signal);color:#fff"}">${vip ? L("Отключить", "O‘chirish") : L("Подключить VIP", "VIP ulash")}</button></div>
     <div class="f"><label for="pDist">${L("Район доставки по умолчанию", "Standart yetkazish tumani")}</label><select id="pDist" class="sel">${DISTRICTS.map(x => `<option value="${x.id}" ${x.id === district ? "selected" : ""}>${L(x.ru, x.uz)}</option>`).join("")}</select></div>
     <div class="f"><span>${L("Оформление", "Ko‘rinish")}</span><div class="seg" role="group" style="justify-self:start"><button type="button" data-look="on" aria-pressed="${fxPref === "on"}">${L("Яркое", "Yorqin")}</button><button type="button" data-look="off" aria-pressed="${fxPref === "off"}">${L("Простое", "Oddiy")}</button><button type="button" data-look="auto" aria-pressed="${fxPref === "auto"}">${L("Авто", "Avto")}</button></div><small style="color:var(--muted)">${L("Яркое — подсветка и анимации. Простое — спокойно и быстрее на слабом телефоне.", "Yorqin — yoritish va animatsiyalar. Oddiy — sokin va kuchsiz telefonda tezroq.")}</small></div>
@@ -3569,7 +3590,7 @@ function storeFormHTML() {
       <span class="err" id="sErr" role="alert" hidden></span>
       <button class="btn btn-primary" type="submit">${auth.edit ? L("Сохранить", "Saqlash") : L("Отправить на проверку", "Tekshiruvga yuborish")}</button>
       ${auth.edit ? "" : `<p class="fine">${L("Модератор Imorat Go проверит данные, обычно в течение дня. Пока магазин на проверке, вы уже можете добавлять товары в кабинете продавца.", "Imorat Go moderatori ma’lumotlarni odatda bir kun ichida tekshiradi. Tekshiruv paytida sotuvchi kabinetida mahsulot qo‘shishingiz mumkin.")}</p>
-      <p class="fine">${L(`Условия: с заказов, оплаченных картой, удерживается комиссия Imorat Go ${pct(feeInfo().ours)} и эквайринг Payme/Click ${pct(feeInfo().bank)} — двумя отдельными строками в кабинете. Первые ${feeInfo().months} месяца комиссия Imorat Go 0%.${apiCfg?.pay_at_store ? " Самовывоз с оплатой в магазине — без комиссии." : ""}`, `Shartlar: karta bilan to‘langan buyurtmalardan Imorat Go komissiyasi ${pct(feeInfo().ours)} va Payme/Click ekvayringi ${pct(feeInfo().bank)} ushlab qolinadi — kabinetda ikki alohida qator. Birinchi ${feeInfo().months} oy Imorat Go komissiyasi 0%.${apiCfg?.pay_at_store ? " Do‘konda to‘lab olib ketish — komissiyasiz." : ""}`, `Terms: on card-paid orders the Imorat Go commission of ${pct(feeInfo().ours)} and the Payme/Click acquiring fee of ${pct(feeInfo().bank)} are withheld — two separate lines in your dashboard. The first ${feeInfo().months} months the Imorat Go commission is 0%.${apiCfg?.pay_at_store ? " Pickup paid at the store — no commission." : ""}`)}</p>`}
+      <p class="fine">${L(`Условия: с заказов, оплаченных картой, удерживается комиссия Imorat Go ${pct(feeInfo().ours)} и эквайринг Payme/Click ${bankPct()} — двумя отдельными строками в кабинете. Первые ${feeInfo().months} месяца комиссия Imorat Go 0%.${apiCfg?.pay_at_store ? " Самовывоз с оплатой в магазине — без комиссии." : ""}`, `Shartlar: karta bilan to‘langan buyurtmalardan Imorat Go komissiyasi ${pct(feeInfo().ours)} va Payme/Click ekvayringi ${bankPct()} ushlab qolinadi — kabinetda ikki alohida qator. Birinchi ${feeInfo().months} oy Imorat Go komissiyasi 0%.${apiCfg?.pay_at_store ? " Do‘konda to‘lab olib ketish — komissiyasiz." : ""}`, `Terms: on card-paid orders the Imorat Go commission of ${pct(feeInfo().ours)} and the Payme/Click acquiring fee of ${bankPct()} are withheld — two separate lines in your dashboard. The first ${feeInfo().months} months the Imorat Go commission is 0%.${apiCfg?.pay_at_store ? " Pickup paid at the store — no commission." : ""}`)}</p>`}
     </form>`;
 }
 function bindStoreForm() {
@@ -4075,7 +4096,7 @@ $("#aiFile").addEventListener("change", e => {
 function applyApiCatalog() {
   if (!apiCat) return;
   const abs = u => (u && u.startsWith("/uploads/") ? API + u : u);
-  apiCat.stores.forEach(s => { if (!STORE[s.id]) STORES.push(s); STORE[s.id] = Object.assign(STORE[s.id] || {}, s); });
+  apiCat.stores.forEach(s => { STORE[s.id] = Object.assign(STORE[s.id] || {}, s); if (!STORES.includes(STORE[s.id])) STORES.push(STORE[s.id]); }); // a store removed while offline comes back by the same object
   const live = new Set(apiCat.stores.map(s => s.id));
   for (let i = STORES.length - 1; i >= 0; i--) if (!live.has(STORES[i].id)) STORES.splice(i, 1);
   const seen = new Set();
@@ -4090,18 +4111,60 @@ function applyApiCatalog() {
   GROUPS = {}; PRODUCTS.forEach(p => { if (p.group) (GROUPS[p.group] ||= []).push(p); });
 }
 async function syncCatalog() {
-  if (!API) return;
+  if (!API || apiState === "incompatible") return;
   try {
-    apiCat = await api("GET", "/api/catalog");
+    apiCat = await api("GET", "/api/catalog"); apiCatAt = Date.now();
+    try { LS.set("imorat.apiCat", { t: apiCatAt, cat: apiCat }); } catch (e) {} // the last real catalog, shown next time until the server answers
     buildProducts(); pruneCart();
     const busy = drawerView || $("#modal").classList.contains("on") || route.view === "seller";
     if (!busy) { const y = window.scrollY; renderMain(); window.scrollTo(0, y); } else counts();
-  } catch (e) { /* keep the built-in catalog */ }
+  } catch (e) { /* keep the saved catalog; the banner says the server is unreachable */ }
+}
+/* ---- server availability: a banner instead of pretend data. offline = no answer (orders and payment are locked, the saved
+   catalog stays visible with its date); incompatible = the server speaks a newer or older API than this build. ---- */
+let apiRetryTimer = 0;
+function setApiState(st) {
+  if (apiState === st) return;
+  apiState = st; renderApiBar();
+  if (drawerView === "checkout" && $("#orderForm")) { try { updateQuote(); } catch (e) {} } // the pay button follows the state; the typed form stays
+  clearTimeout(apiRetryTimer);
+  if (st === "offline") apiRetryTimer = setTimeout(() => { if (!document.hidden) apiBoot(); else setApiState(apiState); }, 30000);
+}
+function renderApiBar() {
+  const el = $("#apiBar"); if (!el) return;
+  if (!API || apiState === "ok" || apiState === "loading") { el.hidden = true; el.innerHTML = ""; return; }
+  const when = apiCatAt ? new Date(apiCatAt).toLocaleString(LOCALE, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "";
+  el.hidden = false; el.dataset.kind = apiState;
+  if (apiState === "incompatible") {
+    const need = apiHealth?.min_client > API_CONTRACT;
+    el.innerHTML = `<span><b>${window.IMORAT_APP ? L("Обновите приложение Imorat Go", "Imorat Go ilovasini yangilang", "Update the Imorat Go app") : L("Обновите страницу", "Sahifani yangilang", "Reload the page")}</b><small>${need
+      ? L("Эта версия больше не поддерживается сервером — заказы и оплата отключены, пока вы не обновитесь.", "Bu versiyani server endi qo‘llab-quvvatlamaydi — yangilamaguningizcha buyurtma va to‘lov o‘chirilgan.", "The server no longer supports this version — orders and payment are off until you update.")
+      : L("Сервер ещё не обновлён до этой версии — заказы и оплата временно отключены.", "Server hali bu versiyaga yangilanmagan — buyurtma va to‘lov vaqtincha o‘chirilgan.", "The server has not been updated to this version yet — orders and payment are temporarily off.")}</small></span>
+      ${window.IMORAT_APP ? "" : `<button class="btn btn-line" type="button" onclick="location.reload()">${L("Обновить", "Yangilash", "Reload")}</button>`}`;
+    return;
+  }
+  el.innerHTML = `<span><b>${L("Нет связи с сервером Imorat Go", "Imorat Go serveri bilan aloqa yo‘q", "No connection to the Imorat Go server")}</b><small>${apiCat?.empty
+    ? L("Каталог недоступен. Проверьте интернет — страница подключится сама.", "Katalog mavjud emas. Internetni tekshiring — sahifa o‘zi ulanadi.", "The catalogue is unavailable. Check your internet — the page reconnects by itself.")
+    : L(`Показан каталог на ${when}. Цены и остатки могли измениться; заказы и оплата откроются, когда связь появится.`, `${when} holatidagi katalog ko‘rsatilgan. Narx va qoldiq o‘zgargan bo‘lishi mumkin; aloqa tiklangach buyurtma va to‘lov ochiladi.`, `Showing the catalogue as of ${when}. Prices and stock may have changed; orders and payment open once the connection is back.`)}</small></span>
+    <button class="btn btn-line" type="button" data-act="api-retry">${L("Повторить", "Qayta urinish", "Retry")}</button>`;
+}
+/* read-only diagnostics for support and tests: window.__imoratState() in the console */
+window.__imoratState = () => ({ api: API || null, state: apiState, contract: API_CONTRACT, server: apiHealth, products: PRODUCTS.length, stores: STORES.map(s => s.id), catalog_at: apiCatAt || null, cached: !!LS.get("imorat.apiCat", null), app: !!window.IMORAT_APP, version: window.IMORAT_APP_VERSION || null });
+/* GET /api/health with a short timeout: the only call that decides "offline" without flipping the banner by itself */
+async function apiProbe() {
+  const ac = new AbortController(), tm = setTimeout(() => ac.abort(), 8000);
+  try { apiHealth = await api("GET", "/api/health", undefined, { signal: ac.signal, probe: true }); } catch (e) { apiHealth = null; } finally { clearTimeout(tm); }
+  if (!apiHealth || apiHealth.ok !== true) return "offline";
+  if ((apiHealth.contract ?? 1) < API_CONTRACT || (apiHealth.min_client ?? 1) > API_CONTRACT) return "incompatible";
+  return "ok";
 }
 async function apiBoot() {
   if (window.IMORAT_SITE && "serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
   if (!API) return;
-  try { apiCfg = await api("GET", "/api/config"); } catch (e) { apiCfg = null; toast(L("Сервер Imorat Go недоступен — показываем сохранённый каталог", "Imorat Go serveri mavjud emas — saqlangan katalog ko‘rsatilmoqda")); return; }
+  const st = await apiProbe();
+  if (st !== "ok") { setApiState(st); return; }
+  try { apiCfg = await api("GET", "/api/config"); } catch (e) { apiCfg = null; setApiState("offline"); return; }
+  setApiState("ok");
   stockOv = {};
   if (apiCfg.ai) { aiImg = true; if (aiOpen) renderAI(); }
   syncSearchTools();
@@ -4120,7 +4183,7 @@ let expectTotal = null;
 function showServerTotals(q) {
   $("#totals").innerHTML = totalsHTML(q.goods, q.svc, q.disc, `<div class="sumrow"><span class="mu">${L("Доставка", "Yetkazish")}</span><span class="num">${fmt(q.del)}</span></div>`) +
     (q.pd ? `<div class="sumrow disc"><span>${L("Промокод", "Promokod")} ${esc(q.promo || "")}</span><span class="num">−${fmt(q.pd)}</span></div>` : "") +
-    (q.cash ? `<div class="sumrow cash"><span>${L("Кешбэк VIP 3%", "VIP keshbek 3%")}</span><span class="num">+${fmt(q.cash)}</span></div>` : "") +
+    (q.cash ? `<div class="sumrow cash"><span>${L(`Кешбэк VIP ${pct(bonusCfg().rateVip)}`, `VIP keshbek ${pct(bonusCfg().rateVip)}`, `VIP cashback ${pct(bonusCfg().rateVip)}`)}</span><span class="num">+${fmt(q.cash)}</span></div>` : "") +
     `<div class="sumrow total"><span>${L("Итого", "Jami")}</span><span class="num">${fmt(q.total)}</span></div>`;
   $("#payBtn").textContent = `${L("Подтвердить", "Tasdiqlash")} ${fmt(q.total)}`;
 }
@@ -4414,7 +4477,8 @@ function payExtra(o) {
   return "";
 }
 /* ---- Live courier map: OpenStreetMap tiles around the store and the address; the courier marker is refreshed every 10 s
-   from /api/orders/:num/courier (Yandex position, or the server's simulation) — in demo mode it is simulated here. ---- */
+   from /api/orders/:num/courier (the Yandex position; without one the server answers "unavailable" and the map shows only the store,
+   the address and the real status — no pretend car). Only the offline demo (no API) animates a courier here. ---- */
 const liveCache = {}; let liveTimer = 0;
 function lmProj(z) { const n = 2 ** z; return (la, lo) => { const r = la * Math.PI / 180; return { x: (lo + 180) / 360 * n, y: (1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2 * n }; }; }
 function liveMapHTML(o, s, st, t) {
@@ -4443,8 +4507,10 @@ function liveBarHTML(s, c, t) {
     : s.status === "to_store" ? L("Курьер едет в магазин за заказом", "Kuryer buyurtma uchun do‘konga ketmoqda", "The courier is driving to the store")
     : L("Курьер забрал заказ и едет к вам", "Kuryer buyurtmani oldi va sizga kelmoqda", "The courier has the order and is on the way to you");
   const who = c?.courier || s.courier ? `<small class="mu">${esc(c?.courier || s.courier)}${t ? " · " + esc(t.veh) : ""}</small>` : "";
+  // a working server without a Yandex position says so instead of drawing a car somewhere
+  const noPos = API && c && !c.pos && !c.simulated && s.status !== "searching" ? `<small class="mu lm-nopos">${ui("pin", 12)} ${L("Местоположение курьера недоступно", "Kuryer joylashuvi mavjud emas", "Courier location unavailable")}</small>` : "";
   const link = s.tracking_url ? `<a class="btn btn-line" href="${esc(s.tracking_url)}" target="_blank" rel="noopener" style="padding:7px 12px">${ui("pin", 14)} ${L("Открыть в Яндекс Go", "Yandex Go da ochish", "Open in Yandex Go")}</a>` : "";
-  return `<span>${left}${txt}${who ? "<br>" + who : ""}</span>${link}`;
+  return `<span>${left}${txt}${who ? "<br>" + who : ""}${noPos ? "<br>" + noPos : ""}</span>${link}`;
 }
 function demoCourier(o, s, i, status) {
   const st = STORE[s.store], from = storePt(st) || DIST[st?.d] || DIST[district], home = o.d.la != null && o.d.lo != null ? { la: +o.d.la, lo: +o.d.lo } : (DIST[o.d.district] || DIST[district]);
@@ -4578,11 +4644,11 @@ setInterval(async () => {
   } catch (e) {}
 }, 20000);
 function sellerExtraHTML(d) {
-  const f = d.finance, rates = d.rates || {}, rt = d.rating, plat = rates.platform || {}, bank = rates.acquiring ?? feeInfo().bank;
+  const f = d.finance, rates = d.rates || {}, rt = d.rating, plat = rates.platform || {}, bank = rates.acquiring ?? feeInfo().bank, bankTxt = bankPct({ bank, bankBy: rates.acquiring_by || feeInfo().bankBy });
   const oursTxt = Object.entries(plat).map(([k, v]) => `${k === "*" ? (Object.keys(plat).length > 1 ? L("остальное", "boshqalar", "other") + " " : "") : catName(k) + " "}${pct(v)}`).join(", ") || pct(feeInfo().ours);
   const until = rates.free_until ? new Date(rates.free_until).toLocaleDateString(LOCALE, { day: "numeric", month: "long", year: "numeric" }) : "";
-  const rateTxt = rates.promo ? L(`до ${until} — Imorat Go 0%, эквайринг Payme/Click ${pct(bank)}; затем Imorat Go ${oursTxt}`, `${until} gacha — Imorat Go 0%, Payme/Click ekvayringi ${pct(bank)}; keyin Imorat Go ${oursTxt}`, `until ${until} — Imorat Go 0%, Payme/Click acquiring ${pct(bank)}; then Imorat Go ${oursTxt}`)
-    : L(`Imorat Go ${oursTxt} + эквайринг Payme/Click ${pct(bank)}`, `Imorat Go ${oursTxt} + Payme/Click ekvayringi ${pct(bank)}`, `Imorat Go ${oursTxt} + Payme/Click acquiring ${pct(bank)}`);
+  const rateTxt = rates.promo ? L(`до ${until} — Imorat Go 0%, эквайринг Payme/Click ${bankTxt}; затем Imorat Go ${oursTxt}`, `${until} gacha — Imorat Go 0%, Payme/Click ekvayringi ${bankTxt}; keyin Imorat Go ${oursTxt}`, `until ${until} — Imorat Go 0%, Payme/Click acquiring ${bankTxt}; then Imorat Go ${oursTxt}`)
+    : L(`Imorat Go ${oursTxt} + эквайринг Payme/Click ${bankTxt}`, `Imorat Go ${oursTxt} + Payme/Click ekvayringi ${bankTxt}`, `Imorat Go ${oursTxt} + Payme/Click acquiring ${bankTxt}`);
   return `<div class="s-grid" style="margin-top:12px">
     <div class="panel"><div class="panel-h"><h2 class="h-m">${L("Уведомления о заказах", "Buyurtma bildirishnomalari")}</h2></div>
       <div class="nrow"><span>${ui("send", 16)} <b>Telegram</b><br><small style="color:var(--muted)">${L("Заказ приходит с кнопками «Принять» и «Нет в наличии»", "Buyurtma «Qabul qilish» va «Mavjud emas» tugmalari bilan keladi")}</small></span>${d.telegram ? `<span class="pill ok">${L("подключён", "ulangan")}</span>` : d.bot ? `<button class="btn btn-primary" type="button" data-act="tg-link">${L("Подключить", "Ulash")}</button>` : `<span class="pill mute">${L("скоро", "tez orada")}</span>`}</div>
@@ -5998,7 +6064,8 @@ document.addEventListener("click", e => {
 /* ================= Bonus points and referrals =================
    1 bonus = 1 so'm. Cashback after the order arrives (more for masters and foremen), spend up to a share of the goods at checkout.
    Invite a friend with your code: the friend gets a welcome bonus, you get a bonus when the friend's first order arrives. */
-const BONUS = { rate: .01, ratePro: .02, maxShare: .2, referral: 30000, welcome: 30000 };
+/* demo-mode bonus settings — the only copy on the client; in API mode every number comes from /api/me/bonus (server .env BONUS_*) */
+const BONUS = { rate: .01, ratePro: .02, rateVip: .03, maxShare: .2, referral: 30000, welcome: 30000 };
 /* the points programme is off until the owner starts it (BONUS_ON=1 on the server); the demo follows the same switch */
 const bonusOn = () => (API ? !!apiCfg?.bonus : false);
 let bonusApi = null; // GET /api/me/bonus
@@ -6033,7 +6100,7 @@ function bonusDemoState() {
   if (!bonusDemo) { const A = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; bonusDemo = { points: 0, code: "IM" + Array.from({ length: 5 }, () => A[Math.floor(Math.random() * A.length)]).join(""), refBy: null, log: [], orders: 0 }; LS.set("imorat.bonus", bonusDemo); }
   return bonusDemo;
 }
-const bonusCfg = () => (bonusApi ? { rate: bonusApi.rate, ratePro: bonusApi.rate_pro, maxShare: bonusApi.max_share, referral: bonusApi.referral, welcome: bonusApi.welcome } : BONUS);
+const bonusCfg = () => (bonusApi ? { rate: bonusApi.rate, ratePro: bonusApi.rate_pro, rateVip: bonusApi.rate_vip ?? BONUS.rateVip, maxShare: bonusApi.max_share, referral: bonusApi.referral, welcome: bonusApi.welcome } : BONUS);
 const bonusBalance = () => (API ? (bonusApi ? bonusApi.points : user?.points || 0) : bonusDemoState().points);
 const bonusRate = () => (user?.role === "pro" ? bonusCfg().ratePro : bonusCfg().rate);
 function bonusAdd(delta, reason) { const b = bonusDemoState(); b.points = Math.max(0, b.points + delta); b.log.unshift({ delta, reason, created_at: Date.now() }); b.log = b.log.slice(0, 40); LS.set("imorat.bonus", b); }
@@ -6057,7 +6124,7 @@ async function applyRefCode(code, silent) {
   if (b.refBy) return toast(L("Код друга уже применён", "Do‘st kodi allaqachon qo‘llangan"));
   if (orders.length) return toast(L("Код друга действует только до первого заказа", "Do‘st kodi faqat birinchi buyurtmagacha amal qiladi"));
   if (!/^IM[A-Z2-9]{5}$/.test(code)) return toast(L("Такого кода нет", "Bunday kod yo‘q"));
-  b.refBy = code; b.welcomePending = true; LS.set("imorat.bonus", b); toast(L(`Код друга принят: ${fmt(BONUS.welcome)} бонусов придут после первого доставленного заказа`, `Do‘st kodi qabul qilindi: ${fmt(BONUS.welcome)} bonus birinchi yetkazilgan buyurtmadan keyin keladi`, `Friend’s code accepted: ${fmt(BONUS.welcome)} points arrive after your first delivered order`)); if (drawerView) renderDrawer();
+  b.refBy = code; b.welcomePending = true; LS.set("imorat.bonus", b); toast(L(`Код друга принят: ${fmt(bonusCfg().welcome)} бонусов придут после первого доставленного заказа`, `Do‘st kodi qabul qilindi: ${fmt(bonusCfg().welcome)} bonus birinchi yetkazilgan buyurtmadan keyin keladi`, `Friend’s code accepted: ${fmt(bonusCfg().welcome)} points arrive after your first delivered order`)); if (drawerView) renderDrawer();
 }
 const BONUS_REASON = () => ({ cashback: L("Кешбэк за заказ", "Buyurtma uchun keshbek"), referral: L("Друг сделал первый заказ", "Do‘st birinchi buyurtma qildi"), welcome: L("Подарок по коду друга", "Do‘st kodi bo‘yicha sovg‘a"), spent: L("Оплата бонусами", "Bonus bilan to‘lov"), refund: L("Возврат за отменённый заказ", "Bekor qilingan buyurtma uchun qaytarish") });
 function bonusCardHTML() {
@@ -6594,7 +6661,7 @@ function demoDash() {
   const sum = k => series.reduce((a, x) => a + x[k], 0), orders = sum("orders"), gmv = sum("gmv");
   const tp = PRODUCTS.filter(p => p.hit).slice(0, 10).map((p, i) => ({ id: p.id, name: p.ru, q: 40 - i * 3, sum: minPrice(p) * (40 - i * 3) }));
   const ts = STORES.slice(0, 9).map((s, i) => ({ id: s.id, name: s.name, orders: Math.round(orders * (.24 - i * .02)), gmv: Math.round(gmv * (.24 - i * .02)), fail: i % 4 === 3 ? 3 : i % 3 === 2 ? 1 : 0, done: 0, accept_min: 4 + (i * 5) % 13 })).map(s => ({ ...s, fail_pct: Math.round(s.fail * 100 / Math.max(1, s.orders)) }));
-  return { demo: true, days: n, series, totals: { orders, orders_prev: Math.round(orders * .78), gmv, gmv_prev: Math.round(gmv * .74), commission: Math.round(gmv * .055), avg_check: Math.round(gmv / orders), buyers: Math.round(orders * .72), repeat_pct: 27, new_users: sum("users"), cancel_pct: 4, views: orders * 46, carts: orders * 6 },
+  return { demo: true, days: n, series, totals: { orders, orders_prev: Math.round(orders * .78), gmv, gmv_prev: Math.round(gmv * .74), commission: Math.round(gmv * feeInfo().ours), avg_check: Math.round(gmv / orders), buyers: Math.round(orders * .72), repeat_pct: 27, new_users: sum("users"), cancel_pct: 4, views: orders * 46, carts: orders * 6 },
     counts: { users: 2140, stores_active: STORES.length, stores_pending: 2, masters_active: 12, masters_pending: 3, problems_open: 2, questions_open: 5 }, top_products: tp, top_stores: ts.sort((a, b) => b.gmv - a.gmv), slow_stores: ts.filter(s => s.fail || s.accept_min > 10).sort((a, b) => b.fail_pct - a.fail_pct) };
 }
 function renderAdmin() {
@@ -7172,6 +7239,7 @@ document.addEventListener("click", e => {
     case "order-cancel": { const num = drawerOrder; api("POST", `/api/orders/${encodeURIComponent(num)}/cancel`).then(r => { const o = orders.find(x => x.num === num); Object.assign(o, mapOrder(r.order)); LS.set("imorat.orders", orders.slice(0, 30)); toast(L("Заказ отменён", "Buyurtma bekor qilindi")); renderDrawer(); syncCatalog(); }).catch(e => toast(e.code === "too_late" ? L("Заказ уже в пути — отменить нельзя", "Buyurtma yo‘lda — bekor qilib bo‘lmaydi") : apiErr(e))); return; }
     case "close-auth": return closeAuth();
     case "logout": return logout();
+    case "api-retry": { const b = e.target.closest("button"); if (b) { b.disabled = true; b.textContent = L("Проверяем…", "Tekshirilmoqda…", "Checking…"); } return apiBoot().then(() => { if (apiState !== "ok") renderApiBar(); }); }
     case "auth-resend": return sendCode();
     case "more": shownN += 36; return renderList(true);
     case "seller-all": sellerAll = true; return renderSeller();

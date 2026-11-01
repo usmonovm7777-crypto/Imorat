@@ -488,6 +488,17 @@ test("Bonus points: referral code, welcome after the first delivery, capped cash
   const unpaidShip = (await call("GET", `/api/orders/${o5.data.order.num}`, null, c)).data.order.ships[0].id;
   assert.equal((await call("PATCH", `/api/admin/shipments/${unpaidShip}`, { status: "picked" }, globalThis.ADMIN)).data.error, "unpaid");
   assert.equal((await call("GET", "/api/me/bonus", null, c)).data.points, 13760);
+  // VIP cashback: the rate the checkout shows (BONUS_RATE_VIP, 3%) is the rate that is credited — one setting, not two
+  const v = (await login("996660055")).data.token;
+  assert.equal((await call("POST", "/api/me/vip", { on: true }, v)).status, 200);
+  const qv = (await call("POST", "/api/quote", { lines: [{ id: 1, store: sid, q: 2 }], form: { ...form, name: "VIP", phone: "998996660055" } }, v)).data.quote;
+  assert.ok(qv.goods > 0); assert.equal(qv.cash, Math.round(qv.goods * 0.03), "the checkout promises 3% of the goods");
+  assert.equal((await call("GET", "/api/me/bonus", null, v)).data.rate_vip, 0.03);
+  const ov = await call("POST", "/api/orders", { lines: [{ id: 1, store: sid, q: 2 }], form: { ...form, name: "VIP", phone: "998996660055" } }, v);
+  assert.equal(ov.status, 200, JSON.stringify(ov.data)); await payNow(ov.data.order);
+  const shv = (await call("GET", "/api/seller/summary", null, seller)).data.orders.find(x => x.num === ov.data.order.num).ship_id;
+  for (const st of ["assembling", "ready", "picked"]) assert.equal((await call("PATCH", `/api/seller/shipments/${shv}`, { status: st }, seller)).status, 200);
+  assert.equal((await call("GET", "/api/me/bonus", null, v)).data.points, Math.floor(qv.goods * 0.03), "3% of the goods is credited — the same number the buyer saw");
 });
 
 test("Bonus budget: a monthly cap stops new accruals, refunds of spent points still work", async () => {
@@ -1005,11 +1016,14 @@ test("Card only: no cash, the full address reaches the courier, the buyer watche
   const d3 = mkdtempSync(join(tmpdir(), "imorat-card-"));
   const mk = env => { const cfg = loadConfig({ JWT_SECRET: "x", DB_PATH: join(d3, (env.YANDEX_DELIVERY_TOKEN ? "y" : "n") + ".db"), UPLOADS_DIR: join(d3, "up"), ADMIN_PHONES: "998901111111", ADMIN_MFA: "0", SMS_MODE: "dev", OTP_PER_IP_HOUR: "500", TELEGRAM_BOT_TOKEN: "TGTOKEN", TELEGRAM_API_URL: fakeBase + "/tg", TELEGRAM_POLL_TIMEOUT: "0", ...env }); const a = createApp(cfg, { info() {}, warn() {}, error: console.error }); return a; };
   const run = async (a, fn) => { await new Promise(r => a.listen(0, "127.0.0.1", r)); const b3 = `http://127.0.0.1:${a.address().port}`; const c = async (m, p, body, tok) => { const r = await fetch(b3 + p, { method: m, headers: { "content-type": "application/json", ...(tok ? { authorization: "Bearer " + tok } : {}) }, body: body ? JSON.stringify(body) : undefined }); return { status: r.status, data: await r.json().catch(() => ({})) }; }; const lg = async ph => { const s = await c("POST", "/api/auth/otp/send", { phone: ph }); return (await c("POST", "/api/auth/otp/verify", { phone: ph, code: s.data.dev_code })).data.token; }; try { await fn(c, lg, a); } finally { a.stopJobs(); a.close(); a.closeAllConnections(); a.db.raw.close(); } };
+  let simOrder = "";
   const form = { name: "Карта", phone: "998901234567", mode: "yandex", district: "yunus", street: "ул. Амира Темура, 15", entrance: "3", floor: "4", flat: "27", intercom: "27К", comment: "Позвоните заранее", la: 41.311, lo: 69.279, pay: "payme", help: "one" };
   // 1) no payment keys yet: ordering is closed, not silently switched to cash
   await run(mk({}), async (c, lg) => {
     const t = await lg("998901234567");
     assert.equal((await c("GET", "/api/config")).data.pay_at_store, false);
+    assert.equal((await c("GET", "/api/config")).data.site_url, "https://usmonovm7777-crypto.github.io/Imorat/", "the website address is the server's explicit SITE_URL");
+    const h = (await c("GET", "/api/health")).data; assert.equal(h.name, "imorat-api"); assert.equal(h.contract, 1); assert.equal(h.min_client, 1); assert.match(h.version, /^\d+\.\d+/);
     const r1 = await c("POST", "/api/orders", { lines: [{ id: 1, store: "usta", q: 1 }], form: { ...form, pay: "store", mode: "pickup" } }, t);
     assert.equal(r1.status, 503); assert.equal(r1.data.error, "payments_off");
     assert.equal((await c("POST", "/api/orders", { lines: [{ id: 1, store: "usta", q: 1 }], form }, t)).data.error, "payments_off");
@@ -1033,12 +1047,20 @@ test("Card only: no cash, the full address reaches the courier, the buyer watche
     const admin = await lg("998901111111"); const sh = o.data.order.ships[0].id;
     for (const st of ["assembling", "searching"]) assert.equal((await c("PATCH", `/api/admin/shipments/${sh}`, { status: st }, admin)).status, 200, st);
     let cr = (await c("GET", `/api/orders/${o.data.order.num}/courier?ship=${sh}`, null, t)).data.courier;
-    assert.equal(cr.status, "searching"); assert.equal(cr.pos, null); assert.ok(cr.simulated); assert.equal(cr.to.la, 41.311);
+    assert.equal(cr.status, "searching"); assert.equal(cr.pos, null); assert.ok(cr.unavailable && !cr.simulated, "no Yandex → no coordinates are invented"); assert.equal(cr.to.la, 41.311);
     assert.equal((await c("PATCH", `/api/admin/shipments/${sh}`, { status: "to_store" }, admin)).status, 200);
     cr = (await c("GET", `/api/orders/${o.data.order.num}/courier?ship=${sh}`, null, t)).data.courier;
-    assert.ok(cr.pos && cr.pos.la > 41 && cr.eta_min >= 1, "a simulated courier is on the way to the store");
+    assert.equal(cr.status, "to_store", "the real status is still reported"); assert.equal(cr.pos, null); assert.ok(cr.unavailable); assert.equal(cr.eta_min, undefined, "no made-up ETA either");
     assert.equal((await c("GET", `/api/orders/${o.data.order.num}/courier`, null, seller)).status, 404, "only the buyer sees the courier");
+    simOrder = o.data.order.num;
   });
+  // 2b) the same database on a declared test server (COURIER_SIMULATION=1): the pretend courier moves, and says so
+  await run(mk({ PAYME_MERCHANT_ID: "5e730e8e0b852a417aa49ceb", PAYME_KEY: "PK", COURIER_SIMULATION: "1" }), async (c, lg) => {
+    const t = await lg("998901234567");
+    const cr = (await c("GET", `/api/orders/${simOrder}/courier`, null, t)).data.courier;
+    assert.ok(cr.simulated && cr.pos && cr.pos.la > 41 && cr.eta_min >= 1, "a simulated courier is on the way to the store");
+  });
+  assert.throws(() => loadConfig({ JWT_SECRET: "x", NODE_ENV: "production", ESKIZ_EMAIL: "a", ESKIZ_PASSWORD: "b", COURIER_SIMULATION: "1" }), /test servers only/, "no simulation on a production server");
   // 3) with a Yandex token: the claim is created with porch/floor/flat/door code, statuses follow Yandex, position is live
   await run(mk({ PAYME_MERCHANT_ID: "5e730e8e0b852a417aa49ceb", PAYME_KEY: "PK", YANDEX_DELIVERY_TOKEN: "y", YANDEX_DELIVERY_URL: fakeBase + "/ya" }), async (c, lg, a) => {
     const t = await lg("998901234567"), admin = await lg("998901111111");
@@ -1133,6 +1155,11 @@ test("Sign in with Telegram from the site: ticket → bot asks for the phone →
 test("SMS_MODE=telegram: production start without an SMS contract, sign-in only through the bot, no code leaks", async () => {
   const d5 = mkdtempSync(join(tmpdir(), "imorat-tg-"));
   assert.throws(() => loadConfig({ JWT_SECRET: "x", DB_PATH: join(d5, "a.db"), UPLOADS_DIR: join(d5, "up"), ADMIN_PHONES: "998901111111", SMS_MODE: "telegram" }), /TELEGRAM_BOT_TOKEN/, "the bot is the only door, so its token is required");
+  { // the acquiring rate: one number for every provider, or each provider's contract rate
+    const one = loadConfig({ JWT_SECRET: "x", ACQUIRING_PERCENT: "1.5" }), per = loadConfig({ JWT_SECRET: "x", ACQUIRING_PERCENT: "payme:2,click:1.8" }), def = loadConfig({ JWT_SECRET: "x" });
+    assert.equal(one.acquiringOf("click"), 0.015); assert.equal(per.acquiringOf("click"), 0.018); assert.equal(per.acquiringOf("payme"), 0.02); assert.equal(per.acquiring, 0.02); assert.deepEqual(per.acquiringBy, { payme: 0.02, click: 0.018 });
+    assert.equal(def.acquiringOf("payme"), 0.02); assert.deepEqual(def.acquiringBy, {});
+  }
   assert.throws(() => loadConfig({ JWT_SECRET: "x", DB_PATH: join(d5, "a.db"), UPLOADS_DIR: join(d5, "up"), ADMIN_PHONES: "998901111111", NODE_ENV: "production", API_DOMAIN: "api.test", PUBLIC_URL: "https://api.test", ALLOWED_ORIGINS: "https://x.test" }), /SMS is in dev mode/, "dev codes never reach production");
   const cfg5 = loadConfig({ JWT_SECRET: "x", DB_PATH: join(d5, "b.db"), UPLOADS_DIR: join(d5, "up"), ADMIN_PHONES: "998901111111", NODE_ENV: "production", API_DOMAIN: "api.test", PUBLIC_URL: "https://api.test", ALLOWED_ORIGINS: "https://x.test",
     SMS_MODE: "telegram", TELEGRAM_BOT_TOKEN: "TGTOKEN", TELEGRAM_API_URL: fakeBase + "/tg", TELEGRAM_POLL_TIMEOUT: "0" });

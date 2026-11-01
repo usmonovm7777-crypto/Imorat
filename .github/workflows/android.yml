@@ -104,6 +104,8 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Prepare the Android project (release)
         working-directory: app
+        # www:release also checks the server itself: it must answer /api/health as an Imorat Go server with the same API
+        # contract as this website, not be in SMS dev mode and not seed sample stores — otherwise the build stops here.
         run: |
           npm run www:release
           [ -d android ] || npx cap add android

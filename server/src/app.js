@@ -1,5 +1,5 @@
 import { createServer } from "node:http";
-import { createReadStream, mkdirSync, writeFileSync, statSync, readdirSync, unlinkSync, existsSync } from "node:fs";
+import { createReadStream, mkdirSync, writeFileSync, readFileSync, statSync, readdirSync, unlinkSync, existsSync } from "node:fs";
 import { join, extname } from "node:path";
 import { randomBytes, createHash } from "node:crypto";
 import { gzipSync } from "node:zlib";
@@ -18,6 +18,12 @@ import { createNativePush } from "./push_native.js";
 import { createNotify } from "./notify.js";
 import { newSecret, checkTotp, otpauthUrl } from "./totp.js";
 import { registerMasters } from "./masters.js";
+
+/* API contract: the site and the app declare the same number (API_CONTRACT in index.html). It goes up only when a change
+   breaks older clients; MIN_CLIENT is the oldest client contract this server still serves. The app's release build checks
+   /api/health against its own number before it is allowed to ship, and the running app shows "update the app" on a mismatch. */
+export const API_CONTRACT = 1, MIN_CLIENT = 1;
+const PKG_VERSION = (() => { try { return JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version || "0"; } catch { return "0"; } })();
 import { registerBot } from "./bot.js";
 import { createBonus } from "./bonus.js";
 import { registerStats } from "./stats.js";
@@ -66,7 +72,7 @@ export function createApp(cfg, log = console) {
      acquiring fee — two separate lines in the cabinet. The end of the free months is set when a store is approved. */
   const addMonths = (t, n) => { const d = new Date(t); d.setUTCMonth(d.getUTCMonth() + n); return d.getTime(); };
   const inPromo = (s, at = Date.now()) => !!(s?.free_until && s.free_until > at);
-  const storeRates = s => ({ platform: cfg.commission, acquiring: cfg.acquiring, promo_months: cfg.promoMonths, free_until: s?.free_until || null, promo: inPromo(s) });
+  const storeRates = s => ({ platform: cfg.commission, acquiring: cfg.acquiring, acquiring_by: cfg.acquiringBy, promo_months: cfg.promoMonths, free_until: s?.free_until || null, promo: inPromo(s) });
   // stores that were active before this rule arrived get their free months from the day they were created
   for (const s of db.all("SELECT id, created_at FROM stores WHERE free_until IS NULL AND status='active'")) db.run("UPDATE stores SET free_until=? WHERE id=?", addMonths(s.created_at, cfg.promoMonths), s.id);
   const audit = (req, action, target, details) => db.run("INSERT INTO audit(user_id,action,target,details,ip,created_at) VALUES(?,?,?,?,?,?)", req?.user?.id || null, action, target == null ? null : String(target), details ? JSON.stringify(details) : null, req?.ip || null, Date.now());
@@ -139,13 +145,14 @@ export function createApp(cfg, log = console) {
   const ownerStore = s => ({ ...publicStore(s), payout_to: s.payout_to || "", free_until: s.free_until || null }); // the store's own view adds its payout details and free months
 
   /* ---------- meta ---------- */
-  r.get("/api/health", () => ({ ok: true, time: Date.now() }));
+  r.get("/api/health", () => ({ ok: true, time: Date.now(), name: "imorat-api", version: PKG_VERSION, contract: API_CONTRACT, min_client: MIN_CLIENT }));
   r.get("/api/config", () => ({
     sms: sms.mode, google_client_id: cfg.google.clientId || null, apple_client_id: cfg.apple.clientId || null,
     apple_redirect_uri: cfg.apple.redirectUri || null, ai: !!cfg.ai.key, yandex: !!cfg.yandex.token, vip_free: cfg.vipFree, pay_at_store: cfg.allowPayAtStore,
     payments: cfg.paymentsOnline, telegram_bot: tg.enabled ? tg.username || null : null, telegram_channel: /^@/.test(cfg.channel?.chat || "") ? cfg.channel.chat : null, push_key: push.publicKey,
-    timers: cfg.timers, commission: cfg.commission, acquiring: cfg.acquiring, promo_months: cfg.promoMonths, demo: cfg.demoStores,
-    ymaps_key: cfg.maps.jsKey || null, geo: geo.provider, bonus: cfg.bonus.enabled // the site draws a Yandex map with the key; address search goes through /api/geo
+    timers: cfg.timers, commission: cfg.commission, acquiring: cfg.acquiring, acquiring_by: cfg.acquiringBy, promo_months: cfg.promoMonths, demo: cfg.demoStores,
+    ymaps_key: cfg.maps.jsKey || null, geo: geo.provider, bonus: cfg.bonus.enabled, // the site draws a Yandex map with the key; address search goes through /api/geo
+    site_url: cfg.siteUrl // the public website (SITE_URL): legal pages for the app, the bank's return address — an explicit setting, never derived from the API host
   }));
   /* ---------- address search for the checkout map ---------- */
   const langOf = url => (["ru", "uz", "en"].includes(url.searchParams.get("lang")) ? url.searchParams.get("lang") : "ru");
@@ -295,7 +302,7 @@ export function createApp(cfg, log = console) {
     const form = cleanForm(b.form || {});
     const { lines, problems } = loadLines(db, ref, b.lines, user);
     const yp = await yandexPrices(db, ref, cfg.yandex, lines, form, log);
-    const q = quote(db, ref, { lines, services: b.services || [], bundles: b.bundles || [], form, promo: b.promo, user, yandexPrices: yp, points: cfg.bonus.enabled ? b.points : 0, maxShare: cfg.bonus.maxShare, bonusOn: cfg.bonus.enabled });
+    const q = quote(db, ref, { lines, services: b.services || [], bundles: b.bundles || [], form, promo: b.promo, user, yandexPrices: yp, points: cfg.bonus.enabled ? b.points : 0, maxShare: cfg.bonus.maxShare, bonusOn: cfg.bonus.enabled, rateVip: cfg.bonus.rateVip });
     return { q, form, lines, problems };
   }
   r.post("/api/quote", async req => { lim.hit("quote-ip:" + req.ip, 120, 60_000); const b = await readJson(req); const { q, problems } = await computeQuote(req, b); return { quote: q, problems }; });
@@ -333,7 +340,7 @@ export function createApp(cfg, log = console) {
         // commission and the acquiring fee only on orders paid through the platform; a reservation paid at the store is free for the store.
         // During a store's free months Imorat Go's own commission is 0, the bank's fee on the card payment stays.
         const commission = online && !inPromo(st, now) ? s.lines.reduce((a, l) => a + Math.round(l.price * l.q * rateOf(PCAT.get(l.id) || db.get("SELECT cat FROM products WHERE id=?", l.id)?.cat)), 0) : 0;
-        const acquiring = online ? Math.round(goods * cfg.acquiring) : 0;
+        const acquiring = online ? Math.round(goods * cfg.acquiringOf(form.pay)) : 0; // the contract rate of the provider the buyer pays through
         const start = storeStartAt(st, now);
         const st0 = online ? "unpaid" : "new";
         db.run("INSERT INTO shipments(order_id,store_id,tariff,price,kg,dist,lines,status,status_at,history,goods,commission,acquiring,start_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
@@ -656,7 +663,7 @@ export function createApp(cfg, log = console) {
     if (status === "searching" && sh.tariff) courier.order(db.get("SELECT * FROM shipments WHERE id=?", sh.id)).catch(e => { log.warn("[courier] order", e.message); notify.admins(`🚚 Не удалось вызвать курьера Яндекса для отправления #${sh.id}: ${String(e.message).slice(0, 160).replace(/[<>&]/g, "")}`); });
     audit(req, "ship." + status, sh.id);
   }
-  /* the buyer watches the courier: live position from Yandex or the simulation */
+  /* the buyer watches the courier: the live position from Yandex, or "unavailable" (real status, no invented coordinates) */
   r.get("/api/orders/:num/courier", async (req, res, p, url) => {
     const u = need(req), o = db.get("SELECT * FROM orders WHERE num=? AND user_id=?", p.num, u.id);
     if (!o) throw new HttpError(404, "not_found", "Order not found");
@@ -814,7 +821,7 @@ export function createApp(cfg, log = console) {
     const m = url.searchParams.get("month");
     const rows = db.all("SELECT id, name, status, free_until FROM stores ORDER BY name").map(s => ({ id: s.id, name: s.name, status: s.status, free_until: s.free_until, promo: inPromo(s), ...storeFinance(s.id, m) })).filter(x => x.orders || x.balance || x.commission_total || x.acquiring_total);
     const t = rows.reduce((a, x) => ({ goods: a.goods + x.goods, commission: a.commission + x.commission, acquiring: a.acquiring + x.acquiring, balance: a.balance + x.balance }), { goods: 0, commission: 0, acquiring: 0, balance: 0 });
-    return { month: monthRange(m)[2], rates: { platform: cfg.commission, acquiring: cfg.acquiring, promo_months: cfg.promoMonths }, stores: rows, totals: t, settlements: db.all("SELECT st.*, s.name FROM settlements st LEFT JOIN stores s ON s.id=st.store_id ORDER BY st.created_at DESC LIMIT 30"),
+    return { month: monthRange(m)[2], rates: { platform: cfg.commission, acquiring: cfg.acquiring, acquiring_by: cfg.acquiringBy, promo_months: cfg.promoMonths }, stores: rows, totals: t, settlements: db.all("SELECT st.*, s.name FROM settlements st LEFT JOIN stores s ON s.id=st.store_id ORDER BY st.created_at DESC LIMIT 30"),
       payouts: db.all("SELECT p.*, s.name FROM payouts p LEFT JOIN stores s ON s.id=p.store_id ORDER BY p.status='requested' DESC, p.requested_at DESC LIMIT 60") };
   });
   /* the store asks for its money from card-paid orders; an admin transfers it and marks the request paid */
