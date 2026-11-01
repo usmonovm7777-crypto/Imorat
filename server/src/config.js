@@ -57,10 +57,19 @@ export function loadConfig(env = process.env) {
       eskizEmail: env.ESKIZ_EMAIL || "",
       eskizPassword: env.ESKIZ_PASSWORD || "",
       eskizFrom: env.ESKIZ_FROM || "4546",
-      template: env.SMS_TEMPLATE || "Imorat Go: tasdiqlash kodi {code}. Kodni hech kimga bermang."
+      template: env.SMS_TEMPLATE || "Qurilish Go: tasdiqlash kodi {code}. Kodni hech kimga bermang."
     },
     google: { clientId: env.GOOGLE_CLIENT_ID || "", jwksUrl: env.GOOGLE_JWKS_URL || "https://www.googleapis.com/oauth2/v3/certs" },
     apple: { clientId: env.APPLE_CLIENT_ID || "", redirectUri: env.APPLE_REDIRECT_URI || "", jwksUrl: env.APPLE_JWKS_URL || "https://appleid.apple.com/auth/keys" },
+    /* AI 3D model of a product from the seller's photo (Stability AI image-to-3D). Off without a key; each model is paid by the owner:
+       stable-point-aware-3d = 4 credits, stable-fast-3d = 10 credits (1 credit = $0.01, docs.stability.ai/pricing); a daily cap per store */
+    model3d: {
+      key: env.STABILITY_API_KEY || "",
+      url: (env.STABILITY_API_URL || "https://api.stability.ai").replace(/\/$/, ""),
+      endpoint: ["stable-point-aware-3d", "stable-fast-3d"].includes(env.MODEL3D_ENDPOINT) ? env.MODEL3D_ENDPOINT : "stable-point-aware-3d",
+      perDay: Number(env.MODEL3D_PER_STORE_DAY) || 20,
+      timeoutMs: Number(env.MODEL3D_TIMEOUT_MS) || 180_000
+    },
     ai: {
       key: env.ANTHROPIC_API_KEY || "",
       model: env.ANTHROPIC_MODEL || "claude-sonnet-5-5",
@@ -82,9 +91,9 @@ export function loadConfig(env = process.env) {
     // Seller deadlines (minutes): reminder, SMS, auto-cancel if not accepted; hours to hand the order over
     timers: { remind: Number(env.ACCEPT_REMIND_MIN) || 5, sms: Number(env.ACCEPT_SMS_MIN) || 10, cancel: Number(env.ACCEPT_TIMEOUT_MIN) || 20, handover: Number(env.HANDOVER_HOURS) || 4 },
     /* What a store pays on a card-paid order, from the goods money:
-       - Imorat Go's own commission by category, %: "*:1" (a category may differ: "build:1,*:2")
+       - Qurilish Go's own commission by category, %: "*:1" (a category may differ: "build:1,*:2")
        - the Payme/Click acquiring fee that the bank charges on the payment, passed on as it is: 2%
-       - a new store's first PROMO_MONTHS after approval: Imorat Go's part is 0%, the acquiring fee stays */
+       - a new store's first PROMO_MONTHS after approval: Qurilish Go's part is 0%, the acquiring fee stays */
     commission: Object.fromEntries(String(env.COMMISSION || "*:1").split(",").map(x => x.split(":")).filter(x => x.length === 2).map(([k, v]) => [k.trim(), Math.round(Math.max(0, Number(v) || 0) * 1e4) / 1e6])),
     // "2" = the same for every provider; "payme:2,click:1.8" = each provider's contract rate (the one without a name is the default)
     ...(() => { const by = {}; let def = null; for (const x of String(env.ACQUIRING_PERCENT ?? "2").split(",").map(v => v.trim()).filter(Boolean)) { const [k, v] = x.includes(":") ? x.split(":") : ["*", x]; const n = Math.round(Math.max(0, Number(v) || 0) * 1e4) / 1e6; if (k.trim() === "*") def = n; else by[k.trim()] = n; }
@@ -99,7 +108,7 @@ export function loadConfig(env = process.env) {
     nativePush: loadNativePushConfig(env), // FCM / APNs keys for the Android and iPhone app (see push_native.js)
     // sign-in for app-store reviewers: "998900000000:123456" — the code is fixed, no SMS is sent; several pairs separated by commas
     reviewAccounts: Object.fromEntries(String(env.REVIEW_ACCOUNTS || "").split(",").map(x => x.trim().split(":")).filter(x => x.length === 2 && /^998\d{9}$/.test(x[0]) && /^\d{4,8}$/.test(x[1]))),
-    smsSellerTemplate: env.SMS_SELLER_TEMPLATE || "Imorat Go: yangi buyurtma {num}. Iltimos, qabul qiling.",
+    smsSellerTemplate: env.SMS_SELLER_TEMPLATE || "Qurilish Go: yangi buyurtma {num}. Iltimos, qabul qiling.",
     channel: { chat: env.TELEGRAM_CHANNEL ?? "@imoratgo", hour: Number(env.CHANNEL_HOUR ?? 10), dropPct: Number(env.CHANNEL_DROP_PCT ?? 0.05) },
     // Mobile operators in Uzbekistan put many phones behind one IP (CGNAT), so per-IP limits are generous;
     // the real protection is per phone number (5 codes an hour) and per account.
@@ -107,7 +116,7 @@ export function loadConfig(env = process.env) {
     ratePerIpMin: Number(env.RATE_PER_IP_MIN || 3000),
     /* the points programme is switched off until the owner turns it on (BONUS_ON=1): no cashback, no spending, no referral rewards */
     bonus: { enabled: env.BONUS_ON === "1", rate: Number(env.BONUS_RATE ?? 0.01), ratePro: Number(env.BONUS_RATE_PRO ?? 0.02), rateVip: Number(env.BONUS_RATE_VIP ?? 0.03), maxShare: Number(env.BONUS_MAX_SHARE ?? 0.2), referral: Number(env.BONUS_REFERRAL ?? 30000), welcome: Number(env.BONUS_WELCOME ?? 30000), maxCashback: Number(env.BONUS_MAX_CASHBACK ?? 200000), maxInvites: Number(env.BONUS_MAX_INVITES ?? 20), monthlyBudget: Math.max(0, Number(env.BONUS_MONTHLY_BUDGET ?? 0) || 0) },
-    smsMasterTemplate: env.SMS_MASTER_TEMPLATE ?? "Imorat Go: sizga ustalik uchun yangi so‘rov keldi. Saytda qabul qiling.",
+    smsMasterTemplate: env.SMS_MASTER_TEMPLATE ?? "Qurilish Go: sizga ustalik uchun yangi so‘rov keldi. Saytda qabul qiling.",
     // Online card payment: a provider is offered once its keys are set; PAYMENTS (e.g. "payme") can narrow the list
     payme: { id: env.PAYME_MERCHANT_ID || "", key: env.PAYME_KEY || "", testKey: env.PAYME_TEST_KEY || "", url: (env.PAYME_CHECKOUT_URL || "https://checkout.paycom.uz").replace(/\/$/, "") },
     click: { serviceId: env.CLICK_SERVICE_ID || "", merchantId: env.CLICK_MERCHANT_ID || "", secret: env.CLICK_SECRET_KEY || "", userId: env.CLICK_MERCHANT_USER_ID || "" },
@@ -115,7 +124,7 @@ export function loadConfig(env = process.env) {
     /* "stage 0": no payment provider yet and pay-at-store allowed — buyers pay the store on receipt, the platform holds no money */
     get payOnReceipt() { return this.allowPayAtStore && !this.paymentsOnline.length; },
     /* who delivers: Yandex when its token is set; in stage 0 (pay on receipt) the store itself with its own courier, price
-       agreed with the buyer; with card payments but no Yandex yet — Imorat Go arranges the courier by hand at the tariff price */
+       agreed with the buyer; with card payments but no Yandex yet — Qurilish Go arranges the courier by hand at the tariff price */
     get deliveryBy() { return this.yandex.token ? "yandex" : this.payOnReceipt ? "store" : "platform"; },
     get paymentsOnline() { const have = [...(this.payme.id && this.payme.key ? ["payme"] : []), ...(this.click.serviceId && this.click.secret ? ["click"] : [])]; const want = list(env.PAYMENTS); return want.length ? have.filter(p => want.includes(p)) : have; }
   };

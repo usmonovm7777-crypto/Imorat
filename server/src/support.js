@@ -2,7 +2,7 @@ import { HttpError, bad, readJson, str } from "./http.js";
 import { escHtml as h } from "./telegram.js";
 import { createHash } from "node:crypto";
 
-/* Support chat with the Imorat Go team. A signed-in person writes from any page; everyone who runs the place
+/* Support chat with the Qurilish Go team. A signed-in person writes from any page; everyone who runs the place
    (owner and helpers) sees the threads in the panel and answers; the person hears the answer in Telegram / push
    and sees it in the chat. One thread per person; messages are plain text, at most 1000 characters. */
 export const SUPPORT_TOPICS = ["order", "cancel", "payment", "delivery", "seller", "other"];
@@ -11,7 +11,7 @@ export function registerSupport({ r, db, cfg, need, needAdmin, lim, tg, push, no
     CREATE TABLE IF NOT EXISTS support_msgs(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT NOT NULL, staff_id TEXT, text TEXT NOT NULL, topic TEXT, order_num TEXT, created_at INTEGER NOT NULL, seen_user INTEGER NOT NULL DEFAULT 0, seen_staff INTEGER NOT NULL DEFAULT 0);
     CREATE INDEX IF NOT EXISTS support_msgs_u ON support_msgs(user_id, id);`);
   const safe = p => Promise.resolve(p).catch(e => log.warn("[support]", e.message));
-  const out = m => ({ id: m.id, from: m.staff_id ? "staff" : "user", text: m.text, topic: m.topic, order: m.order_num, at: m.created_at, staff_name: m.staff_id ? (m.sname || "Imorat Go") : null });
+  const out = m => ({ id: m.id, from: m.staff_id ? "staff" : "user", text: m.text, topic: m.topic, order: m.order_num, at: m.created_at, staff_name: m.staff_id ? (m.sname || "Qurilish Go") : null });
   const thread = uid => db.all("SELECT m.*, s.name sname FROM support_msgs m LEFT JOIN users s ON s.id=m.staff_id WHERE m.user_id=? ORDER BY m.id DESC LIMIT 200", uid).reverse().map(out);
   /* a visitor without an account writes too: the page keeps a random key, the server keeps only its hash as the thread id */
   const guestId = tok => typeof tok === "string" && /^[A-Za-z0-9_-]{24,64}$/.test(tok) ? "g_" + createHash("sha256").update(tok).digest("hex").slice(0, 32) : null;
@@ -33,7 +33,7 @@ export function registerSupport({ r, db, cfg, need, needAdmin, lim, tg, push, no
     const u = need(req), b = await readJson(req);
     lim.hit("sup:" + u.id, 20, 3600_000);
     const t = text(b), topic = SUPPORT_TOPICS.includes(b.topic) ? b.topic : null;
-    const num = typeof b.order === "string" && /^IM-\d{4,8}$/.test(b.order) && db.get("SELECT 1 FROM orders WHERE num=? AND user_id=?", b.order, u.id) ? b.order : null;
+    const num = typeof b.order === "string" && /^(QG|IM)-\d{4,8}$/.test(b.order) && db.get("SELECT 1 FROM orders WHERE num=? AND user_id=?", b.order, u.id) ? b.order : null;
     const first = !db.get("SELECT 1 FROM support_msgs WHERE user_id=? AND created_at>?", u.id, Date.now() - 30 * 60000);
     db.run("INSERT INTO support_msgs(user_id,text,topic,order_num,created_at,seen_user) VALUES(?,?,?,?,?,1)", u.id, t, topic, num, Date.now());
     // the team hears every message of a new conversation and then at most one alert every 30 minutes per person
@@ -80,9 +80,9 @@ export function registerSupport({ r, db, cfg, need, needAdmin, lim, tg, push, no
     const t = text(b);
     db.run("INSERT INTO support_msgs(user_id,staff_id,text,created_at,seen_staff) VALUES(?,?,?,?,1)", u.id, a.id, t, Date.now());
     db.run("UPDATE support_msgs SET seen_staff=1 WHERE user_id=? AND staff_id IS NULL", u.id);
-    const msg = `💬 Поддержка Imorat Go:\n${t}\n\nОтветить можно на сайте: ${cfg.siteUrl}#support`;
+    const msg = `💬 Поддержка Qurilish Go:\n${t}\n\nОтветить можно на сайте: ${cfg.siteUrl}#support`;
     if (u.tg_chat) safe(tg.send(u.tg_chat, h(msg)));
-    if (!String(u.id).startsWith("g_")) safe(push.toUser(u.id, { title: "Поддержка Imorat Go", body: t.slice(0, 140), url: `${cfg.siteUrl}#support`, tag: "support" }));
+    if (!String(u.id).startsWith("g_")) safe(push.toUser(u.id, { title: "Поддержка Qurilish Go", body: t.slice(0, 140), url: `${cfg.siteUrl}#support`, tag: "support" }));
     return { messages: thread(u.id) };
   });
 }

@@ -41,8 +41,8 @@ export function createCourier({ db, cfg, ref, log = console }) {
     // what the driver needs to know besides the address: whether the car can reach the entrance and whether there is a lift
     const notes = [f.access === "far" ? "машина не подъедет к подъезду — разгрузка у ближайшей точки" : "", Number(f.floor) > 1 && !f.private ? (f.elevator === false ? "лифта нет" : f.elevator === true ? "есть лифт" : "") : "", loaders ? "нужна помощь с разгрузкой" : "покупатель принимает у машины"].filter(Boolean);
     const body = {
-      comment: `Imorat Go, заказ ${o.num}. ${notes.join("; ")}${f.comment ? ". " + f.comment : ""}`,
-      emergency_contact: { name: "Imorat Go", phone: cfg.supportPhone || f.phone },
+      comment: `Qurilish Go, заказ ${o.num}. ${notes.join("; ")}${f.comment ? ". " + f.comment : ""}`,
+      emergency_contact: { name: "Qurilish Go", phone: cfg.supportPhone || f.phone },
       items: lines.map((l, i) => ({ pickup_point: 1, droppof_point: 2, title: prods.find(n => n.id === l.id)?.ru || "Товар", quantity: l.q, cost_value: String(l.price), cost_currency: "UZS", weight: Math.max(0.1, Math.round((Number(prods.find(n => n.id === l.id)?.kg) || l.kg || 1) * 100) / 100), size: sizeOf(prods.find(n => n.id === l.id)), extra_id: String(l.id) })),
       route_points: [
         { point_id: 1, visit_order: 1, type: "source", address: { fullname: `Ташкент, ${s.addr || D[s.district]?.ru || ""}`, coordinates: [sp.lo, sp.la], comment: s.landmark || "" }, contact: { name: s.name, phone: "+" + s.phone }, skip_confirmation: true },

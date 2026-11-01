@@ -127,7 +127,7 @@ export function tempPassword() { const A = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMN
 
 /* ---------- Users ---------- */
 export const newUserId = () => "u" + Date.now().toString(36) + randomBytes(3).toString("hex");
-/* role: "owner" (the person who runs Imorat Go: everything), "admin" (a helper: moderation and orders, no money or analytics) or null */
+/* role: "owner" (the person who runs Qurilish Go: everything), "admin" (a helper: moderation and orders, no money or analytics) or null */
 export function publicUser(u, admins = [], staff = null) {
   if (!u) return null;
   const role = staff && !staff.disabled ? staff.role : (!!u.phone && admins.includes(u.phone) ? "owner" : null);

@@ -1,4 +1,4 @@
-"""Imorat Go logo: SVG with outlined type (no font needed to view), several layouts and colour versions.
+"""Qurilish Go logo: SVG with outlined type (no font needed to view), several layouts and colour versions.
 Writes to ./out: wordmark + mark (horizontal), stacked, mark only, monochrome, inverted, app icons, favicon, OG image."""
 import os, math
 from fontTools.ttLib import TTFont
@@ -29,7 +29,7 @@ def word_paths(text, size, x=0.0, y=0.0, tracking=-0.015, fill=INK):
     return "".join(pen_out), cx - x
 
 def mark(x, y, size, cols=(TEAL, ORANGE, DTEAL, TEAL), gap=0.09, radius=0.11, variant="grid", arrow_col="#FFFFFF"):
-    """The Imorat Go mark: four rounded tiles in a grid; in the "go" variant the orange tile breaks out to the right."""
+    """The Qurilish Go mark: four rounded tiles in a grid; in the "go" variant the orange tile breaks out to the right."""
     c = size * (1 - gap) / 2; g = size * gap; r = size * radius; out = []
     pos = [(0, 0), (c + g, 0), (0, c + g), (c + g, c + g)]
     if variant == "go":
@@ -41,7 +41,7 @@ def mark(x, y, size, cols=(TEAL, ORANGE, DTEAL, TEAL), gap=0.09, radius=0.11, va
             out.append(f'<path d="M{cx - k * 0.55:.2f} {cy - k:.2f} L{cx + k * 0.45:.2f} {cy:.2f} L{cx - k * 0.55:.2f} {cy + k:.2f}" fill="none" stroke="{arrow_col}" stroke-width="{c * 0.13:.2f}" stroke-linecap="round" stroke-linejoin="round"/>')
     return "".join(out)
 
-def svg(w, h, body, bg=None, title="Imorat Go"):
+def svg(w, h, body, bg=None, title="Qurilish Go"):
     bgrect = f'<rect width="{w}" height="{h}" fill="{bg}"/>' if bg else ""
     return f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {w} {h}" width="{w}" height="{h}" role="img" aria-label="{title}">{bgrect}{body}</svg>'
 

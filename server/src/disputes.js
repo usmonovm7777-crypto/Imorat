@@ -15,7 +15,7 @@ export function registerDisputes({ r, db, cfg, need, needSeller, needAdmin, isAd
   const tell = (userId, text, url) => {
     const u = userId && db.get("SELECT * FROM users WHERE id=?", userId); if (!u) return;
     if (u.tg_chat) safe(tg.send(u.tg_chat, text));
-    safe(push.toUser(u.id, { title: "Imorat Go", body: text.replace(/<[^>]+>/g, "").slice(0, 160), url }));
+    safe(push.toUser(u.id, { title: "Qurilish Go", body: text.replace(/<[^>]+>/g, "").slice(0, 160), url }));
   };
   const admins = text => { for (const a of db.all(`SELECT u.* FROM users u LEFT JOIN staff s ON s.user_id=u.id WHERE u.tg_chat IS NOT NULL AND (u.phone IN (${cfg.admins.map(() => "?").join(",") || "''"}) OR (s.user_id IS NOT NULL AND s.disabled=0))`, ...cfg.admins)) safe(tg.send(a.tg_chat, text)); };
 
@@ -35,7 +35,7 @@ export function registerDisputes({ r, db, cfg, need, needSeller, needAdmin, isAd
     const id = Number(db.run("INSERT INTO disputes(order_id,ship_id,store_id,user_id,reason,text,photos,status,created_at,updated_at) VALUES(?,?,?,?,?,?,'[]','open',?,?)", o.id, sh.id, sh.store_id, u.id, b.reason, text, now, now).lastInsertRowid);
     audit(req, "dispute.open", id, { order: o.num, store: sh.store_id });
     const st = db.get("SELECT * FROM stores WHERE id=?", sh.store_id);
-    tell(st?.owner_id, `⚠️ <b>Жалоба по заказу ${h(o.num)}</b>: ${REASON_RU[b.reason]}\n«${h(text)}»\n\nОтветьте покупателю в кабинете продавца — модератор Imorat Go тоже видит жалобу.`, `${cfg.siteUrl}#seller`);
+    tell(st?.owner_id, `⚠️ <b>Жалоба по заказу ${h(o.num)}</b>: ${REASON_RU[b.reason]}\n«${h(text)}»\n\nОтветьте покупателю в кабинете продавца — модератор Qurilish Go тоже видит жалобу.`, `${cfg.siteUrl}#seller`);
     admins(`⚠️ Жалоба #${id} · заказ ${h(o.num)} · ${h(st?.name || "")}: ${REASON_RU[b.reason]}\n«${h(text.slice(0, 300))}»`);
     return { problem: out(db.get(q + " WHERE d.id=?", id)) };
   });

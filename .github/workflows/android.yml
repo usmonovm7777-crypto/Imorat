@@ -64,11 +64,11 @@ jobs:
       - name: Publish to the "app-latest" release (download from a phone)
         env: { GH_TOKEN: "${{ github.token }}" }
         run: |
-          cp app/android/app/build/outputs/apk/debug/app-debug.apk Imorat.apk
+          cp app/android/app/build/outputs/apk/debug/app-debug.apk QurilishGo.apk
           MODE=$([ -n "$IMORAT_API" ] && echo "сервер $IMORAT_API" || echo "ДЕМО-режим: сервер не указан, заказы и оплата не настоящие")
-          gh release view app-latest >/dev/null 2>&1 || gh release create app-latest --prerelease --title "Imorat Go — Android (тестовая сборка)" --notes "Тестовая сборка приложения, не для магазинов. Скачайте Imorat.apk на телефон Android и установите."
-          gh release edit app-latest --notes "Тестовая сборка приложения ($MODE). Не для Google Play — магазинная сборка (.aab) делается отдельно. Скачайте Imorat.apk на телефон Android и установите. Обновлено: $(date -u +%F\ %H:%M) UTC, коммит ${GITHUB_SHA::7}."
-          gh release upload app-latest Imorat.apk --clobber
+          gh release view app-latest >/dev/null 2>&1 || gh release create app-latest --prerelease --title "Qurilish Go — Android (тестовая сборка)" --notes "Тестовая сборка приложения, не для магазинов. Скачайте QurilishGo.apk на телефон Android и установите."
+          gh release edit app-latest --notes "Тестовая сборка приложения ($MODE). Не для Google Play — магазинная сборка (.aab) делается отдельно. Скачайте QurilishGo.apk на телефон Android и установите. Обновлено: $(date -u +%F\ %H:%M) UTC, коммит ${GITHUB_SHA::7}."
+          gh release upload app-latest QurilishGo.apk --clobber
 
   aab:
     if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.kind == 'release')
@@ -104,7 +104,7 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Prepare the Android project (release)
         working-directory: app
-        # www:release also checks the server itself: it must answer /api/health as an Imorat Go server with the same API
+        # www:release also checks the server itself: it must answer /api/health as an Qurilish Go server with the same API
         # contract as this website, not be in SMS dev mode and not seed sample stores — otherwise the build stops here.
         run: |
           npm run www:release

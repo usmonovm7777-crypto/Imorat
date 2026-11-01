@@ -1,14 +1,14 @@
 {
-  "name": "Imorat Go — строительные магазины Ташкента",
-  "short_name": "Imorat Go",
+  "name": "Qurilish Go — строительные магазины Ташкента",
+  "short_name": "Qurilish Go",
   "description": "Стройматериалы из магазинов Ташкента: сравнение цен, Usta AI, калькуляторы ремонта и доставка.",
   "id": "./",
   "start_url": "./?source=app",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#F3F5F2",
-  "theme_color": "#0B6E69",
+  "background_color": "#F6F4F0",
+  "theme_color": "#B8480A",
   "lang": "ru",
   "categories": ["shopping", "business"],
   "icons": [

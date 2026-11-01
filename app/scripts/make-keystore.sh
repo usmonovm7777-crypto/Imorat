@@ -6,7 +6,7 @@ set -euo pipefail
 OUT=${1:-imorat-upload.jks}; ALIAS=${2:-imorat}
 [ -e "$OUT" ] && { echo "$OUT already exists — not overwriting"; exit 1; }
 read -r -s -p "Keystore password (12+ characters): " P1; echo
-keytool -genkeypair -v -keystore "$OUT" -alias "$ALIAS" -keyalg RSA -keysize 2048 -validity 10000 -storepass "$P1" -keypass "$P1" -dname "CN=Imorat Go, O=Imorat Go, L=Tashkent, C=UZ"
+keytool -genkeypair -v -keystore "$OUT" -alias "$ALIAS" -keyalg RSA -keysize 2048 -validity 10000 -storepass "$P1" -keypass "$P1" -dname "CN=Qurilish Go, O=Qurilish Go, L=Tashkent, C=UZ"
 echo; echo "GitHub → Settings → Secrets and variables → Actions → New repository secret:"
 echo "  ANDROID_KEYSTORE_BASE64   = (contents of $OUT.base64 below)"
 echo "  ANDROID_KEYSTORE_PASSWORD = the password you typed"

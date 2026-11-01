@@ -1,4 +1,4 @@
-/* Applies Imorat Go's native settings to the generated Android project (android/ is created by `npx cap add android`
+/* Applies Qurilish Go's native settings to the generated Android project (android/ is created by `npx cap add android`
    and is not committed). Safe to run again — every change checks whether it is already there.
    - version:   versionCode / versionName from version.json
    - deep link: imoratgo://… (the way back from the bank page) and the notification permission for Android 13+

@@ -34,7 +34,7 @@ export function createGeo({ cfg, log = console }) {
     const line = road ? `${road}${house ? ", " + house : ""}` : name || String(x.display_name || "").split(",").slice(0, 2).join(",").trim();
     return { label: name && road && name !== road ? `${name} · ${line}` : line, sub: [a.suburb && a.suburb !== road ? a.suburb : "", a.city_district || a.county || ""].filter(Boolean).join(", "), street: line, la: +(+x.lat).toFixed(6), lo: +(+x.lon).toFixed(6), kind: x.addresstype || x.type || "" };
   };
-  const osmHeaders = { "User-Agent": `ImoratGo/1.0 (${cfg.siteUrl || "https://imorat.uz"})`, "Accept-Language": "ru,uz;q=0.8,en;q=0.5" };
+  const osmHeaders = { "User-Agent": `QurilishGo/1.0 (${cfg.siteUrl || "https://imorat.uz"})`, "Accept-Language": "ru,uz;q=0.8,en;q=0.5" };
   const box = `${TASHKENT.lo - TASHKENT.spanLo / 2},${TASHKENT.la + TASHKENT.spanLa / 2},${TASHKENT.lo + TASHKENT.spanLo / 2},${TASHKENT.la - TASHKENT.spanLa / 2}`;
   const osmSearch = q => polite(async () => (await get(`${Y.nominatim}/search?format=jsonv2&addressdetails=1&namedetails=1&limit=7&countrycodes=uz&viewbox=${box}&bounded=1&q=${encodeURIComponent(q)}`, osmHeaders)).map(osmItem));
   const osmReverse = (la, lo) => polite(async () => { const j = await get(`${Y.nominatim}/reverse?format=jsonv2&addressdetails=1&zoom=18&lat=${la}&lon=${lo}`, osmHeaders); return j && !j.error ? [osmItem(j)] : []; });

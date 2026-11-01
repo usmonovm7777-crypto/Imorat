@@ -10,6 +10,7 @@ import { createApp, addMonthsClamped } from "../src/app.js";
 import { totp } from "../src/totp.js";
 import { hashPassword, verifyPassword } from "../src/auth.js";
 import { createECDH, createDecipheriv, hkdfSync } from "node:crypto";
+import { boxGlb, pngRGBA } from "./glb.mjs";
 
 /* ---- fake external services: Eskiz, Yandex, Anthropic, Google JWKS ---- */
 const { privateKey, publicKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
@@ -157,7 +158,7 @@ test("order: server prices, tiers, promo, stock, cancel", async () => {
   const before = (await call("GET", "/api/catalog")).data.products.find(p => p.id === 1).offers.find(o => o.store === "usta").stock;
   const o = await call("POST", "/api/orders", { ...cart, expected_total: q.data.quote.total }, data.token);
   assert.equal(o.status, 200, JSON.stringify(o.data));
-  assert.match(o.data.order.num, /^IM-1\d{5}$/);
+  assert.match(o.data.order.num, /^QG-1\d{5}$/);
   assert.equal(o.data.order.pay_status, "pending"); assert.ok(o.data.order.pay_url, "delivery is paid by card: a checkout link comes back");
   const afterStock = (await call("GET", "/api/catalog")).data.products.find(p => p.id === 1).offers.find(o => o.store === "usta").stock;
   assert.equal(afterStock, before - 10);
@@ -299,7 +300,7 @@ test("Telegram: link seller, order arrives with buttons, accept from Telegram", 
   assert.equal(o.status, 200, JSON.stringify(o.data));
   const ship = o.data.order.ships[0];
   assert.ok(ship.accept_by > Date.now());
-  const msg = await until(() => tgSent.find(x => x.m === "sendMessage" && x.chat_id === "555" && /заказ IM-/.test(x.text)));
+  const msg = await until(() => tgSent.find(x => x.m === "sendMessage" && x.chat_id === "555" && /заказ QG-/.test(x.text)));
   assert.equal(msg.reply_markup.inline_keyboard[0][0].callback_data, `acc:${ship.id}`);
   tgUpdates.push({ update_id: 2, callback_query: { id: "cb1", data: `acc:${ship.id}`, message: { chat: { id: 999 } } } });
   await until(() => tgSent.some(x => x.m === "answerCallbackQuery" && x.callback_query_id === "cb1"));
@@ -742,7 +743,7 @@ test("Telegram bot: search, sign-in by contact, request to a master with buttons
   const sentTo = (chat, re) => tgSent.filter(x => String(x.chat_id) === String(chat) && re.test(x.text || ""));
   // welcome with the menu
   send(7001, { text: "/start" });
-  const w = await until(() => sentTo(7001, /Imorat/)[0]);
+  const w = await until(() => sentTo(7001, /Qurilish/)[0]);
   assert.ok(w.reply_markup.keyboard.flat().some(b => b.request_contact), "sign-in button for a new chat");
   // search with a typo and in Uzbek Latin
   send(7001, { text: "перфаратор" });
@@ -818,7 +819,7 @@ test("Telegram bot: search, sign-in by contact, request to a master with buttons
   await until(() => sentTo(7001, /Topildi[\s\S]*Laminat/).length);
   // English: a chat whose Telegram is in English starts in English; menu, search and pros are translated
   tgUpdates.push({ update_id: ++uid, message: { chat: { id: 7003, type: "private" }, from: { id: 7003, language_code: "en" }, text: "/start" } });
-  const en = await until(() => sentTo(7003, /I am the <b>Imorat Go<\/b> bot/)[0]);
+  const en = await until(() => sentTo(7003, /I am the <b>Qurilish Go<\/b> bot/)[0]);
   assert.ok(en.reply_markup.keyboard.flat().some(b => b.text === "🔎 Find a product"));
   send(7003, { text: "cement" });
   const es = await until(() => sentTo(7003, /Found: <b>\d+<\/b>/)[0]);
@@ -857,7 +858,7 @@ test("Card payment: Payme and Click callbacks, store sees the order only after t
   const rpc = (method, params, auth = "Paycom:PAYME_SECRET") => fetch(base + "/api/pay/payme", { method: "POST", headers: { "content-type": "application/json", authorization: "Basic " + Buffer.from(auth).toString("base64") }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }) }).then(r => r.json());
   assert.equal((await rpc("CheckPerformTransaction", { amount: total * 100, account: { order: num } }, "Paycom:wrong")).error.code, -32504);
   assert.equal((await rpc("CheckPerformTransaction", { amount: total * 100 + 100, account: { order: num } })).error.code, -31001);
-  assert.equal((await rpc("CheckPerformTransaction", { amount: total * 100, account: { order: "IM-1" } })).error.code, -31050);
+  assert.equal((await rpc("CheckPerformTransaction", { amount: total * 100, account: { order: "QG-1" } })).error.code, -31050);
   assert.deepEqual((await rpc("CheckPerformTransaction", { amount: total * 100, account: { order: num } })).result, { allow: true });
   const t1 = Date.now();
   const cr = await rpc("CreateTransaction", { id: "pm-1", time: t1, amount: total * 100, account: { order: num } });
@@ -939,8 +940,8 @@ test("Finance with card payments: money held once, a partner's share survives an
   const fin = async (tok) => (await call("GET", "/api/seller/summary", null, tok)).data.finance;
   const ship = async (tok, num) => (await call("GET", "/api/seller/summary", null, tok)).data.orders.find(x => x.num === num);
   const advance = async (tok, num, states) => { const s = await ship(tok, num); for (const st of states) assert.equal((await call("PATCH", `/api/seller/shipments/${s.ship_id}`, { status: st }, tok)).status, 200, st); };
-  // 1) one store, 100 000 by card: Imorat Go's commission 1% = 1 000 and the bank's acquiring fee 2% = 2 000 are two separate lines;
-  //    Imorat Go holds 100 000 and owes the store 97 000 — not 94 000
+  // 1) one store, 100 000 by card: Qurilish Go's commission 1% = 1 000 and the bank's acquiring fee 2% = 2 000 are two separate lines;
+  //    Qurilish Go holds 100 000 and owes the store 97 000 — not 94 000
   const rates = (await call("GET", "/api/seller/summary", null, sellerA)).data.rates;
   assert.deepEqual(rates.platform, { "*": 0.01 }); assert.equal(rates.acquiring, 0.02); assert.equal(rates.promo, false);
   const o1 = (await call("POST", "/api/orders", { lines: [{ id: 1, store: A, q: 1 }], form }, buyer)).data.order;
@@ -957,7 +958,7 @@ test("Finance with card payments: money held once, a partner's share survives an
   const adminFin = (await call("GET", "/api/admin/finance", null, globalThis.ADMIN)).data;
   const req1 = adminFin.payouts.find(x => x.id === pr.data.payout.id); assert.equal(req1.status, "requested"); assert.equal(req1.payout_to, "8600 1234 5678 9012");
   assert.equal((await call("PATCH", `/api/admin/payouts/${req1.id}`, { status: "paid" }, globalThis.ADMIN)).status, 200);
-  f = await fin(sellerA); assert.equal(f.payout_paid, 50000); assert.equal(f.payout_available, 47000); assert.equal(f.balance, -47000, "after the transfer Imorat Go owes the rest");
+  f = await fin(sellerA); assert.equal(f.payout_paid, 50000); assert.equal(f.payout_available, 47000); assert.equal(f.balance, -47000, "after the transfer Qurilish Go owes the rest");
   assert.equal((await call("POST", "/api/seller/payout", { amount: 99999999 }, sellerA)).data.error, "bad_amount");
   const pr2 = await call("POST", "/api/seller/payout", {}, sellerA); assert.equal(pr2.data.payout.amount, 47000, "no amount = everything available");
   assert.equal((await call("PATCH", `/api/admin/payouts/${pr2.data.payout.id}`, { status: "rejected", note: "неверная карта" }, globalThis.ADMIN)).status, 200);
@@ -993,7 +994,7 @@ test("Finance with card payments: money held once, a partner's share survives an
   const got = (await call("GET", `/api/orders/${o3.num}`, null, buyer)).data.order; assert.equal(got.pay_status, "paid"); assert.ok(got.paid_at);
   await advance(sellerA, o3.num, ["assembling"]); app.sweep(Date.now() + 31 * 60000);
   assert.equal((await call("GET", `/api/orders/${o3.num}`, null, buyer)).data.order.status, "active", "a paid order is not expired by the payment sweep");
-  // 4) free months: the admin gives store B three months — Imorat Go's 1% is 0, the bank's 2% stays; ending them brings the 1% back
+  // 4) free months: the admin gives store B three months — Qurilish Go's 1% is 0, the bank's 2% stays; ending them brings the 1% back
   const untilDay = new Date(Date.now() + 90 * 86400_000).toISOString().slice(0, 10);
   assert.equal((await call("PATCH", `/api/admin/stores/${B}`, { free_until: untilDay }, globalThis.ADMIN)).status, 200);
   const sumB = (await call("GET", "/api/seller/summary", null, sellerB)).data; assert.equal(sumB.rates.promo, true); assert.ok(sumB.store.free_until > Date.now());
@@ -1007,7 +1008,7 @@ test("Finance with card payments: money held once, a partner's share survives an
   await pay(o5, "fin-5"); await advance(sellerB, o5.num, ["assembling", "ready", "picked"]);
   f = await fin(sellerB); assert.equal(f.commission_total, 1000); assert.equal(f.acquiring_total, 4000); assert.equal(f.payout_due, 98000 + 97000);
   assert.ok((await call("GET", "/api/admin/stores", null, globalThis.ADMIN)).data.stores.some(x => x.id === B && x.promo === false && x.free_until <= Date.now()));
-  { // the free-period boundary: an order placed while free_until is still ahead carries 0% Imorat Go commission, one placed
+  { // the free-period boundary: an order placed while free_until is still ahead carries 0% Qurilish Go commission, one placed
     // the moment it has passed carries the full rate — and the three months are counted date to date, clamped to month ends
     const soon = Date.now() + 1500;
     app.db.run("UPDATE stores SET free_until=? WHERE id=?", soon, B);
@@ -1254,7 +1255,7 @@ test("Address search for the checkout map: Nominatim without a key, the Yandex g
     assert.deepEqual((await g("/api/geo/suggest?q=на")).data.items, [], "two letters: no request at all");
     const n0 = geoHits.length, r = await g("/api/geo/suggest?q=" + encodeURIComponent("Навои 10") + "&lang=ru");
     assert.equal(r.status, 200); assert.equal(r.data.items[0].street, "улица Навои, 10"); assert.equal(r.data.items[0].la, 41.3115); assert.equal(r.data.items[0].sub, "Шайхантахур, Шайхантахурский район"); assert.equal(r.data.items.length, 2);
-    assert.match(geoHits[n0], /countrycodes=uz/); assert.match(geoHits[n0], /ImoratGo/, "Nominatim gets a user agent");
+    assert.match(geoHits[n0], /countrycodes=uz/); assert.match(geoHits[n0], /QurilishGo/, "Nominatim gets a user agent");
     await g("/api/geo/suggest?q=" + encodeURIComponent("Навои 10") + "&lang=ru"); assert.equal(geoHits.length, n0 + 1, "the same query is served from the cache");
     const rv = (await g("/api/geo/reverse?la=41.311&lo=69.279")).data.item; assert.equal(rv.street, "проспект Амира Темура, 15"); assert.equal(rv.sub, "Юнусабад");
     assert.equal((await g("/api/geo/reverse?la=abc&lo=1")).data.item, null);
@@ -1377,7 +1378,7 @@ test("Stage 0: pay on receipt, the store delivers itself, no invented delivery p
     const ord = (await c("GET", `/api/orders/${o.data.order.num}`, null, t)).data.order; assert.equal(ord.ships[0].step, 2, "step 2 of the 4-step store flow");
     const cr = (await c("GET", `/api/orders/${o.data.order.num}/courier?ship=${sh.id}`, null, t)).data.courier; assert.equal(cr.pos, null); assert.ok(cr.unavailable);
     assert.equal((await c("PATCH", `/api/seller/shipments/${sh.id}`, { status: "delivered" }, seller)).status, 200);
-    // the store owes Imorat Go nothing for a delivery Imorat Go did not order
+    // the store owes Qurilish Go nothing for a delivery Qurilish Go did not order
     const f = (await c("GET", "/api/seller/summary", null, seller)).data.finance; assert.equal(f.delivery_due, 0); assert.equal(f.balance, 0); assert.equal(f.commission_total, 0);
     const st = (await c("GET", "/api/seller/statement", null, seller)).data; assert.equal(st.totals.sales_store, st.totals.sales); assert.equal(st.totals.due, 0);
     // the buyer got one message when the order was placed (what happens next), and the store's named delivery price reaches the buyer
@@ -1478,7 +1479,7 @@ test("Owner by login/password from .env, helper accounts the owner adds: moderat
   assert.equal((await call("GET", "/api/admin/problems", null, helper)).status, 200);
   assert.equal((await call("GET", "/api/admin/stores", null, helper)).status, 200);
   for (const p of ["/api/admin/finance", "/api/admin/dashboard", "/api/admin/staff", "/api/admin/audit"]) assert.equal((await call("GET", p, null, helper)).data.error, "owner_only", p);
-  assert.equal((await call("PATCH", "/api/admin/orders/IM-100001/pay", { pay_status: "paid" }, helper)).data.error, "owner_only");
+  assert.equal((await call("PATCH", "/api/admin/orders/QG-100001/pay", { pay_status: "paid" }, helper)).data.error, "owner_only");
   assert.equal((await call("POST", "/api/admin/staff", { login: "another" }, helper)).data.error, "owner_only", "a helper cannot add helpers");
   assert.equal((await call("GET", "/api/admin/finance", null, owner)).status, 200, "the owner does see the money");
   // 5) owner-side management: reset the password, disable, enable; the owner's own row is managed on the server
@@ -1612,7 +1613,7 @@ test("Support chat: a person writes, the team sees the thread and answers, the a
   const u = (await login("998881234")).data.token;
   assert.equal((await call("GET", "/api/support")).status, 401, "signed-in only");
   assert.equal((await call("POST", "/api/support", { text: "" }, u)).data.error, "bad_text");
-  const m1 = await call("POST", "/api/support", { text: "Где мой заказ? Жду с утра", topic: "order", order: "IM-000000" }, u);
+  const m1 = await call("POST", "/api/support", { text: "Где мой заказ? Жду с утра", topic: "order", order: "QG-000000" }, u);
   assert.equal(m1.status, 200); assert.equal(m1.data.messages.length, 1); assert.equal(m1.data.messages[0].order, null, "someone else's / unknown order number is dropped");
   await until(() => tgSent.some(x => /Поддержка/.test(x.text) && /Где мой заказ/.test(x.text)));
   const other = (await login("998881235")).data.token;
@@ -1676,4 +1677,63 @@ test("Moderation: a store's new product and a review text wait for the team; rej
     assert.equal((await call("POST", `/api/admin/reviews/product/${rid}`, { ok: true }, globalThis.ADMIN)).status, 200);
     assert.equal((await call("GET", `/api/products/${pid}/reviews`)).data.reviews[0].text, "Отличный клей");
   } finally { CFG.productAutoApprove = true; }
+});
+
+test("AI 3D model from the seller's photo: off without a key, made on a new photo, the seller decides, buyers get the model", async () => {
+  // a stand-in for Stability AI's image-to-3D endpoint: checks the key and the multipart image, answers with a GLB (or an error)
+  const calls = []; let answer = "glb";
+  const stab = createServer(async (req, res) => {
+    const chunks = []; for await (const c of req) chunks.push(c); const raw = Buffer.concat(chunks);
+    calls.push({ url: req.url, auth: req.headers.authorization, type: req.headers["content-type"], hasImage: /name="image"; filename=/.test(raw.toString("latin1")), hasPng: raw.includes(Buffer.from([0x89, 0x50, 0x4e, 0x47])), tex: /name="texture_resolution"\r\n\r\n1024/.test(raw.toString("latin1")) });
+    if (answer === "glb") { res.writeHead(200, { "content-type": "model/gltf-binary" }); res.end(boxGlb()); }
+    else { res.writeHead(answer, { "content-type": "application/json" }); res.end(JSON.stringify({ name: "payment_required", errors: ["insufficient credits"] })); }
+  });
+  await new Promise(r => stab.listen(0, "127.0.0.1", r));
+  const M = CFG.model3d, keep = { ...M };
+  try {
+    const seller = (await login("997770031")).data.token;
+    const st = await call("POST", "/api/seller/store", { name: "3D Test", descr: "Магазин для проверки 3D-моделей товаров", cats: ["build"], phone: "71 200 30 77", addr: "ул. Объёмная, 3", district: "chil" }, seller);
+    assert.equal((await call("PATCH", `/api/admin/stores/${st.data.store.id}`, { status: "active" }, globalThis.ADMIN)).status, 200);
+    const pid = (await call("POST", "/api/seller/products", { ru: "Цемент 3D-тест, 50 кг", cat: "build", sub: "dry", unit: "bag50", price: 60000, stock: 10, kg: 50 }, seller)).data.product.id;
+    const png = pngRGBA(96, 96, (x, y) => [200, 180 + (x % 30), 140, 255]);
+    const photo = (q = "") => fetch(`${base}/api/seller/products/${pid}/photo${q}`, { method: "POST", headers: { authorization: "Bearer " + seller, "content-type": "image/png" }, body: png }).then(r => r.json());
+    // 1) no key: the photo is saved, no model is attempted, asking for one says the service is off
+    M.key = "";
+    assert.equal((await call("GET", "/api/config")).data.model3d, false);
+    assert.equal((await photo()).model3d.state, null);
+    const off = await call("POST", `/api/seller/products/${pid}/model3d`, {}, seller); assert.equal(off.status, 503); assert.equal(off.data.error, "model3d_off");
+    assert.equal(calls.length, 0, "nothing is sent anywhere without a key");
+    // 2) with a key: a new photo starts the model at once; the stand-in gets the photo and the key; the GLB is saved and served
+    Object.assign(M, { key: "sk-test-3d", url: `http://127.0.0.1:${stab.address().port}` });
+    assert.equal((await call("GET", "/api/config")).data.model3d, true);
+    const up = await photo(); assert.equal(up.model3d.state, "working");
+    const ready = await until(async () => { const m = (await call("GET", `/api/seller/products/${pid}/model3d`, null, seller)).data.model3d; return m.state === "ready" && m; });
+    assert.equal(calls.length, 1); assert.equal(calls[0].url, "/v2beta/3d/stable-point-aware-3d"); assert.equal(calls[0].auth, "Bearer sk-test-3d");
+    assert.match(calls[0].type, /^multipart\/form-data; boundary=/); assert.ok(calls[0].hasImage && calls[0].hasPng && calls[0].tex, JSON.stringify(calls[0]));
+    const glbRes = await fetch(ready.url.replace(CFG.publicUrl, base)); assert.equal(glbRes.status, 200); assert.equal(glbRes.headers.get("content-type"), "model/gltf-binary");
+    assert.equal(Buffer.from(await glbRes.arrayBuffer()).slice(0, 4).toString(), "glTF");
+    assert.equal((await call("GET", "/api/seller/summary", null, seller)).data.products.find(p => p.id === pid).model3d.state, "ready", "the cabinet sees it");
+    assert.equal((await call("GET", "/api/catalog")).data.products.find(p => p.id === pid).m3d, undefined, "buyers do not see it before the seller chooses");
+    // 3) the seller uses it: the still made from the model replaces the photo without starting a new model; buyers get the model
+    const still = await photo("?from=3d"); assert.equal(still.model3d.state, "ready"); assert.equal(calls.length, 1, "the still does not cost a new model");
+    assert.equal((await call("POST", `/api/seller/products/${pid}/model3d/use`, { use: true }, seller)).data.model3d.state, "used");
+    assert.equal((await call("GET", "/api/catalog")).data.products.find(p => p.id === pid).m3d, ready.url);
+    // other stores cannot touch it
+    const other = (await login("997770032")).data.token;
+    assert.equal((await call("POST", `/api/seller/products/${pid}/model3d/use`, { use: false }, other)).status, 403);
+    // 4) a failed attempt for the same photo keeps the model buyers already see, and says why
+    answer = 402;
+    assert.equal((await call("POST", `/api/seller/products/${pid}/model3d`, {}, seller)).data.model3d.state, "working");
+    const kept = await until(async () => { const m = (await call("GET", `/api/seller/products/${pid}/model3d`, null, seller)).data.model3d; return m.state !== "working" && m; });
+    assert.equal(kept.state, "used"); assert.equal(kept.err, "no_credits"); assert.equal(kept.url, ready.url);
+    // 5) a new real photo makes the old model wrong: it goes; a failure then leaves no model at all
+    const again = await photo(); assert.equal(again.model3d.state, "working");
+    const failed = await until(async () => { const m = (await call("GET", `/api/seller/products/${pid}/model3d`, null, seller)).data.model3d; return m.state !== "working" && m; });
+    assert.equal(failed.state, "failed"); assert.equal(failed.url, null); assert.equal(failed.err, "no_credits");
+    assert.equal((await call("GET", "/api/catalog")).data.products.find(p => p.id === pid).m3d, undefined);
+    assert.equal((await fetch(ready.url.replace(CFG.publicUrl, base))).status, 404, "the old model file is deleted");
+    // 6) the daily cap per store protects the owner's money
+    answer = "glb"; M.perDay = calls.length - 1;
+    const capped = await call("POST", `/api/seller/products/${pid}/model3d`, {}, seller); assert.equal(capped.status, 429);
+  } finally { Object.assign(M, keep); stab.close(); stab.closeAllConnections(); }
 });

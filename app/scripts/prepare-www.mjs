@@ -27,7 +27,7 @@ if (release) {
   if (!api) problems.push("IMORAT_API is empty — a store build must talk to the real server (set it in ../config.js or the IMORAT_API variable)");
   else if ((!/^https:\/\/[a-z0-9.-]+\.[a-z]{2,}(:\d+)?$/i.test(api) || /localhost|127\.0\.0\.1|\.local$/i.test(api)) && process.env.IMORAT_SELFTEST_HTTP !== "1") problems.push(`IMORAT_API looks wrong for a store build: ${api} (needs https:// and a public domain)`);
   if (siteUrl && !/^https:\/\/[a-z0-9.-]+\.[a-z]{2,}(\/|$)/i.test(siteUrl)) problems.push(`IMORAT_SITE_URL must be an https address of the website: ${siteUrl}`);
-  /* The address alone proves nothing: the server must answer, be an Imorat Go server, speak the API contract this website
+  /* The address alone proves nothing: the server must answer, be an Qurilish Go server, speak the API contract this website
      was built for, and be configured for real use. Otherwise the app in the store would open onto an error screen. */
   if (api && !problems.length) {
     const page = existsSync(join(root, "index.html")) ? readFileSync(join(root, "index.html"), "utf8") : "";
@@ -36,7 +36,7 @@ if (release) {
     const get = async path => { try { const r = await fetch(api + path, { signal: AbortSignal.timeout(12000), headers: { accept: "application/json" } }); return { status: r.status, json: await r.json().catch(() => null) }; } catch (e) { return { error: e.cause?.code || e.name || String(e) }; } };
     const h = await get("/api/health"), c = await get("/api/config");
     if (h.error || !h.json) problems.push(`the server does not answer at ${api}/api/health (${h.error || "HTTP " + h.status}) — start it, open the firewall or fix the address before building the store app`);
-    else if (h.json.ok !== true || h.json.name !== "imorat-api") problems.push(`${api}/api/health is not an Imorat Go server (got ${JSON.stringify(h.json).slice(0, 120)})`);
+    else if (h.json.ok !== true || h.json.name !== "imorat-api") problems.push(`${api}/api/health is not an Qurilish Go server (got ${JSON.stringify(h.json).slice(0, 120)})`);
     else if (clientContract && ((h.json.contract ?? 1) < clientContract || (h.json.min_client ?? 1) > clientContract)) problems.push(`API contract mismatch: the website expects contract ${clientContract}, the server has ${h.json.contract} (serves clients ≥ ${h.json.min_client}) — update the server (imorat update) or the website so both match`);
     if (!c.error && c.json) {
       if (c.json.sms === "dev") problems.push("the server is in SMS dev mode (sign-in codes are returned in API responses) — set SMS_MODE=eskiz or telegram before shipping an app");

@@ -95,8 +95,9 @@ export function openDb(path, catalogPath, opts = {}) {
   addCol("shipments", "accepted_at", "INTEGER"); addCol("shipments", "start_at", "INTEGER"); addCol("shipments", "reminded", "INTEGER NOT NULL DEFAULT 0");
   addCol("shipments", "sms_sent", "INTEGER NOT NULL DEFAULT 0"); addCol("shipments", "cancel_reason", "TEXT"); addCol("shipments", "cancel_note", "TEXT"); addCol("products", "review", "TEXT"); addCol("products", "review_note", "TEXT"); addCol("reviews", "mod", "TEXT"); addCol("product_reviews", "mod", "TEXT"); addCol("shipments", "tg_msg", "TEXT");
   addCol("shipments", "goods", "INTEGER NOT NULL DEFAULT 0"); addCol("shipments", "commission", "INTEGER NOT NULL DEFAULT 0");
-  // the bank's acquiring fee on a card-paid order (kept apart from Imorat Go's commission) and the end of a store's free months
+  // the bank's acquiring fee on a card-paid order (kept apart from Qurilish Go's commission) and the end of a store's free months
   addCol("shipments", "acquiring", "INTEGER NOT NULL DEFAULT 0"); addCol("stores", "free_until", "INTEGER");
+  addCol("products", "m3d", "TEXT"); addCol("products", "m3d_state", "TEXT"); addCol("products", "m3d_err", "TEXT"); addCol("products", "m3d_at", "INTEGER"); // AI 3D model from the photo (model3d.js)
   addCol("products", "dims", "TEXT"); addCol("shipments", "loaders_failed", "INTEGER NOT NULL DEFAULT 0"); // package size [l,w,h] m; the carrier refused the loader
   addCol("stores", "prices_confirmed_at", "INTEGER"); addCol("stores", "prices_reminded_at", "INTEGER"); // the seller's "prices and stock are current" stamp and the last reminder
   addCol("users", "deleted_at", "INTEGER"); // account deleted by its owner: personal data wiped, the row keeps the orders' accounting trail

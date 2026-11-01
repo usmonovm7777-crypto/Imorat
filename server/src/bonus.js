@@ -4,7 +4,7 @@ import { randomBytes } from "node:crypto";
 /* Bonus points: 1 point = 1 so'm.
    Earned when a shipment reaches the buyer (more for masters/foremen), spent at checkout up to a share of the goods.
    Referral: a friend who enters your code gets a welcome bonus; you get a bonus when the friend's first order arrives.
-   Who pays: Imorat Go. The store always receives the full price of the goods (see storeFinance); points spent by the
+   Who pays: Qurilish Go. The store always receives the full price of the goods (see storeFinance); points spent by the
    buyer, the welcome and referral bonuses and the cashback all come out of the platform's own money. Safety rails:
    - points are earned only for orders paid through the platform and confirmed by the bank (pay_status paid / refund_due);
    - cashback is counted on what the buyer actually paid for the goods — the part covered by points, a promo code or a
@@ -44,7 +44,7 @@ export function createBonus({ db, cfg, log = console }) {
       // No cashback on a store's own orders (the owner cannot "sell to himself" for points), and never more than the cap per shipment
       const own = db.get("SELECT owner_id FROM stores WHERE id=?", ship.store_id)?.owner_id === u.id;
       // Only orders paid through the platform and confirmed by the bank earn points: a reservation paid at the store brings
-      // Imorat Go nothing to share, and an order whose payment never arrived cannot be a delivered one
+      // Qurilish Go nothing to share, and an order whose payment never arrived cannot be a delivered one
       const paidHere = !["store", "cash"].includes(o.pay) && ["paid", "refund_due"].includes(o.pay_status);
       if (!paidHere) return;
       if (!has(u.id, ref) && !own) {
