@@ -30,28 +30,28 @@
 </head>
 <body>
 <style>:root {
---bg: #F3F5F2;
+--bg: #F6F4F0;
 --surface: #FFFFFF;
---raised: #F8FAF7;
---ink: #131B1A;
---muted: #5A6561;
---faint: #66706C;
---line: #E0E5DF;
---line-strong: #CBD2CB;
---accent: #0B6E69;
+--raised: #FAF8F4;
+--ink: #1B1917;
+--muted: #615B55;
+--faint: #6C665F;
+--line: #E7E1D8;
+--line-strong: #D4CCC1;
+--accent: #B8480A;
 --accent-ink: #FFFFFF;
---accent-soft: #E0EFEC;
---signal: #C94A05;
+--accent-soft: #FBE9DC;
+--signal: #B42318;
 --signal-ink: #FFFFFF;
---signal-soft: #FCE8DB;
---ok: #23803A;
+--signal-soft: #FDE7E4;
+--ok: #2D7A3A;
 --warn: #B7791F;
---vip-bg: #131B1A;
---vip-fg: #F3F5F2;
---hero-bg: #0F2321;
---hero-fg: #EEF5F3;
---hero-acc: #5ED3C6;
---hero-line: rgba(238, 245, 243, .14);
+--vip-bg: #1F1A17;
+--vip-fg: #F6F1EB;
+--hero-bg: #1F1A17;
+--hero-fg: #F6F1EB;
+--hero-acc: #FF9A4D;
+--hero-line: rgba(246, 241, 235, .14);
 --tile-s: 32%;
 --tile-l: 92%;
 --tile-ink-s: 40%;
@@ -73,20 +73,20 @@
 }
 @media (prefers-color-scheme: dark) {
 :root:not([data-theme="light"]) {
---bg: #0E1312; --surface: #171E1D; --raised: #1C2423; --ink: #E9EEEC; --muted: #9CA7A3; --faint: #87928E;
---line: #28312F; --line-strong: #36403D; --accent: #3DB3AA; --accent-ink: #06201E; --accent-soft: #163029;
---signal: #FF8040; --signal-ink: #1A0E05; --signal-soft: #3A2518; --ok: #6CC27A; --warn: #E0A84A; --vip-bg: #E9EEEC; --vip-fg: #121817;
---hero-bg: #12302C; --hero-fg: #EEF5F3; --hero-acc: #6FE0D3; --hero-line: rgba(238, 245, 243, .14);
+--bg: #141210; --surface: #1D1A17; --raised: #24201C; --ink: #EFEAE4; --muted: #A89F96; --faint: #958C83;
+--line: #332D28; --line-strong: #453C35; --accent: #FF8A3D; --accent-ink: #1F0E02; --accent-soft: #3A2416;
+--signal: #FF6B5E; --signal-ink: #1A0503; --signal-soft: #3A1C18; --ok: #6CC27A; --warn: #E0A84A; --vip-bg: #EFEAE4; --vip-fg: #1B1917;
+--hero-bg: #2A211B; --hero-fg: #F6F1EB; --hero-acc: #FFB070; --hero-line: rgba(246, 241, 235, .14);
 --tile-s: 16%; --tile-l: 20%; --tile-ink-s: 48%; --tile-ink-l: 72%;
 --art-fg: 70%; --art-d1: 46%; --art-d2: 10%; --art-hl: rgba(255, 255, 255, .35); --art-sh: .45;
 --shadow-sm: 0 1px 2px rgba(0,0,0,.3); --shadow: 0 24px 60px rgba(0,0,0,.55); color-scheme: dark;
 }
 }
 :root[data-theme="dark"] {
---bg: #0E1312; --surface: #171E1D; --raised: #1C2423; --ink: #E9EEEC; --muted: #9CA7A3; --faint: #87928E;
---line: #28312F; --line-strong: #36403D; --accent: #3DB3AA; --accent-ink: #06201E; --accent-soft: #163029;
---signal: #FF8040; --signal-ink: #1A0E05; --signal-soft: #3A2518; --ok: #6CC27A; --warn: #E0A84A; --vip-bg: #E9EEEC; --vip-fg: #121817;
---hero-bg: #12302C; --hero-fg: #EEF5F3; --hero-acc: #6FE0D3; --hero-line: rgba(238, 245, 243, .14);
+--bg: #141210; --surface: #1D1A17; --raised: #24201C; --ink: #EFEAE4; --muted: #A89F96; --faint: #958C83;
+--line: #332D28; --line-strong: #453C35; --accent: #FF8A3D; --accent-ink: #1F0E02; --accent-soft: #3A2416;
+--signal: #FF6B5E; --signal-ink: #1A0503; --signal-soft: #3A1C18; --ok: #6CC27A; --warn: #E0A84A; --vip-bg: #EFEAE4; --vip-fg: #1B1917;
+--hero-bg: #2A211B; --hero-fg: #F6F1EB; --hero-acc: #FFB070; --hero-line: rgba(246, 241, 235, .14);
 --tile-s: 16%; --tile-l: 20%; --tile-ink-s: 48%; --tile-ink-l: 72%;
 --art-fg: 70%; --art-d1: 46%; --art-d2: 10%; --art-hl: rgba(255, 255, 255, .35); --art-sh: .45;
 --shadow-sm: 0 1px 2px rgba(0,0,0,.3); --shadow: 0 24px 60px rgba(0,0,0,.55); color-scheme: dark;
@@ -2233,7 +2233,7 @@ function applyLook() {
   else if (themeSet) { document.documentElement.removeAttribute("data-theme"); themeSet = false; }
   const dark = themePref === "dark" || (themePref === "auto" && matchMedia("(prefers-color-scheme: dark)").matches);
   let m = document.querySelector('meta[name="theme-color"]:not([media])'); if (!m) { m = document.createElement("meta"); m.name = "theme-color"; document.head.appendChild(m); }
-  m.content = dark ? "#171E1D" : "#FFFFFF"; // same as the header surface
+  m.content = dark ? "#1D1A17" : "#FFFFFF"; // same as the header surface
 }
 applyLook();
 const motionOK = () => document.documentElement.classList.contains("fx");
@@ -6797,7 +6797,7 @@ function flatLines(e) { return [...e.mats, ...e.furn].map(l => [`${pName(l.p)} �
 async function flatPNG() {
   const rooms = flatRooms(), e = flatEstimate(rooms), lines = flatLines(e), w = 1200, lh = 40, h = 230 + lines.length * lh + 120;
   const c = document.createElement("canvas"); c.width = w; c.height = h; const x = c.getContext("2d");
-  x.fillStyle = "#f6f7f5"; x.fillRect(0, 0, w, h); x.fillStyle = "#0B6E69"; x.fillRect(0, 0, w, 10);
+  x.fillStyle = "#f6f7f5"; x.fillRect(0, 0, w, h); x.fillStyle = "#B8480A"; x.fillRect(0, 0, w, 10);
   x.fillStyle = "#131b1a"; x.font = "700 44px system-ui, sans-serif"; x.fillText(L("Смета квартиры", "Kvartira smetasi"), 50, 80);
   x.font = "26px system-ui, sans-serif"; x.fillStyle = "#5d6b67"; x.fillText(rooms.map(r => r.name).join(" · ").slice(0, 80), 50, 125); x.fillText(`imorat go · ${new Date().toLocaleDateString(LOCALE)} · ${fmtN(e.area)} ${L("м²", "m²")}`, 50, 165);
   let y = 230; x.font = "26px system-ui, sans-serif";
