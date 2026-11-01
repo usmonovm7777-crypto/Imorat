@@ -973,6 +973,16 @@ test("Finance with card payments: money held once, a partner's share survives an
   await pay(o5, "fin-5"); await advance(sellerB, o5.num, ["assembling", "ready", "picked"]);
   f = await fin(sellerB); assert.equal(f.commission_total, 1000); assert.equal(f.acquiring_total, 4000); assert.equal(f.payout_due, 98000 + 97000);
   assert.ok((await call("GET", "/api/admin/stores", null, globalThis.ADMIN)).data.stores.some(x => x.id === B && x.promo === false && x.free_until <= Date.now()));
+  // 5) the seller's statement: every sale with its two deductions, the refund, payouts, the sum due — and the same balance as the cabinet
+  const stA = (await call("GET", "/api/seller/statement", null, sellerA)).data;
+  assert.equal(stA.sales.length, 2, "two completed sales for A this month"); assert.ok(stA.sales.every(x => x.paid === "card" && x.net === x.goods - x.commission - x.acquiring));
+  assert.equal(stA.totals.sales, 200000); assert.equal(stA.totals.commission, 2000); assert.equal(stA.totals.acquiring, 4000); assert.equal(stA.totals.due, 194000); assert.equal(stA.totals.refunds, 0);
+  assert.equal(stA.totals.payouts_paid, 50000); assert.equal(stA.balance.payout_due, 194000); assert.equal(stA.balance.payout_paid, 50000);
+  const stB = (await call("GET", "/api/seller/statement", null, sellerB)).data;
+  assert.equal(stB.refunds.length, 1, "B's cancelled card order is a refund line"); assert.equal(stB.refunds[0].num, o2.num); assert.equal(stB.totals.refunds, 100000);
+  assert.equal(stB.sales.length, 2); assert.equal(stB.totals.commission, 1000, "the free-month sale carried no commission"); assert.equal(stB.totals.due, 98000 + 97000);
+  assert.equal(stB.store.free_until <= Date.now(), true); assert.ok(!JSON.stringify(stB).match(/profit|прибыл/i), "a payout is never called profit");
+  assert.equal((await call("GET", "/api/seller/statement?month=2020-01", null, sellerA)).data.sales.length, 0, "an empty month is empty, not an error");
 });
 
 test("Guard rails: admin shipment moves, partial cancellation refunds points, competitor products, paused masters, disputes, odd JSON", async () => {

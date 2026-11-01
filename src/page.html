@@ -1071,6 +1071,8 @@ html.fx .fx-btn.th-btn, .fx-btn.th-btn { background: var(--surface); color: var(
 .lm-nopos { display: inline-flex; align-items: center; gap: 4px; }
 .fresh { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); font-size: 12px; line-height: 1.3; } .fresh.stale { color: var(--signal); }
 .offer-fresh { grid-column: 1 / -1; }
+.stmt-grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 14px 24px; align-items: start; } @media (max-width: 720px) { .stmt-grid { grid-template-columns: 1fr; } }
+.h-s { font-size: 15px; font-weight: 700; }
 .shop-row.nostock { border-color: color-mix(in srgb, var(--signal) 45%, var(--line)); background: color-mix(in srgb, var(--signal) 5%, var(--surface)); }
 .fresh-panel { display: flex; gap: 10px 14px; align-items: center; flex-wrap: wrap; } .fresh-panel span { flex: 1 1 240px; } .fresh-panel.stale { border-color: color-mix(in srgb, var(--signal) 50%, var(--line)); background: color-mix(in srgb, var(--signal) 7%, var(--surface)); }
 .addr-line { display: flex; gap: 8px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; font-size: 14px; background: var(--bg); }
@@ -4837,8 +4839,66 @@ function sellerExtraHTML(d) {
       <div class="mini-kpis"><div><b>${fmt(f.payout_available || 0)}</b><small>${L("доступно к выводу", "yechib olish mumkin", "available to withdraw")}</small></div>${f.payout_pending ? `<div><b>${fmt(f.payout_pending)}</b><small>${L("в обработке", "qayta ishlanmoqda", "being processed")}</small></div>` : ""}${f.payout_paid ? `<div><b>${fmt(f.payout_paid)}</b><small>${L("уже выплачено", "to‘langan", "paid out so far")}</small></div>` : ""}</div>
       <form class="settle-f" id="payoutForm" style="margin-top:8px"><label class="visually-hidden" for="payoutTo">${L("Карта или счёт", "Karta yoki hisob", "Card or account")}</label><input id="payoutTo" value="${esc(d.store?.payout_to || "")}" placeholder="${L("Номер карты или расчётный счёт", "Karta raqami yoki hisob raqami", "Card number or bank account")}" autocomplete="off" style="flex:2;min-width:200px"><label class="visually-hidden" for="payoutAmt">${L("Сумма", "Summa")}</label><input id="payoutAmt" type="number" min="1" inputmode="numeric" placeholder="${L("Вся сумма", "Butun summa", "Everything")}"><button class="btn btn-primary" type="submit" ${(f.payout_available || 0) > 0 && !f.payout_pending ? "" : "disabled"}>${L("Вывести", "Yechib olish", "Withdraw")}</button></form>
       <small style="color:var(--muted)">${L("Деньги за заказы, оплаченные картой, доступны сразу после того, как покупатель получил заказ. Нажмите «Вывести» — переведём на карту или счёт в тот же рабочий день. Комиссия Imorat Go и эквайринг уже вычтены.", "Karta bilan to‘langan buyurtmalar puli xaridor buyurtmani olgan zahoti mavjud bo‘ladi. «Yechib olish»ni bosing — o‘sha ish kunida kartaga yoki hisobga o‘tkazamiz. Imorat Go komissiyasi va ekvayring allaqachon ayirilgan.", "Money for card-paid orders is available as soon as the buyer has received the order. Tap “Withdraw” and we transfer it to your card or account the same working day. The Imorat Go commission and the acquiring fee are already deducted.")}</small>
-    </div></div>`;
+    </div></div>
+  ${statementHTML()}`;
 }
+/* ---- Monthly statement: what the seller sold, what came off (Imorat Go commission, the bank's acquiring fee, refunds,
+   other entries) and the sum due. From /api/seller/statement — the server adds the figures, the page only shows them.
+   It is a payout, not a profit: purchase prices and taxes are the store's own business. ---- */
+let stmt = { month: "", data: null, loading: false, error: "" };
+async function loadStatement(month) {
+  stmt = { month: month || stmt.month || "", data: null, loading: true, error: "" }; renderStmt();
+  try { stmt.data = await api("GET", "/api/seller/statement" + (stmt.month ? "?month=" + encodeURIComponent(stmt.month) : "")); stmt.month = stmt.data.month; }
+  catch (e) { stmt.error = apiErr(e); }
+  stmt.loading = false; renderStmt();
+}
+function renderStmt() { const el = $("#stmtPanel"); if (el) { const w = document.createElement("div"); w.innerHTML = statementHTML(); el.replaceWith(w.firstElementChild); } }
+function statementHTML() {
+  const S = stmt.data, dt = t => new Date(t).toLocaleDateString(LOCALE, { day: "2-digit", month: "2-digit" });
+  const head = `<div class="panel-h"><h2 class="h-m">${L("Отчёт за месяц", "Oylik hisobot", "Monthly statement")}</h2><span style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><label class="visually-hidden" for="stmtMonth">${L("Месяц", "Oy", "Month")}</label><input type="month" id="stmtMonth" class="sel" value="${esc(stmt.month || S?.month || "")}" style="max-width:170px">${S ? `<button class="btn btn-line" type="button" data-act="stmt-csv" style="padding:6px 10px">${ui("folder", 14)} CSV</button>` : ""}</span></div>`;
+  if (!S && !stmt.loading && !stmt.error) return `<div class="panel" id="stmtPanel" style="margin-top:12px">${head}<button class="btn btn-line" type="button" data-act="stmt-load">${L("Показать отчёт", "Hisobotni ko‘rsatish", "Show the statement")}</button></div>`;
+  if (stmt.loading) return `<div class="panel" id="stmtPanel" style="margin-top:12px">${head}<p class="mu" style="margin:0">${L("Считаем…", "Hisoblanmoqda…", "Adding up…")}</p></div>`;
+  if (stmt.error) return `<div class="panel" id="stmtPanel" style="margin-top:12px">${head}<div class="note warnn">${esc(stmt.error)}</div></div>`;
+  const T = S.totals, until = S.store.free_until ? new Date(S.store.free_until).toLocaleDateString(LOCALE, { day: "numeric", month: "long", year: "numeric" }).replace(/\.$/, "") : "";
+  const row = (lbl, v, cls = "", sign = "") => `<div class="sumrow ${cls}"><span class="${cls ? "" : "mu"}">${lbl}</span><span class="num">${sign}${fmt(v)}</span></div>`;
+  return `<div class="panel" id="stmtPanel" style="margin-top:12px">${head}
+    <div class="note">${S.store.promo ? L(`Бесплатный период: комиссия Imorat Go 0% до ${until}. Эквайринг Payme/Click удерживается и в этот период.`, `Bepul davr: Imorat Go komissiyasi ${until} gacha 0%. Payme/Click ekvayringi bu davrda ham ushlab qolinadi.`, `Free period: 0% Imorat Go commission until ${until}. The Payme/Click acquiring fee applies during it too.`) : S.store.free_until ? L(`Бесплатный период закончился ${until}.`, `Bepul davr ${until} tugadi.`, `The free period ended on ${until}.`) : L("Бесплатный период не назначен.", "Bepul davr belgilanmagan.", "No free period is set.")}</div>
+    <div class="stmt-grid">
+      <div style="display:grid;gap:6px">
+        ${row(L(`Продажи (${T.orders} ${plural(T.orders, ["заказ", "заказа", "заказов"])})`, `Sotuvlar (${T.orders} buyurtma)`, `Sales (${T.orders} ${T.orders === 1 ? "order" : "orders"})`), T.sales)}
+        ${T.sales_store ? row(L("— из них оплачено в магазине", "— shundan do‘konda to‘langan", "— of which paid at the store"), T.sales_store) : ""}
+        ${row(L("Возвраты покупателям", "Xaridorlarga qaytarilgan", "Refunds to buyers"), T.refunds, "", T.refunds ? "−" : "")}
+        ${row(L("Комиссия Imorat Go", "Imorat Go komissiyasi"), T.commission, "", T.commission ? "−" : "")}
+        ${row(L("Эквайринг Payme/Click", "Payme/Click ekvayringi", "Payme/Click acquiring"), T.acquiring, "", T.acquiring ? "−" : "")}
+        ${T.other ? row(L("Другие удержания и платежи", "Boshqa ushlanmalar va to‘lovlar", "Other deductions and payments"), T.other, "", "−") : ""}
+        ${row(L("Сумма к выплате за месяц", "Oy uchun to‘lanadigan summa", "Amount due for the month"), T.due, "total")}
+        ${T.payouts_paid || T.payouts_pending ? `<small class="mu">${L("Выплачено", "To‘langan", "Paid out")}: ${fmt(T.payouts_paid)}${T.payouts_pending ? ` · ${L("в обработке", "qayta ishlanmoqda", "being processed")}: ${fmt(T.payouts_pending)}` : ""}</small>` : ""}
+      </div>
+      <small class="mu">${L("К выплате — это деньги за товары, оплаченные картой, за вычетом комиссии и эквайринга. Это не прибыль: закупочные цены и налоги магазина здесь не учитываются. Заказы с оплатой в магазине получены вами напрямую.", "To‘lanadigan summa — karta bilan to‘langan tovarlar uchun pul, komissiya va ekvayring chegirilgan. Bu foyda emas: do‘konning xarid narxlari va soliqlari bu yerda hisobga olinmaydi. Do‘konda to‘langan buyurtmalarni siz to‘g‘ridan-to‘g‘ri olgansiz.", "The amount due is the card-paid goods money less the commission and the acquiring fee. It is not profit: the store's purchase prices and taxes are not counted here. Pay-at-store orders were received by you directly.")}</small>
+    </div>
+    ${S.sales.length ? `<div class="tbl-wrap" style="margin-top:10px"><table><thead><tr><th>${L("Дата", "Sana", "Date")}</th><th>${L("Заказ", "Buyurtma", "Order")}</th><th class="r">${L("Товары", "Tovarlar", "Goods")}</th><th class="r">${L("Комиссия", "Komissiya", "Commission")}</th><th class="r">${L("Эквайринг", "Ekvayring", "Acquiring")}</th><th class="r">${L("К выплате", "To‘lanadi", "Due")}</th></tr></thead><tbody>
+      ${S.sales.map(x => `<tr><td>${dt(x.at)}</td><td><b class="mono">${esc(x.num)}</b> <small class="mu">${x.items} ${L("шт", "dona", "pcs")}${x.paid === "store" ? " · " + L("оплата в магазине", "do‘konda to‘lov", "paid at the store") : ""}</small></td><td class="r">${fmt(x.goods)}</td><td class="r">${x.commission ? "−" + fmt(x.commission) : "0"}</td><td class="r">${x.acquiring ? "−" + fmt(x.acquiring) : "0"}</td><td class="r"><b>${x.paid === "card" ? fmt(x.net) : "—"}</b></td></tr>`).join("")}
+    </tbody></table></div>` : `<p class="mu" style="margin:10px 0 0">${L("В этом месяце завершённых продаж нет.", "Bu oyda yakunlangan sotuvlar yo‘q.", "No completed sales this month.")}</p>`}
+    ${S.refunds.length ? `<h3 class="h-s" style="margin:12px 0 6px">${L("Возвраты", "Qaytarishlar", "Refunds")}</h3><div class="tbl-wrap"><table><tbody>${S.refunds.map(x => `<tr><td>${dt(x.at)}</td><td><b class="mono">${esc(x.num)}</b> <small class="mu">${CANCEL_TXT()[x.reason] || esc(x.reason || "")}${x.refunded ? " · " + L("возвращено", "qaytarildi", "refunded") : " · " + L("возврат в обработке", "qaytarish jarayonda", "refund in progress")}</small></td><td class="r">−${fmt(x.goods)}</td></tr>`).join("")}</tbody></table></div>` : ""}
+    ${S.payouts.length || S.other.length ? `<h3 class="h-s" style="margin:12px 0 6px">${L("Выплаты и другие записи", "To‘lovlar va boshqa yozuvlar", "Payouts and other entries")}</h3><div class="tbl-wrap"><table><tbody>
+      ${S.payouts.map(x => `<tr><td>${dt(x.requested_at)}</td><td>${L("Выплата", "To‘lov", "Payout")} #${x.id} <small class="mu">${x.status === "paid" ? L("выплачено", "to‘landi", "paid") + (x.done_at ? " " + dt(x.done_at) : "") : x.status === "requested" ? L("в обработке", "qayta ishlanmoqda", "being processed") : esc(x.status)} · ${esc(x.payout_to || "")}</small></td><td class="r">${fmt(x.amount)}</td></tr>`).join("")}
+      ${S.other.map(x => `<tr><td>${dt(x.created_at)}</td><td>${esc(x.note || L("Платёж Imorat Go", "Imorat Go to‘lovi", "Payment to Imorat Go"))}</td><td class="r">−${fmt(x.amount)}</td></tr>`).join("")}
+    </tbody></table></div>` : ""}
+  </div>`;
+}
+function statementCSV() {
+  const S = stmt.data; if (!S) return;
+  const q = v => `"${String(v ?? "").replace(/"/g, '""')}"`, d = t => new Date(t).toISOString().slice(0, 10);
+  const rows = [["date", "type", "order", "goods", "commission", "acquiring", "net", "note"]];
+  S.sales.forEach(x => rows.push([d(x.at), "sale", x.num, x.goods, -x.commission, -x.acquiring, x.paid === "card" ? x.net : "", x.paid === "store" ? "paid at store" : ""]));
+  S.refunds.forEach(x => rows.push([d(x.at), "refund", x.num, -x.goods, "", "", "", x.reason || ""]));
+  S.payouts.forEach(x => rows.push([d(x.requested_at), "payout", "#" + x.id, "", "", "", -x.amount, x.status]));
+  S.other.forEach(x => rows.push([d(x.created_at), "other", "", "", "", "", -x.amount, x.note || ""]));
+  rows.push(["", "total", "", S.totals.sales, -S.totals.commission, -S.totals.acquiring, S.totals.due, "amount due for " + S.month + " (not profit)"]);
+  const blob = new Blob(["\ufeff" + rows.map(r => r.map(q).join(";")).join("\r\n")], { type: "text/csv;charset=utf-8" }), a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = `imorat-go-${S.store.id}-${S.month}.csv`; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+}
+document.addEventListener("change", e => { if (e.target.id === "stmtMonth") loadStatement(e.target.value); });
 document.addEventListener("click", e => {
   const b = e.target.closest("[data-look],[data-theme-set]"); if (!b) return;
   setLook(b.dataset.look, b.dataset.themeSet);
@@ -7420,6 +7480,8 @@ document.addEventListener("click", e => {
     case "logout": return logout();
     case "prices-confirm": { const b = e.target.closest("button"); if (b) b.disabled = true; return api("POST", "/api/seller/offers/confirm").then(() => { toast(L("Спасибо! Покупатели видят сегодняшнюю дату подтверждения", "Rahmat! Xaridorlar bugungi tasdiqlash sanasini ko‘radi", "Thanks! Buyers now see today's confirmation date")); sellerData = null; renderSeller(); syncCatalog(); }).catch(er => { if (b) b.disabled = false; toast(apiErr(er)); }); }
     case "repeat-add": { if (!repeat) return; const ready = repeat.rows.filter(r => r.confirmed && r.pick && PROD[r.id]?.offers.some(x => x.store === r.pick)); ready.forEach(r => { const k = r.id + "|" + r.pick; cart[k] = (cart[k] || 0) + r.q; }); saveCart(); refreshCards(); toast(L(`В корзине: ${ready.length} ${plural(ready.length, ["позиция", "позиции", "позиций"])} из заказа`, `Savatda: buyurtmadan ${ready.length} ta pozitsiya`, `In cart: ${ready.length} ${ready.length === 1 ? "item" : "items"} from the order`)); repeat = null; return openDrawer("cart"); }
+    case "stmt-load": return loadStatement($("#stmtMonth")?.value || "");
+    case "stmt-csv": return statementCSV();
     case "api-retry": { const b = e.target.closest("button"); if (b) { b.disabled = true; b.textContent = L("Проверяем…", "Tekshirilmoqda…", "Checking…"); } return apiBoot().then(() => { if (apiState !== "ok") renderApiBar(); }); }
     case "auth-resend": return sendCode();
     case "more": shownN += 36; return renderList(true);

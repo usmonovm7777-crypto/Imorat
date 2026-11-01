@@ -854,6 +854,29 @@ export function createApp(cfg, log = console) {
     notify.admins(`💸 Запрос выплаты #${id}: ${s.name.replace(/[<>&]/g, "")} — ${amount.toLocaleString("ru-RU")} сум на ${to.replace(/[<>&]/g, "")}. Отметьте «Выплачено» в админке после перевода.`);
     return { ok: true, finance: storeFinance(s.id), payout: db.get("SELECT * FROM payouts WHERE id=?", id) };
   });
+  /* Monthly statement for the seller: every completed sale with the two deductions, refunds, payouts and other entries,
+     and the sum due. It is deliberately not called profit: the store's purchase prices and taxes are unknown here. */
+  r.get("/api/seller/statement", (req, res, p, url) => {
+    const { s } = needSeller(req), [a, b, month] = monthRange(url.searchParams.get("month"));
+    const sales = db.all(`SELECT sh.id ship_id, sh.status_at at, sh.goods, sh.commission, sh.acquiring, sh.lines, sh.status, o.num, o.pay, o.pay_status
+      FROM shipments sh JOIN orders o ON o.id=sh.order_id WHERE sh.store_id=? AND sh.status IN ('delivered','picked') AND sh.status_at>=? AND sh.status_at<? ORDER BY sh.status_at`, s.id, a, b)
+      .map(x => { const card = !["store", "cash"].includes(x.pay); return { ship_id: x.ship_id, at: x.at, num: x.num, items: JSON.parse(x.lines).reduce((n, l) => n + l.q, 0), paid: card ? "card" : "store", goods: x.goods, commission: x.commission, acquiring: x.acquiring, net: card ? x.goods - x.commission - x.acquiring : 0 }; });
+    // card orders cancelled after the bank took the money: the buyer is refunded, the store sees the sale fall away
+    const refunds = db.all(`SELECT sh.id ship_id, sh.status_at at, sh.goods, sh.cancel_reason, o.num, o.pay_status FROM shipments sh JOIN orders o ON o.id=sh.order_id
+      WHERE sh.store_id=? AND sh.status='cancelled' AND o.pay NOT IN ('store','cash') AND o.pay_status IN ('refund_due','refunded') AND sh.status_at>=? AND sh.status_at<? ORDER BY sh.status_at`, s.id, a, b)
+      .map(x => ({ ship_id: x.ship_id, at: x.at, num: x.num, goods: x.goods, reason: x.cancel_reason, refunded: x.pay_status === "refunded" }));
+    const payouts = db.all("SELECT id, amount, status, payout_to, requested_at, done_at, note FROM payouts WHERE store_id=? AND requested_at>=? AND requested_at<? ORDER BY requested_at", s.id, a, b);
+    const other = db.all("SELECT id, amount, note, created_at FROM settlements WHERE store_id=? AND created_at>=? AND created_at<? ORDER BY created_at", s.id, a, b); // payments the store made to Imorat Go (e.g. for pay-at-store orders), entered by the admin
+    const sum = (arr, k) => arr.reduce((n, x) => n + (x[k] || 0), 0);
+    const f = storeFinance(s.id, month);
+    return {
+      month, store: { id: s.id, name: s.name, free_until: s.free_until || null, promo: inPromo(s) }, rates: storeRates(s),
+      sales, refunds, payouts, other,
+      totals: { sales: sum(sales, "goods"), sales_card: sum(sales.filter(x => x.paid === "card"), "goods"), sales_store: sum(sales.filter(x => x.paid === "store"), "goods"), orders: sales.length, refunds: sum(refunds, "goods"), commission: sum(sales, "commission"), acquiring: sum(sales, "acquiring"), other: sum(other, "amount"), due: sum(sales, "net"),
+        payouts_paid: sum(payouts.filter(x => x.status === "paid"), "amount"), payouts_pending: sum(payouts.filter(x => x.status === "requested"), "amount") },
+      balance: { payout_due: f.payout_due, payout_paid: f.payout_paid, payout_pending: f.payout_pending, payout_available: f.payout_available, delivery_due: f.delivery_due, settled: f.settled, owed: f.balance } // all-time, same figures as the cabinet
+    };
+  });
   r.get("/api/seller/payouts", req => { const { s } = needSeller(req); return { payouts: db.all("SELECT * FROM payouts WHERE store_id=? ORDER BY requested_at DESC LIMIT 30", s.id) }; });
   r.patch("/api/admin/payouts/:id", async (req, res, p) => {
     const a = needAdmin(req), b = await readJson(req);
