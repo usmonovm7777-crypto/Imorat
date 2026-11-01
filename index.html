@@ -2944,7 +2944,10 @@ const NAMES = ["Шерзод", "Бобур", "Жасур", "Отабек", "Ди
 const LET = "ABCDEFHKMOPTXYZ";
 function submitOrder(e) {
   e.preventDefault();
-  const d = readForm(), digits = d.phone.replace(/\D/g, ""), okP = /^998\d{9}$/.test(digits), okS = d.mode === "pickup" || d.street.trim().length > 3;
+  const d = readForm(); let digits = d.phone.replace(/\D/g, "");
+  if (digits.length === 9) digits = "998" + digits; // typed without the country code — the usual way to say a number here
+  if (/^998\d{9}$/.test(digits)) { d.phone = `+${digits.slice(0, 3)} ${digits.slice(3, 5)} ${digits.slice(5, 8)} ${digits.slice(8, 10)} ${digits.slice(10)}`; const fp = $("#fPhone"); if (fp && fp.value !== d.phone) fp.value = d.phone; }
+  const okP = /^998\d{9}$/.test(digits), okS = d.mode === "pickup" || d.street.trim().length > 3;
   $("#phoneErr").hidden = okP; $("#fPhone").setAttribute("aria-invalid", !okP);
   $("#streetErr").hidden = okS; $("#fStreet").setAttribute("aria-invalid", !okS);
   const okA = d.mode === "pickup" || d.private || (String(d.flat || "").trim() && String(d.floor || "").trim());
