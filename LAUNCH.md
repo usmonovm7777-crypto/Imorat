@@ -9,35 +9,36 @@
 |---|---|---|
 | Сайт (RU / UZ / EN, PWA) | `index.html`, GitHub Pages `https://usmonovm7777-crypto.github.io/Imorat/` | готов; без сервера работает в демо-режиме |
 | SEO-страницы товаров и категорий | `p/`, `c/`, `uz/`, `sitemap.xml` | генерируются `tools/build_seo.py` |
-| Сервер (API, SQLite, без зависимостей) | `server/` | готов, 26 автотестов, Docker + HTTPS |
+| Сервер (API, SQLite, без зависимостей) | `server/` | готов, 29 автотестов, Docker + HTTPS, установка одной командой (`DEPLOY.md`) |
 | Telegram-бот (RU / UZ / EN) и канал | `server/src/bot.js`, `@imoratGo_bot`, `@imoratgo` | готов; включается токеном в `.env` |
 | Шаблон прайса для магазинов | `templates/imorat-go-price-template.xlsx` (RU+UZ), `…-en.xlsx` | ссылка есть в кабинете продавца |
 | Логотип и иконки | `brand/`, `icons/`, `brand/README.txt` | готово |
-| Презентации для магазинов (RU / UZ / EN) | артефакты Claude (Slides), экспорт в PDF/PPTX из меню Share | готово; впишите телефон вместо «[ваш телефон]» |
+| Презентации для магазинов (RU / UZ / EN) | артефакты Claude (Slides), экспорт в PDF/PPTX из меню Share | готово: комиссия 1% + эквайринг 2%, первые 3 месяца 0% |
 
 ## 2. Сервер за один вечер
 
+Подробно, шаг за шагом, с ценами на домен и VPS — в **`DEPLOY.md`**. Коротко:
+
 ```bash
-# на VPS с Ubuntu (1 ГБ памяти хватит), Docker установлен, DNS api.<домен> → IP сервера
-git clone https://github.com/usmonovm7777-crypto/Imorat.git && cd Imorat/server
-cp .env.example .env && nano .env        # см. таблицу ключей ниже
-docker compose up -d --build             # API + Caddy (HTTPS сам)
-curl https://api.<домен>/api/health      # {"ok":true}
+# VPS с Ubuntu 24.04 (2 ГБ), DNS: imorat.uz, www, api → IP сервера; токен бота от @BotFather
+curl -fsSL https://raw.githubusercontent.com/usmonovm7777-crypto/Imorat/main/server/tools/install.sh -o install.sh
+sudo bash install.sh --site imorat.uz --admin 998901234567 --bot 1234567890:AAE...
+imorat doctor                            # DNS, HTTPS, настройки, ключи
 ```
 
-Потом в `config.js` сайта укажите `window.IMORAT_API = "https://api.<домен>";` и запушьте.
+Установщик сам ставит Docker, пишет `.env` со случайным `JWT_SECRET`, поднимает API + Caddy (HTTPS) и отдаёт сайт с того же
+сервера (`config.js` генерируется из `.env`), включает файрвол, ночные копии и автообновление с GitHub. Дальше всё через
+команду `imorat` (`status`, `logs`, `env`, `update`, `backup`, `restore`, `doctor`). Ручной путь (только API, без сайта):
+`cp .env.example .env && docker compose up -d --build` в `server/`.
 
-Обязательные переменные `.env`: `API_DOMAIN`, `PUBLIC_URL`, `JWT_SECRET` (`openssl rand -hex 32`), `ADMIN_PHONES`
-(ваш номер — он модерирует магазины), `ALLOWED_ORIGINS` (адреса сайта), `DEMO_STORES=0` (без демо-магазинов).
-
-В продакшене сервер **не запустится**, пока SMS в тестовом режиме (иначе коды входа видны всем): заполните
-`ESKIZ_EMAIL`/`ESKIZ_PASSWORD` или на тестовом сервере поставьте `ALLOW_DEV_SMS=1`.
+Вход без договора на SMS: `SMS_MODE=telegram` — покупатели и магазины входят через бота (он просит контакт), SMS-коды не нужны;
+в продакшене тестовый режим SMS (`dev`) запуск блокирует.
 
 ## 3. Ключи — по мере готовности
 
 | Что даёт | Переменные | Где взять | Без ключа |
 |---|---|---|---|
-| SMS-коды входа | `ESKIZ_EMAIL`, `ESKIZ_PASSWORD`, `SMS_TEMPLATE` | eskiz.uz (шаблон SMS согласовать) | вход невозможен в проде |
+| SMS-коды входа | `ESKIZ_EMAIL`, `ESKIZ_PASSWORD`, `SMS_TEMPLATE` (и убрать `SMS_MODE=telegram`) | eskiz.uz (шаблон SMS согласовать) | вход только через Telegram-бота |
 | Заказы магазинам в Telegram, бот для покупателей и мастеров | `TELEGRAM_BOT_TOKEN` | @BotFather → `/newbot` (токен никому не показывать; утёк — `/revoke`) | уведомления только на сайте |
 | Канал с товаром дня | `TELEGRAM_CHANNEL=@imoratgo` + бот админ канала | Telegram | постов нет |
 | Usta AI, фото-поиск, AI-дизайнер | `ANTHROPIC_API_KEY` | console.anthropic.com | кнопки AI скрыты |
@@ -76,7 +77,7 @@ curl https://api.<домен>/api/health      # {"ok":true}
 
 ## 7. Что проверено перед запуском (октябрь 2026)
 
-- 26 серверных автотестов, ~50 браузерных сценариев (Playwright, телефон и компьютер, RU/UZ/EN, светлая и тёмная темы).
+- 29 серверных автотестов, ~50 браузерных сценариев (Playwright, телефон и компьютер, RU/UZ/EN, светлая и тёмная темы); сквозной прогон всех экранов 31.10.2026 — без ошибок консоли, переполнений и непереведённых строк.
 - Аудит безопасности: исправлены самоначисление бонусов (потолок 200 000, без кешбэка на «свой» магазин, приветственный бонус
   после первого доставленного заказа), лимиты OTP по номеру, привязка Google/Apple только после подтверждения телефона,
   доступ заблокированных магазинов, смена владельца, лимиты импорта и фото, защита TOTP от повтора, CSP/X-Frame-Options, таймаут AI.

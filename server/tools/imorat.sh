@@ -5,7 +5,7 @@
 #   imorat env           edit server/.env in nano, then restart the API
 #   imorat restart       restart the API (after editing .env by hand)
 #   imorat update        pull the latest code from GitHub, rebuild the API, refresh the site
-#   imorat update-site   refresh the website copy and config.js only (runs every 10 minutes from cron)
+#   imorat update-site   refresh the website copy and config.js (runs every 10 minutes from cron; rebuilds the API when server code changed)
 #   imorat backup        copy the database to /var/backups/imorat (also runs nightly)
 #   imorat restore FILE  put a backup back (stops the API for a few seconds)
 #   imorat doctor        check DNS, ports, HTTPS, .env and keys — run this when something does not work
@@ -61,7 +61,9 @@ case "$cmd" in
   update-site)
     before=$(cd "$REPO_DIR" && git rev-parse HEAD); git_pull || { say "GitHub is not reachable right now — kept the current site"; exit 0; }
     after=$(cd "$REPO_DIR" && git rev-parse HEAD)
-    if [ "$before" != "$after" ] || [ ! -f "$SRV/site/index.html" ] || [ "${1:-}" = "--force" ]; then sync_site; say "site refreshed to ${after:0:7}"; else say "site is up to date (${after:0:7})"; fi ;;
+    if [ "$before" != "$after" ] || [ ! -f "$SRV/site/index.html" ] || [ "${1:-}" = "--force" ]; then sync_site; say "site refreshed to ${after:0:7}"; else say "site is up to date (${after:0:7})"; fi
+    # the site and the API ship together: when the server code changed, rebuild it too (a few seconds of downtime)
+    if [ "$before" != "$after" ] && (cd "$REPO_DIR" && git diff --name-only "$before" "$after" | grep -q '^server/'); then say "server code changed — rebuilding the API…"; dc up -d --build >/dev/null 2>&1 && say "API updated"; fi ;;
   backup)
     need_root backup; mkdir -p "$BACKUPS"; f="$BACKUPS/imorat-$(date +%F-%H%M).db"
     # SQLite's own backup API makes a consistent copy even while the API is writing
