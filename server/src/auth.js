@@ -1,4 +1,4 @@
-import { createHmac, createHash, timingSafeEqual, createPublicKey, verify as cryptoVerify, randomInt, randomBytes } from "node:crypto";
+import { createHmac, createHash, timingSafeEqual, createPublicKey, verify as cryptoVerify, randomInt, randomBytes, scryptSync } from "node:crypto";
 import { HttpError, bad } from "./http.js";
 
 const b64u = b => Buffer.from(b).toString("base64url");
@@ -100,13 +100,39 @@ export async function verifyIdToken(token, { jwksUrl, issuers, audience }) {
   return body;
 }
 
+/* ---------- Passwords (staff accounts: the owner and the helpers the owner adds) ----------
+   scrypt with a random salt; the stored string carries its own parameters, so they can be raised later without breaking old hashes.
+   The owner's hash lives in server/.env (OWNER_PASSWORD_HASH), never in the repository; helpers' hashes live in the database. */
+const SCRYPT = { N: 16384, r: 8, p: 1, len: 32 };
+export function hashPassword(password) {
+  const pw = String(password ?? "");
+  if (pw.length < 10) throw bad("weak_password", "Password must be at least 10 characters");
+  const salt = randomBytes(16);
+  const key = scryptSync(pw.normalize("NFKC"), salt, SCRYPT.len, { N: SCRYPT.N, r: SCRYPT.r, p: SCRYPT.p });
+  return `scrypt$${SCRYPT.N}$${SCRYPT.r}$${SCRYPT.p}$${salt.toString("base64url")}$${key.toString("base64url")}`;
+}
+const DUMMY_HASH = `scrypt$${SCRYPT.N}$${SCRYPT.r}$${SCRYPT.p}$${Buffer.alloc(16, 7).toString("base64url")}$${Buffer.alloc(32, 9).toString("base64url")}`;
+export function verifyPassword(password, stored) {
+  // an unknown login is checked against a dummy hash, so "no such login" and "wrong password" take the same time
+  const m = String(stored || DUMMY_HASH).match(/^scrypt\$(\d+)\$(\d+)\$(\d+)\$([A-Za-z0-9_-]+)\$([A-Za-z0-9_-]+)$/);
+  if (!m) return false;
+  const [, N, r, p, salt, hash] = m, want = Buffer.from(hash, "base64url");
+  let got; try { got = scryptSync(String(password ?? "").normalize("NFKC"), Buffer.from(salt, "base64url"), want.length, { N: +N, r: +r, p: +p }); } catch { return false; }
+  return !!stored && got.length === want.length && timingSafeEqual(got, want);
+}
+/* a temporary password for a new helper: 14 characters from an unambiguous alphabet, shown once */
+export function tempPassword() { const A = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789"; return Array.from({ length: 14 }, () => A[randomInt(A.length)]).join(""); }
+
 /* ---------- Users ---------- */
 export const newUserId = () => "u" + Date.now().toString(36) + randomBytes(3).toString("hex");
-export function publicUser(u, admins = []) {
+/* role: "owner" (the person who runs Imorat Go: everything), "admin" (a helper: moderation and orders, no money or analytics) or null */
+export function publicUser(u, admins = [], staff = null) {
   if (!u) return null;
+  const role = staff && !staff.disabled ? staff.role : (!!u.phone && admins.includes(u.phone) ? "owner" : null);
   return {
     id: u.id, name: u.name, phone: u.phone ? prettyPhone(u.phone) : "", email: u.email, role: u.role, district: u.district,
-    vip: !!u.vip, store_id: u.store_id || null, via: u.google_sub ? "google" : u.apple_sub ? "apple" : "phone",
-    admin: !!u.phone && admins.includes(u.phone), created: u.created_at, points: u.points || 0
+    vip: !!u.vip, store_id: u.store_id || null, via: staff ? "password" : u.google_sub ? "google" : u.apple_sub ? "apple" : "phone",
+    admin: !!role, owner: role === "owner", staff: staff ? { login: staff.login, role: staff.role, must_change: !!staff.must_change, env: !!staff.from_env } : null,
+    created: u.created_at, points: u.points || 0
   };
 }

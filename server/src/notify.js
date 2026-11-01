@@ -107,7 +107,7 @@ export function createNotify({ db, cfg, tg, push, sms, ref, log = console }) {
       this.admins(`🧰 Отправление #${c.s.id} (заказ ${c.o.num}): Яндекс не принял заявку с грузчиком, курьер заказан без него. Верните покупателю плату за разгрузку и при необходимости организуйте подъём.`);
     },
     async admins(text) {
-      for (const a of db.all(`SELECT * FROM users WHERE tg_chat IS NOT NULL AND phone IN (${cfg.admins.map(() => "?").join(",") || "''"})`, ...cfg.admins)) safe(tg.send(a.tg_chat, text));
+      for (const a of db.all(`SELECT u.* FROM users u LEFT JOIN staff s ON s.user_id=u.id WHERE u.tg_chat IS NOT NULL AND (u.phone IN (${cfg.admins.map(() => "?").join(",") || "''"}) OR (s.user_id IS NOT NULL AND s.disabled=0))`, ...cfg.admins)) safe(tg.send(a.tg_chat, text));
     }
   };
 }

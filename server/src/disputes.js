@@ -17,7 +17,7 @@ export function registerDisputes({ r, db, cfg, need, needSeller, needAdmin, isAd
     if (u.tg_chat) safe(tg.send(u.tg_chat, text));
     safe(push.toUser(u.id, { title: "Imorat Go", body: text.replace(/<[^>]+>/g, "").slice(0, 160), url }));
   };
-  const admins = text => { for (const a of db.all(`SELECT tg_chat FROM users WHERE tg_chat IS NOT NULL AND phone IN (${cfg.admins.map(() => "?").join(",") || "''"})`, ...cfg.admins)) safe(tg.send(a.tg_chat, text)); };
+  const admins = text => { for (const a of db.all(`SELECT u.* FROM users u LEFT JOIN staff s ON s.user_id=u.id WHERE u.tg_chat IS NOT NULL AND (u.phone IN (${cfg.admins.map(() => "?").join(",") || "''"}) OR (s.user_id IS NOT NULL AND s.disabled=0))`, ...cfg.admins)) safe(tg.send(a.tg_chat, text)); };
 
   r.post("/api/orders/:num/problems", async (req, res, p) => {
     const u = need(req), b = await readJson(req);

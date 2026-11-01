@@ -9,6 +9,7 @@
 #   imorat backup        copy the database to /var/backups/imorat (also runs nightly)
 #   imorat restore FILE  put a backup back (stops the API for a few seconds)
 #   imorat doctor        check DNS, ports, HTTPS, .env and keys — run this when something does not work
+#   imorat owner [--login NAME]   set (or change) the owner's login and password for the panel; asks for the password, stores only its hash
 set -euo pipefail
 REPO_DIR=${IMORAT_REPO_DIR:-/opt/imorat}
 SRV=${IMORAT_SRV:-/srv/imorat}
@@ -102,6 +103,22 @@ case "$cmd" in
     for k in TELEGRAM_BOT_TOKEN PAYME_MERCHANT_ID CLICK_SERVICE_ID ANTHROPIC_API_KEY YANDEX_DELIVERY_TOKEN YANDEX_MAPS_KEY; do [ -n "$(envget $k)" ] && echo "  $k ✓" || echo "  $k — not yet (see DEPLOY.md, what it unlocks)"; done
     echo "— containers"; dc ps --format 'table {{.Name}}\t{{.Status}}' 2>/dev/null || dc ps
     echo "— last API log lines"; dc logs --tail 15 api 2>/dev/null | tail -15 ;;
+  owner)
+    need_root owner; login=""; norestart=0
+    while [ $# -gt 0 ]; do case "$1" in --login) login=${2:-}; shift 2 ;; --no-restart) norestart=1; shift ;; *) shift ;; esac; done
+    [ -n "$login" ] || login=$(envget OWNER_LOGIN); [ -n "$login" ] || read -r -p "Owner login for the panel (letters, digits, . _ - @): " login
+    echo "$login" | grep -qE '^[A-Za-z0-9_.@-]{3,64}$' || die "login: 3–64 letters, digits, . _ - @"
+    read -r -s -p "New password (10+ characters, not shown): " p1; echo; read -r -s -p "Once more: " p2; echo
+    [ "$p1" = "$p2" ] || die "the two passwords differ — nothing changed"
+    [ ${#p1} -ge 10 ] || die "at least 10 characters — nothing changed"
+    # the hash is computed inside the API image (node lives there); the password travels over stdin only
+    hash=$(printf '%s\n' "$p1" | dc run --rm --no-deps -T --entrypoint node api --disable-warning=ExperimentalWarning tools/owner.mjs hash --stdin 2>/dev/null | tail -1)
+    unset p1 p2
+    echo "$hash" | grep -q '^scrypt\$' || die "could not compute the hash (is the API image built? imorat update)"
+    setenv() { if grep -qE "^#? ?$1=" "$ENV_FILE"; then sed -i -E "s|^#? ?$1=.*|$1=$2|" "$ENV_FILE"; else printf '%s=%s\n' "$1" "$2" >> "$ENV_FILE"; fi; }
+    setenv OWNER_LOGIN "$login"; setenv OWNER_PASSWORD_HASH "'$hash'"   # single quotes: Docker Compose must not expand the $ signs inside the hash
+    say "owner login: $login — password hash saved to $ENV_FILE"
+    if [ "$norestart" = 0 ]; then dc up -d --force-recreate api >/dev/null 2>&1 && say "API restarted; sign in at https://$(envget SITE_DOMAIN)/#owner"; fi ;;
   write-config) write_site_config; say "config.js written" ;;
   *) sed -n '2,12p' "$0"; exit 1 ;;
 esac

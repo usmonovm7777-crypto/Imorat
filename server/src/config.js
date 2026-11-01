@@ -28,6 +28,9 @@ export function loadConfig(env = process.env) {
   // In production a forgotten ESKIZ_* would hand out sign-in codes in API responses; refuse to start unless this is a declared test server
   if (prod && smsMode === "dev" && env.ALLOW_DEV_SMS !== "1") throw new Error("SMS is in dev mode: set ESKIZ_EMAIL/ESKIZ_PASSWORD, or ALLOW_DEV_SMS=1 on a test server only");
   if (prod && env.COURIER_SIMULATION === "1") throw new Error("COURIER_SIMULATION is for test servers only: a production server shows real courier coordinates or none");
+  if (!!String(env.OWNER_LOGIN || "").trim() !== !!String(env.OWNER_PASSWORD_HASH || "").trim()) throw new Error("OWNER_LOGIN and OWNER_PASSWORD_HASH go together: run `imorat owner` (or node tools/owner.mjs hash) to set both");
+  if (env.OWNER_PASSWORD_HASH && !/^scrypt\$\d+\$\d+\$\d+\$[A-Za-z0-9_-]+\$[A-Za-z0-9_-]+$/.test(String(env.OWNER_PASSWORD_HASH).trim())) throw new Error("OWNER_PASSWORD_HASH is not a hash made by `imorat owner` — never put the password itself there");
+  if (env.OWNER_LOGIN && !/^[A-Za-z0-9_.@-]{3,64}$/.test(String(env.OWNER_LOGIN).trim())) throw new Error("OWNER_LOGIN: 3–64 letters, digits, . _ - @");
   return {
     prod,
     port: Number(env.PORT) || 8787,
@@ -86,6 +89,9 @@ export function loadConfig(env = process.env) {
       const acquiring = def ?? (Object.keys(by).length ? Math.max(...Object.values(by)) : 0.02); return { acquiring, acquiringBy: by, acquiringOf: p => by[p] ?? acquiring }; })(),
     promoMonths: Math.max(0, Math.round(Number(env.PROMO_MONTHS ?? 3) || 0)),
     adminMfa: env.ADMIN_MFA !== "0",
+    /* The owner's own sign-in by login and password (besides the phone numbers in ADMIN_PHONES). The hash is made on the server
+       (`imorat owner` or `node tools/owner.mjs hash`) and lives only in .env; the password itself is never stored anywhere. */
+    owner: { login: String(env.OWNER_LOGIN || "").trim(), hash: String(env.OWNER_PASSWORD_HASH || "").trim() },
     backupDir: env.BACKUP_DIR || "",
     supportPhone: String(env.SUPPORT_PHONE || "").replace(/[^\d+]/g, ""), // emergency contact handed to the Yandex courier (defaults to the buyer's phone)
     nativePush: loadNativePushConfig(env), // FCM / APNs keys for the Android and iPhone app (see push_native.js)

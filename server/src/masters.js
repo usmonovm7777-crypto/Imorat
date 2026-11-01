@@ -110,7 +110,7 @@ export function registerMasters({ r, db, cfg, ref, need, needAdmin, audit, lim, 
       db.run("INSERT INTO masters(id,user_id,name,specs,districts,exp,price,price_unit,about,phone,status,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,'pending',?,?)",
         "m" + now.toString(36), u.id, name, JSON.stringify(specs), JSON.stringify(districts), exp, price, unit, about, u.phone, now, now);
       audit(req, "master.new", u.id);
-      for (const a of db.all(`SELECT tg_chat FROM users WHERE tg_chat IS NOT NULL AND phone IN (${cfg.admins.map(() => "?").join(",") || "''"})`, ...cfg.admins)) safe(tg.send(a.tg_chat, `🧰 Новая анкета мастера: <b>${h(name)}</b> (${specs.join(", ")}). Проверьте в кабинете модератора.`));
+      for (const a of db.all(`SELECT u.* FROM users u LEFT JOIN staff s ON s.user_id=u.id WHERE u.tg_chat IS NOT NULL AND (u.phone IN (${cfg.admins.map(() => "?").join(",") || "''"}) OR (s.user_id IS NOT NULL AND s.disabled=0))`, ...cfg.admins)) safe(tg.send(a.tg_chat, `🧰 Новая анкета мастера: <b>${h(name)}</b> (${specs.join(", ")}). Проверьте в кабинете модератора.`));
     }
     return { master: pub(mine(u), stats()[mine(u).id]) };
   });

@@ -1611,7 +1611,10 @@ async function api(method, path, body, opts = {}) {
   catch (e) { if (e.name === "AbortError") throw e; if (!opts.probe && apiState !== "incompatible") setApiState("offline"); const er = new Error("offline"); er.code = "offline"; throw er; }
   // the server answers again: a plain call proves it is back, but the config and catalogue still have to be (re)loaded — apiBoot does that
   if (apiState === "offline" && !opts.probe) { if (apiCfg) setApiState("ok"); else if (!apiBooting) apiBoot(); }
-  if (r.status === 401 && apiToken && !path.startsWith("/api/auth/")) { apiToken = ""; LS.set("imorat.token", ""); }
+  if (r.status === 401 && apiToken && !path.startsWith("/api/auth/")) { // the session ended elsewhere (password changed, account disabled, logout everywhere)
+    apiToken = ""; LS.set("imorat.token", ""); adminToken = ""; LS.set("imorat.adminToken", "");
+    if (user?.api) { user = null; try { localStorage.removeItem("imorat.user"); } catch (e) {} setTimeout(() => { renderHeader(); renderTabbar(); if (["seller", "admin"].includes(route.view)) renderMain(); toast(L("Сессия завершена — войдите снова", "Sessiya tugadi — qayta kiring", "Your session ended — sign in again")); }, 0); }
+  }
   if (opts.raw && r.ok) return r;
   const j = await r.json().catch(() => ({}));
   if (!r.ok) { const er = new Error(j.message || "error"); er.code = j.error || "http_" + r.status; er.status = r.status; er.data = j; throw er; }
@@ -1687,7 +1690,7 @@ function apiErr(e) {
   if (String(e.code || "").startsWith("bad_")) return lang === "en" ? "Check the data: " + e.message : L("Проверьте введённые данные", "Kiritilgan ma’lumotlarni tekshiring"); // the server's text is English
   return L("Что-то пошло не так. Попробуйте ещё раз.", "Nimadir xato ketdi. Qayta urinib ko‘ring.");
 }
-const fromApiUser = u => ({ id: u.id, name: u.name, phone: u.phone, email: u.email, via: u.via, role: u.role, district: u.district, vip: u.vip, store_id: u.store_id, admin: u.admin, created: u.created, telegram: !!u.telegram, mfa: !!u.mfa, points: u.points || 0, api: true });
+const fromApiUser = u => ({ id: u.id, name: u.name, phone: u.phone, email: u.email, via: u.via, role: u.role, district: u.district, vip: u.vip, store_id: u.store_id, admin: u.admin, owner: !!u.owner, staff: u.staff || null, created: u.created, telegram: !!u.telegram, mfa: !!u.mfa, points: u.points || 0, api: true });
 const mapOrder = o => ({ ...o, disc: (o.disc || 0) + (o.pts || 0), bdisc: o.bdisc ?? o.disc ?? 0, pd: o.pd || 0, api: true, ships: o.ships.map(s => ({ ...s, courier: s.courier || "", plate: null })) });
 
 /* ================= Geography & stores ================= */
@@ -2344,7 +2347,7 @@ function renderHeader() {
     <button type="button" class="ms-l" data-go="masters">${ui("wrench", 15)}${L("Мастера", "Ustalar")}</button>
     ${quick.map(id => `<button type="button" data-go="cat-${id}">${catName(id)}</button>`).join("")}
     <button type="button" class="hl" data-scroll="bundles">${L("Комплекты", "To‘plamlar")}</button>
-    <button type="button" class="hl" data-scroll="vip">Imorat Go VIP</button>
+    ${storeDelivers() ? "" : `<button type="button" class="hl" data-scroll="vip">Imorat Go VIP</button>`}
     <button type="button" data-go="seller">${L("Продавцам", "Sotuvchilarga")}</button>
   </nav></div>`;
   $("#q").addEventListener("input", e => { f.q = e.target.value; f.photo = null; if (route.view === "catalog") renderList(); suggInput(); });
@@ -3336,15 +3339,15 @@ function dProfile() {
   fetchOrders();
   $("#dTitle").textContent = L("Профиль", "Profil");
   const last = orders[0];
-  $("#dBody").innerHTML = (user ? `<div class="acct"><span class="av">${esc(initial(user.name))}</span><span><b>${esc(user.name)}</b><small class="num">${esc(user.phone)}</small><small>${user.email ? esc(user.email) + " · " : ""}${L("вход через", "kirish:")} ${viaName(user.via)}${user.role === "pro" ? ` · <span class="ws">${L("цены для мастеров", "ustalar uchun narxlar")}</span>` : ""}</small></span><button class="ib" type="button" data-act="logout" aria-label="${L("Выйти", "Chiqish")}" title="${L("Выйти", "Chiqish")}">${ui("logout", 16)}</button></div>`
+  $("#dBody").innerHTML = (user ? `<div class="acct"><span class="av">${esc(initial(user.name))}</span><span><b>${esc(user.name)}</b><small class="num">${user.staff ? esc(user.staff.login) + " · " + (user.owner ? L("владелец", "egasi", "owner") : L("сотрудник", "xodim", "staff")) : esc(user.phone)}</small><small>${user.email ? esc(user.email) + " · " : ""}${L("вход через", "kirish:")} ${viaName(user.via)}${user.role === "pro" ? ` · <span class="ws">${L("цены для мастеров", "ustalar uchun narxlar")}</span>` : ""}</small></span><button class="ib" type="button" data-act="logout" aria-label="${L("Выйти", "Chiqish")}" title="${L("Выйти", "Chiqish")}">${ui("logout", 16)}</button></div>`
     : `<div class="acct" style="grid-template-columns:1fr"><span><b>${L("Войдите, чтобы сохранять заказы", "Buyurtmalarni saqlash uchun kiring")}</b><small>${L("Номер телефона или Telegram — займёт меньше минуты", "Telefon raqami yoki Telegram — bir daqiqadan kam", "Phone number or Telegram — takes under a minute")}</small></span><button class="btn btn-primary" type="button" data-act="login">${L("Войти или зарегистрироваться", "Kirish yoki ro‘yxatdan o‘tish")}</button></div>`) + `
-    ${user ? `<div class="f" id="roleBox"><span>${L("Кто вы?", "Siz kimsiz?")} <small class="mu">${L("— от этого зависят цены и подсказки", "— narxlar va maslahatlar shunga bog‘liq", "— prices and tips depend on it")}</small></span>${rolesHTML(user.store_id || user.role === "seller" ? "store" : user.role === "pro" ? "pro" : "buyer", "prole")}</div>` : ""}
+    ${user && !user.staff ? `<div class="f" id="roleBox"><span>${L("Кто вы?", "Siz kimsiz?")} <small class="mu">${L("— от этого зависят цены и подсказки", "— narxlar va maslahatlar shunga bog‘liq", "— prices and tips depend on it")}</small></span>${rolesHTML(user.store_id || user.role === "seller" ? "store" : user.role === "pro" ? "pro" : "buyer", "prole")}</div>` : ""}
     ${bonusOn() ? bonusCardHTML() : ""}
     ${notifyRows()}
-    <div class="vip-card"><span class="eyebrow" style="color:var(--signal)">${ui("crown", 14)} Imorat Go VIP</span>
+    ${user?.staff || storeDelivers() ? "" : `<div class="vip-card"><span class="eyebrow" style="color:var(--signal)">${ui("crown", 14)} Imorat Go VIP</span>
       <b style="font-size:17px">${vip ? L("VIP подключён", "VIP ulangan") : L("Доставка в точный час и бесплатно", "Aniq soatda va bepul yetkazish")}</b>
       <small>${vip ? (bonusOn() ? L(`Точный час без доплаты, курьер в приоритете, кешбэк ${pct(bonusCfg().rateVip)}.`, `Aniq soat bepul, ustuvor kuryer, ${pct(bonusCfg().rateVip)} keshbek.`, `Exact hour at no extra charge, priority courier, ${pct(bonusCfg().rateVip)} cashback.`) : L("Точный час без доплаты, курьер в приоритете.", "Aniq soat bepul, ustuvor kuryer.", "Exact hour at no extra cost, priority courier.")) : L(`${fmt(VIP_FEE)} в месяц, первый месяц бесплатно.`, `Oyiga ${fmt(VIP_FEE)}, birinchi oy bepul.`, `${fmt(VIP_FEE)} per month, first month free.`)}</small>
-      <button class="btn ${vip ? "btn-line" : "btn-primary"}" type="button" data-act="${vip ? "vip-off" : "vip-on"}" style="${vip ? "border-color:color-mix(in srgb,var(--vip-fg) 35%,transparent)" : "background:var(--signal);color:#fff"}">${vip ? L("Отключить", "O‘chirish") : L("Подключить VIP", "VIP ulash")}</button></div>
+      <button class="btn ${vip ? "btn-line" : "btn-primary"}" type="button" data-act="${vip ? "vip-off" : "vip-on"}" style="${vip ? "border-color:color-mix(in srgb,var(--vip-fg) 35%,transparent)" : "background:var(--signal);color:#fff"}">${vip ? L("Отключить", "O‘chirish") : L("Подключить VIP", "VIP ulash")}</button></div>`}
     <div class="f"><label for="pDist">${L("Район доставки по умолчанию", "Standart yetkazish tumani")}</label><select id="pDist" class="sel">${DISTRICTS.map(x => `<option value="${x.id}" ${x.id === district ? "selected" : ""}>${L(x.ru, x.uz)}</option>`).join("")}</select></div>
     <div class="f"><span>${L("Оформление", "Ko‘rinish")}</span><div class="seg" role="group" style="justify-self:start"><button type="button" data-look="on" aria-pressed="${fxPref === "on"}">${L("Яркое", "Yorqin")}</button><button type="button" data-look="off" aria-pressed="${fxPref === "off"}">${L("Простое", "Oddiy")}</button><button type="button" data-look="auto" aria-pressed="${fxPref === "auto"}">${L("Авто", "Avto")}</button></div><small style="color:var(--muted)">${L("Яркое — подсветка и анимации. Простое — спокойно и быстрее на слабом телефоне.", "Yorqin — yoritish va animatsiyalar. Oddiy — sokin va kuchsiz telefonda tezroq.")}</small></div>
     <div class="f"><span>${L("Тема", "Mavzu")}</span><div class="seg" role="group" style="justify-self:start"><button type="button" data-theme-set="auto" aria-pressed="${themePref === "auto"}">${L("Авто", "Avto")}</button><button type="button" data-theme-set="light" aria-pressed="${themePref === "light"}">${L("Светлая", "Yorug‘")}</button><button type="button" data-theme-set="dark" aria-pressed="${themePref === "dark"}">${L("Тёмная", "Qorong‘i")}</button></div></div>
@@ -3354,7 +3357,8 @@ function dProfile() {
       <button class="order-row" type="button" data-act="projects"><b>${L("Проекты ремонта", "Ta’mir loyihalari")}</b><b class="num">${projects.length}</b><small>${L("Сохранённые списки материалов", "Saqlangan material ro‘yxatlari")}</small></button>
       <button class="order-row" type="button" data-act="watch"><b>${L("Слежу за ценой", "Narx kuzatuvi")}</b><b class="num">${watch.length}</b><small>${L("Сообщим о снижении цены", "Narx tushsa xabar beramiz")}</small></button>
       <button class="order-row" type="button" data-act="favs"><b>${L("Избранное", "Saralanganlar")}</b><b class="num">${favs.length}</b><small>${L("Сохранённые товары", "Saqlangan mahsulotlar")}</small></button>
-      ${user?.admin ? `<button class="order-row" type="button" data-go="admin"><b>${L("Панель Imorat Go", "Imorat Go paneli")}</b>${ui("calc", 18)}<small>${L("Оборот, заказы, магазины, модерация", "Aylanma, buyurtmalar, do‘konlar, moderatsiya")}</small></button>` : ""}
+      ${user?.admin ? `<button class="order-row" type="button" data-go="admin"><b>${L("Панель Imorat Go", "Imorat Go paneli")}</b>${ui("calc", 18)}<small>${user.owner ? L("Оборот, заказы, магазины, модерация, сотрудники", "Aylanma, buyurtmalar, do‘konlar, moderatsiya, xodimlar", "Turnover, orders, stores, moderation, staff") : L("Модерация магазинов, мастеров и жалоб", "Do‘kon, usta va shikoyatlar moderatsiyasi", "Moderation of stores, masters and complaints")}</small></button>` : ""}
+      ${user?.staff && !user.staff.env ? `<button class="order-row" type="button" data-act="pw-change"><b>${L("Сменить пароль", "Parolni almashtirish", "Change password")}</b>${ui("shield", 18)}<small>${L("Другие ваши сессии завершатся", "Boshqa sessiyalaringiz tugaydi", "Your other sessions will end")}</small></button>` : ""}
       <button class="order-row" type="button" data-go="masters" data-mtabgo="mine"><b>${L("Заявки мастерам", "Ustalarga so‘rovlar")}</b>${ui("wrench", 18)}<small>${L("Плиточники, электрики, сантехники", "Kafelchi, elektrik, santexnik")}</small></button>
       <button class="order-row" type="button" data-act="ai"><b>Usta AI</b>${ui("spark", 18)}<small>${L("Подбор материалов и советы", "Material tanlash va maslahatlar")}</small></button>
       <button class="order-row" type="button" data-act="home-setup"><b>${L("Настроить главную", "Bosh sahifani sozlash", "Customize home")}</b>${ui("grid", 18)}<small>${L("Какие блоки показывать и в каком порядке", "Qaysi bloklar va qanday tartibda", "Which blocks to show and in what order")}</small></button>
@@ -3438,7 +3442,7 @@ const digitsOf = s => String(s || "").replace(/\D/g, "");
 const fmtPhone = d => { d = d.slice(0, 9); return [d.slice(0, 2), d.slice(2, 5), d.slice(5, 7), d.slice(7, 9)].filter(Boolean).join(" "); };
 const fullPhone = d => "+998 " + fmtPhone(d);
 const initial = n => (String(n || "?").trim()[0] || "?").toUpperCase();
-const viaName = v => ({ google: "Google", apple: "Apple", telegram: "Telegram", phone: L("номер телефона", "telefon raqami") }[v] || v);
+const viaName = v => ({ google: "Google", apple: "Apple", telegram: "Telegram", phone: L("номер телефона", "telefon raqami"), password: L("логин и пароль", "login va parol", "login and password") }[v] || v);
 function openAuth(then, step = "start") {
   if (widOpen) closeWidgets();
   const edit = step === "store" && then === "seller-edit";
@@ -3542,13 +3546,15 @@ async function tgLoginStart() {
         const p = await api("GET", `/api/auth/tg/poll?ticket=${encodeURIComponent(auth.tgTicket)}`);
         if (p.token) { clearInterval(tgLoginTimer); auth.via = "telegram"; afterLogin({ ...p, user: { ...p.user, via: "telegram" } }); }
         else if (Date.now() - auth.tgSince > 9 * 60000) { clearInterval(tgLoginTimer); const er = $("#tgErr"); if (er) { er.textContent = L("Время вышло — нажмите «Назад» и попробуйте снова.", "Vaqt tugadi — «Orqaga»ni bosib, qayta urinib ko‘ring.", "Time is up — go back and try again."); er.hidden = false; } }
-      } catch (e) { clearInterval(tgLoginTimer); const er = $("#tgErr"); if (er) { er.textContent = apiErr(e); er.hidden = false; } }
+      } catch (e) { if (e.code === "offline") return; /* a dropped connection: keep polling, the banner explains */ clearInterval(tgLoginTimer); const er = $("#tgErr"); if (er) { er.textContent = e.code === "ticket_expired" ? L("Вход не подтверждён в Telegram (нажали «Нет» или ссылка устарела). Нажмите «Назад» и попробуйте снова.", "Kirish Telegramda tasdiqlanmadi («Yo‘q» bosildi yoki havola eskirgan). «Orqaga»ni bosib, qayta urinib ko‘ring.", "The sign-in was not confirmed in Telegram (“No” was tapped or the link expired). Go back and try again.") : apiErr(e); er.hidden = false; } }
     }, 2000);
   } catch (e) { auth.busy = false; try { w?.close(); } catch {} toast(apiErr(e)); }
 }
 function afterLogin(r) {
   apiToken = r.token; LS.set("imorat.token", r.token);
   const u = fromApiUser(r.user);
+  if (u.staff?.must_change) { user = u; LS.set("imorat.user", u); auth.pwForced = true; auth.step = "pw"; return renderAuth(); } // the temporary password is used once
+  if (u.staff) { user = u; LS.set("imorat.user", u); adminToken = ""; LS.set("imorat.adminToken", ""); adminState.need = null; closeAuth(); renderHeader(); renderTabbar(); toast(u.owner ? L("Вы вошли как владелец", "Egasi sifatida kirdingiz", "Signed in as the owner") : L("Вы вошли как сотрудник", "Xodim sifatida kirdingiz", "Signed in as staff")); if (route.view !== "admin") location.hash = "admin"; else renderMain(); return; }
   if (r.is_new) { auth.pending = u; auth.name = u.name || auth.name; auth.step = "profile"; return renderAuth(); }
   if (auth.then === "store" && !u.store_id) { auth.pending = u; auth.name = u.name; auth.dist = u.district; auth.step = "store"; return renderAuth(); }
   finishAuth(u, r.token);
@@ -3864,7 +3870,28 @@ function renderAuth() {
       ${API && apiCfg?.telegram_bot ? `<button class="soc tg" type="button" data-act="tg-login">${ui("send", 20)} ${L("Войти через Telegram", "Telegram orqali kirish", "Sign in with Telegram")}</button>`
         : `<button class="soc tg" type="button" disabled title="${L("Заработает после подключения сервера", "Server ulangandan keyin ishlaydi", "Works once the server is connected")}">${ui("send", 20)} ${L("Войти через Telegram", "Telegram orqali kirish", "Sign in with Telegram")}</button>`}
       <p class="fine">${L("Продолжая, вы соглашаетесь с", "Davom etib, siz", "By continuing you agree to the")} <a href="${legalUrl("terms")}" target="_blank" rel="noopener">${L("условиями сервиса", "xizmat shartlari", "terms of use")}</a> ${L("и", "va", "and the")} <a href="${legalUrl("privacy")}" target="_blank" rel="noopener">${L("политикой конфиденциальности", "maxfiylik siyosatiga", "privacy policy")}</a>${L(".", " rozilik bildirasiz.", ".")}</p>
-      ${API ? "" : `<p class="demo">${L("Демо-режим: отправка SMS и вход через Telegram заработают после подключения сервера.", "Demo rejim: SMS yuborish va Telegram orqali kirish server ulangandan keyin ishlaydi.", "Demo mode: SMS and Telegram sign-in work once the server is connected.")}</p>`}`;
+      ${API ? "" : `<p class="demo">${L("Демо-режим: отправка SMS и вход через Telegram заработают после подключения сервера.", "Demo rejim: SMS yuborish va Telegram orqali kirish server ulangandan keyin ishlaydi.", "Demo mode: SMS and Telegram sign-in work once the server is connected.")}</p>`}
+      ${API ? `<button class="lnk" type="button" data-authstep="staff" style="justify-self:center;font-size:12.5px;color:var(--muted)">${L("Вход для сотрудников Imorat Go", "Imorat Go xodimlari uchun kirish", "Imorat Go staff sign-in")}</button>` : ""}`;
+  } else if (st === "staff") {
+    h = `${back("start")}<h2>${L("Вход для сотрудников", "Xodimlar uchun kirish", "Staff sign-in")}</h2>
+      <p>${L("Логин и пароль выдаёт владелец Imorat Go. Покупатели и магазины входят по номеру телефона.", "Login va parolni Imorat Go egasi beradi. Xaridorlar va do‘konlar telefon raqami bilan kiradi.", "The owner of Imorat Go issues the login and password. Buyers and stores sign in with a phone number.")}</p>
+      <form id="authStaff" novalidate style="display:grid;gap:10px" autocomplete="on">
+        <div class="f"><label for="aLogin">${L("Логин", "Login")}</label><input id="aLogin" name="username" autocomplete="username" autocapitalize="off" spellcheck="false" value="${esc(auth.login || "")}"></div>
+        <div class="f"><label for="aPass">${L("Пароль", "Parol", "Password")}</label><input id="aPass" name="password" type="password" autocomplete="current-password"></div>
+        <span class="err" id="aStErr" role="alert" hidden></span>
+        <button class="btn btn-primary" type="submit">${L("Войти", "Kirish", "Sign in")}</button>
+      </form>`;
+  } else if (st === "pw") {
+    h = `<h2>${auth.pwForced ? L("Смените временный пароль", "Vaqtinchalik parolni almashtiring", "Change the temporary password") : L("Новый пароль", "Yangi parol", "New password")}</h2>
+      <p>${auth.pwForced ? L("Пароль, который вам передали, одноразовый. Придумайте свой — не короче 10 символов.", "Sizga berilgan parol bir martalik. O‘zingiznikini o‘ylab toping — kamida 10 ta belgi.", "The password you were given is temporary. Choose your own, at least 10 characters.") : L("Не короче 10 символов. После смены другие ваши сессии завершатся.", "Kamida 10 ta belgi. Almashtirilgach boshqa sessiyalaringiz tugaydi.", "At least 10 characters. Your other sessions end after the change.")}</p>
+      <form id="authPw" novalidate style="display:grid;gap:10px">
+        <div class="f"><label for="aPwOld">${L("Текущий пароль", "Joriy parol", "Current password")}</label><input id="aPwOld" type="password" autocomplete="current-password"></div>
+        <div class="f"><label for="aPwNew">${L("Новый пароль", "Yangi parol", "New password")}</label><input id="aPwNew" type="password" autocomplete="new-password" minlength="10"></div>
+        <div class="f"><label for="aPwNew2">${L("Ещё раз", "Yana bir bor", "Once more")}</label><input id="aPwNew2" type="password" autocomplete="new-password"></div>
+        <span class="err" id="aPwErr" role="alert" hidden></span>
+        <button class="btn btn-primary" type="submit">${L("Сохранить пароль", "Parolni saqlash", "Save the password")}</button>
+        ${auth.pwForced ? "" : `<button class="lnk" type="button" data-act="close-auth" style="justify-self:start">${L("Отмена", "Bekor qilish", "Cancel")}</button>`}
+      </form>`;
   } else if (st === "tg") {
     h = `${back("start")}<h2>${L("Вход через Telegram", "Telegram orqali kirish", "Sign in with Telegram")}</h2>
       <p>${L("Мы открыли Telegram. Нажмите в боте «Start», поделитесь номером, если он попросит, и подтвердите вход кнопкой «✅ Да, это я» — страница войдёт сама.", "Telegramni ochdik. Botda «Start»ni bosing, so‘rasa telefon raqamingizni yuboring va «✅ Ha, bu men» tugmasi bilan kirishni tasdiqlang — sahifa o‘zi kiradi.", "We opened Telegram. Tap “Start” in the bot, share your phone number if asked, and confirm with “✅ Yes, it’s me” — this page signs in by itself.")}</p>
@@ -3934,6 +3961,29 @@ function renderAuth() {
       auth.phone = d; sendCode();
     });
     if (st !== "start") setTimeout(() => ph.focus(), 60);
+  }
+  if (st === "staff") {
+    $("#authStaff").addEventListener("submit", async e => {
+      e.preventDefault(); const login = $("#aLogin").value.trim(), password = $("#aPass").value, er = $("#aStErr"), btn = e.target.querySelector("button[type=submit]");
+      if (!login || !password) { er.textContent = L("Введите логин и пароль", "Login va parolni kiriting", "Enter the login and the password"); er.hidden = false; return; }
+      auth.login = login; btn.disabled = true; er.hidden = true;
+      try { const r = await api("POST", "/api/auth/staff", { login, password }); auth.via = "password"; afterLogin(r); }
+      catch (ex) { er.textContent = ex.code === "bad_login" ? L("Неверный логин или пароль", "Login yoki parol noto‘g‘ri", "Wrong login or password") : ex.code === "rate_limited" ? L("Слишком много попыток — подождите 15 минут", "Urinishlar ko‘p — 15 daqiqa kuting", "Too many attempts — wait 15 minutes") : apiErr(ex); er.hidden = false; btn.disabled = false; }
+    });
+    setTimeout(() => $("#aLogin").focus(), 60);
+  }
+  if (st === "pw") {
+    $("#authPw").addEventListener("submit", async e => {
+      e.preventDefault(); const er = $("#aPwErr"), o = $("#aPwOld").value, n1 = $("#aPwNew").value, n2 = $("#aPwNew2").value, btn = e.target.querySelector("button[type=submit]");
+      const fail = m => { er.textContent = m; er.hidden = false; };
+      if (n1.length < 10) return fail(L("Не короче 10 символов", "Kamida 10 ta belgi", "At least 10 characters"));
+      if (n1 !== n2) return fail(L("Пароли не совпадают", "Parollar mos emas", "The passwords differ"));
+      if (n1 === o) return fail(L("Новый пароль совпадает с текущим", "Yangi parol joriysi bilan bir xil", "The new password is the same as the current one"));
+      btn.disabled = true; er.hidden = true;
+      try { const r = await api("POST", "/api/me/password", { old: o, password: n1 }); auth.pwForced = false; toast(L("Пароль изменён", "Parol o‘zgartirildi", "Password changed")); afterLogin(r); }
+      catch (ex) { fail(ex.code === "bad_login" ? L("Текущий пароль неверный", "Joriy parol noto‘g‘ri", "The current password is wrong") : ex.code === "owner_env" ? L("Пароль владельца меняется на сервере командой imorat owner", "Egasi paroli serverda imorat owner buyrug‘i bilan o‘zgartiriladi", "The owner's password is changed on the server with imorat owner") : apiErr(ex)); btn.disabled = false; }
+    });
+    setTimeout(() => $("#aPwOld").focus(), 60);
   }
   if (st === "oauth") {
     $("#authOauth").addEventListener("submit", e => {
@@ -4029,7 +4079,7 @@ function forgetAccountData() {
 function logout() {
   nativePushForget();
   forgetAccountData();
-  user = null; apiToken = ""; LS.set("imorat.token", ""); sellerData = null; adminToken = ""; LS.set("imorat.adminToken", ""); adminState = { need: null }; adminStores = null; adminFin = null;
+  user = null; apiToken = ""; LS.set("imorat.token", ""); sellerData = null; adminToken = ""; LS.set("imorat.adminToken", ""); adminState = { need: null }; adminStores = null; adminFin = null; staffList = null; staffNew = null; dash = null;
   if (API) { myStore = null; LS.set("imorat.myStore", null); if (drawerView === "track") drawerView = "orders"; }
   try { localStorage.removeItem("imorat.user"); } catch (e) {}
   renderHeader(); renderTabbar(); counts(); if (drawerView) renderDrawer(); if (route.view === "catalog") renderList(true); if (route.view === "seller") renderSeller();
@@ -4585,13 +4635,13 @@ function adminHTML() {
   if (!user?.admin) return "";
   if (adminState.need) return adminGateHTML();
   if (!adminStores) { loadAdmin(); return ""; }
-  if (!adminFin && !adminState.finLoading) { adminState.finLoading = true; loadAdminFin().finally(() => { adminState.finLoading = false; }); }
+  if (user.owner && !adminFin && !adminState.finLoading) { adminState.finLoading = true; loadAdminFin().finally(() => { adminState.finLoading = false; }); }
   const pend = adminStores.filter(s => s.status === "pending");
   return `<div class="panel" style="margin-top:12px"><div class="panel-h"><h2 class="h-m">${L("Модерация магазинов", "Do‘konlar moderatsiyasi")}</h2><span class="pill ${pend.length ? "warn" : "ok"}">${pend.length} ${L("ждут", "kutmoqda")}</span></div>
     <div class="tbl-wrap"><table><thead><tr><th>${L("Магазин", "Do‘kon")}</th><th>${L("Владелец", "Egasi")}</th><th>${L("Статус", "Holat")}</th><th></th></tr></thead><tbody>
     ${adminStores.slice(0, 40).map(s => { const [lb, c] = ST_STATUS()[s.status] || ["?", "mute"]; return `<tr><td><b>${esc(s.name)}</b><br><small style="color:var(--muted)">${dName(s.d)}, ${esc(s.addr)} · ${(s.cats || []).map(catName).join(", ")}</small><br><small>${esc(s.descr || "")}</small></td><td style="font-size:13px">${esc(s.owner_name || "—")}<br><span class="num">${esc(s.owner_phone ? "+" + s.owner_phone : "")}</span></td><td><span class="pill ${c}">${lb}</span>${s.status === "active" ? `<br><small style="color:${s.promo ? "var(--ok)" : "var(--muted)"}">${s.promo ? L("комиссия 0% до", "komissiya 0% gacha:", "0% commission until") + " " + new Date(s.free_until).toLocaleDateString(LOCALE) : L("комиссия", "komissiya", "commission") + " " + pct(feeInfo().ours)}</small>` : ""}</td>
       <td style="white-space:nowrap">${s.status !== "active" ? `<button class="btn btn-primary" type="button" data-adm="${esc(s.id)}|active">${L("Одобрить", "Tasdiqlash")}</button>` : `<button class="btn btn-line" type="button" data-admf="${esc(s.id)}" title="${L("Ещё 3 месяца без комиссии Imorat Go", "Yana 3 oy Imorat Go komissiyasisiz", "Three more months without the Imorat Go commission")}">0% +3 ${L("мес", "oy", "mo")}</button>`} ${s.status === "pending" ? `<button class="btn btn-line" type="button" data-adm="${esc(s.id)}|rejected">${L("Отклонить", "Rad etish")}</button>` : s.status === "active" ? `<button class="btn btn-line" type="button" data-adm="${esc(s.id)}|blocked">${L("Скрыть", "Yashirish")}</button>` : ""} <button class="btn btn-line" type="button" data-admv="${esc(s.id)}|${s.verified ? 0 : 1}">${s.verified ? "✓ " + L("Проверен", "Tekshirilgan") : L("Отметить проверенным", "Tekshirilgan deb belgilash")}</button></td></tr>`; }).join("")}
-    </tbody></table></div></div>${adminProblemsHTML()}${adminMastersHTML()}${adminChannelHTML()}${adminFinanceHTML()}`;
+    </tbody></table></div></div>${adminProblemsHTML()}${adminMastersHTML()}${user.owner ? adminChannelHTML() + adminFinanceHTML() : ""}`;
 }
 function renderSellerApi() {
   const crumbs = `<nav class="crumbs"><button type="button" data-go="home">${L("Главная", "Asosiy")}</button>${ui("chev", 12)}<span>${L("Кабинет продавца", "Sotuvchi kabineti")}</span></nav>`;
@@ -5076,7 +5126,7 @@ async function loadAdminFin() { try { adminFin = await adminApi("GET", "/api/adm
 document.addEventListener("submit", async e => {
   if (e.target.id === "mfaForm") {
     e.preventDefault();
-    try { const r = await api("POST", "/api/admin/mfa/verify", { code: $("#mfaCode").value }); adminToken = r.token; LS.set("imorat.adminToken", adminToken); adminState = { need: null }; adminStores = null; adminFin = null; toast(L("Код принят", "Kod qabul qilindi")); renderMain(); }
+    try { const r = await api("POST", "/api/admin/mfa/verify", { code: $("#mfaCode").value }); adminToken = r.token; LS.set("imorat.adminToken", adminToken); adminState = { need: null }; adminStores = null; adminFin = null; staffList = null; staffNew = null; dash = null; toast(L("Код принят", "Kod qabul qilindi")); renderMain(); }
     catch (er) { toast(er.code === "mfa_wrong" ? L("Неверный код — проверьте время на телефоне", "Kod noto‘g‘ri — telefondagi vaqtni tekshiring", "Wrong code — check the time on your phone") : er.code === "mfa_reused" ? L("Этот код уже использован — подождите следующий (30 с)", "Bu kod allaqachon ishlatilgan — keyingisini kuting (30 s)", "This code was already used — wait for the next one (30 s)") : apiErr(er)); }
     return;
   }
@@ -7024,13 +7074,57 @@ function demoDash() {
   return { demo: true, days: n, series, totals: { orders, orders_prev: Math.round(orders * .78), gmv, gmv_prev: Math.round(gmv * .74), commission: Math.round(gmv * feeInfo().ours), avg_check: Math.round(gmv / orders), buyers: Math.round(orders * .72), repeat_pct: 27, new_users: sum("users"), cancel_pct: 4, views: orders * 46, carts: orders * 6 },
     counts: { users: 2140, stores_active: STORES.length, stores_pending: 2, masters_active: 12, masters_pending: 3, problems_open: 2, questions_open: 5 }, top_products: tp, top_stores: ts.sort((a, b) => b.gmv - a.gmv), slow_stores: ts.filter(s => s.fail || s.accept_min > 10).sort((a, b) => b.fail_pct - a.fail_pct) };
 }
+/* ---- Staff accounts (owner only): who can sign in with a login and password, add a helper, reset, disable ---- */
+let staffList = null, staffNew = null; // staffNew = { login, password } shown once after creation / reset
+function staffPanelHTML() {
+  if (!user?.owner) return "";
+  if (staffList === null) { staffList = false; adminApi("GET", "/api/admin/staff").then(r => { staffList = r; if (route.view === "admin") renderAdmin(); }).catch(() => { staffList = { staff: [], error: true }; }); return ""; }
+  if (!staffList) return "";
+  const rows = (staffList.staff || []).map(st => `<tr class="${st.disabled ? "off" : ""}"><td><b>${esc(st.login)}</b>${st.env ? ` <span class="pill ok">${L("владелец", "egasi", "owner")}</span>` : st.role === "owner" ? ` <span class="pill ok">${L("владелец", "egasi", "owner")}</span>` : ""}<br><small class="mu">${esc(st.name || "")}${st.note ? " · " + esc(st.note) : ""}</small></td>
+      <td>${st.disabled ? `<span class="pill mute">${L("отключён", "o‘chirilgan", "disabled")}</span>` : st.must_change ? `<span class="pill warn">${L("временный пароль", "vaqtinchalik parol", "temporary password")}</span>` : `<span class="pill ok">${L("активен", "faol", "active")}</span>`}${st.mfa ? ` <span class="pill mute">2FA</span>` : ""}<br><small class="mu">${st.last_login_at ? L("вход", "kirish", "sign-in") + " " + new Date(st.last_login_at).toLocaleString(LOCALE, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : L("ещё не входил", "hali kirmagan", "never signed in")}</small></td>
+      <td class="r">${st.env ? `<small class="mu">${L("пароль: imorat owner на сервере", "parol: serverda imorat owner", "password: imorat owner on the server")}</small>` : `<div style="display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap"><button class="btn btn-line" type="button" data-staff="${esc(st.id)}|reset" style="padding:6px 10px">${L("Новый пароль", "Yangi parol", "New password")}</button><button class="btn btn-line" type="button" data-staff="${esc(st.id)}|${st.disabled ? "enable" : "disable"}" style="padding:6px 10px">${st.disabled ? L("Включить", "Yoqish", "Enable") : L("Отключить", "O‘chirish", "Disable")}</button></div>`}</td></tr>`).join("");
+  return `<div class="panel" style="margin-top:12px" id="staffPanel"><div class="panel-h"><h2 class="h-m">${ui("shield", 18)} ${L("Сотрудники", "Xodimlar", "Staff")}</h2><span class="mu" style="font-size:13px">${L("вход по логину и паролю", "login va parol bilan kirish", "login + password sign-in")}</span></div>
+    <p class="mu" style="margin:0 0 8px;font-size:13px">${L("Помощник видит модерацию магазинов и мастеров, жалобы и заказы. Деньги, выплаты, аналитика и этот список — только у владельца. Каждому помощнику — свой логин; отключить можно в любой момент.", "Yordamchi do‘kon va ustalar moderatsiyasini, shikoyat va buyurtmalarni ko‘radi. Pul, to‘lovlar, tahlil va bu ro‘yxat — faqat egasida. Har bir yordamchiga alohida login; istalgan payt o‘chirish mumkin.", "A helper sees store and master moderation, complaints and orders. Money, payouts, analytics and this list are the owner's only. One login per helper; disable at any time.")}${staffList.owner_env ? "" : " " + L("Свой вход по логину и паролю для владельца задаётся на сервере: imorat owner.", "Egasi uchun login va parol bilan kirish serverda o‘rnatiladi: imorat owner.", "The owner's own login/password sign-in is set on the server: imorat owner.")}</p>
+    ${staffNew ? `<div class="note" style="margin-bottom:10px"><b>${esc(staffNew.login)}</b> — ${L("временный пароль (показывается один раз, передайте лично)", "vaqtinchalik parol (bir marta ko‘rsatiladi, shaxsan bering)", "temporary password (shown once, hand it over in person)")}: <code class="mono" style="font-size:15px;user-select:all">${esc(staffNew.password)}</code> <button class="lnk" type="button" data-act="staff-copy">${L("Скопировать", "Nusxalash", "Copy")}</button> <button class="lnk" type="button" data-act="staff-hide">${L("Скрыть", "Yashirish", "Hide")}</button></div>` : ""}
+    <div class="tbl-wrap"><table><thead><tr><th>${L("Логин", "Login")}</th><th>${L("Статус", "Holat", "Status")}</th><th></th></tr></thead><tbody>${rows || `<tr><td colspan="3" class="mu">${L("Пока только вы", "Hozircha faqat siz", "Only you so far")}</td></tr>`}</tbody></table></div>
+    <form class="settle-f" id="staffForm" style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end">
+      <div class="f"><label for="stLogin">${L("Логин помощника", "Yordamchi logini", "Helper's login")}</label><input id="stLogin" autocapitalize="off" spellcheck="false" placeholder="dilshod" pattern="[A-Za-z0-9_.@-]{3,64}" required></div>
+      <div class="f"><label for="stName">${L("Имя", "Ism", "Name")}</label><input id="stName" placeholder="${L("Дильшод", "Dilshod", "Dilshod")}"></div>
+      <button class="btn btn-primary" type="submit">${ui("plus", 16)} ${L("Добавить", "Qo‘shish", "Add")}</button>
+    </form></div>`;
+}
+document.addEventListener("submit", async e => {
+  const f = e.target.closest("#staffForm"); if (!f) return; e.preventDefault();
+  const login = $("#stLogin").value.trim(), name = $("#stName").value.trim(), btn = f.querySelector("button[type=submit]");
+  if (!/^[A-Za-z0-9_.@-]{3,64}$/.test(login)) return toast(L("Логин: 3–64 латинских буквы, цифры, . _ - @", "Login: 3–64 lotin harfi, raqam, . _ - @", "Login: 3–64 latin letters, digits, . _ - @"));
+  btn.disabled = true;
+  try { const r = await adminApi("POST", "/api/admin/staff", { login, name }); staffNew = { login: r.staff.login, password: r.password }; staffList = null; toast(L("Помощник добавлен", "Yordamchi qo‘shildi", "Helper added")); renderAdmin(); }
+  catch (er) { btn.disabled = false; toast(er.code === "login_taken" ? L("Такой логин уже есть", "Bunday login bor", "This login already exists") : er.code === "bad_login_name" ? L("Логин: 3–64 латинских буквы, цифры, . _ - @", "Login: 3–64 lotin harfi, raqam, . _ - @", "Login: 3–64 latin letters, digits, . _ - @") : apiErr(er)); }
+});
+document.addEventListener("click", async e => {
+  const t = e.target.closest("[data-staff]"); if (!t) return;
+  const [id, act] = t.dataset.staff.split("|"); t.disabled = true;
+  try {
+    const r = await adminApi("PATCH", "/api/admin/staff/" + encodeURIComponent(id), act === "reset" ? { reset_password: true } : { disabled: act === "disable" });
+    if (r.password) staffNew = { login: r.staff.login, password: r.password };
+    toast(act === "reset" ? L("Новый временный пароль готов", "Yangi vaqtinchalik parol tayyor", "A new temporary password is ready") : act === "disable" ? L("Доступ отключён, сессии завершены", "Kirish o‘chirildi, sessiyalar tugatildi", "Access disabled, sessions ended") : L("Доступ включён", "Kirish yoqildi", "Access enabled"));
+    staffList = null; renderAdmin();
+  } catch (er) { t.disabled = false; toast(apiErr(er)); }
+});
 function renderAdmin() {
   const crumbs = `<nav class="crumbs"><button type="button" data-go="home">${L("Главная", "Asosiy")}</button>${ui("chev", 12)}<span>${L("Панель Imorat Go", "Imorat Go paneli")}</span></nav>`;
   let D;
   if (API) {
-    if (!user) { $("#app").innerHTML = `<div class="wrap">${crumbs}<div class="panel" style="margin:12px 0;display:grid;gap:10px;justify-items:start"><h1 class="h-l" style="margin:0">${L("Панель владельца", "Egasi paneli")}</h1><p class="mu" style="margin:0">${L("Войдите номером модератора.", "Moderator raqami bilan kiring.")}</p><button class="btn btn-primary" type="button" data-act="login">${L("Войти", "Kirish")}</button></div></div>`; return; }
+    if (!user) { $("#app").innerHTML = `<div class="wrap">${crumbs}<div class="panel" style="margin:12px 0;display:grid;gap:10px;justify-items:start"><h1 class="h-l" style="margin:0">${L("Панель владельца", "Egasi paneli")}</h1><p class="mu" style="margin:0">${L("Войдите номером модератора или логином сотрудника.", "Moderator raqami yoki xodim logini bilan kiring.", "Sign in with a moderator's phone or a staff login.")}</p><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-primary" type="button" data-act="login">${L("Войти", "Kirish")}</button><button class="btn btn-line" type="button" data-go="owner">${L("Вход для сотрудников", "Xodimlar kirishi", "Staff sign-in")}</button></div></div></div>`; return; }
     if (!user.admin) { $("#app").innerHTML = `<div class="wrap">${crumbs}<div class="panel" style="margin:12px 0">${L("Эта страница только для модераторов Imorat Go.", "Bu sahifa faqat Imorat Go moderatorlari uchun.")}</div></div>`; return; }
     if (adminState.need) { $("#app").innerHTML = `<div class="wrap">${crumbs}${adminGateHTML()}</div>`; return; }
+    if (user.staff?.must_change) { $("#app").innerHTML = `<div class="wrap">${crumbs}<div class="panel" style="margin:12px 0;display:grid;gap:10px;justify-items:start"><h1 class="h-l" style="margin:0">${L("Смените временный пароль", "Vaqtinchalik parolni almashtiring", "Change the temporary password")}</h1><p class="mu" style="margin:0">${L("Пароль, который вам передали, одноразовый — задайте свой, и панель откроется.", "Sizga berilgan parol bir martalik — o‘zingiznikini qo‘ying, panel ochiladi.", "The password you were given is temporary — set your own and the panel opens.")}</p><button class="btn btn-primary" type="button" data-act="pw-change">${L("Задать пароль", "Parol qo‘yish", "Set a password")}</button></div></div>`; return; }
+    if (!user.owner) { // a helper: moderation, complaints and masters — no money, no analytics
+      $("#app").innerHTML = `<div class="wrap adm">${crumbs}<h1 class="h-l">${L("Модерация Imorat Go", "Imorat Go moderatsiyasi", "Imorat Go moderation")}</h1>
+        <p class="mu" style="margin:4px 0 0">${L("Вы вошли как сотрудник", "Siz xodim sifatida kirdingiz", "You are signed in as staff")}${user.staff ? ` · <b>${esc(user.staff.login)}</b>` : ""}. ${L("Финансы и аналитика доступны только владельцу.", "Moliya va tahlil faqat egasiga ochiq.", "Finance and analytics are the owner's only.")} <button class="lnk" type="button" data-act="pw-change">${L("Сменить пароль", "Parolni almashtirish", "Change password")}</button></p>
+        ${adminHTML()}</div>`;
+      return;
+    }
     if (!dash) { $("#app").innerHTML = `<div class="wrap">${crumbs}<div class="panel" style="margin:12px 0">${L("Загружаем…", "Yuklanmoqda…")}</div></div>`; loadDash(); return; }
     if (dash.error !== undefined) { $("#app").innerHTML = `<div class="wrap">${crumbs}<div class="panel" style="margin:12px 0">${esc(dash.error || "")}</div></div>`; return; }
     D = dash;
@@ -7065,7 +7159,7 @@ function renderAdmin() {
     <div class="panel" style="margin-top:12px"><div class="panel-h"><h2 class="h-m">${ui("clock", 18)} ${L("Магазины, которые подводят", "Buyurtmalarni buzayotgan do‘konlar")}</h2></div>
       <p class="mu" style="margin:0 0 8px;font-size:13px">${L("Срывы (не принял, нет в наличии, не передал курьеру) и долгое подтверждение. Позвоните им — это прямо влияет на доверие покупателей.", "Buzilgan buyurtmalar (qabul qilmadi, mavjud emas, kuryerga bermadi) va uzoq tasdiqlash. Ularga qo‘ng‘iroq qiling — bu xaridorlar ishonchiga bevosita ta’sir qiladi.")}</p>
       ${tbl([L("Магазин", "Do‘kon"), L("Срывы", "Buzilganlar"), L("Принимает за", "Qabul qiladi"), L("Заказы", "Buyurt.")], D.slow_stores.map(x => `<tr><td><button type="button" class="slink" data-go="store-${esc(x.id)}">${esc(x.name)}</button></td><td class="r num" style="color:${x.fail_pct > 5 ? "var(--signal)" : "inherit"}">${x.fail} · ${x.fail_pct}%</td><td class="r num">${x.accept_min != null ? x.accept_min + " " + L("мин", "daq") : "—"}</td><td class="r num">${x.orders}</td></tr>`))}</div>
-    ${API ? adminHTML() : `<p class="mu" style="font-size:13px">${L("В демо-версии показаны примерные цифры. На рабочем сайте здесь будут настоящие данные и модерация магазинов, мастеров и жалоб.", "Demo versiyada taxminiy raqamlar ko‘rsatilgan. Ishchi saytda bu yerda haqiqiy ma’lumotlar va do‘konlar, ustalar va shikoyatlar moderatsiyasi bo‘ladi.")}</p>`}
+    ${API ? staffPanelHTML() + adminHTML() : `<p class="mu" style="font-size:13px">${L("В демо-версии показаны примерные цифры. На рабочем сайте здесь будут настоящие данные и модерация магазинов, мастеров и жалоб.", "Demo versiyada taxminiy raqamlar ko‘rsatilgan. Ishchi saytda bu yerda haqiqiy ma’lumotlar va do‘konlar, ustalar va shikoyatlar moderatsiyasi bo‘ladi.")}</p>`}
   </div>`;
 }
 document.addEventListener("click", e => { const t = e.target.closest("[data-dashdays]"); if (!t || route.view !== "admin") return; dashDays = +t.dataset.dashdays; dash = null; renderAdmin(); });
@@ -7490,6 +7584,7 @@ function parseHash() {
   if (h === "design") return { view: "design", cat: null };
   if (h === "masters") return { view: "masters", cat: null };
   if (h === "admin") return { view: "admin", cat: null };
+  if (h === "owner") return { view: "owner", cat: null }; // the owner's bookmark: opens the staff sign-in, then the panel
   if (h === "flat") return { view: "flat", cat: null };
   if (h === "list") return { view: "shop", cat: null };
   if (h.startsWith("store-")) return { view: "store", cat: null, store: h.slice(6) };
@@ -7504,6 +7599,7 @@ function renderMain() {
   else if (route.view === "design") renderDesign();
   else if (route.view === "masters") renderMasters();
   else if (route.view === "admin") renderAdmin();
+  else if (route.view === "owner") { if (user?.admin) { history.replaceState(null, "", "#admin"); route = parseHash(); renderAdmin(); } else { renderHome(); if (API) openAuth("owner", "staff"); else toast(L("Вход для сотрудников работает на сайте с сервером", "Xodimlar kirishi serverli saytda ishlaydi", "Staff sign-in works on the site with the server")); } }
   else if (route.view === "flat") renderFlat();
   else if (route.view === "shop") renderShop();
   else if (route.view === "store") renderStore(route.store);
@@ -7626,6 +7722,9 @@ document.addEventListener("click", e => {
     case "w-deliv": return openWidgets("deliv");
     case "home-setup": return openDrawer("homeSetup");
     case "tg-login": return tgLoginStart();
+    case "pw-change": { auth.pwForced = false; auth.then = null; openAuth(null, "pw"); return; }
+    case "staff-copy": { const pw = staffNew?.password || ""; (navigator.clipboard?.writeText(pw) || Promise.reject()).then(() => toast(L("Пароль скопирован", "Parol nusxalandi", "Password copied"))).catch(() => { const c = $("#staffPanel code"); if (c) { const r = document.createRange(); r.selectNodeContents(c); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); } }); return; }
+    case "staff-hide": staffNew = null; return renderAdmin();
     case "home-reset": resetHome(); if (drawerView === "homeSetup") dHomeSetup(); return toast(L("Главная как по умолчанию", "Bosh sahifa standart holatda", "Home reset to default"));
     case "stores-all": { const st = $(".stores"); if (st) st.classList.add("all"); t.closest(".stores-more")?.remove(); return; }
     case "theme-toggle": return setLook(null, effTheme() === "dark" ? "light" : "dark");

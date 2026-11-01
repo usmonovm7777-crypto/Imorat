@@ -5,7 +5,7 @@ import { randomBytes, createHash } from "node:crypto";
 import { gzipSync } from "node:zlib";
 import { openDb } from "./db.js";
 import { Router, HttpError, bad, readJson, readBody, send, cors, Limiter, clientIp, int, str } from "./http.js";
-import { signJwt, verifyJwt, parsePhone, issueOtp, checkOtp, verifyIdToken, newUserId, publicUser } from "./auth.js";
+import { signJwt, verifyJwt, parsePhone, issueOtp, checkOtp, verifyIdToken, newUserId, publicUser, hashPassword, verifyPassword, tempPassword } from "./auth.js";
 import { createSms } from "./sms.js";
 import { loadLines, quote, assertNoProblems, dimsOf } from "./pricing.js";
 import { yandexPrices } from "./delivery.js";
@@ -52,7 +52,7 @@ export const STEPS = {
 const SELLER_MOVES = { new: ["assembling", "cancelled"], assembling: ["searching", "ready", "on_way", "cancelled"], ready: ["picked"], searching: ["to_store"], to_store: ["on_way"], on_way: ["delivered"] };
 const flowOf = (sh, f) => sh.tariff ? (f?.delivery_by === "store" ? "store" : "yandex") : "pickup";
 const FAIL_REASONS = ["not_accepted", "out_of_stock", "not_shipped"];
-const SESSION_TTL = 60 * 86400;
+const SESSION_TTL = 60 * 86400, STAFF_TTL = 14 * 86400; // a password session of the owner / a helper is shorter than a buyer's
 const MIME = { ".webp": "image/webp", ".jpg": "image/jpeg", ".png": "image/png" };
 
 export function createApp(cfg, log = console) {
@@ -124,7 +124,12 @@ export function createApp(cfg, log = console) {
     return u;
   };
   const need = req => { if (!req.user) throw new HttpError(401, "auth_required", "Sign in first"); return req.user; };
-  const isAdmin = u => !!u?.phone && cfg.admins.includes(u.phone);
+  /* Who runs the place. "owner": the phone numbers in ADMIN_PHONES and the login from OWNER_LOGIN — everything, including money and
+     analytics. "admin": a helper the owner added from the panel — moderation, orders and complaints, nothing about money. */
+  const staffOf = u => (u && u.role === "staff" ? db.get("SELECT * FROM staff WHERE user_id=?", u.id) : null) || null;
+  const roleOf = u => { if (!u) return null; if (u.phone && cfg.admins.includes(u.phone)) return "owner"; const st = staffOf(u); return st && !st.disabled ? st.role : null; };
+  const isAdmin = u => !!roleOf(u);
+  const isOwner = u => roleOf(u) === "owner";
   const adminOk = req => { try { needAdmin(req); return true; } catch { return false; } };
   const needAdmin = (req, { mfa = true } = {}) => {
     const u = need(req); if (!isAdmin(u)) throw new HttpError(403, "forbidden", "Admins only");
@@ -134,6 +139,20 @@ export function createApp(cfg, log = console) {
     }
     return u;
   };
+  const needOwner = (req, opts) => { const u = needAdmin(req, opts); if (!isOwner(u)) throw new HttpError(403, "owner_only", "Only the owner of Imorat Go can do this"); return u; };
+  /* the owner's login/password from .env becomes (or refreshes) the owner's staff row: the hash in .env always wins */
+  function ensureOwner() {
+    if (!cfg.owner.login) { db.run("UPDATE staff SET disabled=1 WHERE from_env=1 AND disabled=0"); return; }
+    const now = Date.now();
+    let st = db.get("SELECT * FROM staff WHERE from_env=1");
+    if (st && st.login !== cfg.owner.login && db.get("SELECT 1 FROM staff WHERE login=? AND user_id<>?", cfg.owner.login, st.user_id)) log.warn(`[owner] OWNER_LOGIN ${cfg.owner.login} is taken by a helper account — rename that helper`);
+    if (!st) {
+      const id = "owner_" + randomBytes(4).toString("hex");
+      db.run("INSERT INTO users(id,phone,name,email,role,district,created_at) VALUES(?,NULL,?,'','staff','mirob',?)", id, "Владелец Imorat Go", now);
+      db.run("INSERT INTO staff(user_id,login,pass_hash,role,from_env,created_by,created_at) VALUES(?,?,?,'owner',1,'env',?)", id, cfg.owner.login, cfg.owner.hash, now);
+    } else db.run("UPDATE staff SET login=?, pass_hash=?, role='owner', disabled=0 WHERE user_id=?", cfg.owner.login, cfg.owner.hash, st.user_id);
+  }
+  ensureOwner();
   const needSeller = req => {
     const u = need(req);
     const s = u.store_id && db.get("SELECT * FROM stores WHERE id=?", u.store_id);
@@ -142,7 +161,7 @@ export function createApp(cfg, log = console) {
     if ((s.status === "blocked" || s.status === "rejected") && !/^\/api\/seller\/(store|summary)(\?|$)/.test(req.url) && !isAdmin(u)) throw new HttpError(403, "store_" + s.status, "The store is " + s.status + "; contact Imorat Go support");
     return { u, s };
   };
-  const session = (u, extra = {}) => ({ token: signJwt({ sub: u.id, typ: "session", v: u.token_ver || 0, ...extra }, cfg.jwtSecret, extra.mfa ? 12 * 3600 : SESSION_TTL), user: { ...publicUser(u, cfg.admins), telegram: !!u.tg_chat, mfa: !!u.totp_on } });
+  const session = (u, extra = {}) => { const st = staffOf(u); return { token: signJwt({ sub: u.id, typ: "session", v: u.token_ver || 0, ...extra }, cfg.jwtSecret, extra.mfa ? 12 * 3600 : st ? STAFF_TTL : SESSION_TTL), user: { ...publicUser(u, cfg.admins, st), telegram: !!u.tg_chat, mfa: !!u.totp_on } }; };
   const mediaUrl = p => (p && p.startsWith("/uploads/") ? cfg.publicUrl + p : p);
   /* Saves an uploaded JPEG/PNG/WEBP (checked by its first bytes) and returns its /uploads path */
   const saveImage = (buf, prefix) => {
@@ -248,10 +267,69 @@ export function createApp(cfg, log = console) {
     db.run("INSERT INTO audit(user_id,action,target,details,ip,created_at) VALUES(?,?,?,?,?,?)", u.id, "login.telegram", u.id, "{}", req.ip, Date.now());
     return { ...session(u), is_new: !u.name };
   });
+  /* ---------- staff sign-in: the owner (login from .env) and the helpers the owner added, by login + password ---------- */
+  r.post("/api/auth/staff", async req => {
+    const b = await readJson(req);
+    const login = String(b.login || "").trim(), password = String(b.password || "");
+    lim.hit("staff-ip:" + req.ip, 30, 15 * 60000);
+    if (login) lim.hit("staff-login:" + login.toLowerCase(), 10, 15 * 60000); // a brute force on one login stops after 10 tries a quarter hour
+    const st = login ? db.get("SELECT * FROM staff WHERE lower(login)=lower(?)", login) : null;
+    const ok = verifyPassword(password, st?.pass_hash) && st && !st.disabled; // the dummy hash is checked when the login is unknown: same timing
+    if (!ok) { db.run("INSERT INTO audit(user_id,action,target,details,ip,created_at) VALUES(?,?,?,?,?,?)", st?.user_id || null, "staff.login_fail", login.slice(0, 64), "{}", req.ip, Date.now()); throw new HttpError(401, "bad_login", "Wrong login or password"); }
+    const u = db.get("SELECT * FROM users WHERE id=?", st.user_id);
+    if (!u) throw new HttpError(401, "bad_login", "Wrong login or password");
+    db.run("UPDATE staff SET last_login_at=? WHERE user_id=?", Date.now(), st.user_id);
+    audit(req, "staff.login", u.id);
+    return session(u);
+  });
+  /* a helper changes their own password (the owner's password is set on the server: `imorat owner`) */
+  r.post("/api/me/password", async req => {
+    const u = need(req), b = await readJson(req), st = staffOf(u);
+    if (!st) throw new HttpError(409, "no_password", "This account signs in by phone or Telegram, it has no password");
+    if (st.from_env) throw new HttpError(409, "owner_env", "The owner's password is set on the server with `imorat owner`");
+    lim.hit("pwchange:" + u.id, 10, 3600_000);
+    if (!verifyPassword(String(b.old || ""), st.pass_hash)) throw bad("bad_login", "The current password is wrong");
+    const hash = hashPassword(b.password); // throws weak_password under 10 characters
+    db.run("UPDATE staff SET pass_hash=?, must_change=0 WHERE user_id=?", hash, u.id);
+    db.run("UPDATE users SET token_ver=token_ver+1 WHERE id=?", u.id); // every other session of this helper ends
+    audit(req, "staff.password", u.id);
+    return session(db.get("SELECT * FROM users WHERE id=?", u.id));
+  });
+  /* ---------- the owner manages helper accounts ---------- */
+  const staffOut = st => { const u = db.get("SELECT name, totp_on FROM users WHERE id=?", st.user_id); return { id: st.user_id, login: st.login, name: u?.name || "", role: st.role, disabled: !!st.disabled, must_change: !!st.must_change, env: !!st.from_env, mfa: !!u?.totp_on, created_at: st.created_at, last_login_at: st.last_login_at, note: st.note }; };
+  r.get("/api/admin/staff", req => { needOwner(req); return { staff: db.all("SELECT * FROM staff ORDER BY from_env DESC, created_at").map(staffOut), phone_admins: cfg.admins.length, owner_env: !!cfg.owner.login }; });
+  r.post("/api/admin/staff", async req => {
+    const o = needOwner(req), b = await readJson(req);
+    const login = String(b.login || "").trim(), name = str(b.name, 80);
+    if (!/^[A-Za-z0-9_.@-]{3,64}$/.test(login)) throw bad("bad_login_name", "Login: 3–64 letters, digits, . _ - @");
+    if (db.get("SELECT 1 FROM staff WHERE lower(login)=lower(?)", login)) throw new HttpError(409, "login_taken", "This login is already used");
+    if (db.all("SELECT 1 FROM staff WHERE from_env=0 AND disabled=0").length >= 20) throw bad("too_many_staff", "Up to 20 helper accounts");
+    const id = "st_" + randomBytes(4).toString("hex"), pw = tempPassword(), now = Date.now();
+    db.tx(() => {
+      db.run("INSERT INTO users(id,phone,name,email,role,district,created_at) VALUES(?,NULL,?,'','staff','mirob',?)", id, name || login, now);
+      db.run("INSERT INTO staff(user_id,login,pass_hash,role,must_change,created_by,created_at,note) VALUES(?,?,?,'admin',1,?,?,?)", id, login, hashPassword(pw), o.id, now, str(b.note, 200));
+    });
+    audit(req, "staff.create", id, { login });
+    // the temporary password is shown once, to the owner, who passes it on; the helper must change it at the first sign-in
+    return { staff: staffOut(db.get("SELECT * FROM staff WHERE user_id=?", id)), password: pw };
+  });
+  r.patch("/api/admin/staff/:id", async (req, res, p) => {
+    const o = needOwner(req), b = await readJson(req), st = db.get("SELECT * FROM staff WHERE user_id=?", p.id);
+    if (!st) throw new HttpError(404, "not_found", "No such account");
+    if (st.from_env) throw new HttpError(409, "owner_env", "The owner's account is managed on the server (OWNER_LOGIN / `imorat owner`)");
+    const out = {};
+    if (b.name !== undefined) db.run("UPDATE users SET name=? WHERE id=?", str(b.name, 80) || st.login, st.user_id);
+    if (b.note !== undefined) db.run("UPDATE staff SET note=? WHERE user_id=?", str(b.note, 200), st.user_id);
+    if (b.disabled !== undefined) { db.run("UPDATE staff SET disabled=? WHERE user_id=?", b.disabled ? 1 : 0, st.user_id); if (b.disabled) db.run("UPDATE users SET token_ver=token_ver+1 WHERE id=?", st.user_id); audit(req, b.disabled ? "staff.disable" : "staff.enable", st.user_id); }
+    if (b.reset_password) { const pw = tempPassword(); db.run("UPDATE staff SET pass_hash=?, must_change=1 WHERE user_id=?", hashPassword(pw), st.user_id); db.run("UPDATE users SET token_ver=token_ver+1 WHERE id=?", st.user_id); out.password = pw; audit(req, "staff.reset_password", st.user_id); }
+    if (b.reset_mfa) { db.run("UPDATE users SET totp_secret=NULL, totp_on=0, totp_last=NULL, token_ver=token_ver+1 WHERE id=?", st.user_id); audit(req, "staff.reset_mfa", st.user_id); }
+    void o;
+    return { staff: staffOut(db.get("SELECT * FROM staff WHERE user_id=?", st.user_id)), ...out };
+  });
   r.post("/api/auth/google", async req => { const b = await readJson(req); return social(req, "google", b.credential, b.name); });
   r.post("/api/auth/apple", async req => { const b = await readJson(req); return social(req, "apple", b.id_token, b.name); });
 
-  r.get("/api/me", req => ({ user: { ...publicUser(need(req), cfg.admins), telegram: !!req.user.tg_chat, mfa: !!req.user.totp_on }, store: req.user.store_id ? publicStore(db.get("SELECT * FROM stores WHERE id=?", req.user.store_id)) : null }));
+  r.get("/api/me", req => ({ user: { ...publicUser(need(req), cfg.admins, staffOf(req.user)), telegram: !!req.user.tg_chat, mfa: !!req.user.totp_on }, store: req.user.store_id ? publicStore(db.get("SELECT * FROM stores WHERE id=?", req.user.store_id)) : null }));
   r.patch("/api/me", async req => {
     const u = need(req), b = await readJson(req);
     const name = b.name !== undefined ? str(b.name, 80) : u.name;
@@ -266,13 +344,13 @@ export function createApp(cfg, log = console) {
     const email = b.email !== undefined ? str(b.email, 120) : u.email;
     if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw bad("bad_email", "Invalid e-mail");
     db.run("UPDATE users SET name=?, district=?, role=?, email=? WHERE id=?", name, district, role, email, u.id);
-    return { user: publicUser(db.get("SELECT * FROM users WHERE id=?", u.id), cfg.admins) };
+    return { user: publicUser(db.get("SELECT * FROM users WHERE id=?", u.id), cfg.admins, staffOf(u)) };
   });
   r.post("/api/me/vip", async req => {
     const u = need(req), b = await readJson(req);
     if (b.on && !cfg.vipFree) throw new HttpError(402, "payment_required", "VIP is paid; payments are not connected yet");
     db.run("UPDATE users SET vip=? WHERE id=?", b.on ? 1 : 0, u.id);
-    return { user: publicUser(db.get("SELECT * FROM users WHERE id=?", u.id), cfg.admins) };
+    return { user: publicUser(db.get("SELECT * FROM users WHERE id=?", u.id), cfg.admins, staffOf(u)) };
   });
 
   /* ---------- catalog ---------- */
@@ -758,6 +836,7 @@ export function createApp(cfg, log = console) {
   r.del("/api/me", async req => {
     const u = need(req), b = await readJson(req).catch(() => ({}));
     if (b.confirm !== true) throw bad("confirm", "Send {\"confirm\": true} to delete the account");
+    if (staffOf(u)) throw new HttpError(409, "staff_account", "A staff account is disabled by the owner from the panel, not deleted here");
     if (db.get("SELECT COUNT(*) n FROM shipments sh JOIN orders o ON o.id=sh.order_id WHERE o.user_id=? AND sh.status NOT IN ('delivered','picked','cancelled')", u.id).n) throw new HttpError(409, "active_orders", "Finish or cancel your active orders first");
     const st = u.store_id ? db.get("SELECT * FROM stores WHERE id=?", u.store_id) : null;
     if (st && st.owner_id === u.id) {
@@ -864,7 +943,7 @@ export function createApp(cfg, log = console) {
     return session(db.get("SELECT * FROM users WHERE id=?", u.id), { mfa: true });
   });
   r.get("/api/admin/finance", (req, res, p, url) => {
-    needAdmin(req);
+    needOwner(req); // money: the owner only
     const m = url.searchParams.get("month");
     const rows = db.all("SELECT id, name, status, free_until FROM stores ORDER BY name").map(s => ({ id: s.id, name: s.name, status: s.status, free_until: s.free_until, promo: inPromo(s), ...storeFinance(s.id, m) })).filter(x => x.orders || x.balance || x.commission_total || x.acquiring_total);
     const t = rows.reduce((a, x) => ({ goods: a.goods + x.goods, commission: a.commission + x.commission, acquiring: a.acquiring + x.acquiring, balance: a.balance + x.balance }), { goods: 0, commission: 0, acquiring: 0, balance: 0 });
@@ -909,7 +988,7 @@ export function createApp(cfg, log = console) {
   });
   r.get("/api/seller/payouts", req => { const { s } = needSeller(req); return { payouts: db.all("SELECT * FROM payouts WHERE store_id=? ORDER BY requested_at DESC LIMIT 30", s.id) }; });
   r.patch("/api/admin/payouts/:id", async (req, res, p) => {
-    const a = needAdmin(req), b = await readJson(req);
+    const a = needOwner(req), b = await readJson(req);
     const po = db.get("SELECT * FROM payouts WHERE id=?", Number(p.id)); if (!po) throw new HttpError(404, "not_found", "Request not found");
     if (po.status !== "requested") throw bad("done", "This request is already closed");
     if (!["paid", "rejected"].includes(b.status)) throw bad("bad_status", "paid or rejected");
@@ -920,14 +999,14 @@ export function createApp(cfg, log = console) {
     return { ok: true, finance: storeFinance(po.store_id) };
   });
   r.post("/api/admin/settlements", async req => {
-    const u = needAdmin(req), b = await readJson(req);
+    const u = needOwner(req), b = await readJson(req);
     const s = db.get("SELECT id FROM stores WHERE id=?", String(b.store_id || "")); if (!s) throw new HttpError(404, "not_found", "Store not found");
     const amount = int(b.amount, -1e12, 1e12); if (!amount) throw bad("bad_amount", "Amount is required");
     db.run("INSERT INTO settlements(store_id,amount,note,admin_id,created_at) VALUES(?,?,?,?,?)", s.id, amount, str(b.note, 200), u.id, Date.now());
     audit(req, "settlement", s.id, { amount, note: str(b.note, 200) });
     return { ok: true, finance: storeFinance(s.id) };
   });
-  r.get("/api/admin/audit", req => { needAdmin(req); return { log: db.all("SELECT a.*, u.name, u.phone FROM audit a LEFT JOIN users u ON u.id=a.user_id ORDER BY a.id DESC LIMIT 100") }; });
+  r.get("/api/admin/audit", req => { needOwner(req); return { log: db.all("SELECT a.*, u.name, u.phone FROM audit a LEFT JOIN users u ON u.id=a.user_id ORDER BY a.id DESC LIMIT 100") }; });
   r.get("/api/admin/stores", req => { needAdmin(req); return { stores: db.all("SELECT s.*, u.name owner_name, u.phone owner_phone FROM stores s LEFT JOIN users u ON u.id=s.owner_id ORDER BY s.status='pending' DESC, s.created_at DESC").map(s => ({ ...publicStore(s), owner_name: s.owner_name, owner_phone: s.owner_phone, loc_src: s.loc_src, created: s.created_at, note: s.review_note, free_until: s.free_until, promo: inPromo(s) })) }; });
   r.patch("/api/admin/stores/:id", async (req, res, p) => {
     needAdmin(req); const b = await readJson(req);
@@ -975,7 +1054,7 @@ export function createApp(cfg, log = console) {
     return { ok: true };
   });
   r.patch("/api/admin/orders/:num/pay", async (req, res, p) => {
-    needAdmin(req); const b = await readJson(req);
+    needOwner(req); const b = await readJson(req); // marks money as received: the owner only
     if (!["paid", "pending", "refunded", "refund_due", "on_delivery"].includes(b.pay_status)) throw bad("bad_status", "Unknown payment status");
     const o = db.get("SELECT id, pay_status FROM orders WHERE num=?", p.num); if (!o) throw new HttpError(404, "not_found", "Order not found");
     db.run("UPDATE orders SET pay_status=?, paid_at=CASE WHEN ?='paid' AND paid_at IS NULL THEN ? ELSE paid_at END WHERE id=?", b.pay_status, b.pay_status, Date.now(), o.id);
@@ -989,10 +1068,10 @@ export function createApp(cfg, log = console) {
   bot = registerBot({ db, cfg, ref, tg, bonus, masters: mastersApi, log });
   bonus.routes(r, need, lim);
   registerStats({ r, db, lim, needSeller });
-  channel.routes(r, needAdmin);
+  channel.routes(r, needOwner); // the Telegram channel speaks for the company: the owner only
   registerQuestions({ r, db, cfg, need, needSeller, lim, tg, push, log });
   registerTeams({ r, db, cfg, need, lim, tg, log });
-  registerDashboard({ r, db, needAdmin });
+  registerDashboard({ r, db, needAdmin: needOwner }); // analytics: the owner only
   const cx = registerCatalogExtras({ r, db, cfg, need, lim, tg, push, saveImage, removeUpload, mediaUrl, log });
   registerDisputes({ r, db, cfg, need, needSeller, needAdmin, isAdmin, audit, lim, tg, push, saveImage, mediaUrl, log });
 

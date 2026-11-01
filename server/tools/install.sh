@@ -12,9 +12,10 @@ set -euo pipefail
 REPO_URL=${REPO_URL:-https://github.com/usmonovm7777-crypto/Imorat.git}
 BRANCH=${BRANCH:-main}
 REPO_DIR=${REPO_DIR:-/opt/imorat}; SRV=${SRV:-/srv/imorat}; SKIP_SYSTEM=${IMORAT_SKIP_SYSTEM:-0}   # overrides are for tests
-SITE=""; API=""; ADMIN=""; BOT=""; DRY=0
+SITE=""; API=""; ADMIN=""; BOT=""; OWNER=""; DRY=0
 while [ $# -gt 0 ]; do case "$1" in
   --site) SITE=${2:-}; shift 2 ;; --api) API=${2:-}; shift 2 ;; --admin) ADMIN=${2:-}; shift 2 ;; --bot) BOT=${2:-}; shift 2 ;;
+  --owner) OWNER=${2:-}; shift 2 ;; # a login for the owner's password sign-in to the panel; the password is asked for at the end (never passed on the command line)
   --repo) REPO_URL=$2; shift 2 ;; --branch) BRANCH=$2; shift 2 ;; --dry-run) DRY=1; shift ;;
   -h|--help) sed -n '2,10p' "$0"; exit 0 ;; *) echo "unknown option $1"; exit 1 ;; esac; done
 red() { echo -e "\033[31m$*\033[0m"; } ; grn() { echo -e "\033[32m$*\033[0m"; } ; step() { echo -e "\n\033[1m▶ $*\033[0m"; }
@@ -80,6 +81,12 @@ sys chmod 644 /etc/cron.d/imorat
 step "7/7 Start: API + Caddy (first build takes 1–2 minutes)"
 if [ "$DRY" = 0 ] && [ "$SKIP_SYSTEM" = 0 ]; then (cd "$REPO_DIR/server" && docker compose -f docker-compose.yml -f docker-compose.site.yml up -d --build); sleep 6; fi
 
+if [ -n "$OWNER" ] && [ "$DRY" = 0 ]; then
+  step "Owner's password sign-in ($OWNER)"
+  echo "  Type a password for the panel (10+ characters). It is not shown and is not saved anywhere: only its hash goes to .env."
+  IMORAT_REPO_DIR="$REPO_DIR" bash "$REPO_DIR/server/tools/imorat.sh" owner --login "$OWNER" --no-restart || red "  owner password not set — run later: imorat owner --login $OWNER"
+fi
+
 echo; grn "Done."; echo
 if [ -z "$BOT" ]; then
   red "The API will keep restarting until a sign-in method is configured:"
@@ -91,7 +98,7 @@ Next:
   1. DNS at your registrar — three A records pointing to this server's IP:  $SITE   www.$SITE   $API
      (HTTPS certificates appear by themselves within a minute after DNS works)
   2. Check everything:        imorat doctor
-  3. Open https://$SITE — sign in with $ADMIN, turn on the two-step code (authenticator app), and approve the first store.
+  3. Open https://$SITE — sign in with $ADMIN (or the owner login${OWNER:+ $OWNER} at https://$SITE/#owner), turn on the two-step code (authenticator app), and approve the first store.
   4. Keys as you get them:    imorat env   (Payme/Click, Eskiz, Yandex Delivery, Yandex Maps, Anthropic)
 Everyday:  imorat status · imorat logs · imorat update · imorat backup       Guide: $REPO_DIR/DEPLOY.md
 EOF

@@ -3,6 +3,7 @@ WORKDIR /app
 ENV NODE_ENV=production PORT=8787 DB_PATH=/data/imorat.db UPLOADS_DIR=/data/uploads
 COPY package.json ./
 COPY src ./src
+COPY tools/owner.mjs ./tools/owner.mjs
 COPY data/catalog.json ./data/catalog.json
 RUN mkdir -p /data && chown -R node:node /data
 USER node
