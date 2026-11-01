@@ -421,6 +421,8 @@ export function createApp(cfg, log = console) {
     db.run("UPDATE shipments SET status=?, status_at=?, history=?, accepted_at=CASE WHEN ?='assembling' AND accepted_at IS NULL THEN ? ELSE accepted_at END, cancel_reason=COALESCE(?, cancel_reason) WHERE id=?",
       status, now, JSON.stringify(h), status, now, reason, s.id);
     setImmediate(() => notify.status(s.id));
+    // a courier already ordered for this shipment is called off (a paid cancellation is reported to the admins)
+    if (status === "cancelled" && s.claim_id && !String(s.claim_id).startsWith("sim-")) courier.cancel(s).then(r => { if (r?.cancel_state === "paid") notify.admins(`🚚 Отправление #${s.id} отменено после выезда курьера Яндекса — отмена платная (${r.cancel_state}).`); }).catch(e => { log.warn("[courier] cancel", e.message); notify.admins(`🚚 Не удалось отменить заявку Яндекса для отправления #${s.id}: ${String(e.message).replace(/[<>&]/g, "")}. Отмените её вручную в кабинете Яндекс Доставки.`); });
     const all = db.all("SELECT status FROM shipments WHERE order_id=?", s.order_id).map(x => x.status);
     const st = all.every(x => x === "cancelled") ? "cancelled" : all.every(x => ["delivered", "picked", "cancelled"].includes(x)) ? "done" : "active";
     db.run("UPDATE orders SET status=? WHERE id=?", st, s.order_id);

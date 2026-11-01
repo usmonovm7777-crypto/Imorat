@@ -13,7 +13,7 @@ import { createECDH, createDecipheriv, hkdfSync } from "node:crypto";
 /* ---- fake external services: Eskiz, Yandex, Anthropic, Google JWKS ---- */
 const { privateKey, publicKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
 const jwk = { ...publicKey.export({ format: "jwk" }), kid: "k1", alg: "RS256", use: "sig" };
-const sms = [], tgSent = [], tgUpdates = [], pushes = [], yaClaims = [], geoHits = [], fcmSent = [], apnsSent = [];
+const sms = [], tgSent = [], tgUpdates = [], pushes = [], yaClaims = [], yaCancels = [], geoHits = [], fcmSent = [], apnsSent = [];
 const fake = createServer(async (req, res) => {
   const chunks = []; for await (const c of req) chunks.push(c); const raw = Buffer.concat(chunks), body = raw.toString("utf8");
   const json = (s, o) => { res.writeHead(s, { "content-type": "application/json" }); res.end(JSON.stringify(o)); };
@@ -23,6 +23,8 @@ const fake = createServer(async (req, res) => {
   // Yandex claims: create → accept → info (status advances on every call) → tracking link → performer position
   if (req.url.startsWith("/ya/b2b/cargo/integration/v2/claims/create")) { yaClaims.push({ body: JSON.parse(body), infos: 0 }); return json(200, { id: "claim-" + yaClaims.length, version: 1, status: "new" }); }
   if (req.url.startsWith("/ya/b2b/cargo/integration/v2/claims/accept")) return json(200, { id: "x", status: "ready_for_approval" });
+  if (req.url.startsWith("/ya/b2b/cargo/integration/v2/claims/cancel-info")) return json(200, { cancel_state: "paid" });
+  if (req.url.startsWith("/ya/b2b/cargo/integration/v2/claims/cancel?")) { yaCancels.push({ url: req.url, body: JSON.parse(body) }); return json(200, { id: "x", status: "cancelled_with_payment" }); }
   if (req.url.startsWith("/ya/b2b/cargo/integration/v2/claims/tracking-links")) return json(200, { route_points: [{ type: "destination", sharing_url: "https://taxi.yandex.ru/route/abc" }] });
   if (req.url.startsWith("/ya/b2b/cargo/integration/v2/claims/info")) { const c = yaClaims[Number(req.url.match(/claim-(\d+)/)[1]) - 1]; const seq = ["performer_found", "pickuped", "delivered_finish"]; const st = seq[Math.min(seq.length - 1, c.infos++)]; return json(200, { id: "x", status: st, performer_info: { courier_name: "Шерзод", car_model: "Chevrolet Labo", car_number: "01A123BC" } }); }
   if (req.url.startsWith("/ya/b2b/cargo/integration/v2/claims/performer-position")) return json(200, { position: { lat: 41.3, lon: 69.25, speed: 10, direction: 90, timestamp: Math.floor(Date.now() / 1000), dist_to_point: 1200 } });
@@ -1059,6 +1061,16 @@ test("Card only: no cash, the full address reaches the courier, the buyer watche
     a.sweep(); await until(async () => (await c("GET", `/api/orders/${o.data.order.num}`, null, t)).data.order.ships[0].status === "on_way");
     a.sweep(); await until(async () => (await c("GET", `/api/orders/${o.data.order.num}`, null, t)).data.order.ships[0].status === "delivered");
     assert.equal((await c("GET", `/api/orders/${o.data.order.num}`, null, t)).data.order.status, "done");
+    // a shipment cancelled after the courier was called: the Yandex claim is cancelled too (here a paid cancellation → the admins hear about it)
+    const o2 = await c("POST", "/api/orders", { lines: [{ id: 1, store: "usta", q: 1 }], form }, t); assert.equal(o2.status, 200);
+    await rpc("CreateTransaction", { id: "c3", time: Date.now(), amount: o2.data.order.total * 100, account: { order: o2.data.order.num } }); await rpc("PerformTransaction", { id: "c3" });
+    const sh2 = o2.data.order.ships[0].id, n1 = yaClaims.length;
+    for (const st of ["assembling", "searching"]) await c("PATCH", `/api/admin/shipments/${sh2}`, { status: st }, admin);
+    await until(() => yaClaims.length > n1);
+    const k0 = yaCancels.length;
+    assert.equal((await c("PATCH", `/api/admin/shipments/${sh2}`, { status: "cancelled" }, admin)).status, 200);
+    await until(() => yaCancels.length > k0);
+    assert.match(yaCancels[yaCancels.length - 1].url, /claim_id=claim-/); assert.equal(yaCancels[yaCancels.length - 1].body.cancel_state, "paid");
   });
   rmSync(d3, { recursive: true, force: true });
 });

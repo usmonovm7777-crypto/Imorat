@@ -86,5 +86,15 @@ export function createCourier({ db, cfg, ref, log = console }) {
     return { ...base, pos: lerp(from, to, k), eta_min: Math.max(1, Math.round(total - el)), updated: Date.now(), simulated: true };
   }
 
-  return { live, order, poll, position, STATUS_MAP };
+  /* the shipment was cancelled after the courier was called: cancel the Yandex claim too, otherwise the trip is still charged.
+     cancel-info says whether it is still free or already paid (the car is on its way); both are cancelled, the admin is told which. */
+  async function cancel(sh) {
+    if (!live || !sh.claim_id || sh.claim_id.startsWith("sim-")) return null;
+    const info = await api(`claims/info?claim_id=${encodeURIComponent(sh.claim_id)}`);
+    if (/^(delivered|delivered_finish|cancelled|cancelled_with_payment|cancelled_by_taxi|returned|returned_finish|failed)$/.test(info.status)) return { already: info.status };
+    const ci = await api(`claims/cancel-info?claim_id=${encodeURIComponent(sh.claim_id)}`).catch(() => ({ cancel_state: "free" }));
+    const r = await api(`claims/cancel?claim_id=${encodeURIComponent(sh.claim_id)}`, { version: info.version || 1, cancel_state: ci.cancel_state || "free" });
+    return { status: r.status, cancel_state: ci.cancel_state || "free" };
+  }
+  return { live, order, poll, position, cancel, STATUS_MAP };
 }

@@ -12,7 +12,9 @@ export async function yandexPrices(db, ref, cfg, lines, form, log = console) {
     const s = db.get("SELECT * FROM stores WHERE id=?", sid);
     const t = ref.tariffs.find(x => g.kg <= x.maxKg) || ref.tariffs[ref.tariffs.length - 1];
     const requirements = t.id === "courier" ? { taxi_class: "express" }
-      : { taxi_class: "cargo", cargo_type: t.id === "cargo_s" ? "lcv_m" : "lcv_l", ...(form.lift ? { cargo_loaders: 1 } : {}) };
+      : { taxi_class: "cargo", cargo_type: t.id === "cargo_s" ? "lcv_m" : "lcv_l" };
+    // the price is asked without loaders on purpose: unloading help is priced by our own LOADER fee in pricing.quote,
+    // the loader is ordered in the claim (courier.js) — asking Yandex for it here would count it twice in the buyer's price
     const body = {
       route_points: [
         { id: 1, coordinates: [s.lo ?? D[s.district].lo, s.la ?? D[s.district].la], fullname: `Ташкент, ${s.addr || D[s.district].ru}` },

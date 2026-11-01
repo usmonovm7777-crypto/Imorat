@@ -79,6 +79,7 @@ export function loadConfig(env = process.env) {
     promoMonths: Math.max(0, Math.round(Number(env.PROMO_MONTHS ?? 3) || 0)),
     adminMfa: env.ADMIN_MFA !== "0",
     backupDir: env.BACKUP_DIR || "",
+    supportPhone: String(env.SUPPORT_PHONE || "").replace(/[^\d+]/g, ""), // emergency contact handed to the Yandex courier (defaults to the buyer's phone)
     nativePush: loadNativePushConfig(env), // FCM / APNs keys for the Android and iPhone app (see push_native.js)
     // sign-in for app-store reviewers: "998900000000:123456" — the code is fixed, no SMS is sent; several pairs separated by commas
     reviewAccounts: Object.fromEntries(String(env.REVIEW_ACCOUNTS || "").split(",").map(x => x.trim().split(":")).filter(x => x.length === 2 && /^998\d{9}$/.test(x[0]) && /^\d{4,8}$/.test(x[1]))),
