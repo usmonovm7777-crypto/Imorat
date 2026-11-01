@@ -208,6 +208,7 @@ linear-gradient(180deg, hsl(var(--h) var(--tile-s) var(--tile-l)) 0 70%, hsl(var
 .rail-nav button:hover { color: var(--ink); background: var(--raised); }
 .rail-nav button.hl { color: var(--signal); font-weight: 600; }
 .rail-nav button.ai-l { color: var(--accent); font-weight: 600; }
+.rail-nav button[aria-current="page"] { color: var(--ink); font-weight: 700; background: var(--raised); box-shadow: inset 0 -2px 0 var(--accent); }
 .hdr-row .where { display: none; }
 .search input { min-width: 0; }
 @media (max-width: 1240px) and (min-width: 761px) { .search .ask .t { display: none; } .search input { padding-right: 124px; } }
@@ -295,7 +296,7 @@ mask: linear-gradient(180deg, #000, rgba(0,0,0,.55)); -webkit-mask: linear-gradi
 .hero .eyebrow { color: color-mix(in srgb, var(--hero-fg) 70%, transparent); }
 .hero .h-xl em { font-style: normal; color: var(--hero-acc); }
 .hero-l { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; align-content: center; min-width: 0; }
-@media (min-width: 761px) { .hero .askbar { max-width: 500px; } }
+.hero .askbar { padding: 4px 4px 4px 14px; border-radius: 13px; } .hero .askbar input { padding: 6px 0; font-size: 14.5px; } .hero .askbar .btn { padding: 8px 14px; font-size: 14px; border-radius: 10px; }
 .hero .eyebrow { display: block; } .hero .eyebrow svg { vertical-align: -2px; margin-right: 4px; }
 .hero .lead { color: color-mix(in srgb, var(--hero-fg) 76%, transparent); font-size: 17px; max-width: 50ch; margin: 0; }
 .askbar { display: flex; align-items: center; gap: 8px; background: var(--hero-fg); color: #10201E; border-radius: 16px; padding: 6px 6px 6px 16px; box-shadow: 0 20px 50px rgba(0,0,0,.25); }
@@ -754,6 +755,7 @@ html:not(.fx) .truckel { animation: none; }
 .flyer { position: fixed; z-index: 80; width: 64px; height: 64px; border-radius: 50%; overflow: hidden; pointer-events: none; box-shadow: var(--shadow); }
 .flyer img, .flyer svg { width: 100%; height: 100%; object-fit: cover; }
 html.fx .askbar { position: relative; isolation: isolate; overflow: hidden; padding: 8px 8px 8px 18px; background: transparent; }
+html.fx .hero .askbar { padding: 5px 5px 5px 16px; }
 html.fx .askbar::before { content: ""; position: absolute; left: 50%; top: 50%; width: 220%; aspect-ratio: 1; margin: -110% 0 0 -110%; z-index: -2; background: conic-gradient(var(--hero-acc), var(--signal), #ffffff, var(--hero-acc)); animation: spin 5s linear infinite; }
 html.fx .askbar::after { content: ""; position: absolute; inset: 2px; z-index: -1; border-radius: 14px; background: var(--hero-fg); }
 @keyframes spin { to { transform: rotate(1turn); } }
@@ -938,7 +940,8 @@ html.ds-dragging, html.ds-dragging * { cursor: grabbing !important; user-select:
 .sup-m.them { justify-self: start; } .sup-m.them > div { background: var(--raised); border: 1px solid var(--line); border-bottom-left-radius: 4px; }
 .sup-m.me { justify-self: end; text-align: right; } .sup-m.me > div { background: var(--accent); color: var(--accent-ink); border-bottom-right-radius: 4px; text-align: left; }
 .sup-topics { display: flex; flex-wrap: wrap; gap: 6px; } .sup-topics .chip { font-size: 13px; padding: 7px 12px; }
-.sup-f { display: grid; gap: 6px; } .sup-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: end; }
+.sup-f { display: grid; gap: 6px; } .sup-who { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; } .sup-who input { border: 1.5px solid var(--line-strong); border-radius: 10px; padding: 9px 11px; background: var(--raised); color: inherit; font-size: 14px; min-width: 0; }
+.hb .dot.sup[hidden] { display: none; } .sup-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: end; }
 .sup-row textarea { width: 100%; border: 1.5px solid var(--line-strong); border-radius: 12px; padding: 10px 12px; background: var(--raised); color: inherit; font: inherit; font-size: 14.5px; resize: none; max-height: 140px; }
 .sup-row textarea:focus { outline: none; border-color: var(--accent); background: var(--surface); } .sup-row .btn { padding: 11px 13px; }
 .asup { display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); gap: 12px; min-height: 320px; }
@@ -3967,7 +3970,7 @@ function renderAuth() {
         : `<button class="soc tg" type="button" disabled title="${L("Заработает после подключения сервера", "Server ulangandan keyin ishlaydi", "Works once the server is connected")}">${ui("send", 20)} ${L("Войти через Telegram", "Telegram orqali kirish", "Sign in with Telegram")}</button>`}
       <p class="fine">${L("Продолжая, вы соглашаетесь с", "Davom etib, siz", "By continuing you agree to the")} <a href="${legalUrl("terms")}" target="_blank" rel="noopener">${L("условиями сервиса", "xizmat shartlari", "terms of use")}</a> ${L("и", "va", "and the")} <a href="${legalUrl("privacy")}" target="_blank" rel="noopener">${L("политикой конфиденциальности", "maxfiylik siyosatiga", "privacy policy")}</a>${L(".", " rozilik bildirasiz.", ".")}</p>
       ${API ? "" : `<p class="demo">${L("Демо-режим: отправка SMS и вход через Telegram заработают после подключения сервера.", "Demo rejim: SMS yuborish va Telegram orqali kirish server ulangandan keyin ishlaydi.", "Demo mode: SMS and Telegram sign-in work once the server is connected.")}</p>`}
-      ${API ? `<button class="lnk" type="button" data-authstep="staff" style="justify-self:center;font-size:12.5px;color:var(--muted)">${L("Вход для сотрудников Imorat Go", "Imorat Go xodimlari uchun kirish", "Imorat Go staff sign-in")}</button>` : ""}`;
+      ${true ? `<button class="lnk" type="button" data-authstep="staff" style="justify-self:center;font-size:12.5px;color:var(--muted)">${L("Вход для сотрудников Imorat Go", "Imorat Go xodimlari uchun kirish", "Imorat Go staff sign-in")}</button>` : ""}`;
   } else if (st === "staff") {
     h = `${back("start")}<h2>${L("Вход для сотрудников", "Xodimlar uchun kirish", "Staff sign-in")}</h2>
       <p>${L("Логин и пароль выдаёт владелец Imorat Go. Покупатели и магазины входят по номеру телефона.", "Login va parolni Imorat Go egasi beradi. Xaridorlar va do‘konlar telefon raqami bilan kiradi.", "The owner of Imorat Go issues the login and password. Buyers and stores sign in with a phone number.")}</p>
@@ -3976,7 +3979,7 @@ function renderAuth() {
         <div class="f"><label for="aPass">${L("Пароль", "Parol", "Password")}</label><input id="aPass" name="password" type="password" autocomplete="current-password"></div>
         <span class="err" id="aStErr" role="alert" hidden></span>
         <button class="btn btn-primary" type="submit">${L("Войти", "Kirish", "Sign in")}</button>
-      </form>`;
+      </form>${API ? "" : `<div class="demo">${L("Демо-вход владельца: логин", "Egasi demo-kirishi: login", "Demo owner sign-in: login")} <b class="mono">${DEMO_OWNER.login}</b>, ${L("пароль", "parol", "password")} <b class="mono">${DEMO_OWNER.pass}</b>. <button class="lnk" type="button" data-act="demo-owner-fill">${L("Подставить", "Qo‘yish", "Fill in")}</button><br><small>${L("Только в демо. На рабочем сайте пароль задаётся на сервере, а после него спрашивается код из приложения-аутентификатора.", "Faqat demoda. Ishchi saytda parol serverda o‘rnatiladi, keyin autentifikator ilovasidan kod so‘raladi.", "Demo only. On the working site the password is set on the server, then a code from an authenticator app is asked.")}</small></div>`}`;
   } else if (st === "pw") {
     h = `<h2>${auth.pwForced ? L("Смените временный пароль", "Vaqtinchalik parolni almashtiring", "Change the temporary password") : L("Новый пароль", "Yangi parol", "New password")}</h2>
       <p>${auth.pwForced ? L("Пароль, который вам передали, одноразовый. Придумайте свой — не короче 10 символов.", "Sizga berilgan parol bir martalik. O‘zingiznikini o‘ylab toping — kamida 10 ta belgi.", "The password you were given is temporary. Choose your own, at least 10 characters.") : L("Не короче 10 символов. После смены другие ваши сессии завершатся.", "Kamida 10 ta belgi. Almashtirilgach boshqa sessiyalaringiz tugaydi.", "At least 10 characters. Your other sessions end after the change.")}</p>
@@ -4063,6 +4066,12 @@ function renderAuth() {
       e.preventDefault(); const login = $("#aLogin").value.trim(), password = $("#aPass").value, er = $("#aStErr"), btn = e.target.querySelector("button[type=submit]");
       if (!login || !password) { er.textContent = L("Введите логин и пароль", "Login va parolni kiriting", "Enter the login and the password"); er.hidden = false; return; }
       auth.login = login; btn.disabled = true; er.hidden = true;
+      if (!API) { // demo: one test owner account, kept in this browser only
+        if (login.toLowerCase() !== DEMO_OWNER.login || password !== DEMO_OWNER.pass) { er.textContent = L("Неверный логин или пароль", "Login yoki parol noto‘g‘ri", "Wrong login or password"); er.hidden = false; btn.disabled = false; return; }
+        user = { id: "demo-owner", name: L("Владелец (демо)", "Egasi (demo)", "Owner (demo)"), phone: "", via: "password", admin: true, owner: true, staff: { login: DEMO_OWNER.login, role: "owner", must_change: false, env: true, demo: true }, district };
+        LS.set("imorat.user", user); closeAuth(); renderHeader(); renderTabbar(); toast(L("Вы вошли как владелец (демо)", "Egasi sifatida kirdingiz (demo)", "Signed in as the owner (demo)"));
+        history.pushState(null, "", "#admin"); route = parseHash(); renderMain(); window.scrollTo(0, 0); return;
+      }
       try { const r = await api("POST", "/api/auth/staff", { login, password }); auth.via = "password"; afterLogin(r); }
       catch (ex) { er.textContent = ex.code === "bad_login" ? L("Неверный логин или пароль", "Login yoki parol noto‘g‘ri", "Wrong login or password") : ex.code === "rate_limited" ? L("Слишком много попыток — подождите 15 минут", "Urinishlar ko‘p — 15 daqiqa kuting", "Too many attempts — wait 15 minutes") : apiErr(ex); er.hidden = false; btn.disabled = false; }
     });
@@ -7505,7 +7514,10 @@ function renderAdmin() {
     if (!dash) { $("#app").innerHTML = `<div class="wrap">${crumbs}<div class="panel" style="margin:12px 0">${L("Загружаем…", "Yuklanmoqda…")}</div></div>`; loadDash(); return; }
     if (dash.error !== undefined) { $("#app").innerHTML = `<div class="wrap">${crumbs}<div class="panel" style="margin:12px 0">${esc(dash.error || "")}</div></div>`; return; }
     D = dash;
-  } else D = demoDash();
+  } else {
+    if (!user?.admin) { $("#app").innerHTML = `<div class="wrap">${crumbs}<div class="panel" style="margin:12px 0;display:grid;gap:10px;justify-items:start"><h1 class="h-l" style="margin:0">${L("Панель владельца", "Egasi paneli", "Owner panel")}</h1><p class="mu" style="margin:0">${L("Вход по логину и паролю владельца или админа. В демо есть тестовый вход — логин и пароль показаны в окне входа.", "Egasi yoki admin login va paroli bilan kirish. Demoda sinov kirishi bor — login va parol kirish oynasida ko‘rsatilgan.", "Sign in with the owner's or an admin's login and password. The demo has a test sign-in — shown in the sign-in window.")}</p><button class="btn btn-primary" type="button" data-act="owner-login">${L("Войти", "Kirish", "Sign in")}</button></div></div>`; return; }
+    D = demoDash();
+  }
   const big = v => v >= 1e6 ? `${(Math.round(v / 1e5) / 10).toString().replace(".", DEC)} ${L("млн", "mln")}` : `${fmtN(v / 1000)} ${L("тыс", "ming")}`;
   const t = D.totals, c = D.counts, ch = (a, b) => (b ? Math.round((a - b) * 100 / b) : null);
   const delta = (a, b) => { const v = ch(a, b); return v == null ? "" : `<small style="color:${v >= 0 ? "var(--ok)" : "var(--signal)"}">${v >= 0 ? "▲" : "▼"} ${Math.abs(v)}% ${L("к прошлому периоду", "o‘tgan davrga nisbatan")}</small>`; };
@@ -7518,7 +7530,7 @@ function renderAdmin() {
     <div class="ds-head" style="display:flex;justify-content:space-between;gap:12px;align-items:end;flex-wrap:wrap"><div><h1 class="h-l">${L("Панель Imorat Go", "Imorat Go paneli")} ${D.demo ? `<span class="pill mute">${L("демо-данные", "demo ma’lumot")}</span>` : ""}</h1><p class="mu" style="margin:0">${L("Как идут дела у маркетплейса", "Marketpleys ishlari qanday ketmoqda")}</p></div>
       <div class="seg" role="group" aria-label="${L("Период", "Davr")}">${[7, 30, 90].map(n => `<button type="button" data-dashdays="${n}" aria-pressed="${dashDays === n}">${n} ${L("дн", "kun")}</button>`).join("")}</div></div>
     ${att.length ? `<div class="adm-att">${att.map(([n, tx, go]) => `<button type="button" class="chip" ${go ? `data-go="${go}"` : ""}><b>${n}</b> ${tx}</button>`).join("")}</div>` : ""}
-    ${API ? adminSupportHTML() + adminModHTML() : ""}
+    ${API ? adminSupportHTML() + adminModHTML() : demoSupportHTML()}
     <div class="kpis adm-k">
       <div class="kpi"><span>${L("Оборот товаров", "Mahsulot aylanmasi")}</span><b>${big(t.gmv)}</b>${delta(t.gmv, t.gmv_prev)}</div>
       <div class="kpi"><span>${L("Заказов", "Buyurtmalar")}</span><b>${fmtN(t.orders)}</b>${delta(t.orders, t.orders_prev)}</div>
@@ -7787,26 +7799,35 @@ async function dsPhotoSave() {
    A signed-in person writes from the round button on any page (or #support); the team answers from the panel,
    the answer comes back here and in Telegram / push. Without the server (demo) the chat explains where to write. */
 var sup = { msgs: null, unread: 0, busy: false, poll: 0, order: null };
+/* who is writing: a signed-in person (their account), a visitor without an account (a random key kept in this browser),
+   or the demo without a server (the chat lives in this browser and the demo panel answers it) */
+const supGuestKey = () => { let k = LS.get("imorat.supGuest", ""); if (!/^[A-Za-z0-9_-]{24,64}$/.test(k)) { const a = new Uint8Array(24); crypto.getRandomValues(a); k = [...a].map(x => "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_"[x % 64]).join(""); LS.set("imorat.supGuest", k); } return k; };
+const DEMO_OWNER = { login: "demo-owner", pass: "Imorat-Demo-2026" }; // the demo's test owner (no server); the working site never accepts it
+const supMode = () => !API ? "demo" : user && !user.staff ? "user" : user?.staff ? "staff" : "guest";
+const supDemo = { get: () => LS.get("imorat.supDemo", { name: "", phone: "", msgs: [] }), set: v => LS.set("imorat.supDemo", v) };
 const SUP_TOPICS = () => [["order", L("Где мой заказ?", "Buyurtmam qayerda?", "Where is my order?")], ["cancel", L("Отменить или изменить заказ", "Buyurtmani bekor qilish yoki o‘zgartirish", "Cancel or change an order")], ["payment", L("Оплата и возврат", "To‘lov va qaytarish", "Payment and refund")], ["delivery", L("Доставка", "Yetkazish", "Delivery")], ["seller", L("Я продавец", "Men sotuvchiman", "I am a seller")], ["other", L("Другой вопрос", "Boshqa savol", "Something else")]];
 async function supLoad(peek) {
-  if (!API || !user || user.staff) return;
-  try { const r = await api("GET", "/api/support" + (peek ? "?peek=1" : "")); sup.unread = peek ? r.unread : 0; if (!peek || sup.msgs) sup.msgs = r.messages; }
+  const m = supMode(); if (m === "staff") return;
+  if (m === "demo") { const d = supDemo.get(); sup.unread = peek ? d.msgs.filter(x => x.from === "staff" && !x.seen).length : 0; if (!peek) { d.msgs.forEach(x => { x.seen = true; }); supDemo.set(d); } sup.msgs = d.msgs; supBadge(); if (drawerView === "support" && !peek) supDraw(); return; }
+  if (m === "guest" && !LS.get("imorat.supGuest", "")) { sup.msgs = []; if (drawerView === "support" && !peek) supDraw(); return; } // nothing written from this browser yet
+  try { const r = m === "user" ? await api("GET", "/api/support" + (peek ? "?peek=1" : "")) : await api("POST", "/api/support/guest", { guest: supGuestKey(), peek: !!peek }); sup.unread = peek ? r.unread : 0; if (!peek || sup.msgs) sup.msgs = r.messages; }
   catch (e) { if (!peek) sup.msgs = sup.msgs || []; }
   supBadge(); if (drawerView === "support" && !peek) supDraw();
 }
-function supBadge() { const b = $("#supBtn"); if (!b) return; const d = b.querySelector(".dot"); d.hidden = !sup.unread; d.textContent = sup.unread; b.hidden = !!drawerView || route.view === "admin" || !!user?.staff; }
+function supBadge() { const b = $("#supBtn"); if (!b) return; const d = b.querySelector(".dot"); d.hidden = !sup.unread; d.textContent = sup.unread; b.hidden = !!drawerView || route.view === "admin" || !!user?.staff; staffSupBadge(); }
 function supTime(t) { const d = new Date(t), today = new Date().toDateString() === d.toDateString(); return d.toLocaleString(LOCALE, today ? { hour: "2-digit", minute: "2-digit" } : { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }); }
 function supBubbles(list, mine) { return list.map(m => `<div class="sup-m ${m.from === mine ? "me" : "them"}"><div>${esc(m.text).replace(/\n/g, "<br>")}</div><small>${m.from === "staff" ? esc(m.staff_name || "Imorat Go") + " · " : ""}${m.order ? esc(m.order) + " · " : ""}${supTime(m.at)}</small></div>`).join(""); }
 function dSupport() {
   $("#dTitle").textContent = L("Поддержка Imorat Go", "Imorat Go yordami", "Imorat Go support");
   const bot = esc(apiCfg?.telegram_bot || "imoratGo_bot"), tgA = `<a class="btn btn-line" href="https://t.me/${bot}" target="_blank" rel="noopener">${ui("send", 16)} Telegram · @${bot}</a>`;
   const hello = `<div class="sup-m them"><div>${L("Здравствуйте! Напишите вопрос — ответит команда Imorat Go, обычно в течение 15 минут с 9:00 до 21:00. Ответ придёт сюда, в Telegram и уведомлением.", "Assalomu alaykum! Savolingizni yozing — Imorat Go jamoasi javob beradi, odatda 9:00–21:00 oralig‘ida 15 daqiqa ichida. Javob shu yerga, Telegramga va bildirishnoma bilan keladi.", "Hello! Write your question — the Imorat Go team answers, usually within 15 minutes between 9:00 and 21:00. The answer comes here, to Telegram and as a notification.")}</div><small>${L("Бот", "Bot", "Bot")}</small></div>`;
-  if (!API) { $("#dBody").innerHTML = `<div class="sup">${hello}<div class="note">${L("В демо-версии сообщения никуда не уходят. Напишите нам в Telegram — ответим там.", "Demo versiyada xabarlar hech qayerga ketmaydi. Telegramda yozing — o‘sha yerda javob beramiz.", "In the demo messages go nowhere. Write to us in Telegram — we answer there.")}</div>${tgA}</div>`; $("#dFoot").innerHTML = ""; return; }
-  if (!user) { $("#dBody").innerHTML = `<div class="sup">${hello}<div class="note">${L("Войдите по номеру телефона — так мы увидим ваши заказы и ответим быстрее.", "Telefon raqami bilan kiring — buyurtmalaringizni ko‘rib, tezroq javob beramiz.", "Sign in with your phone — we will see your orders and answer faster.")}</div><button class="btn btn-primary" type="button" data-act="login">${L("Войти и написать", "Kirib yozish", "Sign in and write")}</button>${tgA}</div>`; $("#dFoot").innerHTML = ""; return; }
-  if (user.staff) { $("#dBody").innerHTML = `<div class="note">${L("Обращения покупателей и продавцов — в панели: раздел «Поддержка».", "Xaridor va sotuvchilar murojaatlari — panelda: «Yordam» bo‘limi.", "Messages from buyers and sellers are in the panel: «Support».")}</div><button class="btn btn-primary" type="button" data-go="admin">${L("Открыть панель", "Panelni ochish", "Open the panel")}</button>`; $("#dFoot").innerHTML = ""; return; }
+  void tgA;
+  if (user?.staff) { $("#dBody").innerHTML = `<div class="note">${L("Обращения покупателей и продавцов — в панели: раздел «Поддержка».", "Xaridor va sotuvchilar murojaatlari — panelda: «Yordam» bo‘limi.", "Messages from buyers and sellers are in the panel: «Support».")}</div><button class="btn btn-primary" type="button" data-go="admin">${L("Открыть панель", "Panelni ochish", "Open the panel")}</button>`; $("#dFoot").innerHTML = ""; return; }
   if (sup.msgs === null) { $("#dBody").innerHTML = `<div class="sup">${hello}<p class="mu">${L("Загружаем переписку…", "Yozishmalar yuklanmoqda…", "Loading the conversation…")}</p></div>`; supLoad(); }
   else supDraw();
-  $("#dFoot").innerHTML = `<form class="sup-f" id="supForm" onsubmit="return false">${sup.order ? `<span class="pill acc">${L("Заказ", "Buyurtma", "Order")} ${esc(sup.order)} <button type="button" class="lnk" data-act="sup-unorder" aria-label="${L("Убрать", "Olib tashlash", "Remove")}">×</button></span>` : ""}<div class="sup-row"><label class="visually-hidden" for="supText">${L("Сообщение", "Xabar", "Message")}</label><textarea id="supText" rows="1" maxlength="1000" placeholder="${L("Сообщение…", "Xabar…", "Message…")}"></textarea><button class="btn btn-primary" type="button" data-act="sup-send" aria-label="${L("Отправить", "Yuborish", "Send")}">${ui("send", 18)}</button></div><span class="err" id="supErr" role="alert" hidden></span></form>`;
+  const md = supMode(), known = md === "user" || (md === "guest" && (sup.msgs || []).length) || (md === "demo" && supDemo.get().name);
+  const who = known ? "" : `<div class="sup-who"><label class="visually-hidden" for="supName">${L("Ваше имя", "Ismingiz", "Your name")}</label><input id="supName" maxlength="60" autocomplete="name" placeholder="${L("Ваше имя", "Ismingiz", "Your name")}" value="${esc(form.name || "")}"><label class="visually-hidden" for="supPhone">${L("Телефон", "Telefon", "Phone")}</label><input id="supPhone" type="tel" inputmode="tel" autocomplete="tel" maxlength="20" placeholder="${L("Телефон для ответа", "Javob uchun telefon", "Phone for the answer")}" value="${esc(digitsOf(form.phone || "").length > 4 ? form.phone : "")}"></div>`;
+  $("#dFoot").innerHTML = `<form class="sup-f" id="supForm" onsubmit="return false">${who}${sup.order ? `<span class="pill acc">${L("Заказ", "Buyurtma", "Order")} ${esc(sup.order)} <button type="button" class="lnk" data-act="sup-unorder" aria-label="${L("Убрать", "Olib tashlash", "Remove")}">×</button></span>` : ""}<div class="sup-row"><label class="visually-hidden" for="supText">${L("Сообщение", "Xabar", "Message")}</label><textarea id="supText" rows="1" maxlength="1000" placeholder="${L("Сообщение…", "Xabar…", "Message…")}"></textarea><button class="btn btn-primary" type="button" data-act="sup-send" aria-label="${L("Отправить", "Yuborish", "Send")}">${ui("send", 18)}</button></div><span class="err" id="supErr" role="alert" hidden></span></form>`;
   const ta = $("#supText"); ta.addEventListener("input", () => { ta.style.height = "auto"; ta.style.height = Math.min(140, ta.scrollHeight) + "px"; });
   ta.addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey && !isPhone()) { e.preventDefault(); supSend(); } });
   clearInterval(sup.poll); sup.poll = setInterval(() => { if (drawerView !== "support") { clearInterval(sup.poll); return; } if (!document.hidden) supLoad(); }, 8000);
@@ -7822,7 +7843,15 @@ async function supSend(topic) {
   const ta = $("#supText"), er = $("#supErr"), text = (ta?.value || "").trim(); if (sup.busy) return;
   if (text.length < 2) { if (er) { er.textContent = L("Напишите сообщение", "Xabar yozing", "Write a message"); er.hidden = false; } ta?.focus(); return; }
   sup.busy = true; if (er) er.hidden = true;
-  try { const r = await api("POST", "/api/support", { text, topic: topic || sup.topic || null, order: sup.order || undefined }); sup.msgs = r.messages; sup.topic = null; sup.order = null; ta.value = ""; ta.style.height = ""; supDraw(); $("#dBody").scrollTop = $("#dBody").scrollHeight; dSupportFootOrder(); }
+  const md = supMode(), nm = ($("#supName")?.value || "").trim(), ph = ($("#supPhone")?.value || "").trim();
+  if ($("#supName") && (nm.length < 2 || digitsOf(ph).length < 9)) { if (er) { er.textContent = L("Напишите имя и телефон — по нему ответим, если вы закроете сайт", "Ism va telefonni yozing — saytni yopsangiz, shu raqamga javob beramiz", "Your name and phone — we answer there if you close the site"); er.hidden = false; } sup.busy = false; ($("#supName").value ? $("#supPhone") : $("#supName")).focus(); return; }
+  try {
+    let r;
+    if (md === "demo") { const d = supDemo.get(); if (nm) { d.name = nm; d.phone = ph; } d.msgs.push({ id: Date.now(), from: "user", text, topic: topic || sup.topic || null, order: sup.order || null, at: Date.now() }); supDemo.set(d); r = { messages: d.msgs }; toast(L("Демо: сообщение видно в «Панели владельца» этого браузера", "Demo: xabar shu brauzerdagi «Egasi paneli»da ko‘rinadi", "Demo: the message shows in this browser’s owner panel")); }
+    else if (md === "guest") r = await api("POST", "/api/support/guest/send", { guest: supGuestKey(), text, topic: topic || sup.topic || null, name: nm || undefined, phone: ph || undefined });
+    else r = await api("POST", "/api/support", { text, topic: topic || sup.topic || null, order: sup.order || undefined });
+    if (nm) { form.name ||= nm; form.phone ||= ph; LS.set("imorat.form2", form); } $("#supForm .sup-who")?.remove();
+    sup.msgs = r.messages; sup.topic = null; sup.order = null; ta.value = ""; ta.style.height = ""; supDraw(); $("#dBody").scrollTop = $("#dBody").scrollHeight; dSupportFootOrder(); }
   catch (e) { if (er) { er.textContent = apiErr(e); er.hidden = false; } }
   sup.busy = false;
 }
@@ -7837,13 +7866,25 @@ document.addEventListener("click", e => {
   if (a === "sup-unorder") { sup.order = null; return dSupportFootOrder(); }
   if (t.dataset.suptopic) { const k = t.dataset.suptopic, txt = SUP_TOPICS().find(x => x[0] === k)?.[1] || ""; sup.topic = k; const ta = $("#supText"); if (ta) { ta.value = k === "other" ? "" : txt + " — "; ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); } }
 });
-document.addEventListener("visibilitychange", () => { if (!document.hidden && user && API) supLoad(true); });
-setInterval(() => { if (user && API && !document.hidden && drawerView !== "support") supLoad(true); }, 60000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) supLoad(true); });
+setInterval(() => { if (!document.hidden && drawerView !== "support") supLoad(true); }, 60000);
+setTimeout(() => supLoad(true), 1500);
 
+/* ---- the team hears a new message while on the site: a toast with a sound and a badge, checked every 20 s ---- */
+var staffSup = { n: null, t: 0 };
+function staffSupBadge() { const b = document.querySelector('.hb[data-act="profile"]'); if (!b || !user?.admin) return; let d = b.querySelector(".dot.sup"); if (!d) { d = document.createElement("span"); d.className = "dot sup"; b.appendChild(d); } d.hidden = !staffSup.n; d.textContent = staffSup.n || ""; }
+async function staffSupCheck() {
+  if (!API || !user?.admin || document.hidden || adminState.need) return;
+  try { const r = await adminApi("GET", "/api/admin/support"), n = r.threads.reduce((a, x) => a + (x.unread || 0), 0);
+    if (staffSup.n != null && n > staffSup.n) { const x = r.threads.find(t => t.unread); toast(`💬 ${L("Поддержка", "Yordam", "Support")}: ${x ? (x.name || "—") + " — " + x.last.text.slice(0, 80) : ""}`, 7000); try { beep?.(); } catch {} if (route.view === "admin") { asup.threads = r.threads; asupRedraw(); } }
+    staffSup.n = n; staffSupBadge();
+  } catch {}
+}
+setInterval(staffSupCheck, 20000); setTimeout(staffSupCheck, 3000);
 /* ---- the team's side: threads and answers (owner and helpers) ---- */
 var asup = { threads: null, sel: null, data: null, at: 0, busy: false };
 function adminSupportHTML() {
-  if (!API) return "";
+  if (!API) return demoSupportHTML();
   if (asup.threads === null || Date.now() - asup.at > 30000) { if (asup.threads === null) asup.threads = false; asup.at = Date.now(); adminApi("GET", "/api/admin/support").then(r => { const was = JSON.stringify(asup.threads); asup.threads = r.threads; if (JSON.stringify(r.threads) !== was) asupRedraw(); }).catch(() => { asup.threads = asup.threads || []; }); }
   return `<div id="asupBox">${asupInner()}</div>`;
 }
@@ -7852,7 +7893,7 @@ function asupInner() {
   const list = asup.threads || [], unread = list.reduce((a, x) => a + (x.unread || 0), 0), d = asup.data;
   return `<div class="panel" style="margin-top:12px;display:grid;gap:10px"><div class="panel-h"><h2 class="h-m">${ui("chat", 18)} ${L("Поддержка", "Yordam", "Support")}</h2><span class="pill ${unread ? "warn" : "ok"}">${unread ? unread + " " + L("новых", "yangi", "new") : L("всё отвечено", "hammasiga javob berilgan", "all answered")}</span></div>
     ${!list.length ? `<p class="mu" style="margin:0">${asup.threads === false ? L("Загружаем…", "Yuklanmoqda…", "Loading…") : L("Пока никто не писал. Кнопка «Поддержка» есть на каждой странице сайта.", "Hozircha hech kim yozmagan. «Yordam» tugmasi saytning har bir sahifasida bor.", "Nobody has written yet. The «Support» button is on every page.")}</p>` : `<div class="asup">
-      <div class="asup-list">${list.map(x => `<button type="button" class="asup-t ${asup.sel === x.user ? "on" : ""}" data-asup="${esc(x.user)}"><b>${esc(x.name || L("Без имени", "Ismsiz", "No name"))}${x.unread ? ` <span class="pill warn">${x.unread}</span>` : ""}</b><small>${x.phone ? "+" + esc(x.phone) + " · " : ""}${supTime(x.last.at)}</small><span class="mu">${x.last.from === "staff" ? "↩ " : ""}${esc(x.last.text)}</span></button>`).join("")}</div>
+      <div class="asup-list">${list.map(x => `<button type="button" class="asup-t ${asup.sel === x.user ? "on" : ""}" data-asup="${esc(x.user)}"><b>${esc(x.name || L("Без имени", "Ismsiz", "No name"))}${x.guest ? ` <span class="pill mute">${L("без входа", "kirmasdan", "no account")}</span>` : ""}${x.unread ? ` <span class="pill warn">${x.unread}</span>` : ""}</b><small>${x.phone ? "+" + esc(x.phone) + " · " : ""}${supTime(x.last.at)}</small><span class="mu">${x.last.from === "staff" ? "↩ " : ""}${esc(x.last.text)}</span></button>`).join("")}</div>
       <div class="asup-chat">${!asup.sel ? `<p class="mu">${L("Выберите обращение слева", "Chapdan murojaatni tanlang", "Pick a conversation")}</p>` : !d ? `<p class="mu">${L("Загружаем…", "Yuklanmoqda…", "Loading…")}</p>` : `<div class="asup-h"><b>${esc(d.user.name || "—")}</b> <span class="mu">${d.user.phone ? "+" + esc(d.user.phone) : ""}</span>${d.orders.length ? `<small class="mu">${L("Заказы", "Buyurtmalar", "Orders")}: ${d.orders.map(o => `${esc(o.num)} (${({ active: L("в работе", "jarayonda", "active"), done: L("выполнен", "bajarildi", "done"), cancelled: L("отменён", "bekor", "cancelled") })[o.status] || esc(o.status)})`).join(", ")}</small>` : ""}</div>
         <div class="asup-log" id="asupLog">${supBubbles(d.messages, "staff")}</div>
         <form class="sup-f" onsubmit="return false"><div class="sup-row"><label class="visually-hidden" for="asupText">${L("Ответ", "Javob", "Answer")}</label><textarea id="asupText" rows="2" maxlength="1000" placeholder="${L("Ответ покупателю — придёт ему в Telegram и на сайт", "Xaridorga javob — Telegram va saytga keladi", "Answer — it reaches Telegram and the site")}"></textarea><button class="btn btn-primary" type="button" data-asupsend="1">${ui("send", 18)}</button></div></form>`}</div></div>`}</div>`;
@@ -7867,6 +7908,15 @@ document.addEventListener("click", async e => {
   asup.busy = false;
 });
 
+/* the demo panel: answers the chat this browser wrote (no server) */
+function demoSupportHTML() {
+  const d = supDemo.get(); if (!d.msgs.length) return `<div class="panel" style="margin-top:12px"><div class="panel-h"><h2 class="h-m">${ui("chat", 18)} ${L("Поддержка", "Yordam", "Support")}</h2><span class="pill mute">${L("демо", "demo", "demo")}</span></div><p class="mu" style="margin:0">${L("Напишите в «Поддержку» с этого браузера — сообщение появится здесь, и вы сможете ответить.", "Shu brauzerdan «Yordam»ga yozing — xabar shu yerda chiqadi va javob bera olasiz.", "Write to Support from this browser — the message appears here and you can answer.")}</p></div>`;
+  const unread = d.msgs.filter(x => x.from === "user" && !x.seenStaff).length; d.msgs.forEach(x => { if (x.from === "user") x.seenStaff = true; }); supDemo.set(d);
+  return `<div class="panel" style="margin-top:12px;display:grid;gap:10px"><div class="panel-h"><h2 class="h-m">${ui("chat", 18)} ${L("Поддержка", "Yordam", "Support")}</h2><span class="pill ${unread ? "warn" : "ok"}">${unread ? unread + " " + L("новых", "yangi", "new") : L("демо", "demo", "demo")}</span></div>
+    <div class="asup-h"><b>${esc(d.name || "—")}</b> <span class="mu">${esc(d.phone || "")}</span></div><div class="asup-log">${supBubbles(d.msgs, "staff")}</div>
+    <form class="sup-f" onsubmit="return false"><div class="sup-row"><textarea id="dsupText" rows="2" maxlength="1000" placeholder="${L("Ответ покупателю", "Xaridorga javob", "Answer")}" aria-label="${L("Ответ", "Javob", "Answer")}"></textarea><button class="btn btn-primary" type="button" data-dsupsend="1">${ui("send", 18)}</button></div></form></div>`;
+}
+document.addEventListener("click", e => { const t = e.target.closest("[data-dsupsend]"); if (!t) return; const v = ($("#dsupText")?.value || "").trim(); if (v.length < 2) return; const d = supDemo.get(); d.msgs.push({ id: Date.now(), from: "staff", staff_name: L("Владелец Imorat Go", "Imorat Go egasi", "Imorat Go owner"), text: v, at: Date.now() }); supDemo.set(d); toast(L("Ответ отправлен — покупатель увидит его в чате", "Javob yuborildi — xaridor chatda ko‘radi", "Sent — the buyer sees it in the chat")); renderMain(); });
 /* ---- Moderation queue: new store products and review texts wait for the owner or a helper ---- */
 var amod = { data: null, at: 0 };
 function adminModHTML() {
@@ -8102,12 +8152,14 @@ function renderMain() {
   else if (route.view === "design") renderDesign();
   else if (route.view === "masters") renderMasters();
   else if (route.view === "admin") renderAdmin();
-  else if (route.view === "owner") { if (user?.admin) { history.replaceState(null, "", "#admin"); route = parseHash(); renderAdmin(); } else { renderHome(); if (API) openAuth("owner", "staff"); else toast(L("Вход для сотрудников работает на сайте с сервером", "Xodimlar kirishi serverli saytda ishlaydi", "Staff sign-in works on the site with the server")); } }
+  else if (route.view === "owner") { if (user?.admin) { history.replaceState(null, "", "#admin"); route = parseHash(); renderAdmin(); } else { renderHome(); if (API || true) openAuth("owner", "staff"); else toast(L("Вход для сотрудников работает на сайте с сервером", "Xodimlar kirishi serverli saytda ishlaydi", "Staff sign-in works on the site with the server")); } }
   else if (route.view === "flat") renderFlat();
   else if (route.view === "shop") renderShop();
   else if (route.view === "store") renderStore(route.store);
   else renderHome();
   renderTabbar(); counts();
+  // the top menu shows where you are: the open category, the masters page
+  document.querySelectorAll(".rail-nav button").forEach(b => { const g = b.dataset.go, on = g && ((route.view === "catalog" && g === "cat-" + route.cat) || (g === route.view && ["masters", "seller"].includes(g))); if (on) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current"); });
   { const b = $("#supBtn"); if (b) { b.querySelector(".sup-i").innerHTML = ui("headset", 20); b.querySelector(".sup-l").textContent = L("Поддержка", "Yordam", "Support"); b.setAttribute("aria-label", L("Написать в поддержку", "Yordamga yozish", "Write to support")); supBadge(); } }
   if (route.support) { route.support = false; setTimeout(() => openSupport(), 0); }
   if (route.prod) { const id = route.prod; route.prod = 0; setTimeout(() => openProduct(id), 0); }
@@ -8213,6 +8265,8 @@ document.addEventListener("click", e => {
     case "order-cancel-no": { $("#cancelForm")?.remove(); const b = document.querySelector('[data-act="order-cancel"]'); if (b) b.hidden = false; return; }
     case "close-auth": return closeAuth();
     case "logout": return logout();
+    case "owner-login": return openAuth("owner", "staff");
+    case "demo-owner-fill": { const l = $("#aLogin"), p2 = $("#aPass"); if (l) l.value = DEMO_OWNER.login; if (p2) p2.value = DEMO_OWNER.pass; return; }
     case "prices-confirm": { const b = e.target.closest("button"); if (b) b.disabled = true; return api("POST", "/api/seller/offers/confirm").then(() => { toast(L("Спасибо! Покупатели видят сегодняшнюю дату подтверждения", "Rahmat! Xaridorlar bugungi tasdiqlash sanasini ko‘radi", "Thanks! Buyers now see today's confirmation date")); sellerData = null; renderSeller(); syncCatalog(); }).catch(er => { if (b) b.disabled = false; toast(apiErr(er)); }); }
     case "repeat-add": { if (!repeat) return; const ready = repeat.rows.filter(r => r.confirmed && r.pick && PROD[r.id]?.offers.some(x => x.store === r.pick)); ready.forEach(r => { const k = r.id + "|" + r.pick; cart[k] = (cart[k] || 0) + r.q; }); saveCart(); refreshCards(); toast(L(`В корзине: ${ready.length} ${plural(ready.length, ["позиция", "позиции", "позиций"])} из заказа`, `Savatda: buyurtmadan ${ready.length} ta pozitsiya`, `In cart: ${ready.length} ${ready.length === 1 ? "item" : "items"} from the order`)); repeat = null; return openDrawer("cart"); }
     case "stmt-load": return loadStatement($("#stmtMonth")?.value || "");
@@ -8280,7 +8334,7 @@ renderAll();
 renderCmpBar();
 apiBoot();
 if (location.hash === "#orders") setTimeout(() => openDrawer("orders"), 300);
-["#drawer", "#ai", "#modal", "#mega", "#authM", "#wid"].forEach(s => $(s).setAttribute("inert", ""));
+["#drawer", "#ai", "#modal", "#mega", "#authM", "#wid"].forEach(s => { if (!$(s).classList.contains("on")) $(s).setAttribute("inert", ""); }); // a panel the first render already opened (#owner, #support, a product link) stays usable
 mqFine.addEventListener?.("change", () => { applyLook(); if (route.view === "home") renderMain(); });
 mqDark.addEventListener?.("change", () => { if (themePref === "auto") renderHeader(); });
 mqPhone.addEventListener?.("change", () => { if (route.view === "home") renderMain(); });

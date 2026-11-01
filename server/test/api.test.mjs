@@ -1618,6 +1618,18 @@ test("Support chat: a person writes, the team sees the thread and answers, the a
   const mine = await call("GET", "/api/support", null, u); assert.equal(mine.data.messages.length, 2); assert.equal(mine.data.messages[1].text, "Заказ у магазина, курьер выедет до 14:00");
   assert.equal((await call("GET", "/api/support?peek=1", null, u)).data.unread, 0);
   assert.equal((await call("POST", `/api/admin/support/${(await call("GET", "/api/me", null, other)).data.user.id}`, { text: "привет" }, globalThis.ADMIN)).data.error, "no_thread", "the team answers threads, it does not start them");
+  // a visitor without an account writes from the site: name and phone with the first message; the team answers into the same chat
+  const key = "guestkey_" + "x".repeat(24);
+  assert.equal((await call("POST", "/api/support/guest/send", { guest: "short", text: "привет", name: "Аня", phone: "901112233" })).data.error, "bad_guest");
+  assert.equal((await call("POST", "/api/support/guest/send", { guest: key, text: "Есть ли доставка в Чирчик?" })).data.error, "bad_name", "the first message needs a name");
+  assert.equal((await call("POST", "/api/support/guest/send", { guest: key, text: "Есть ли доставка в Чирчик?", name: "Аня", phone: "12" })).data.error, "bad_phone");
+  const g1 = await call("POST", "/api/support/guest/send", { guest: key, text: "Есть ли доставка в Чирчик?", name: "Аня", phone: "90 111 22 33" }); assert.equal(g1.status, 200); assert.equal(g1.data.messages.length, 1);
+  await until(() => tgSent.some(x => /без входа/.test(x.text) && /Чирчик/.test(x.text)));
+  assert.equal((await call("POST", "/api/support/guest/send", { guest: key, text: "И сколько стоит?" })).status, 200, "later messages need no name again");
+  const gt = (await call("GET", "/api/admin/support", null, globalThis.ADMIN)).data.threads.find(t => t.guest && t.name === "Аня"); assert.ok(gt); assert.equal(gt.phone, "998901112233"); assert.equal(gt.unread, 2);
+  assert.equal((await call("POST", `/api/admin/support/${gt.user}`, { text: "Да, доставляем, 60 000 сум" }, globalThis.ADMIN)).status, 200);
+  const gr = await call("POST", "/api/support/guest", { guest: key, peek: true }); assert.equal(gr.data.unread, 1); assert.equal(gr.data.messages.at(-1).text, "Да, доставляем, 60 000 сум");
+  assert.equal((await call("POST", "/api/support/guest", { guest: "guestkey_" + "y".repeat(24) })).data.messages.length, 0, "another key sees nothing");
 });
 
 test("Moderation: a store's new product and a review text wait for the team; rejection needs a note; approval publishes", async () => {
