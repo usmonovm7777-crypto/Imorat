@@ -59,6 +59,13 @@ export function createApp(cfg, log = console) {
   const channel = createChannel({ db, cfg, tg, log });
   const PCAT = new Map(db.all("SELECT id, cat FROM products").map(p => [p.id, p.cat]));
   const rateOf = cat => cfg.commission[cat] ?? cfg.commission["*"] ?? 0;
+  /* What a store pays from a card-paid order: Imorat Go's commission (0% during the store's first free months) and the bank's
+     acquiring fee — two separate lines in the cabinet. The end of the free months is set when a store is approved. */
+  const addMonths = (t, n) => { const d = new Date(t); d.setUTCMonth(d.getUTCMonth() + n); return d.getTime(); };
+  const inPromo = (s, at = Date.now()) => !!(s?.free_until && s.free_until > at);
+  const storeRates = s => ({ platform: cfg.commission, acquiring: cfg.acquiring, promo_months: cfg.promoMonths, free_until: s?.free_until || null, promo: inPromo(s) });
+  // stores that were active before this rule arrived get their free months from the day they were created
+  for (const s of db.all("SELECT id, created_at FROM stores WHERE free_until IS NULL AND status='active'")) db.run("UPDATE stores SET free_until=? WHERE id=?", addMonths(s.created_at, cfg.promoMonths), s.id);
   const audit = (req, action, target, details) => db.run("INSERT INTO audit(user_id,action,target,details,ip,created_at) VALUES(?,?,?,?,?,?)", req?.user?.id || null, action, target == null ? null : String(target), details ? JSON.stringify(details) : null, req?.ip || null, Date.now());
 
   /* Store hours are Tashkent time (UTC+5). Orders placed at night wait for the opening, so the accept timer starts then. */
@@ -126,7 +133,7 @@ export function createApp(cfg, log = console) {
     id: s.id, name: s.name, d: s.district, addr: s.addr, addrUz: s.addr_uz || s.addr, hours: s.hours, ru: s.ru || s.descr.slice(0, 80), uz: s.uz || s.ru || s.descr.slice(0, 80),
     descr: s.descr, cats: JSON.parse(s.cats || "[]"), phone: s.phone, telegram: s.telegram, verified: !!s.verified, landmark: s.landmark, la: s.la, lo: s.lo, status: s.status, loc_src: s.loc_src, note: s.review_note, created: s.created_at
   });
-  const ownerStore = s => ({ ...publicStore(s), payout_to: s.payout_to || "" }); // the store's own view adds its payout details
+  const ownerStore = s => ({ ...publicStore(s), payout_to: s.payout_to || "", free_until: s.free_until || null }); // the store's own view adds its payout details and free months
 
   /* ---------- meta ---------- */
   r.get("/api/health", () => ({ ok: true, time: Date.now() }));
@@ -134,7 +141,7 @@ export function createApp(cfg, log = console) {
     sms: sms.mode, google_client_id: cfg.google.clientId || null, apple_client_id: cfg.apple.clientId || null,
     apple_redirect_uri: cfg.apple.redirectUri || null, ai: !!cfg.ai.key, yandex: !!cfg.yandex.token, vip_free: cfg.vipFree, pay_at_store: cfg.allowPayAtStore,
     payments: cfg.paymentsOnline, telegram_bot: tg.enabled ? tg.username || null : null, telegram_channel: /^@/.test(cfg.channel?.chat || "") ? cfg.channel.chat : null, push_key: push.publicKey,
-    timers: cfg.timers, commission: cfg.commission, demo: cfg.demoStores,
+    timers: cfg.timers, commission: cfg.commission, acquiring: cfg.acquiring, promo_months: cfg.promoMonths, demo: cfg.demoStores,
     ymaps_key: cfg.maps.jsKey || null, geo: geo.provider, bonus: cfg.bonus.enabled // the site draws a Yandex map with the key; address search goes through /api/geo
   }));
   /* ---------- address search for the checkout map ---------- */
@@ -316,13 +323,15 @@ export function createApp(cfg, log = console) {
       if (q.pts) db.run("INSERT INTO points_log(user_id,delta,reason,ref,created_at) VALUES(?,?,?,?,?)", u.id, -q.pts, "spent", "order:" + id, now);
       db.run("UPDATE orders SET num=? WHERE id=?", num, id);
       for (const s of q.ships) {
-        const goods = s.lines.reduce((a, l) => a + l.price * l.q, 0);
-        // commission only on orders paid through the platform; a reservation paid at the store is free for the store
-        const commission = online ? s.lines.reduce((a, l) => a + Math.round(l.price * l.q * rateOf(PCAT.get(l.id) || db.get("SELECT cat FROM products WHERE id=?", l.id)?.cat)), 0) : 0;
-        const start = storeStartAt(db.get("SELECT hours FROM stores WHERE id=?", s.store), now);
+        const goods = s.lines.reduce((a, l) => a + l.price * l.q, 0), st = db.get("SELECT hours, free_until FROM stores WHERE id=?", s.store);
+        // commission and the acquiring fee only on orders paid through the platform; a reservation paid at the store is free for the store.
+        // During a store's free months Imorat Go's own commission is 0, the bank's fee on the card payment stays.
+        const commission = online && !inPromo(st, now) ? s.lines.reduce((a, l) => a + Math.round(l.price * l.q * rateOf(PCAT.get(l.id) || db.get("SELECT cat FROM products WHERE id=?", l.id)?.cat)), 0) : 0;
+        const acquiring = online ? Math.round(goods * cfg.acquiring) : 0;
+        const start = storeStartAt(st, now);
         const st0 = online ? "unpaid" : "new";
-        db.run("INSERT INTO shipments(order_id,store_id,tariff,price,kg,dist,lines,status,status_at,history,goods,commission,start_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
-          id, s.store, s.tariff, s.price, s.kg, s.dist, JSON.stringify(s.lines), st0, now, JSON.stringify([{ s: st0, t: now }]), goods, commission, start);
+        db.run("INSERT INTO shipments(order_id,store_id,tariff,price,kg,dist,lines,status,status_at,history,goods,commission,acquiring,start_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+          id, s.store, s.tariff, s.price, s.kg, s.dist, JSON.stringify(s.lines), st0, now, JSON.stringify([{ s: st0, t: now }]), goods, commission, acquiring, start);
       }
       if (q.promo) db.run("INSERT OR IGNORE INTO promo_uses(user_id,code,order_id) VALUES(?,?,?)", u.id, q.promo, id);
       return num;
@@ -513,7 +522,7 @@ export function createApp(cfg, log = console) {
       store: ownerStore(s),
       kpi: { revenue30: revenue, orders30: ships.filter(x => x.oc >= since).length, open: ships.filter(x => !["delivered", "picked", "cancelled"].includes(x.status)).length, products: products.length, out_of_stock: products.filter(p => p.stock <= 0).length },
       finance: storeFinance(s.id),
-      rates: cfg.commission,
+      rates: storeRates(s),
       telegram: !!req.user.tg_chat, bot: tg.enabled ? tg.username : null,
       rating: storeStats()[s.id] || null,
       reviews: db.all("SELECT r.ship_id, r.stars, r.text, r.reply, r.created_at, u.name FROM reviews r LEFT JOIN users u ON u.id=r.user_id WHERE r.store_id=? ORDER BY r.created_at DESC LIMIT 20", s.id).map(x => ({ ...x, name: (x.name || "").split(" ")[0] })),
@@ -521,7 +530,7 @@ export function createApp(cfg, log = console) {
         const f = JSON.parse(x.form);
         return { ship_id: x.id, num: x.num, t: x.oc, status: x.status, tariff: x.tariff, price: x.price, kg: x.kg, pay: x.pay, pay_status: x.pay_status,
           buyer: f.name, phone: f.phone, district: f.district, street: f.mode === "pickup" ? "" : f.street, floor: f.private ? null : f.floor, entrance: f.entrance || "", private: !!f.private, help: f.help || (f.lift ? "one" : "none"), when: f.when, hour: f.hour, comment: f.comment, lines: JSON.parse(x.lines),
-          cancel_reason: x.cancel_reason, accept_by: x.status === "new" ? (x.start_at || x.status_at) + cfg.timers.cancel * 60000 : null, commission: x.commission,
+          cancel_reason: x.cancel_reason, accept_by: x.status === "new" ? (x.start_at || x.status_at) + cfg.timers.cancel * 60000 : null, commission: x.commission, acquiring: x.acquiring,
           next: SELLER_MOVES[x.status]?.filter(n => (x.tariff ? n !== "ready" : !["searching"].includes(n))) || [] };
       }),
       products
@@ -717,20 +726,20 @@ export function createApp(cfg, log = console) {
   const monthRange = m => { const [y, mo] = (/^\d{4}-\d{2}$/.test(m || "") ? m : new Date(Date.now() + 5 * 3600000).toISOString().slice(0, 7)).split("-").map(Number); return [Date.UTC(y, mo - 1, 1) - 5 * 3600000, Date.UTC(y, mo, 1) - 5 * 3600000, `${y}-${String(mo).padStart(2, "0")}`]; };
   function storeFinance(storeId, m) {
     const [a, b, month] = monthRange(m);
-    const mon = db.get("SELECT COALESCE(SUM(goods),0) goods, COALESCE(SUM(commission),0) commission, COUNT(*) n FROM shipments WHERE store_id=? AND status IN ('delivered','picked') AND status_at>=? AND status_at<?", storeId, a, b);
-    const all = db.get("SELECT COALESCE(SUM(commission),0) c FROM shipments WHERE store_id=? AND status IN ('delivered','picked')", storeId).c;
+    const mon = db.get("SELECT COALESCE(SUM(goods),0) goods, COALESCE(SUM(commission),0) commission, COALESCE(SUM(acquiring),0) acquiring, COUNT(*) n FROM shipments WHERE store_id=? AND status IN ('delivered','picked') AND status_at>=? AND status_at<?", storeId, a, b);
+    const tot = db.get("SELECT COALESCE(SUM(commission),0) c, COALESCE(SUM(acquiring),0) q FROM shipments WHERE store_id=? AND status IN ('delivered','picked')", storeId), all = tot.c + tot.q;
     // Money that crossed sides: for orders paid to the store the buyer also handed it the delivery fee that Imorat Go paid to Yandex;
-    // for orders paid by card online Imorat Go holds the goods money and owes the store its share (goods minus commission).
+    // for orders paid by card online Imorat Go holds the goods money and owes the store its share (goods minus commission and the bank's fee).
     const flow = db.get(`SELECT COALESCE(SUM(CASE WHEN o.pay IN ('store','cash') AND sh.tariff IS NOT NULL THEN sh.price ELSE 0 END),0) delivery_due,
-        COALESCE(SUM(CASE WHEN o.pay NOT IN ('store','cash') AND o.pay_status IN ('paid','refund_due','refunded') THEN sh.goods - sh.commission ELSE 0 END),0) payout_due,
+        COALESCE(SUM(CASE WHEN o.pay NOT IN ('store','cash') AND o.pay_status IN ('paid','refund_due','refunded') THEN sh.goods - sh.commission - sh.acquiring ELSE 0 END),0) payout_due,
         COALESCE(SUM(CASE WHEN o.pay NOT IN ('store','cash') AND o.pay_status IN ('paid','refund_due','refunded') THEN sh.goods ELSE 0 END),0) online_held,
         COALESCE(SUM(CASE WHEN o.pay NOT IN ('store','cash') AND o.pay_status IN ('paid','refund_due','refunded') AND sh.status_at>=? AND sh.status_at<? THEN sh.goods ELSE 0 END),0) online_month
         FROM shipments sh JOIN orders o ON o.id=sh.order_id WHERE sh.store_id=? AND sh.status IN ('delivered','picked')`, a, b, storeId);
     const paid = db.get("SELECT COALESCE(SUM(amount),0) s FROM settlements WHERE store_id=?", storeId).s;
     const po = db.get("SELECT COALESCE(SUM(CASE WHEN status='paid' THEN amount ELSE 0 END),0) paid, COALESCE(SUM(CASE WHEN status='requested' THEN amount ELSE 0 END),0) pending FROM payouts WHERE store_id=?", storeId);
-    // balance > 0: the store owes Imorat Go; < 0: Imorat Go owes the store. Commission on card-paid orders is already inside
-    // the goods money Imorat Go holds, so it is counted once: all commissions + delivery fees handed to the store − goods money held + what was paid out.
-    return { month, goods: mon.goods, commission: mon.commission, orders: mon.n, online_month: flow.online_month, commission_total: all, delivery_due: flow.delivery_due, payout_due: flow.payout_due,
+    // balance > 0: the store owes Imorat Go; < 0: Imorat Go owes the store. Commission and fees on card-paid orders are already inside
+    // the goods money Imorat Go holds, so they are counted once: all commissions and fees + delivery fees handed to the store − goods money held + what was paid out.
+    return { month, goods: mon.goods, commission: mon.commission, acquiring: mon.acquiring, orders: mon.n, online_month: flow.online_month, commission_total: tot.c, acquiring_total: tot.q, delivery_due: flow.delivery_due, payout_due: flow.payout_due,
       payout_paid: po.paid, payout_pending: po.pending, payout_available: Math.max(0, flow.payout_due - po.paid - po.pending), settled: paid, balance: all + flow.delivery_due - flow.online_held - paid + po.paid };
   }
 
@@ -754,9 +763,9 @@ export function createApp(cfg, log = console) {
   r.get("/api/admin/finance", (req, res, p, url) => {
     needAdmin(req);
     const m = url.searchParams.get("month");
-    const rows = db.all("SELECT id, name, status FROM stores ORDER BY name").map(s => ({ id: s.id, name: s.name, status: s.status, ...storeFinance(s.id, m) })).filter(x => x.orders || x.balance || x.commission_total);
-    const t = rows.reduce((a, x) => ({ goods: a.goods + x.goods, commission: a.commission + x.commission, balance: a.balance + x.balance }), { goods: 0, commission: 0, balance: 0 });
-    return { month: monthRange(m)[2], rates: cfg.commission, stores: rows, totals: t, settlements: db.all("SELECT st.*, s.name FROM settlements st LEFT JOIN stores s ON s.id=st.store_id ORDER BY st.created_at DESC LIMIT 30"),
+    const rows = db.all("SELECT id, name, status, free_until FROM stores ORDER BY name").map(s => ({ id: s.id, name: s.name, status: s.status, free_until: s.free_until, promo: inPromo(s), ...storeFinance(s.id, m) })).filter(x => x.orders || x.balance || x.commission_total || x.acquiring_total);
+    const t = rows.reduce((a, x) => ({ goods: a.goods + x.goods, commission: a.commission + x.commission, acquiring: a.acquiring + x.acquiring, balance: a.balance + x.balance }), { goods: 0, commission: 0, acquiring: 0, balance: 0 });
+    return { month: monthRange(m)[2], rates: { platform: cfg.commission, acquiring: cfg.acquiring, promo_months: cfg.promoMonths }, stores: rows, totals: t, settlements: db.all("SELECT st.*, s.name FROM settlements st LEFT JOIN stores s ON s.id=st.store_id ORDER BY st.created_at DESC LIMIT 30"),
       payouts: db.all("SELECT p.*, s.name FROM payouts p LEFT JOIN stores s ON s.id=p.store_id ORDER BY p.status='requested' DESC, p.requested_at DESC LIMIT 60") };
   });
   /* the store asks for its money from card-paid orders; an admin transfers it and marks the request paid */
@@ -793,7 +802,7 @@ export function createApp(cfg, log = console) {
     return { ok: true, finance: storeFinance(s.id) };
   });
   r.get("/api/admin/audit", req => { needAdmin(req); return { log: db.all("SELECT a.*, u.name, u.phone FROM audit a LEFT JOIN users u ON u.id=a.user_id ORDER BY a.id DESC LIMIT 100") }; });
-  r.get("/api/admin/stores", req => { needAdmin(req); return { stores: db.all("SELECT s.*, u.name owner_name, u.phone owner_phone FROM stores s LEFT JOIN users u ON u.id=s.owner_id ORDER BY s.status='pending' DESC, s.created_at DESC").map(s => ({ ...publicStore(s), owner_name: s.owner_name, owner_phone: s.owner_phone, loc_src: s.loc_src, created: s.created_at, note: s.review_note })) }; });
+  r.get("/api/admin/stores", req => { needAdmin(req); return { stores: db.all("SELECT s.*, u.name owner_name, u.phone owner_phone FROM stores s LEFT JOIN users u ON u.id=s.owner_id ORDER BY s.status='pending' DESC, s.created_at DESC").map(s => ({ ...publicStore(s), owner_name: s.owner_name, owner_phone: s.owner_phone, loc_src: s.loc_src, created: s.created_at, note: s.review_note, free_until: s.free_until, promo: inPromo(s) })) }; });
   r.patch("/api/admin/stores/:id", async (req, res, p) => {
     needAdmin(req); const b = await readJson(req);
     const s = db.get("SELECT * FROM stores WHERE id=?", p.id); if (!s) throw new HttpError(404, "not_found", "Store not found");
@@ -801,7 +810,10 @@ export function createApp(cfg, log = console) {
     // validate everything before the first write, so a bad owner phone does not leave a half-applied change
     const newOwner = b.owner_phone ? db.get("SELECT * FROM users WHERE phone=?", parsePhone(b.owner_phone)) : null;
     if (b.owner_phone && !newOwner) throw new HttpError(404, "user_not_found", "The owner must sign in once first");
-    db.run("UPDATE stores SET status=COALESCE(?,status), review_note=COALESCE(?,review_note), verified=COALESCE(?,verified) WHERE id=?", b.status || null, b.note != null ? str(b.note, 300) : null, b.verified == null ? null : b.verified ? 1 : 0, s.id);
+    // the free months start on the day of approval; an admin may also move or end them by hand ("free_until": date, "" ends them now)
+    let freeUntil; if (b.free_until !== undefined) { if (b.free_until === "" || b.free_until === null) freeUntil = Date.now(); else { freeUntil = new Date(b.free_until).getTime(); if (!Number.isFinite(freeUntil)) throw bad("bad_date", "free_until must be a date"); } }
+    else if (b.status === "active" && s.status !== "active" && !s.free_until) freeUntil = addMonths(Date.now(), cfg.promoMonths);
+    db.run("UPDATE stores SET status=COALESCE(?,status), review_note=COALESCE(?,review_note), verified=COALESCE(?,verified), free_until=COALESCE(?,free_until) WHERE id=?", b.status || null, b.note != null ? str(b.note, 300) : null, b.verified == null ? null : b.verified ? 1 : 0, freeUntil ?? null, s.id);
     audit(req, "store." + (b.status || "edit"), s.id, { note: str(b.note, 300), owner_phone: str(b.owner_phone, 20) });
     if (b.status === "active" && s.status !== "active") channel.storeApproved(s).catch(e => log.warn("[channel]", e.message));
     if (b.status && s.owner_id) { const ow = db.get("SELECT tg_chat FROM users WHERE id=?", s.owner_id); if (ow?.tg_chat) tg.send(ow.tg_chat, b.status === "active" ? `🎉 Магазин «${s.name.replace(/[<>&]/g, "")}» одобрен и виден покупателям на Imorat Go.` : `Статус магазина «${s.name.replace(/[<>&]/g, "")}»: ${b.status}.${b.note ? " " + str(b.note, 300).replace(/[<>&]/g, "") : ""}`); }

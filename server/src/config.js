@@ -65,8 +65,13 @@ export function loadConfig(env = process.env) {
     siteUrl: (env.SITE_URL || "https://usmonovm7777-crypto.github.io/Imorat/").replace(/\/?$/, "/"),
     // Seller deadlines (minutes): reminder, SMS, auto-cancel if not accepted; hours to hand the order over
     timers: { remind: Number(env.ACCEPT_REMIND_MIN) || 5, sms: Number(env.ACCEPT_SMS_MIN) || 10, cancel: Number(env.ACCEPT_TIMEOUT_MIN) || 20, handover: Number(env.HANDOVER_HOURS) || 4 },
-    // Commission by category, %: "build:4,metal:4,fasten:4,*:8"
-    commission: Object.fromEntries(String(env.COMMISSION || "build:4,metal:4,fasten:4,*:8").split(",").map(x => x.split(":")).filter(x => x.length === 2).map(([k, v]) => [k.trim(), Number(v) / 100])),
+    /* What a store pays on a card-paid order, from the goods money:
+       - Imorat Go's own commission by category, %: "*:1" (a category may differ: "build:1,*:2")
+       - the Payme/Click acquiring fee that the bank charges on the payment, passed on as it is: 2%
+       - a new store's first PROMO_MONTHS after approval: Imorat Go's part is 0%, the acquiring fee stays */
+    commission: Object.fromEntries(String(env.COMMISSION || "*:1").split(",").map(x => x.split(":")).filter(x => x.length === 2).map(([k, v]) => [k.trim(), Number(v) / 100])),
+    acquiring: Math.max(0, Number(env.ACQUIRING_PERCENT ?? 2) || 0) / 100,
+    promoMonths: Math.max(0, Math.round(Number(env.PROMO_MONTHS ?? 3) || 0)),
     adminMfa: env.ADMIN_MFA !== "0",
     backupDir: env.BACKUP_DIR || "",
     smsSellerTemplate: env.SMS_SELLER_TEMPLATE || "Imorat Go: yangi buyurtma {num}. Iltimos, qabul qiling.",

@@ -78,7 +78,7 @@ before(async () => {
     JWT_SECRET: "test-secret", DB_PATH: join(dir, "t.db"), UPLOADS_DIR: join(dir, "up"), ADMIN_PHONES: "998901111111",
     GOOGLE_CLIENT_ID: "gid", GOOGLE_JWKS_URL: fakeBase + "/jwks", ANTHROPIC_API_KEY: "sk-test", ANTHROPIC_URL: fakeBase + "/ai", SMS_MODE: "dev",
     TELEGRAM_BOT_TOKEN: "TGTOKEN", TELEGRAM_API_URL: fakeBase + "/tg", TELEGRAM_POLL_TIMEOUT: "0", PAYME_MERCHANT_ID: "5e730e8e0b852a417aa49ceb", PAYME_KEY: "PAYME_SECRET", CLICK_SERVICE_ID: "12345", CLICK_MERCHANT_ID: "777", CLICK_SECRET_KEY: "CLICK_SECRET", PAY_TIMEOUT_MIN: "30", BACKUP_DIR: join(dir, "bk"), OTP_PER_IP_HOUR: "200", TELEGRAM_CHANNEL: "@imorat_test", CHANNEL_HOUR: "25",
-    ALLOW_PAY_AT_STORE: "1", BONUS_ON: "1" // most scenarios below pay the store on pickup; the card-only default is covered by its own test
+    ALLOW_PAY_AT_STORE: "1", BONUS_ON: "1", PROMO_MONTHS: "0" // most scenarios below pay the store on pickup; the card-only default and the free months have their own checks
   });
   app = createApp(cfg, { info() {}, warn() {}, error: console.error });
   await new Promise(r => app.listen(0, "127.0.0.1", r));
@@ -810,33 +810,39 @@ test("Finance with card payments: money held once, a partner's share survives an
   const fin = async (tok) => (await call("GET", "/api/seller/summary", null, tok)).data.finance;
   const ship = async (tok, num) => (await call("GET", "/api/seller/summary", null, tok)).data.orders.find(x => x.num === num);
   const advance = async (tok, num, states) => { const s = await ship(tok, num); for (const st of states) assert.equal((await call("PATCH", `/api/seller/shipments/${s.ship_id}`, { status: st }, tok)).status, 200, st); };
-  // 1) one store, 100 000 by card, commission 4% = 4 000: Imorat Go holds 100 000 and owes the store 96 000 — not 92 000
+  // 1) one store, 100 000 by card: Imorat Go's commission 1% = 1 000 and the bank's acquiring fee 2% = 2 000 are two separate lines;
+  //    Imorat Go holds 100 000 and owes the store 97 000 — not 94 000
+  const rates = (await call("GET", "/api/seller/summary", null, sellerA)).data.rates;
+  assert.deepEqual(rates.platform, { "*": 0.01 }); assert.equal(rates.acquiring, 0.02); assert.equal(rates.promo, false);
   const o1 = (await call("POST", "/api/orders", { lines: [{ id: 1, store: A, q: 1 }], form }, buyer)).data.order;
   await pay(o1, "fin-1"); await advance(sellerA, o1.num, ["assembling", "ready", "picked"]);
   let f = await fin(sellerA);
-  assert.equal(f.payout_due, 96000); assert.equal(f.commission_total, 4000); assert.equal(f.balance, -96000, "card money is counted once");
+  assert.equal(f.payout_due, 97000); assert.equal(f.commission_total, 1000); assert.equal(f.acquiring_total, 2000); assert.equal(f.commission, 1000); assert.equal(f.acquiring, 2000);
+  assert.equal(f.balance, -97000, "card money is counted once");
+  assert.equal((await ship(sellerA, o1.num)).acquiring, 2000);
   // the store takes its money out whenever it likes after the handover: request → admin transfers → marked paid
-  assert.equal((await call("POST", "/api/seller/payout", { amount: 96000 }, sellerA)).data.error, "payout_to", "needs a card or account first");
+  assert.equal((await call("POST", "/api/seller/payout", { amount: 97000 }, sellerA)).data.error, "payout_to", "needs a card or account first");
   const pr = await call("POST", "/api/seller/payout", { amount: 50000, payout_to: "8600 1234 5678 9012" }, sellerA);
-  assert.equal(pr.status, 200, JSON.stringify(pr.data)); assert.equal(pr.data.finance.payout_available, 46000); assert.equal(pr.data.finance.payout_pending, 50000);
+  assert.equal(pr.status, 200, JSON.stringify(pr.data)); assert.equal(pr.data.finance.payout_available, 47000); assert.equal(pr.data.finance.payout_pending, 50000);
   assert.equal((await call("POST", "/api/seller/payout", {}, sellerA)).status, 409, "one open request at a time");
   const adminFin = (await call("GET", "/api/admin/finance", null, globalThis.ADMIN)).data;
   const req1 = adminFin.payouts.find(x => x.id === pr.data.payout.id); assert.equal(req1.status, "requested"); assert.equal(req1.payout_to, "8600 1234 5678 9012");
   assert.equal((await call("PATCH", `/api/admin/payouts/${req1.id}`, { status: "paid" }, globalThis.ADMIN)).status, 200);
-  f = await fin(sellerA); assert.equal(f.payout_paid, 50000); assert.equal(f.payout_available, 46000); assert.equal(f.balance, -46000, "after the transfer Imorat Go owes the rest");
+  f = await fin(sellerA); assert.equal(f.payout_paid, 50000); assert.equal(f.payout_available, 47000); assert.equal(f.balance, -47000, "after the transfer Imorat Go owes the rest");
   assert.equal((await call("POST", "/api/seller/payout", { amount: 99999999 }, sellerA)).data.error, "bad_amount");
-  const pr2 = await call("POST", "/api/seller/payout", {}, sellerA); assert.equal(pr2.data.payout.amount, 46000, "no amount = everything available");
+  const pr2 = await call("POST", "/api/seller/payout", {}, sellerA); assert.equal(pr2.data.payout.amount, 47000, "no amount = everything available");
   assert.equal((await call("PATCH", `/api/admin/payouts/${pr2.data.payout.id}`, { status: "rejected", note: "неверная карта" }, globalThis.ADMIN)).status, 200);
-  assert.equal((await fin(sellerA)).payout_available, 46000, "a rejected request frees the money again");
+  assert.equal((await fin(sellerA)).payout_available, 47000, "a rejected request frees the money again");
+  assert.equal(adminFin.rates.acquiring, 0.02); assert.ok(adminFin.totals.acquiring >= 2000); assert.equal(adminFin.stores.find(x => x.id === A).acquiring, 2000);
   assert.equal((await call("GET", "/api/seller/payouts", null, sellerA)).data.payouts.length, 2);
   assert.equal((await call("GET", "/api/seller/summary", null, sellerA)).data.store.payout_to, "8600 1234 5678 9012");
   // 2) two stores in one order; A hands over, B cancels: A's share stays, the order is flagged for a partial refund
   const o2 = (await call("POST", "/api/orders", { lines: [{ id: 1, store: A, q: 1 }, { id: 2, store: B, q: 1 }], form }, buyer)).data.order;
   await pay(o2, "fin-2"); await advance(sellerA, o2.num, ["assembling", "ready", "picked"]);
-  assert.equal((await fin(sellerA)).payout_due, 192000);
+  assert.equal((await fin(sellerA)).payout_due, 194000);
   const sb = await ship(sellerB, o2.num); assert.equal((await call("PATCH", `/api/seller/shipments/${sb.ship_id}`, { status: "cancelled", reason: "out_of_stock" }, sellerB)).status, 200);
   assert.equal((await call("GET", `/api/orders/${o2.num}`, null, buyer)).data.order.pay_status, "refund_due");
-  f = await fin(sellerA); assert.equal(f.payout_due, 192000, "A keeps its share after B's cancellation"); assert.equal(f.balance, -142000, "192 000 due minus the 50 000 already paid out");
+  f = await fin(sellerA); assert.equal(f.payout_due, 194000, "A keeps its share after B's cancellation"); assert.equal(f.balance, -144000, "194 000 due minus the 50 000 already paid out");
   assert.equal((await fin(sellerB)).payout_due, 0);
   // 3) the admin marks an order paid by hand: the store gets it like after a bank callback
   const o3 = (await call("POST", "/api/orders", { lines: [{ id: 1, store: A, q: 1 }], form }, buyer)).data.order;
@@ -846,6 +852,20 @@ test("Finance with card payments: money held once, a partner's share survives an
   const got = (await call("GET", `/api/orders/${o3.num}`, null, buyer)).data.order; assert.equal(got.pay_status, "paid"); assert.ok(got.paid_at);
   await advance(sellerA, o3.num, ["assembling"]); app.sweep(Date.now() + 31 * 60000);
   assert.equal((await call("GET", `/api/orders/${o3.num}`, null, buyer)).data.order.status, "active", "a paid order is not expired by the payment sweep");
+  // 4) free months: the admin gives store B three months — Imorat Go's 1% is 0, the bank's 2% stays; ending them brings the 1% back
+  const until = new Date(Date.now() + 90 * 86400_000).toISOString().slice(0, 10);
+  assert.equal((await call("PATCH", `/api/admin/stores/${B}`, { free_until: until }, globalThis.ADMIN)).status, 200);
+  const sumB = (await call("GET", "/api/seller/summary", null, sellerB)).data; assert.equal(sumB.rates.promo, true); assert.ok(sumB.store.free_until > Date.now());
+  await call("POST", "/api/seller/offers", { product_id: 2, price: 100000, stock: 50 }, sellerB); // B's "out of stock" cancellation zeroed its stock
+  const o4r = await call("POST", "/api/orders", { lines: [{ id: 2, store: B, q: 1 }], form }, buyer); assert.equal(o4r.status, 200, JSON.stringify(o4r.data)); const o4 = o4r.data.order;
+  await pay(o4, "fin-4"); await advance(sellerB, o4.num, ["assembling", "ready", "picked"]);
+  f = await fin(sellerB); assert.equal(f.commission_total, 0, "no commission in the free months"); assert.equal(f.acquiring_total, 2000); assert.equal(f.payout_due, 98000);
+  assert.equal((await call("PATCH", `/api/admin/stores/${B}`, { free_until: "" }, globalThis.ADMIN)).status, 200);
+  assert.equal((await call("GET", "/api/seller/summary", null, sellerB)).data.rates.promo, false);
+  const o5 = (await call("POST", "/api/orders", { lines: [{ id: 2, store: B, q: 1 }], form }, buyer)).data.order;
+  await pay(o5, "fin-5"); await advance(sellerB, o5.num, ["assembling", "ready", "picked"]);
+  f = await fin(sellerB); assert.equal(f.commission_total, 1000); assert.equal(f.acquiring_total, 4000); assert.equal(f.payout_due, 98000 + 97000);
+  assert.ok((await call("GET", "/api/admin/stores", null, globalThis.ADMIN)).data.stores.some(x => x.id === B && x.promo === false && x.free_until <= Date.now()));
 });
 
 test("Guard rails: admin shipment moves, partial cancellation refunds points, competitor products, paused masters, disputes, odd JSON", async () => {

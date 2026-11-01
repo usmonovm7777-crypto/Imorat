@@ -91,6 +91,8 @@ export function openDb(path, catalogPath, opts = {}) {
   addCol("shipments", "accepted_at", "INTEGER"); addCol("shipments", "start_at", "INTEGER"); addCol("shipments", "reminded", "INTEGER NOT NULL DEFAULT 0");
   addCol("shipments", "sms_sent", "INTEGER NOT NULL DEFAULT 0"); addCol("shipments", "cancel_reason", "TEXT"); addCol("shipments", "tg_msg", "TEXT");
   addCol("shipments", "goods", "INTEGER NOT NULL DEFAULT 0"); addCol("shipments", "commission", "INTEGER NOT NULL DEFAULT 0");
+  // the bank's acquiring fee on a card-paid order (kept apart from Imorat Go's commission) and the end of a store's free months
+  addCol("shipments", "acquiring", "INTEGER NOT NULL DEFAULT 0"); addCol("stores", "free_until", "INTEGER");
   addCol("orders", "paid_at", "INTEGER"); addCol("orders", "pay_ref", "TEXT");
   raw.exec(`CREATE TABLE IF NOT EXISTS payments(id INTEGER PRIMARY KEY AUTOINCREMENT, provider TEXT NOT NULL, pid TEXT NOT NULL, order_id INTEGER NOT NULL REFERENCES orders(id),
     amount INTEGER NOT NULL, state INTEGER NOT NULL, create_time INTEGER NOT NULL, perform_time INTEGER, cancel_time INTEGER, reason INTEGER, UNIQUE(provider, pid));
