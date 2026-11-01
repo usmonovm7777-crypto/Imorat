@@ -32,7 +32,7 @@ npm test                  # автотесты API
    Caddy сам получит HTTPS-сертификат. Данные хранятся в Docker-томе `imorat-data`.
 4. В `config.js` сайта: `window.IMORAT_API = "https://api.imorat.uz";` — и запушить на GitHub.
 
-Резервная копия базы: `docker compose exec api sh -c "cp /data/imorat.db /data/backup-$(date +%F).db"`.
+Резервная копия базы: `sudo imorat backup` (если ставили через `tools/install.sh`) или `docker compose exec api node -e "const{DatabaseSync}=require('node:sqlite');new DatabaseSync('/data/imorat.db').exec(\"VACUUM INTO '/data/backup-$(date +%F).db'\")"`. Простое `cp` файла базы при включённом WAL может дать неполную копию. Восстановление: `sudo imorat restore ФАЙЛ`.
 
 ## Ключи (всё необязательно, подключайте по мере готовности)
 

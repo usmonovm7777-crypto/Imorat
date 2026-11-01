@@ -37,13 +37,13 @@ export function createCourier({ db, cfg, ref, log = console }) {
     const loaders = f.help === "one" || (f.help == null && f.lift) ? 1 : 0; // unloading help chosen at checkout
     const requirements = t.id === "courier" ? { taxi_class: "express" } : { taxi_class: "cargo", cargo_type: t.id === "cargo_s" ? "lcv_m" : "lcv_l", ...(loaders ? { cargo_loaders: loaders } : {}) };
     const sp = storePt(s), dp = destPt(f);
-    const prods = db.all(`SELECT id, ru, sub, dims FROM products WHERE id IN (${lines.map(() => "?").join(",") || "0"})`, ...lines.map(l => l.id));
+    const prods = db.all(`SELECT id, ru, sub, dims, kg FROM products WHERE id IN (${lines.map(() => "?").join(",") || "0"})`, ...lines.map(l => l.id));
     // what the driver needs to know besides the address: whether the car can reach the entrance and whether there is a lift
     const notes = [f.access === "far" ? "машина не подъедет к подъезду — разгрузка у ближайшей точки" : "", Number(f.floor) > 1 && !f.private ? (f.elevator === false ? "лифта нет" : f.elevator === true ? "есть лифт" : "") : "", loaders ? "нужна помощь с разгрузкой" : "покупатель принимает у машины"].filter(Boolean);
     const body = {
       comment: `Imorat Go, заказ ${o.num}. ${notes.join("; ")}${f.comment ? ". " + f.comment : ""}`,
       emergency_contact: { name: "Imorat Go", phone: cfg.supportPhone || f.phone },
-      items: lines.map((l, i) => ({ pickup_point: 1, droppof_point: 2, title: prods.find(n => n.id === l.id)?.ru || "Товар", quantity: l.q, cost_value: String(l.price), cost_currency: "UZS", weight: Math.max(0.1, Math.round((l.kg || 1) * 100) / 100), size: sizeOf(prods.find(n => n.id === l.id)), extra_id: String(l.id) })),
+      items: lines.map((l, i) => ({ pickup_point: 1, droppof_point: 2, title: prods.find(n => n.id === l.id)?.ru || "Товар", quantity: l.q, cost_value: String(l.price), cost_currency: "UZS", weight: Math.max(0.1, Math.round((Number(prods.find(n => n.id === l.id)?.kg) || l.kg || 1) * 100) / 100), size: sizeOf(prods.find(n => n.id === l.id)), extra_id: String(l.id) })),
       route_points: [
         { point_id: 1, visit_order: 1, type: "source", address: { fullname: `Ташкент, ${s.addr || D[s.district]?.ru || ""}`, coordinates: [sp.lo, sp.la], comment: s.landmark || "" }, contact: { name: s.name, phone: "+" + s.phone }, skip_confirmation: true },
         { point_id: 2, visit_order: 2, type: "destination", address: { fullname: ["Ташкент", f.street].filter(Boolean).join(", "), coordinates: [dp.lo, dp.la], porch: f.entrance || undefined, sfloor: f.private ? undefined : String(f.floor || ""), sflat: f.private ? undefined : (f.flat || undefined), door_code: f.intercom || undefined, comment: f.comment || "" }, contact: { name: f.name, phone: "+" + f.phone.replace(/\D/g, "") }, external_order_id: o.num }

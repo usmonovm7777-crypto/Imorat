@@ -11,6 +11,9 @@ server.listen(cfg.port, cfg.host, () => {
   if (!process.env.JWT_SECRET) log.warn("JWT_SECRET is not set: sessions reset on every restart. Set it in .env");
   if (!cfg.admins.length) log.warn("ADMIN_PHONES is empty: nobody can approve new stores");
 });
+// a rejected promise in a background job (a notification, a courier call) is logged, never a reason for the API to die
+process.on("unhandledRejection", e => log.error("[unhandledRejection]", e?.stack || e));
+process.on("uncaughtException", e => { log.error("[uncaughtException]", e?.stack || e); });
 const stop = () => { server.close(() => { server.db.raw.close(); process.exit(0); }); setTimeout(() => process.exit(0), 5000).unref(); };
 process.on("SIGTERM", stop);
 process.on("SIGINT", stop);

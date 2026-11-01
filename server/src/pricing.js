@@ -7,7 +7,8 @@ export const round = p => (p < 20000 ? Math.round(p / 100) * 100 : Math.round(p 
 export function distanceKm(a, b) {
   const R = 6371, r = Math.PI / 180;
   const h = Math.sin((b.la - a.la) * r / 2) ** 2 + Math.cos(a.la * r) * Math.cos(b.la * r) * Math.sin((b.lo - a.lo) * r / 2) ** 2;
-  return Math.max(2, 2 * R * Math.asin(Math.sqrt(h)) * 1.35);
+  const km = 2 * R * Math.asin(Math.sqrt(Math.min(1, Math.max(0, h)))) * 1.35;
+  return Number.isFinite(km) ? Math.max(2, km) : 2; // a broken coordinate pair must never turn into a NaN price
 }
 
 export function tierOf(ref, product, q, role) {
@@ -57,7 +58,19 @@ export function pickTariff(ref, kg, len = 0) {
 }
 export function quote(db, ref, { lines, services = [], bundles = [], form = {}, promo = "", user = null, yandexPrices = null, points = 0, maxShare = 0.2, bonusOn = true, rateVip = 0.03, storeDelivery = false }) {
   const D = Object.fromEntries(ref.districts.map(d => [d.id, d]));
-  const dest = D[form.district] || D[user?.district] || D.mirob;
+  const dest = (Object.hasOwn(D, form.district) && D[form.district]) || (Object.hasOwn(D, user?.district ?? "") && D[user.district]) || D.mirob;
+  /* The buyer pays the store directly (stage 0 / cash on pickup): no money passes through Imorat Go, so nothing the platform
+     would finance can be applied — promo codes, bundle discounts, bonus points, and no installation service is sold
+     (the store never agreed to any of it and would not receive the difference). The quote says what was dropped. */
+  const payAtStore = ["store", "cash"].includes(form.pay);
+  const dropped = [];
+  if (payAtStore) {
+    if (Array.isArray(services) && services.length) dropped.push("services");
+    if (Array.isArray(bundles) && bundles.length) dropped.push("bundles");
+    if (String(promo || "").trim()) dropped.push("promo");
+    if (Number(points) > 0) dropped.push("points");
+    services = []; bundles = []; promo = ""; points = 0;
+  }
   const vip = !!user?.vip;
   const groups = new Map();
   for (const l of lines) {
@@ -73,7 +86,7 @@ export function quote(db, ref, { lines, services = [], bundles = [], form = {}, 
   const ships = [...groups.values()].map(g => {
     if (form.mode === "pickup") return { g, t: null, dist: 0, price: 0, full: 0 };
     const t = pickTariff(ref, g.kg, g.len);
-    const from = g.store.la != null ? { la: g.store.la, lo: g.store.lo } : D[g.store.district];
+    const from = g.store.la != null ? { la: g.store.la, lo: g.store.lo } : (Object.hasOwn(D, g.store.district || "") && D[g.store.district]) || D.mirob;
     const to = form.la != null && form.lo != null ? { la: Number(form.la), lo: Number(form.lo) } : dest;
     const dist = distanceKm(from, to);
     const yp = yandexPrices?.[g.store.id];
@@ -124,7 +137,7 @@ export function quote(db, ref, { lines, services = [], bundles = [], form = {}, 
   // with store delivery the total is the goods total: delivery is agreed with and paid to the store on receipt
   const total = unknown ? null : goods + (byStore ? 0 : del) + svc - disc - pd - pts;
   return {
-    goods, del, svc, disc, pd, pts, total, unknown, delivery_by: byStore ? "store" : form.mode === "pickup" ? null : "yandex", /* unknown: a delivery price is missing, so del and total are null (never 0) */ cash: vip && bonusOn ? Math.round(goods * rateVip) : 0, /* the VIP cashback promised at checkout (cfg.bonus.rateVip; bonus.js credits the same rate) */ promo: promoCode, bundles: bundlesApplied, services: svcLines,
+    goods, del, svc, disc, pd, pts, total, unknown, pay_at_store: payAtStore, not_applied: dropped, delivery_by: byStore ? "store" : form.mode === "pickup" ? null : "yandex", /* unknown: a delivery price is missing, so del and total are null (never 0) */ cash: vip && bonusOn && !payAtStore ? Math.round(goods * rateVip) : 0, /* the VIP cashback promised at checkout (cfg.bonus.rateVip; bonus.js credits the same rate) */ promo: promoCode, bundles: bundlesApplied, services: svcLines,
     ships: ships.map(s => ({
       store: s.g.store.id, store_name: s.g.store.name, tariff: s.t?.id || null, price: s.price, full: s.full, kg: Math.round(s.g.kg * 100) / 100, len: s.g.len || 0,
       dist: Math.round(s.dist * 10) / 10, source: s.source || null,

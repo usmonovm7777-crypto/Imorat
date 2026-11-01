@@ -79,7 +79,8 @@ export function createPayments({ db, cfg, log = console, onPaid, cancelOrder }) 
   async function paymeHandler(req, res) {
     const buf = await readBody(req, 64 * 1024);
     let body; try { body = JSON.parse(buf.toString("utf8")); } catch { return pErr(null, "parse"); }
-    const id = body.id ?? null, params = body.params || {}, now = Date.now();
+    if (!body || typeof body !== "object" || Array.isArray(body)) return pErr(null, "parse"); // `null`, a string or an array is not a JSON-RPC request
+    const id = body.id ?? null, params = (body.params && typeof body.params === "object") ? body.params : {}, now = Date.now();
     if (!paymeAuth(req)) return pErr(id, "auth");
     switch (body.method) {
       case "CheckPerformTransaction": {
@@ -141,6 +142,7 @@ export function createPayments({ db, cfg, log = console, onPaid, cancelOrder }) 
     let b = {};
     if ((req.headers["content-type"] || "").includes("json")) { try { b = JSON.parse(txt); } catch { b = {}; } }
     else b = Object.fromEntries(new URLSearchParams(txt));
+    if (!b || typeof b !== "object" || Array.isArray(b)) b = {}; // `null` / a bare string parses fine but is not a form
     const action = Number(b.action);
     if (String(b.service_id) !== String(click.serviceId)) return cRes(b, -8, "Error in request from click");
     const base = action === 1 ? `${b.click_trans_id}${b.service_id}${click.secret}${b.merchant_trans_id}${b.merchant_prepare_id}${b.amount}${b.action}${b.sign_time}` : `${b.click_trans_id}${b.service_id}${click.secret}${b.merchant_trans_id}${b.amount}${b.action}${b.sign_time}`;

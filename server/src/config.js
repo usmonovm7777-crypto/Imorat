@@ -40,7 +40,9 @@ export function loadConfig(env = process.env) {
     allowPayAtStore: env.ALLOW_PAY_AT_STORE === "1",
     uploadsDir: env.UPLOADS_DIR || "uploads",
     publicUrl: (env.PUBLIC_URL || "").replace(/\/$/, ""),
-    origins: list(env.ALLOWED_ORIGINS || "https://usmonovm7777-crypto.github.io,http://localhost:8080,http://127.0.0.1:8080"),
+    /* The mobile app's WebView runs at https://localhost (Android, androidScheme https) and capacitor://localhost (iOS):
+       those origins are always allowed, otherwise the installed app could not call the API at all. */
+    origins: [...new Set([...list(env.ALLOWED_ORIGINS || "https://usmonovm7777-crypto.github.io,http://localhost:8080,http://127.0.0.1:8080"), "https://localhost", "capacitor://localhost", "http://localhost"])],
     jwtSecret: env.JWT_SECRET || randomBytes(32).toString("hex"),
     admins: list(env.ADMIN_PHONES).map(normPhone),
     vipFree: env.VIP_FREE !== "0",

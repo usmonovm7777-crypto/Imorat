@@ -81,7 +81,7 @@ export function openDb(path, catalogPath, opts = {}) {
   raw.exec(SCHEMA);
   // Columns added after the first release (safe to run on an existing database)
   const addCol = (t, c, def) => { if (!raw.prepare(`PRAGMA table_info(${t})`).all().some(x => x.name === c)) raw.exec(`ALTER TABLE ${t} ADD COLUMN ${c} ${def}`); };
-  addCol("users", "tg_chat", "TEXT"); addCol("users", "token_ver", "INTEGER NOT NULL DEFAULT 0");
+  addCol("tg_logins", "ip", "TEXT"); addCol("users", "tg_chat", "TEXT"); addCol("users", "token_ver", "INTEGER NOT NULL DEFAULT 0");
   addCol("users", "points", "INTEGER NOT NULL DEFAULT 0"); addCol("users", "ref_code", "TEXT"); addCol("users", "ref_by", "TEXT"); addCol("users", "ref_paid", "INTEGER NOT NULL DEFAULT 0");
   addCol("stores", "verified", "INTEGER NOT NULL DEFAULT 0"); addCol("stores", "payout_to", "TEXT NOT NULL DEFAULT ''");
   raw.exec("CREATE TABLE IF NOT EXISTS payouts(id INTEGER PRIMARY KEY AUTOINCREMENT, store_id TEXT NOT NULL, amount INTEGER NOT NULL, status TEXT NOT NULL DEFAULT 'requested', note TEXT NOT NULL DEFAULT '', payout_to TEXT NOT NULL DEFAULT '', admin_id TEXT, requested_at INTEGER NOT NULL, done_at INTEGER); CREATE INDEX IF NOT EXISTS payouts_store ON payouts(store_id, status)");
@@ -168,8 +168,17 @@ function seed(db, ref, demo = true) {
 function dropDemoStores(db, ref) {
   const ids = ref.stores.map(s => s.id).filter(id => db.get("SELECT 1 FROM stores WHERE id=? AND owner_id IS NULL", id));
   if (!ids.length) return;
+  const now = Date.now();
   db.tx(() => {
-    for (const id of ids) { db.run("DELETE FROM offers WHERE store_id=?", id); db.run("DELETE FROM stores WHERE id=?", id); }
-    db.setMeta("catalog_rev", Date.now());
+    for (const id of ids) {
+      // test orders to a sample store cannot be fulfilled by anyone: close them instead of leaving shipments that point at a missing store
+      for (const sh of db.all("SELECT id, history, order_id FROM shipments WHERE store_id=? AND status NOT IN ('cancelled','delivered','picked')", id)) {
+        const hist = (() => { try { return JSON.parse(sh.history || "[]"); } catch { return []; } })(); hist.push({ s: "cancelled", t: now });
+        db.run("UPDATE shipments SET status='cancelled', status_at=?, history=?, cancel_reason='admin' WHERE id=?", now, JSON.stringify(hist), sh.id);
+        if (!db.get("SELECT 1 FROM shipments WHERE order_id=? AND status<>'cancelled'", sh.order_id)) db.run("UPDATE orders SET status='cancelled' WHERE id=?", sh.order_id);
+      }
+      db.run("DELETE FROM offers WHERE store_id=?", id); db.run("DELETE FROM stores WHERE id=?", id);
+    }
+    db.setMeta("catalog_rev", now);
   });
 }

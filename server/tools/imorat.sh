@@ -71,13 +71,21 @@ case "$cmd" in
     # SQLite's own backup API makes a consistent copy even while the API is writing
     dc exec -T api node -e "const{DatabaseSync}=require('node:sqlite');const d=new DatabaseSync('/data/imorat.db');d.exec(\"VACUUM INTO '/data/backup-tmp.db'\");d.close()" \
       && dc cp api:/data/backup-tmp.db "$f" && dc exec -T api rm -f /data/backup-tmp.db
-    cp -r "$(docker volume inspect -f '{{.Mountpoint}}' server_imorat-data 2>/dev/null || true)/uploads" "$BACKUPS/uploads" 2>/dev/null || true
+    dc cp api:/data/uploads "$BACKUPS/" 2>/dev/null || true   # product photos live next to the database
     ls -1t "$BACKUPS"/imorat-*.db | tail -n +31 | xargs -r rm -f
     say "backup: $f ($(du -h "$f" | cut -f1))" ;;
   restore)
     need_root restore; [ -f "${1:-}" ] || die "usage: imorat restore /var/backups/imorat/imorat-YYYY-MM-DD-HHMM.db"
+    # the file must be a healthy SQLite database before anything is touched
+    node -e "const{DatabaseSync}=require('node:sqlite');const d=new DatabaseSync(process.argv[1],{readOnly:true});const r=d.prepare('PRAGMA integrity_check').get();if(r.integrity_check!=='ok')throw new Error(r.integrity_check);console.log('backup is a healthy database:',d.prepare('SELECT count(*) n FROM orders').get().n,'orders')" "$1" 2>/dev/null \
+      || dc run --rm --no-deps -T -v "$(cd "$(dirname "$1")" && pwd)/$(basename "$1"):/restore.db:ro" --entrypoint node api -e "const{DatabaseSync}=require('node:sqlite');const d=new DatabaseSync('/restore.db',{readOnly:true});const r=d.prepare('PRAGMA integrity_check').get();if(r.integrity_check!=='ok')throw new Error(r.integrity_check);console.log('backup is a healthy database:',d.prepare('SELECT count(*) n FROM orders').get().n,'orders')" \
+      || die "$1 is not a valid Imorat Go database — nothing was changed"
     read -r -p "Replace the live database with $1? Current data after that backup will be lost. [yes/NO] " ok; [ "$ok" = yes ] || exit 1
-    dc stop api; dc cp "$1" api:/data/imorat.db; dc start api; say "restored; check: imorat status" ;;
+    dc stop api
+    dc cp "$1" api:/data/imorat.db
+    # docker cp leaves the file owned by root and a stale write-ahead log would be replayed over the restored data
+    dc run --rm --no-deps -T --user root --entrypoint sh api -c 'chown node:node /data/imorat.db && rm -f /data/imorat.db-wal /data/imorat.db-shm'
+    dc start api; say "restored; check: imorat status" ;;
   doctor)
     api=$(envget API_DOMAIN); site=$(envget SITE_DOMAIN); ip=$(curl -fsS --max-time 5 https://api.ipify.org || curl -fsS --max-time 5 https://ifconfig.me || echo "?")
     echo "this server's public IP: $ip"

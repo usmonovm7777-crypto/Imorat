@@ -269,6 +269,11 @@ test("Bulky goods: the vehicle follows the longest item, not only the weight; se
   assert.equal(np.status, 200, JSON.stringify(np.data));
   const own = (await call("GET", "/api/catalog")).data.products.find(p => p.id === np.data.product.id); assert.deepEqual(own.dims, [2.4, 0.08, 0.02]);
   assert.equal((await q([{ id: np.data.product.id, store: st.data.store.id, q: 2 }])).ships[0].tariff, "cargo_s", "1.6 kg of skirting, 2.4 m long → small van");
+  // the length alone is enough (the seller's form asks only for it): width and height default to 10 cm; a bad length means "not given"
+  const np2 = await call("POST", "/api/seller/products", { ru: "Труба ПВХ 3 м", cat: "build", sub: "wood", unit: "pcs", price: 25000, stock: 20, kg: 1.2, len_cm: 300 }, seller); assert.equal(np2.status, 200, JSON.stringify(np2.data));
+  assert.deepEqual((await call("GET", "/api/catalog")).data.products.find(p => p.id === np2.data.product.id).dims, [3, 0.1, 0.1]);
+  const np3 = await call("POST", "/api/seller/products", { ru: "Без габаритов", cat: "build", sub: "wood", unit: "pcs", price: 25000, stock: 20, kg: 1.2, len_cm: "abc", wid_cm: 5 }, seller); assert.equal(np3.status, 200);
+  assert.equal(app.db.get("SELECT dims FROM products WHERE id=?", np3.data.product.id).dims, null, "nothing stored"); assert.deepEqual((await call("GET", "/api/catalog")).data.products.find(p => p.id === np3.data.product.id).dims, [3, 0.15, 0.1], "the catalogue shows the typical size of the subcategory");
 });
 
 test("Telegram: link seller, order arrives with buttons, accept from Telegram", async () => {
@@ -961,6 +966,18 @@ test("Finance with card payments: money held once, a partner's share survives an
   assert.equal((await call("GET", `/api/orders/${o2.num}`, null, buyer)).data.order.pay_status, "refund_due");
   f = await fin(sellerA); assert.equal(f.payout_due, 194000, "A keeps its share after B's cancellation"); assert.equal(f.balance, -144000, "194 000 due minus the 50 000 already paid out");
   assert.equal((await fin(sellerB)).payout_due, 0);
+  // 2b) both parts of a paid two-store order fail one after the other: each cancellation raises its own refund for the admin
+  app.db.run("UPDATE users SET tg_chat='7777' WHERE phone='998901111111'");
+  await call("POST", "/api/seller/offers", { product_id: 2, price: 100000, stock: 50 }, sellerB); // "out of stock" above zeroed B's offer
+  const o2bR = await call("POST", "/api/orders", { lines: [{ id: 1, store: A, q: 1 }, { id: 2, store: B, q: 1 }], form }, buyer); assert.equal(o2bR.status, 200, JSON.stringify(o2bR.data)); const o2b = o2bR.data.order;
+  await pay(o2b, "fin-2b");
+  const refundsTo = () => tgSent.filter(m => String(m.chat_id) === "7777" && new RegExp("Возврат по заказу " + o2b.num).test(m.text || "")).length;
+  const sb2 = await ship(sellerB, o2b.num); assert.equal((await call("PATCH", `/api/seller/shipments/${sb2.ship_id}`, { status: "cancelled", reason: "out_of_stock" }, sellerB)).status, 200);
+  await until(() => refundsTo() >= 1);
+  const sa2 = await ship(sellerA, o2b.num); assert.equal((await call("PATCH", `/api/seller/shipments/${sa2.ship_id}`, { status: "cancelled", reason: "out_of_stock" }, sellerA)).status, 200);
+  await until(() => refundsTo() >= 2); // the second part's refund is reported too, although the order was already refund_due
+  assert.equal((await call("GET", `/api/orders/${o2b.num}`, null, buyer)).data.order.status, "cancelled");
+  await call("POST", "/api/seller/offers", { product_id: 1, price: 100000, stock: 50 }, sellerA); // A's "out of stock" zeroed its offer
   // 3) the admin marks an order paid by hand: the store gets it like after a bank callback
   const o3 = (await call("POST", "/api/orders", { lines: [{ id: 1, store: A, q: 1 }], form }, buyer)).data.order;
   assert.equal(await ship(sellerA, o3.num), undefined);
@@ -970,8 +987,8 @@ test("Finance with card payments: money held once, a partner's share survives an
   await advance(sellerA, o3.num, ["assembling"]); app.sweep(Date.now() + 31 * 60000);
   assert.equal((await call("GET", `/api/orders/${o3.num}`, null, buyer)).data.order.status, "active", "a paid order is not expired by the payment sweep");
   // 4) free months: the admin gives store B three months — Imorat Go's 1% is 0, the bank's 2% stays; ending them brings the 1% back
-  const until = new Date(Date.now() + 90 * 86400_000).toISOString().slice(0, 10);
-  assert.equal((await call("PATCH", `/api/admin/stores/${B}`, { free_until: until }, globalThis.ADMIN)).status, 200);
+  const untilDay = new Date(Date.now() + 90 * 86400_000).toISOString().slice(0, 10);
+  assert.equal((await call("PATCH", `/api/admin/stores/${B}`, { free_until: untilDay }, globalThis.ADMIN)).status, 200);
   const sumB = (await call("GET", "/api/seller/summary", null, sellerB)).data; assert.equal(sumB.rates.promo, true); assert.ok(sumB.store.free_until > Date.now());
   await call("POST", "/api/seller/offers", { product_id: 2, price: 100000, stock: 50 }, sellerB); // B's "out of stock" cancellation zeroed its stock
   const o4r = await call("POST", "/api/orders", { lines: [{ id: 2, store: B, q: 1 }], form }, buyer); assert.equal(o4r.status, 200, JSON.stringify(o4r.data)); const o4 = o4r.data.order;
@@ -1000,10 +1017,10 @@ test("Finance with card payments: money held once, a partner's share survives an
   // 5) the seller's statement: every sale with its two deductions, the refund, payouts, the sum due — and the same balance as the cabinet
   const stA = (await call("GET", "/api/seller/statement", null, sellerA)).data;
   assert.equal(stA.sales.length, 2, "two completed sales for A this month"); assert.ok(stA.sales.every(x => x.paid === "card" && x.net === x.goods - x.commission - x.acquiring));
-  assert.equal(stA.totals.sales, 200000); assert.equal(stA.totals.commission, 2000); assert.equal(stA.totals.acquiring, 4000); assert.equal(stA.totals.due, 194000); assert.equal(stA.totals.refunds, 0);
+  assert.equal(stA.totals.sales, 200000); assert.equal(stA.totals.commission, 2000); assert.equal(stA.totals.acquiring, 4000); assert.equal(stA.totals.due, 194000); assert.equal(stA.totals.refunds, 100000, "A's part of the twice-cancelled card order is its refund line");
   assert.equal(stA.totals.payouts_paid, 50000); assert.equal(stA.balance.payout_due, 194000); assert.equal(stA.balance.payout_paid, 50000);
   const stB = (await call("GET", "/api/seller/statement", null, sellerB)).data;
-  assert.equal(stB.refunds.length, 1, "B's cancelled card order is a refund line"); assert.equal(stB.refunds[0].num, o2.num); assert.equal(stB.totals.refunds, 100000);
+  assert.equal(stB.refunds.length, 2, "B's cancelled card orders are refund lines"); assert.ok(stB.refunds.some(x => x.num === o2.num)); assert.equal(stB.totals.refunds, 200000);
   assert.equal(stB.sales.length, 2); assert.equal(stB.totals.commission, 1000, "the free-month sale carried no commission"); assert.equal(stB.totals.due, 98000 + 97000);
   assert.equal(stB.store.free_until <= Date.now(), true); assert.ok(!JSON.stringify(stB).match(/profit|прибыл/i), "a payout is never called profit");
   assert.equal((await call("GET", "/api/seller/statement?month=2020-01", null, sellerA)).data.sales.length, 0, "an empty month is empty, not an error");
@@ -1079,6 +1096,33 @@ test("Guard rails: admin shipment moves, partial cancellation refunds points, co
   // 6) odd shapes in valid JSON are answered, not crashed on
   assert.notEqual((await call("POST", "/api/quote", { lines: [{ id: 1, store: A, q: 1 }], form, services: "x", bundles: 5 }, buyer)).status, 500);
   assert.notEqual((await call("POST", "/api/seller/import", { offers: [null], create: [null] }, seller)).status, 500);
+  // 6b) a promo code comes back when the order is cancelled, but cancelling the same order twice must not free another order's use
+  const pA = (await call("POST", "/api/orders", { lines: [{ id: 1, store: A, q: 1 }], form: { ...form, mode: "pickup" }, promo: "IMORAT5" }, buyer)).data.order; assert.equal(pA.promo, "IMORAT5");
+  assert.equal((await call("POST", `/api/orders/${pA.num}/cancel`, {}, buyer)).status, 200);
+  const pB = (await call("POST", "/api/orders", { lines: [{ id: 1, store: A, q: 1 }], form: { ...form, mode: "pickup" }, promo: "IMORAT5" }, buyer)).data.order; assert.equal(pB.promo, "IMORAT5", "the use came back after the cancellation");
+  assert.notEqual((await call("POST", `/api/orders/${pA.num}/cancel`, {}, buyer)).status, 200, "a cancelled order cannot be cancelled again");
+  const pC = (await call("POST", "/api/orders", { lines: [{ id: 1, store: A, q: 1 }], form: { ...form, mode: "pickup" }, promo: "IMORAT5" }, buyer)).data.order; assert.equal(pC.promo, null, "B still holds the promo use");
+  // 6c) a one-time admin code is one-time in the neighbouring 30-second window as well
+  const adminRaw2 = (await login("901111111")).data.token, secret = app.db.get("SELECT totp_secret FROM users WHERE phone='998901111111'").totp_secret;
+  const future = totp(secret, Date.now() + 30000); // the code of the next window is already accepted now (clock tolerance)…
+  assert.equal((await call("POST", "/api/admin/mfa/verify", { code: future }, adminRaw2)).status, 200);
+  assert.equal((await call("POST", "/api/admin/mfa/verify", { code: future }, adminRaw2)).data.error, "mfa_reused", "…and is refused when replayed");
+  assert.equal((await call("POST", "/api/admin/mfa/verify", { code: totp(secret) }, adminRaw2)).data.error, "mfa_reused", "an older window's code is refused once a newer one was used");
+  // 7) payment callbacks with a body that is valid JSON but not an object (null, a string, an array) get a provider-style error, never a 500
+  for (const raw of ["null", "\"x\"", "[]", "{\"params\":null,\"method\":\"CheckTransaction\"}"]) {
+    for (const p of ["/api/pay/payme", "/api/pay/click", "/api/pay/click/prepare", "/api/pay/click/complete"]) {
+      const r = await fetch(base + p, { method: "POST", headers: { "content-type": "application/json" }, body: raw });
+      assert.equal(r.status, 200, `${p} ${raw}`); const j = await r.json(); assert.ok(j.error !== undefined, `${p} ${raw} answers with an error object`);
+    }
+  }
+  // 8) CORS: the website's origins and the app's WebView origins are allowed, anything else gets no CORS headers (the browser then blocks it)
+  const acao = async origin => (await fetch(base + "/api/config", { headers: { origin } })).headers.get("access-control-allow-origin");
+  assert.equal(await acao("https://usmonovm7777-crypto.github.io"), "https://usmonovm7777-crypto.github.io");
+  assert.equal(await acao("https://localhost"), "https://localhost", "Android app (androidScheme https)");
+  assert.equal(await acao("capacitor://localhost"), "capacitor://localhost", "iOS app");
+  assert.equal(await acao("https://evil.example"), null);
+  const pre = await fetch(base + "/api/orders", { method: "OPTIONS", headers: { origin: "https://localhost", "access-control-request-method": "POST", "access-control-request-headers": "authorization" } });
+  assert.equal(pre.status, 204); assert.match(pre.headers.get("access-control-allow-headers") || "", /Authorization/);
 });
 
 test("Card only: no cash, the full address reaches the courier, the buyer watches the courier (simulated and via Yandex)", async () => {
@@ -1225,14 +1269,34 @@ test("Sign in with Telegram from the site: ticket → bot asks for the phone →
   assert.ok(ask.reply_markup.keyboard.flat().some(b => b.request_contact), "contact button is offered");
   assert.deepEqual((await call("GET", `/api/auth/tg/poll?ticket=${st.data.ticket}`)).data, { pending: true }, "still pending until the phone is shared");
   send(7801, { contact: { phone_number: "+998933337788", user_id: 7801, first_name: "Телеграм", last_name: "Юзер" } });
+  // the phone binds the chat, but the site session is handed over only after an explicit "yes, it's me" (a link can be sent to anyone)
+  const ask1 = await until(() => sentTo(7801, /Это вы\?/)[0]);
+  const yes1 = ask1.reply_markup.inline_keyboard.flat().find(b => /Да/.test(b.text)); assert.equal(yes1.callback_data, `tgl:y:${st.data.ticket}`);
+  assert.deepEqual((await call("GET", `/api/auth/tg/poll?ticket=${st.data.ticket}`)).data, { pending: true }, "still pending until the person confirms in the bot");
+  let cbid = 0;
+  const press = data => { const id = "tglq" + (++cbid); tgUpdates.push({ update_id: ++uid, callback_query: { id, data, from: { id: 7801 }, message: { chat: { id: 7801, type: "private" }, message_id: 5 } } }); return id; };
+  press(yes1.callback_data);
   await until(() => sentTo(7801, /вошли на сайт/).length);
   const got = await call("GET", `/api/auth/tg/poll?ticket=${st.data.ticket}`);
   assert.equal(got.status, 200); assert.ok(got.data.token); assert.equal(got.data.user.phone, "+998 93 333 77 88"); assert.equal(got.data.user.name, "Телеграм Юзер"); assert.equal(got.data.user.telegram, true);
   assert.equal((await call("GET", "/api/me", null, got.data.token)).data.user.phone, "+998 93 333 77 88", "the token works");
   assert.equal((await call("GET", `/api/auth/tg/poll?ticket=${st.data.ticket}`)).status, 410, "a ticket is used once");
-  // the same chat again: already known → signed in immediately, no phone asked
+  // the same chat again: already known → no phone asked, but still a confirmation; "No" kills the ticket (phishing link from a stranger)
+  const stX = await call("POST", "/api/auth/tg/start", {});
+  send(7801, { text: "/start login_" + stX.data.ticket });
+  const askX = await until(() => sentTo(7801, /Это вы\?/).filter(m => m.reply_markup.inline_keyboard.flat().some(b => b.callback_data === `tgl:y:${stX.data.ticket}`))[0]);
+  assert.ok(!sentTo(7801, /поделитесь номером/).some(m => tgSent.indexOf(m) > tgSent.indexOf(askX)), "a known chat is not asked for the phone again");
+  press(`tgl:n:${stX.data.ticket}`);
+  await until(() => sentTo(7801, /никто не вошёл/).length);
+  assert.equal((await call("GET", `/api/auth/tg/poll?ticket=${stX.data.ticket}`)).status, 410, "a refused ticket never signs anyone in");
+  press(`tgl:y:${stX.data.ticket}`); // a late "yes" on the dead ticket changes nothing
+  await until(() => tgSent.filter(x => x.m === "answerCallbackQuery" && /устарела/.test(x.text || "")).length);
+  assert.equal((await call("GET", `/api/auth/tg/poll?ticket=${stX.data.ticket}`)).status, 410);
+  // and "Yes" signs in
   const st2 = await call("POST", "/api/auth/tg/start", {});
   send(7801, { text: "/start login_" + st2.data.ticket });
+  await until(() => sentTo(7801, /Это вы\?/).filter(m => m.reply_markup.inline_keyboard.flat().some(b => b.callback_data === `tgl:y:${st2.data.ticket}`)).length);
+  press(`tgl:y:${st2.data.ticket}`);
   await until(() => sentTo(7801, /вошли на сайт/).length >= 2);
   assert.equal((await call("GET", `/api/auth/tg/poll?ticket=${st2.data.ticket}`)).data.user.phone, "+998 93 333 77 88");
   // an expired or reused link gets a friendly message
@@ -1303,6 +1367,33 @@ test("Stage 0: pay on receipt, the store delivers itself, no invented delivery p
     const st = (await c("GET", "/api/seller/statement", null, seller)).data; assert.equal(st.totals.sales_store, st.totals.sales); assert.equal(st.totals.due, 0);
     // pickup with cash still works too
     const o2 = await c("POST", "/api/orders", { lines: [{ id: 1, store: "usta", q: 1 }], form: { ...form, mode: "pickup" } }, t); assert.equal(o2.status, 200); assert.equal(o2.data.order.d.delivery_by, undefined);
+    // money the platform never touches cannot be discounted or sold: promo codes, bundles, installation and bonus points are ignored when the buyer pays the store
+    const qOnline = (await c("POST", "/api/quote", { lines: [{ id: 30, store: "santex", q: 1 }], form: { ...form, pay: "payme" }, promo: "IMORAT5", services: [30] }, t)).data.quote;
+    assert.ok(qOnline.pd > 0 && qOnline.svc > 0, "the same cart paid by card does get the promo and the installation: " + JSON.stringify([qOnline.pd, qOnline.svc]));
+    const q2 = (await c("POST", "/api/quote", { lines: [{ id: 30, store: "santex", q: 1 }], form, promo: "IMORAT5", services: [30], bundles: ["bath"], points: 5000 }, t)).data.quote;
+    assert.equal(q2.pd, 0); assert.equal(q2.svc, 0); assert.equal(q2.disc, 0); assert.equal(q2.pts, 0); assert.equal(q2.promo, null); assert.deepEqual(q2.services, []); assert.equal(q2.total, q2.goods);
+    assert.equal(q2.pay_at_store, true); assert.ok(q2.not_applied.includes("promo") && q2.not_applied.includes("services"), JSON.stringify(q2.not_applied));
+    const o3 = await c("POST", "/api/orders", { lines: [{ id: 30, store: "santex", q: 1 }], form, promo: "IMORAT5", services: [30], expected_total: q2.total }, t);
+    assert.equal(o3.status, 200, JSON.stringify(o3.data)); assert.equal(o3.data.order.total, o3.data.order.goods); assert.equal(o3.data.order.promo, null);
+    assert.equal(a0.db.get("SELECT COUNT(*) n FROM promo_uses WHERE code='IMORAT5'").n, 0, "no promo use is recorded for a pay-at-store order");
+    // the buyer cancels while the store packs: the store is told at once (a new message, not only an edit of the old card)
+    const sh3 = a0.db.get("SELECT * FROM shipments WHERE order_id=(SELECT id FROM orders WHERE num=?)", o3.data.order.num);
+    const seller2 = await lg("998901234569"); a0.db.run("UPDATE stores SET owner_id=(SELECT id FROM users WHERE phone='998901234569') WHERE id='santex'"); a0.db.run("UPDATE users SET store_id='santex', tg_chat='4343' WHERE phone='998901234569'");
+    assert.equal((await c("PATCH", `/api/seller/shipments/${sh3.id}`, { status: "assembling" }, seller2)).status, 200);
+    const n3 = tgSent.length;
+    assert.equal((await c("POST", `/api/orders/${o3.data.order.num}/cancel`, {}, t)).status, 200);
+    const told = await until(() => tgSent.slice(n3).find(m => m.m === "sendMessage" && String(m.chat_id) === "4343" && /отменён/.test(m.text || "")));
+    assert.match(told.text, /покупатель отменил/);
+    // cancelling a second time changes nothing and is refused
+    assert.notEqual((await c("POST", `/api/orders/${o3.data.order.num}/cancel`, {}, t)).status, 200);
+    // an admin cannot push a store-delivered shipment into the carrier flow
+    const o4 = await c("POST", "/api/orders", { lines: [{ id: 1, store: "usta", q: 1 }], form }, t); const sh4 = a0.db.get("SELECT * FROM shipments WHERE order_id=(SELECT id FROM orders WHERE num=?)", o4.data.order.num);
+    assert.equal((await c("PATCH", `/api/admin/shipments/${sh4.id}`, { status: "searching" }, admin)).data.error, "bad_status");
+    assert.equal((await c("PATCH", `/api/admin/shipments/${sh4.id}`, { status: "assembling" }, admin)).status, 200);
+    // odd client data never becomes a 500: prototype names as a district, coordinates off the planet
+    assert.notEqual((await c("PATCH", "/api/me", { district: "constructor" }, t)).status, 500);
+    const qx = await c("POST", "/api/quote", { lines: [{ id: 1, store: "usta", q: 1 }], form: { ...form, district: "constructor", la: 1000, lo: -5000 } }, t); assert.equal(qx.status, 200, JSON.stringify(qx.data));
+    const ox = await c("POST", "/api/orders", { lines: [{ id: 1, store: "usta", q: 1 }], form: { ...form, district: "__proto__", la: "91", lo: "abc" } }, t); assert.equal(ox.status, 200, JSON.stringify(ox.data));
     await new Promise(r => setTimeout(r, 400)); // let the status notifications finish before the database closes
   } finally { a0.stopJobs(); a0.close(); a0.closeAllConnections(); a0.db.raw.close(); rmSync(d0, { recursive: true, force: true }); }
 });

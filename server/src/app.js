@@ -59,11 +59,12 @@ export function createApp(cfg, log = console) {
   const db = openDb(cfg.dbPath, cfg.catalogPath, { demoStores: cfg.demoStores });
   const ref = db.ref;
   const subIcon = (cat, sub) => { const m = new Map(); for (const p of ref.products) if (p.cat === cat && p.sub === sub && p.icon) m.set(p.icon, (m.get(p.icon) || 0) + 1); return [...m].sort((x, y) => y[1] - x[1])[0]?.[0] || ref.cats.find(c => c.id === cat)?.icon || "box"; };
-  const subUnit = (cat, sub, want) => { if (want && ref.units[want]) return want; const m = new Map(); for (const p of ref.products) if (p.cat === cat && p.sub === sub) m.set(p.unit, (m.get(p.unit) || 0) + 1); return [...m].sort((x, y) => y[1] - x[1])[0]?.[0] || "pcs"; };
+  const subUnit = (cat, sub, want) => { if (want && typeof want === "string" && Object.hasOwn(ref.units, want)) return want; const m = new Map(); for (const p of ref.products) if (p.cat === cat && p.sub === sub) m.set(p.unit, (m.get(p.unit) || 0) + 1); return [...m].sort((x, y) => y[1] - x[1])[0]?.[0] || "pcs"; };
   const sms = createSms(cfg.sms, log);
   const lim = new Limiter();
   const r = new Router();
   const D = Object.fromEntries(ref.districts.map(d => [d.id, d]));
+  const isDistrict = x => typeof x === "string" && Object.hasOwn(D, x); // never "constructor" / "__proto__" from a client
   const CATS = new Set(ref.cats.map(c => c.id));
   mkdirSync(cfg.uploadsDir, { recursive: true });
   const bumpCatalog = () => db.setMeta("catalog_rev", Date.now());
@@ -151,6 +152,8 @@ export function createApp(cfg, log = console) {
     writeFileSync(join(cfg.uploadsDir, name), buf);
     return "/uploads/" + name;
   };
+  /* delete a file this server saved earlier (a replaced photo); anything outside the uploads folder is ignored */
+  const removeUpload = path => { if (typeof path === "string" && path.startsWith("/uploads/")) { try { unlinkSync(join(cfg.uploadsDir, path.slice("/uploads/".length).replace(/[^\w.-]/g, ""))); } catch {} } };
   const publicStore = s => ({
     id: s.id, name: s.name, d: s.district, addr: s.addr, addrUz: s.addr_uz || s.addr, hours: s.hours, ru: s.ru || s.descr.slice(0, 80), uz: s.uz || s.ru || s.descr.slice(0, 80),
     descr: s.descr, cats: JSON.parse(s.cats || "[]"), phone: s.phone, telegram: s.telegram, verified: !!s.verified, landmark: s.landmark, la: s.la, lo: s.lo, status: s.status, loc_src: s.loc_src, note: s.review_note, created: s.created_at
@@ -232,7 +235,7 @@ export function createApp(cfg, log = console) {
     lim.hit("tgstart-ip:" + req.ip, 30, 3600_000);
     if (!tg.enabled || !tg.username) throw new HttpError(503, "telegram_off", "Telegram sign-in is not connected on the server yet");
     const ticket = randomBytes(16).toString("hex");
-    db.run("INSERT INTO tg_logins(ticket,user_id,created_at,expires_at) VALUES(?,NULL,?,?)", ticket, Date.now(), Date.now() + 10 * 60000);
+    db.run("INSERT INTO tg_logins(ticket,user_id,created_at,expires_at,ip) VALUES(?,NULL,?,?,?)", ticket, Date.now(), Date.now() + 10 * 60000, String(req.ip || "").slice(0, 45));
     return { ticket, url: `https://t.me/${tg.username}?start=login_${ticket}`, bot: tg.username };
   });
   r.get("/api/auth/tg/poll", (req, res, p, url) => {
@@ -253,7 +256,7 @@ export function createApp(cfg, log = console) {
     const u = need(req), b = await readJson(req);
     const name = b.name !== undefined ? str(b.name, 80) : u.name;
     if (b.name !== undefined && name.length < 2) throw bad("bad_name", "Name is too short");
-    const district = b.district !== undefined ? (D[b.district] ? b.district : null) : u.district;
+    const district = b.district !== undefined ? (isDistrict(b.district) ? b.district : null) : u.district;
     if (!district) throw bad("bad_district", "Unknown district");
     let role = u.role;
     if (b.role !== undefined) {
@@ -307,13 +310,13 @@ export function createApp(cfg, log = console) {
 
   /* ---------- quote & orders ---------- */
   const cleanForm = f => ({
-    name: str(f?.name, 80), phone: str(f?.phone, 30), district: D[f?.district] ? f.district : "mirob", street: str(f?.street, 160), flat: str(f?.flat, 30),
+    name: str(f?.name, 80), phone: str(f?.phone, 30), district: isDistrict(f?.district) ? f.district : "mirob", street: str(f?.street, 160), flat: str(f?.flat, 30),
     entrance: str(f?.entrance, 20), intercom: str(f?.intercom, 30), private: !!f?.private, // full address for the Yandex courier: porch, intercom code, or a private house
     floor: String(int(f?.floor, 1, 60) || 1), help: f?.help === "none" ? "none" : f?.help || f?.lift ? "one" : "none", lift: f?.help ? f.help !== "none" : !!f?.lift, mode: f?.mode === "pickup" ? "pickup" : "yandex",
     access: f?.access === "far" ? "far" : "door", elevator: f?.elevator === true || f?.elevator === "true" ? true : f?.elevator === false || f?.elevator === "false" ? false : null, // can the car reach the entrance; is there a lift (null = not asked)
     when: ["asap", "slot", "vip"].includes(f?.when) ? f.when : "asap", hour: String(int(f?.hour, 8, 20) ?? 9).padStart(2, "0"),
     pay: ["click", "payme", "uzum", "nasiya", "cash", "store"].includes(f?.pay) ? f.pay : "store", comment: str(f?.comment, 300),
-    la: Number.isFinite(Number(f?.la)) && f?.la !== null && f?.la !== "" ? Number(f.la) : null, lo: Number.isFinite(Number(f?.lo)) && f?.lo !== null && f?.lo !== "" ? Number(f.lo) : null
+    la: Number.isFinite(Number(f?.la)) && f?.la !== null && f?.la !== "" && Math.abs(Number(f.la)) <= 90 ? Number(f.la) : null, lo: Number.isFinite(Number(f?.lo)) && f?.lo !== null && f?.lo !== "" && Math.abs(Number(f.lo)) <= 180 ? Number(f.lo) : null
   });
   async function computeQuote(req, b) {
     const user = req.user;
@@ -365,7 +368,8 @@ export function createApp(cfg, log = console) {
         db.run("INSERT INTO shipments(order_id,store_id,tariff,price,kg,dist,lines,status,status_at,history,goods,commission,acquiring,start_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
           id, s.store, s.tariff, s.price ?? 0, s.kg, s.dist, JSON.stringify(s.lines), st0, now, JSON.stringify([{ s: st0, t: now }]), goods, commission, acquiring, start); // price 0 = "agreed with the store" when the store delivers (form.delivery_by)
       }
-      if (q.promo) db.run("INSERT OR IGNORE INTO promo_uses(user_id,code,order_id) VALUES(?,?,?)", u.id, q.promo, id);
+      // the promo use is claimed inside the transaction: two orders racing with the same code cannot both get the discount
+      if (q.promo && !db.run("INSERT OR IGNORE INTO promo_uses(user_id,code,order_id) VALUES(?,?,?)", u.id, q.promo, id).changes) throw new HttpError(409, "total_changed", "The promo code has just been used, check the new total", { quote: { ...q, pd: 0, promo: null, total: q.total + q.pd } });
       return num;
     });
     bumpCatalog();
@@ -414,6 +418,7 @@ export function createApp(cfg, log = console) {
   });
   /* Cancels a whole order while nothing has left the stores: stock back, points back (via setShipStatus), promo freed. False once a shipment is on its way. */
   function cancelOrder(o, reason) {
+    if (o.status === "cancelled") return false; // cancelling twice must not run the side effects (promo use, points) again
     const ships = db.all("SELECT * FROM shipments WHERE order_id=?", o.id);
     if (ships.some(s => !["unpaid", "new", "assembling", "cancelled"].includes(s.status))) return false;
     db.tx(() => {
@@ -423,7 +428,7 @@ export function createApp(cfg, log = console) {
         setShipStatus(s, "cancelled", reason);
       }
       db.run("UPDATE orders SET status='cancelled' WHERE id=?", o.id);
-      if (o.promo) db.run("DELETE FROM promo_uses WHERE user_id=? AND code=?", o.user_id, o.promo);
+      if (o.promo) db.run("DELETE FROM promo_uses WHERE user_id=? AND code=? AND order_id=?", o.user_id, o.promo, o.id); // only this order's use comes back
     });
     bumpCatalog();
     return true;
@@ -459,7 +464,7 @@ export function createApp(cfg, log = console) {
     // a card-paid shipment the store failed (or the buyer cancelled in time): the money must go back — flagged for the admin until refunds are automated
     if (status === "cancelled" && reason !== "refund") {
       const o = db.get("SELECT * FROM orders WHERE id=?", s.order_id);
-      if (o && o.pay_status === "paid" && !["store", "cash"].includes(o.pay)) {
+      if (o && ["paid", "refund_due"].includes(o.pay_status) && !["store", "cash"].includes(o.pay)) { // refund_due: a second part of the same paid order is cancelled → one more refund
         // the buyer paid for this part its goods minus its share of the promo discount and of the points, plus its delivery
         const goods = JSON.parse(s.lines).reduce((a, l) => a + l.price * l.q, 0), share = o.goods ? goods / o.goods : 1;
         const part = Math.max(0, Math.round(goods - (o.promo_disc || 0) * share - (o.points_used || 0) * share + (s.price || 0)));
@@ -506,7 +511,7 @@ export function createApp(cfg, log = console) {
       out.la = la; out.lo = lo; out.loc_src = la === null ? "district" : b.loc_src === "gps" ? "gps" : "map";
     }
     if (!partial || has("district")) {
-      let d = D[b.district] ? b.district : null;
+      let d = isDistrict(b.district) ? b.district : null;
       if (!d && out.la != null) d = ref.districts.reduce((best, x) => ((x.la - out.la) ** 2 + (x.lo - out.lo) ** 2 < (best.la - out.la) ** 2 + (best.lo - out.lo) ** 2 ? x : best)).id;
       if (!d) throw bad("bad_district", "Choose the district");
       out.district = d;
@@ -521,7 +526,8 @@ export function createApp(cfg, log = console) {
     if (u.store_id) throw new HttpError(409, "store_exists", "You already have a store; edit it in the cabinet");
     const s = storeInput(b);
     const base = s.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 20) || "store";
-    const id = base + "-" + randomBytes(2).toString("hex");
+    let id = base + "-" + randomBytes(2).toString("hex");
+    for (let n = 0; db.get("SELECT 1 FROM stores WHERE id=?", id) && n < 10; n++) id = base + "-" + randomBytes(n < 5 ? 2 : 4).toString("hex"); // a popular name never collides into a 500
     const status = process.env.STORE_AUTO_APPROVE === "1" ? "active" : "pending";
     db.tx(() => {
       db.run(`INSERT INTO stores(id,name,district,addr,addr_uz,hours,ru,uz,phone,la,lo,owner_id,status,created_at,descr,cats,landmark,telegram,loc_src)
@@ -634,7 +640,15 @@ export function createApp(cfg, log = console) {
     return { updated, added, created, skipped: bad1.length };
   });
   /* package size given by the seller in centimetres ([length, width, height] or len_cm/wid_cm/hgt_cm) → metres, or null */
-  const dimsFrom = b => { const a = Array.isArray(b?.dims_cm) ? b.dims_cm : [b?.len_cm, b?.wid_cm, b?.hgt_cm]; const n = a.map(Number); return n.length === 3 && n.every(x => x >= 1 && x <= 1500) ? JSON.stringify(n.map(x => Math.round(x) / 100)) : null; };
+  /* package size in cm → metres. The length alone is enough (it decides the vehicle); width and height default to 10 cm.
+     Values outside 1–1500 cm, or no length at all, mean "not given" — the catalogue's category size is used then. */
+  const dimsFrom = b => {
+    const a = Array.isArray(b?.dims_cm) ? b.dims_cm.slice(0, 3) : [b?.len_cm, b?.wid_cm, b?.hgt_cm];
+    const ok = x => Number.isFinite(Number(x)) && Number(x) >= 1 && Number(x) <= 1500;
+    if (!ok(a[0])) return null;
+    const n = [Number(a[0]), ok(a[1]) ? Number(a[1]) : 10, ok(a[2]) ? Number(a[2]) : 10];
+    return JSON.stringify(n.map(x => Math.round(x) / 100));
+  };
   r.post("/api/seller/products", async req => {
     const { s } = needSeller(req), b = await readJson(req);
     lim.hit("prod-new:" + s.id, 500, 86400_000);
@@ -667,7 +681,7 @@ export function createApp(cfg, log = console) {
     if (!ext) throw bad("bad_image", "Upload a JPEG, PNG or WEBP image up to 5 MB");
     const name = `p${prod.id}-${randomBytes(4).toString("hex")}${ext}`;
     writeFileSync(join(cfg.uploadsDir, name), buf);
-    if (prod.img && prod.img.startsWith("/uploads/")) { try { unlinkSync(join(cfg.uploadsDir, prod.img.slice("/uploads/".length).replace(/[^\w.-]/g, ""))); } catch {} }
+    removeUpload(prod.img);
     db.run("UPDATE products SET img=? WHERE id=?", "/uploads/" + name, prod.id);
     bumpCatalog();
     return { img: mediaUrl("/uploads/" + name) };
@@ -842,9 +856,10 @@ export function createApp(cfg, log = console) {
   r.post("/api/admin/mfa/verify", async req => {
     const u = needAdmin(req, { mfa: false }), b = await readJson(req);
     lim.hit("mfa:" + u.id, 10, 15 * 60000);
-    if (!u.totp_secret || !checkTotp(u.totp_secret, b.code)) { audit(req, "mfa.fail", u.id); throw bad("mfa_wrong", "Wrong code"); }
-    const step = String(Math.floor(Date.now() / 30000)) + ":" + String(b.code).replace(/\D/g, "");
-    if (!db.run("UPDATE users SET totp_last=? WHERE id=? AND (totp_last IS NULL OR totp_last<>?)", step, u.id, step).changes) throw bad("mfa_reused", "This code was already used, wait for the next one");
+    const counter = u.totp_secret ? checkTotp(u.totp_secret, b.code) : false;
+    if (counter === false) { audit(req, "mfa.fail", u.id); throw bad("mfa_wrong", "Wrong code"); }
+    // each code counts once: the counter it belongs to is remembered, and anything up to it is refused (no replay in the ±30 s tolerance)
+    if (!db.run("UPDATE users SET totp_last=? WHERE id=? AND (totp_last IS NULL OR CAST(totp_last AS INTEGER)<?)", String(counter), u.id, counter).changes) throw bad("mfa_reused", "This code was already used, wait for the next one");
     if (!u.totp_on) { db.run("UPDATE users SET totp_on=1 WHERE id=?", u.id); audit(req, "mfa.enabled", u.id); }
     return session(db.get("SELECT * FROM users WHERE id=?", u.id), { mfa: true });
   });
@@ -939,14 +954,14 @@ export function createApp(cfg, log = console) {
   r.patch("/api/admin/shipments/:id", async (req, res, p) => {
     needAdmin(req); const b = await readJson(req);
     const sh = db.get("SELECT * FROM shipments WHERE id=?", Number(p.id)); if (!sh) throw new HttpError(404, "not_found", "Shipment not found");
-    const steps = STEPS[sh.tariff ? "yandex" : "pickup"];
+    const o = db.get("SELECT * FROM orders WHERE id=?", sh.order_id);
+    const steps = STEPS[flowOf(sh, o ? JSON.parse(o.form) : {})]; // a store-delivered shipment has no carrier steps (searching / to_store)
     if (!steps.includes(b.status) && b.status !== "cancelled") throw bad("bad_status", "Unknown status");
     if (b.courier) db.run("UPDATE shipments SET courier=? WHERE id=?", str(b.courier, 80), sh.id);
     if (b.status === sh.status) return { ok: true };
     // the admin can move a shipment forward or cancel it, but not revive a cancelled one, hand over an unpaid one, or undo a handover
     if (sh.status === "cancelled") throw bad("already_cancelled", "This shipment is cancelled");
     if (["delivered", "picked"].includes(sh.status)) throw bad("already_done", "This shipment has been handed over");
-    const o = db.get("SELECT * FROM orders WHERE id=?", sh.order_id);
     if (sh.status === "unpaid" && b.status !== "cancelled") throw bad("unpaid", "The order has not been paid yet — mark the payment first");
     if (["delivered", "picked"].includes(b.status) && !["store", "cash"].includes(o?.pay) && !["paid", "refund_due", "refunded"].includes(o?.pay_status)) throw bad("unpaid", "The order has not been paid yet");
     if (b.status !== "cancelled" && steps.indexOf(b.status) < steps.indexOf(sh.status)) throw bad("backwards", "A shipment cannot go back to an earlier step");
@@ -978,7 +993,7 @@ export function createApp(cfg, log = console) {
   registerQuestions({ r, db, cfg, need, needSeller, lim, tg, push, log });
   registerTeams({ r, db, cfg, need, lim, tg, log });
   registerDashboard({ r, db, needAdmin });
-  const cx = registerCatalogExtras({ r, db, cfg, need, lim, tg, push, saveImage, mediaUrl, log });
+  const cx = registerCatalogExtras({ r, db, cfg, need, lim, tg, push, saveImage, removeUpload, mediaUrl, log });
   registerDisputes({ r, db, cfg, need, needSeller, needAdmin, isAdmin, audit, lim, tg, push, saveImage, mediaUrl, log });
 
   /* ---------- HTTP server ---------- */
@@ -1054,14 +1069,20 @@ export function createApp(cfg, log = console) {
     }
   }
   /* Yandex drives the courier statuses once a claim exists; a failed search returns the shipment to the store */
+  let courierSweeping = false;
   async function courierSweep() {
-    if (!courier.live) return;
+    if (!courier.live || courierSweeping) return; // a slow carrier API must not let two sweeps move the same shipment twice
+    courierSweeping = true;
+    try { await courierSweepRun(); } finally { courierSweeping = false; }
+  }
+  async function courierSweepRun() {
     for (const s of db.all("SELECT * FROM shipments WHERE claim_id IS NOT NULL AND status IN ('searching','to_store','on_way')")) {
       let r; try { r = await courier.poll(s); } catch (e) { log.warn("[courier] poll", s.id, e.message); continue; }
       if (!r || !r.status || r.status === s.status) continue;
       const order = ["searching", "to_store", "on_way", "delivered"];
       if (r.status === "failed") {
         db.run("UPDATE shipments SET claim_id=NULL, tracking_url=NULL WHERE id=?", s.id); setShipStatus(s, "assembling", "courier_failed");
+        db.run("UPDATE shipments SET accepted_at=? WHERE id=?", Date.now(), s.id); // the handover clock starts again: the store did its part, the carrier failed
         notify.admins(`🚚 Яндекс не выполнил доставку отправления #${s.id} (${r.raw}). Магазину нужно вызвать курьера снова.`);
         const st = db.get("SELECT owner_id FROM stores WHERE id=?", s.store_id), ow = st?.owner_id && db.get("SELECT tg_chat FROM users WHERE id=?", st.owner_id);
         if (ow?.tg_chat) tg.send(ow.tg_chat, `🚚 Яндекс не нашёл курьера для отправления #${s.id}. Нажмите «Вызвать курьера» ещё раз в кабинете.`);

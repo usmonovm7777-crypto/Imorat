@@ -19,9 +19,12 @@ export function totp(secret, t = Date.now(), step = 30) {
   const o = h[h.length - 1] & 15;
   return String(((h.readUInt32BE(o) & 0x7fffffff) % 1e6)).padStart(6, "0");
 }
+/* returns the 30-second counter the code belongs to (a number), or false; the caller rejects a counter it has already
+   accepted, so a captured code cannot be replayed in the neighbouring window either (RFC 6238 §5.2) */
 export function checkTotp(secret, code, t = Date.now()) {
   const c = String(code || "").replace(/\D/g, "");
   if (c.length !== 6) return false;
-  return [-30000, 0, 30000].some(d => timingSafeEqual(Buffer.from(totp(secret, t + d)), Buffer.from(c)));
+  for (const d of [-30000, 0, 30000]) if (timingSafeEqual(Buffer.from(totp(secret, t + d)), Buffer.from(c))) return Math.floor((t + d) / 30000);
+  return false;
 }
 export const otpauthUrl = (secret, label) => `otpauth://totp/${encodeURIComponent("Imorat Go:" + label)}?secret=${secret}&issuer=Imorat Go&digits=6&period=30`;

@@ -51,7 +51,7 @@ export function createNotify({ db, cfg, tg, push, sms, ref, log = console }) {
   const cabinet = `${cfg.siteUrl}#seller`;
   return {
     async shipmentNew(shipId) {
-      const c = ctx(shipId); if (!c.s || !c.st) return;
+      const c = ctx(shipId); if (!c.s || !c.o || !c.st) return;
       if (c.owner?.tg_chat) {
         const m = await safe(tg.send(c.owner.tg_chat, sellerText(c), sellerButtons(c.s, c.f?.delivery_by === "store")));
         if (m?.message_id) db.run("UPDATE shipments SET tg_msg=? WHERE id=?", JSON.stringify({ chat: c.owner.tg_chat, id: m.message_id }), c.s.id);
@@ -59,31 +59,38 @@ export function createNotify({ db, cfg, tg, push, sms, ref, log = console }) {
       if (c.owner) safe(push.toUser(c.owner.id, { title: `Новый заказ ${c.o.num}`, body: `${JSON.parse(c.s.lines).length} поз. · примите за ${cfg.timers.cancel} мин`, url: cabinet, tag: "ship-" + c.s.id }));
     },
     async sellerRefresh(shipId) {
-      const c = ctx(shipId); if (!c.s?.tg_msg) return;
+      const c = ctx(shipId); if (!c.s?.tg_msg || !c.o || !c.st) return;
       const m = JSON.parse(c.s.tg_msg);
       await safe(tg.edit(m.chat, m.id, sellerText(c), sellerButtons(c.s, c.f?.delivery_by === "store")));
     },
     async remind(shipId) {
-      const c = ctx(shipId); if (!c.s || !c.owner) return;
+      const c = ctx(shipId); if (!c.s || !c.o || !c.owner) return;
       const left = Math.max(1, Math.round(cfg.timers.cancel - (Date.now() - (c.s.start_at || c.s.status_at)) / 60000));
       if (c.owner.tg_chat) safe(tg.send(c.owner.tg_chat, `⏰ <b>Заказ ${h(c.o.num)} ждёт подтверждения</b>\nОсталось ${left} мин, потом он отменится и снизит рейтинг магазина.`, sellerButtons(c.s)));
       safe(push.toUser(c.owner.id, { title: `⏰ Примите заказ ${c.o.num}`, body: `Осталось ${left} мин`, url: cabinet, tag: "ship-" + c.s.id }));
     },
     async smsSeller(shipId) {
-      const c = ctx(shipId); if (!c.s || !c.st) return;
+      const c = ctx(shipId); if (!c.s || !c.o || !c.st) return;
       const phone = c.st.phone || c.owner?.phone; if (!phone) return;
       await safe(sms.sendText(phone, cfg.smsSellerTemplate.replace("{num}", c.o.num)));
     },
     /* card payment received: the buyer learns the order is now with the store */
     async paid(shipId) {
-      const c = ctx(shipId); if (!c.s || !c.buyer) return;
+      const c = ctx(shipId); if (!c.s || !c.o || !c.st || !c.buyer) return;
       const text = `Оплата по заказу ${c.o.num} получена (${c.o.total.toLocaleString("ru-RU")} сум, включая доставку). Магазин ${c.st.name} получил заказ.`;
       if (c.buyer.tg_chat) safe(tg.send(c.buyer.tg_chat, h(text)));
       safe(push.toUser(c.buyer.id, { title: `Imorat Go · ${c.o.num}`, body: text, url: `${cfg.siteUrl}#orders`, tag: "order-" + c.o.num }));
     },
     async status(shipId) {
-      const c = ctx(shipId); if (!c.s) return;
+      const c = ctx(shipId); if (!c.s || !c.o || !c.st) return; // a shipment whose order or store row is gone (dropped demo stores) must not crash the job
       this.sellerRefresh(shipId);
+      // the store hears about a cancellation it did not make itself (the buyer, a timer, an admin, a failed payment): otherwise it keeps packing
+      if (c.s.status === "cancelled" && c.s.cancel_reason !== "out_of_stock" && c.owner) {
+        const why = { buyer: "покупатель отменил заказ", admin: "отменён администратором Imorat Go", not_accepted: "не подтверждён вовремя", not_shipped: "не передан курьеру вовремя", unpaid: "покупатель не оплатил картой", refund: "платёж отменён" }[c.s.cancel_reason] || "отменён";
+        const line = `❌ <b>Заказ ${h(c.o.num)} отменён</b>: ${why}. Собирать и везти его не нужно; товар снова в продаже.`;
+        if (c.owner.tg_chat) safe(tg.send(c.owner.tg_chat, line));
+        safe(push.toUser(c.owner.id, { title: `❌ Заказ ${c.o.num} отменён`, body: why, url: cabinet, tag: "ship-" + c.s.id }));
+      }
       const text = c.s.status === "cancelled"
         ? `Заказ ${c.o.num} из магазина ${c.st.name} отменён: ${CANCEL_TEXT[c.s.cancel_reason] || "отмена"}.${c.s.cancel_reason !== "buyer" ? " Оплачивать ничего не нужно. Попробуйте заказать этот товар в другом магазине." : ""}`
         : BUYER_TEXT[c.s.status]?.(c.o, c.st, c.f);
@@ -93,7 +100,7 @@ export function createNotify({ db, cfg, tg, push, sms, ref, log = console }) {
     },
     /* the carrier could not give a loader for this trip: the buyer hears it before the car arrives, the admins settle the fee */
     async loadersFailed(shipId) {
-      const c = ctx(shipId); if (!c.s || !c.buyer) return;
+      const c = ctx(shipId); if (!c.s || !c.o || !c.buyer) return;
       const text = `Заказ ${c.o.num}: перевозчик не смог выделить грузчика на этот рейс — водитель привезёт заказ к подъезду, разгрузка у машины. Плату за помощь мы вернём; если нужна помощь с подъёмом, напишите в поддержку.`;
       if (c.buyer.tg_chat) safe(tg.send(c.buyer.tg_chat, h(text)));
       safe(push.toUser(c.buyer.id, { title: `Imorat Go · ${c.o.num}`, body: text, url: `${cfg.siteUrl}#orders`, tag: "order-" + c.o.num }));

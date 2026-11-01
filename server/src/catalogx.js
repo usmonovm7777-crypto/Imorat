@@ -2,7 +2,7 @@ import { HttpError, bad, readJson, readBody, str, int } from "./http.js";
 import { escHtml as h } from "./telegram.js";
 
 /* Back-in-stock alerts and product reviews with a photo (only from buyers who received the product). */
-export function registerCatalogExtras({ r, db, cfg, need, lim, tg, push, saveImage, mediaUrl, log }) {
+export function registerCatalogExtras({ r, db, cfg, need, lim, tg, push, saveImage, removeUpload = () => {}, mediaUrl, log }) {
   const safe = p => Promise.resolve(p).catch(e => log.warn("[catalogx]", e.message));
   /* ---- back in stock ---- */
   r.get("/api/me/stock-watch", req => { const u = need(req); return { ids: db.all("SELECT product_id FROM stock_watch WHERE user_id=?", u.id).map(x => x.product_id) }; });
@@ -50,7 +50,9 @@ export function registerCatalogExtras({ r, db, cfg, need, lim, tg, push, saveIma
   r.post("/api/product-reviews/:id/photo", async (req, res, p) => {
     const u = need(req), rv = db.get("SELECT * FROM product_reviews WHERE id=? AND user_id=?", Number(p.id), u.id);
     if (!rv) throw new HttpError(404, "not_found", "Review not found");
+    lim.hit("rphoto:" + u.id, 20, 86400_000); // a photo is replaced, not collected: a few retries a day are plenty
     const path = saveImage(await readBody(req, 5 * 1024 * 1024), "r" + rv.id);
+    removeUpload(rv.photo); // the previous file of this review is not kept
     db.run("UPDATE product_reviews SET photo=? WHERE id=?", path, rv.id);
     return { photo: mediaUrl(path) };
   });

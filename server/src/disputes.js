@@ -45,6 +45,7 @@ export function registerDisputes({ r, db, cfg, need, needSeller, needAdmin, isAd
     if (!["open", "answered"].includes(d.status)) throw bad("closed", "This problem is already resolved");
     const photos = JSON.parse(d.photos || "[]");
     if (photos.length >= 3) throw bad("too_many_photos", "Up to 3 photos");
+    lim.hit("dphoto:" + u.id, 30, 86400_000);
     const path = saveImage(await readBody(req, 5 * 1024 * 1024), "d" + d.id);
     photos.push(path); db.run("UPDATE disputes SET photos=?, updated_at=? WHERE id=?", JSON.stringify(photos), Date.now(), d.id);
     return { photos: photos.map(mediaUrl) };

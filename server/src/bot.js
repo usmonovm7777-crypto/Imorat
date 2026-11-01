@@ -172,7 +172,15 @@ export function registerBot({ db, cfg, ref, tg, bonus, masters, log = console })
       [[{ text: ch.L("📤 Отправить другу", "📤 Döstga yuboriş", "📤 Send to a friend"), url: share }]]);
   }
 
-  /* the site is waiting for this chat's account: hand the ticket over, the page picks the session up */
+  /* The site is waiting for this chat's account. Nothing is bound until the person confirms with a button:
+     a sign-in link can be sent to anyone, and opening it must not log the sender in as the victim. */
+  function loginAsk(ch, row) {
+    const when = Math.max(0, Math.round((Date.now() - row.created_at) / 60000)), ip = row.ip ? ` (IP ${h(row.ip)})` : "";
+    return tg.send(ch.id, ch.L(`🔐 <b>Вход на сайт Imorat Go</b>\nКто-то нажал «Войти через Telegram» на сайте ${when ? when + " мин назад" : "только что"}${ip}.\n\nЭто вы? Если вы не открывали сайт — нажмите «Нет»: тогда никто не войдёт в ваш аккаунт.`,
+      `🔐 <b>Imorat Go saytiga kiriş</b>\nKimdir saytda «Telegram orqali kiriş»ni ${when ? when + " daqiqa oldin" : "hozirgina"} bosdi${ip}.\n\nBu sizmi? Saytni oçmagan bölsangiz — «Yöq»ni bosing: unda hech kim akkauntingizga kirmaydi.`,
+      `🔐 <b>Sign in to Imorat Go</b>\nSomeone tapped “Sign in with Telegram” on the site ${when ? when + " min ago" : "just now"}${ip}.\n\nIs that you? If you did not open the site, tap “No” — then nobody gets into your account.`),
+      [[{ text: ch.L("✅ Да, это я — войти", "✅ Ha, bu men — kiriş", "✅ Yes, it’s me — sign in"), callback_data: `tgl:y:${row.ticket}` }, { text: ch.L("❌ Нет", "❌ Yöq", "❌ No"), callback_data: `tgl:n:${row.ticket}` }]]);
+  }
   function loginDone(ch, ticket, u) {
     db.run("UPDATE tg_logins SET user_id=? WHERE ticket=? AND user_id IS NULL", u.id, ticket);
     setState(ch, null);
@@ -190,7 +198,7 @@ export function registerBot({ db, cfg, ref, tg, bonus, masters, log = console })
     db.run("UPDATE users SET tg_chat=?, lang=? WHERE id=?", ch.id, ch.lang, u.id);
     db.run("INSERT INTO audit(user_id,action,target,details,ip,created_at) VALUES(?,?,?,?,?,?)", u.id, "tg.contact_login", u.id, JSON.stringify({ isNew }), "telegram", Date.now());
     const ch2 = chatOf(ch.id), pend = ch.c.state === "pend_mq" ? ch.data.mid : null;
-    if (ch.c.state === "login" && ch.data.ticket) return loginDone(ch2, ch.data.ticket, u);
+    if (ch.c.state === "login" && ch.data.ticket) { const row = db.get("SELECT * FROM tg_logins WHERE ticket=? AND user_id IS NULL AND expires_at>?", ch.data.ticket, Date.now()); setState(ch2, null); if (row) return loginAsk(ch2, row); }
     const st = u.store_id && db.get("SELECT name FROM stores WHERE id=?", u.store_id);
     menu(ch2, ch.L(`✅ Вы вошли${u.name ? ", " + h(u.name.split(" ")[0]) : ""}. Статусы заказов, ответы мастеров${st ? ` и заказы магазина «${h(st.name)}»` : ""} будут приходить сюда.${isNew ? "\nНа сайте войдите по этому же номеру — увидите всё то же самое." : ""}`, `✅ Kirdingiz${u.name ? ", " + h(u.name.split(" ")[0]) : ""}. Buyurtma holati, ustalar javobi${st ? ` va «${h(st.name)}» dökoni buyurtmalari` : ""} şu yerga keladi.${isNew ? "\nSaytga şu raqam bilan kiring — hammasi bir xil körinadi." : ""}`, `✅ You are signed in${u.name ? ", " + h(u.name.split(" ")[0]) : ""}. Order statuses, replies from pros${st ? ` and orders for the store "${h(st.name)}"` : ""} will arrive here.${isNew ? "\nSign in on the website with the same number to see the same things there." : ""}`));
     if (pend) return startRequest(ch2, pend);
@@ -217,7 +225,7 @@ export function registerBot({ db, cfg, ref, tg, bonus, masters, log = console })
     if (/^login_/.test(token || "")) { // «Войти через Telegram» on the site
       const row = db.get("SELECT * FROM tg_logins WHERE ticket=? AND user_id IS NULL AND expires_at>?", token.slice(6), Date.now());
       if (!row) return menu(ch0, ch0.L("Ссылка для входа устарела. Нажмите «Войти через Telegram» на сайте ещё раз.", "Kiriş havolasi eskirgan. Saytda «Telegram orqali kiriş»ni yana bosing.", "The sign-in link has expired. Tap “Sign in with Telegram” on the site again."));
-      if (ch0.user) return loginDone(ch0, row.ticket, ch0.user);
+      if (ch0.user) return loginAsk(ch0, row);
       setState(ch0, "login", { ticket: row.ticket });
       return menu(ch0, ch0.L("Чтобы войти на сайт, поделитесь номером телефона — кнопка «📱 Войти по номеру телефона» внизу. Номер нужен курьеру и магазину.", "Saytga kiriş uçun telefon raqamingizni yuboring — pastdagi «📱 Telefon raqam bilan kiriş» tugmasi. Raqam kuryer va dökonga kerak.", "To sign in on the site, share your phone number — the “📱 Sign in with my phone number” button below. Couriers and stores need it."));
     }
@@ -258,10 +266,17 @@ export function registerBot({ db, cfg, ref, tg, bonus, masters, log = console })
   /* returns true when the button belongs to the bot (not a seller's order button) */
   async function callback(q) {
     const data = String(q.data || ""), chat = q.message?.chat?.id, mid = q.message?.message_id;
-    if (!/^(s|ms|mm|mq|wh|di|x|mr|rv|rvs|lg)(:|$)/.test(data) || !chat || q.message?.chat?.type === "channel") return false;
+    if (!/^(s|ms|mm|mq|wh|di|x|mr|rv|rvs|lg|tgl)(:|$)/.test(data) || !chat || q.message?.chat?.type === "channel") return false;
     const ch = chatOf(chat, q.from), [a, b, c] = data.split(":");
     if (flood("cb:" + chat)) { safe(tg.answer(q.id)); return true; }
     if (a === "x") { setState(ch, null); await tg.answer(q.id, ch.L("Отменено", "Bekor qilindi", "Cancelled")); safe(tg.editButtons(chat, mid, [])); return true; }
+    if (a === "tgl") { // the person confirms (or refuses) the sign-in on the site
+      const row = db.get("SELECT * FROM tg_logins WHERE ticket=? AND user_id IS NULL AND expires_at>?", String(c || ""), Date.now());
+      safe(tg.editButtons(chat, mid, []));
+      if (!row) { await tg.answer(q.id, ch.L("Ссылка для входа устарела", "Kiriş havolasi eskirgan", "The sign-in link has expired")); return true; }
+      if (b !== "y" || !ch.user) { db.run("DELETE FROM tg_logins WHERE ticket=?", row.ticket); await tg.answer(q.id, ch.L("Вход отклонён", "Kiriş rad etildi", "Sign-in refused")); await menu(ch, ch.L("Хорошо, никто не вошёл. Если это были не вы — просто не открывайте такие ссылки.", "Yaxşi, hech kim kirmadi. Bu siz bölmasangiz — bunday havolalarni oçmang.", "OK, nobody signed in. If that was not you, simply do not open such links.")); return true; }
+      await tg.answer(q.id); await loginDone(ch, row.ticket, ch.user); return true;
+    }
     if (a === "lg") {
       const lang = LI[b] != null ? b : "ru";
       db.run("UPDATE tg_chats SET lang=? WHERE chat=?", lang, ch.id); if (ch.user) db.run("UPDATE users SET lang=? WHERE id=?", lang, ch.user.id);
