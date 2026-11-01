@@ -1058,3 +1058,21 @@ test("Sign in with Telegram from the site: ticket → bot asks for the phone →
   send(7801, { text: "/start login_" + st2.data.ticket });
   await until(() => sentTo(7801, /устарела/).length);
 });
+
+test("SMS_MODE=telegram: production start without an SMS contract, sign-in only through the bot, no code leaks", async () => {
+  const d5 = mkdtempSync(join(tmpdir(), "imorat-tg-"));
+  assert.throws(() => loadConfig({ JWT_SECRET: "x", DB_PATH: join(d5, "a.db"), UPLOADS_DIR: join(d5, "up"), ADMIN_PHONES: "998901111111", SMS_MODE: "telegram" }), /TELEGRAM_BOT_TOKEN/, "the bot is the only door, so its token is required");
+  assert.throws(() => loadConfig({ JWT_SECRET: "x", DB_PATH: join(d5, "a.db"), UPLOADS_DIR: join(d5, "up"), ADMIN_PHONES: "998901111111", NODE_ENV: "production", API_DOMAIN: "api.test", PUBLIC_URL: "https://api.test", ALLOWED_ORIGINS: "https://x.test" }), /SMS is in dev mode/, "dev codes never reach production");
+  const cfg5 = loadConfig({ JWT_SECRET: "x", DB_PATH: join(d5, "b.db"), UPLOADS_DIR: join(d5, "up"), ADMIN_PHONES: "998901111111", NODE_ENV: "production", API_DOMAIN: "api.test", PUBLIC_URL: "https://api.test", ALLOWED_ORIGINS: "https://x.test",
+    SMS_MODE: "telegram", TELEGRAM_BOT_TOKEN: "TGTOKEN", TELEGRAM_API_URL: fakeBase + "/tg", TELEGRAM_POLL_TIMEOUT: "0" });
+  assert.equal(cfg5.sms.mode, "telegram");
+  const a5 = createApp(cfg5, { info() {}, warn() {}, error: console.error });
+  await new Promise(r => a5.listen(0, "127.0.0.1", r)); const b5 = `http://127.0.0.1:${a5.address().port}`;
+  const c = async (method, path, body) => { const r = await fetch(b5 + path, { method, headers: { "content-type": "application/json" }, body: body ? JSON.stringify(body) : undefined }); return { status: r.status, data: await r.json() }; };
+  try {
+    assert.equal((await c("GET", "/api/config")).data.sms, "telegram", "the site hides the SMS form and shows the Telegram button");
+    const s = await c("POST", "/api/auth/otp/send", { phone: "998901234567" });
+    assert.equal(s.status, 503); assert.equal(s.data.error, "sms_off"); assert.equal(s.data.dev_code, undefined);
+    const t = await c("POST", "/api/auth/tg/start", {}); assert.equal(t.status, 200); assert.match(t.data.url, /t\.me\/.*start=login_/, "Telegram sign-in still works");
+  } finally { a5.stopJobs(); a5.close(); a5.closeAllConnections(); a5.db.raw.close(); rmSync(d5, { recursive: true, force: true }); }
+});

@@ -17,6 +17,7 @@ export function createSms(cfg, log = console) {
   return {
     mode: cfg.mode,
     async sendText(phone, text) {
+      if (cfg.mode === "telegram") { log.info(`[sms:off] ${phone} (no SMS contract yet)`); return { skipped: true }; }
       if (cfg.mode !== "eskiz") { log.info(`[sms:dev] ${phone} → ${text}`); return { dev: true }; }
       if (!token || Date.now() - tokenAt > 25 * 86400_000) await login();
       let r = await sendOnce(phone, text);

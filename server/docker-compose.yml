@@ -1,7 +1,9 @@
 # Production on any VPS (Ubuntu + Docker): API + automatic HTTPS (Caddy).
 # 1) Point a DNS record (e.g. api.imorat.uz) to the server's IP.
 # 2) cp .env.example .env  and fill it in (API_DOMAIN, JWT_SECRET, ADMIN_PHONES, keys).
-# 3) docker compose up -d --build
+# 3) docker compose up -d --build        (API only)
+#    docker compose -f docker-compose.yml -f docker-compose.site.yml up -d --build   (API + the website, see tools/install.sh)
+name: imorat
 services:
   api:
     build: .

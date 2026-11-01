@@ -1,0 +1,11 @@
+# Serve the website from this server too (imorat.uz + www) next to the API (api.imorat.uz).
+# Used together with docker-compose.yml:  docker compose -f docker-compose.yml -f docker-compose.site.yml up -d
+# Needs SITE_DOMAIN in .env, the site copy in /srv/imorat/site and config.js in /srv/imorat/site-config
+# (both are prepared by tools/install.sh and refreshed by `imorat update-site`).
+services:
+  caddy:
+    command: caddy run --config /etc/caddy/Caddyfile --adapter caddyfile
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - /srv/imorat/site:/site:ro
+      - /srv/imorat/site-config:/site-config:ro

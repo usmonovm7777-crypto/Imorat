@@ -19,7 +19,11 @@ export const normPhone = p => { const d = String(p || "").replace(/\D/g, ""); re
 export function loadConfig(env = process.env) {
   const prod = env.NODE_ENV === "production";
   if (prod && !env.JWT_SECRET) throw new Error("JWT_SECRET is required in production (any long random string)");
+  // "eskiz" sends real SMS; "telegram" = no SMS contract yet, people sign in only through the Telegram bot (it asks for the
+  // contact, which confirms the number) — safe for production; "dev" returns the code in the API response (testing only)
   const smsMode = env.SMS_MODE || (env.ESKIZ_EMAIL ? "eskiz" : "dev");
+  if (!["eskiz", "telegram", "dev"].includes(smsMode)) throw new Error("SMS_MODE must be eskiz, telegram or dev");
+  if (smsMode === "telegram" && !env.TELEGRAM_BOT_TOKEN) throw new Error("SMS_MODE=telegram needs TELEGRAM_BOT_TOKEN: sign-in goes through the bot");
   // In production a forgotten ESKIZ_* would hand out sign-in codes in API responses; refuse to start unless this is a declared test server
   if (prod && smsMode === "dev" && env.ALLOW_DEV_SMS !== "1") throw new Error("SMS is in dev mode: set ESKIZ_EMAIL/ESKIZ_PASSWORD, or ALLOW_DEV_SMS=1 on a test server only");
   return {

@@ -151,6 +151,7 @@ export function createApp(cfg, log = console) {
 
   /* ---------- auth ---------- */
   r.post("/api/auth/otp/send", async req => {
+    if (sms.mode === "telegram") throw new HttpError(503, "sms_off", "Sign in through the Telegram bot — SMS codes are not connected yet");
     const b = await readJson(req);
     const phone = parsePhone(b.phone);
     lim.hit("otp-ip:" + req.ip, cfg.otpPerIpHour, 3600_000);
