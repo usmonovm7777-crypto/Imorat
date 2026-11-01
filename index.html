@@ -193,7 +193,7 @@ linear-gradient(180deg, hsl(var(--h) var(--tile-s) var(--tile-l)) 0 70%, hsl(var
 .search .ask { position: static; translate: none; display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 9px; font-size: 13px; font-weight: 600; background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 55%, var(--signal))); color: #fff; }
 .where { display: inline-flex; align-items: center; gap: 6px; border-radius: 12px; padding: 6px 4px 6px 10px; color: var(--muted); font-size: 13px; flex: none; }
 .where:hover { background: var(--raised); }
-.where select { border: 0; background: transparent; font-size: 13px; font-weight: 500; color: var(--ink); padding: 4px 2px; max-width: 150px; cursor: pointer; }
+.where select { border: 0; background: transparent; font-size: 13px; font-weight: 500; color: var(--ink); padding: 4px 2px; max-width: 150px; cursor: pointer; field-sizing: content; }
 .seg { display: inline-flex; border: 1px solid var(--line-strong); border-radius: 10px; padding: 2px; flex: none; }
 .seg button { padding: 5px 9px; border-radius: 7px; font-size: 12px; font-weight: 600; color: var(--muted); }
 .seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
@@ -208,9 +208,12 @@ linear-gradient(180deg, hsl(var(--h) var(--tile-s) var(--tile-l)) 0 70%, hsl(var
 .rail-nav button:hover { color: var(--ink); background: var(--raised); }
 .rail-nav button.hl { color: var(--signal); font-weight: 600; }
 .rail-nav button.ai-l { color: var(--accent); font-weight: 600; }
-@media (max-width: 1180px) { .where { display: none; } }
+.hdr-row .where { display: none; }
 .search input { min-width: 0; }
 @media (max-width: 1240px) and (min-width: 761px) { .search .ask .t { display: none; } .search input { padding-right: 124px; } }
+.search { container-type: inline-size; } .search .ask { white-space: nowrap; flex: none; }
+@container (max-width: 340px) { .search .ask .t { display: none; } .search input { padding-right: 124px; } }
+@container (max-width: 250px) { .search .s-ic[data-act="photo-search"] { display: none; } .search input { padding-right: 88px; } }
 @media (max-width: 1080px) and (min-width: 761px) {
 .hdr-row { gap: 8px; }
 .cat-btn, .cart-btn { padding: 10px 11px; font-size: 0; gap: 0; }
@@ -290,6 +293,7 @@ repeating-linear-gradient(0deg, transparent 0 39px, var(--hero-line) 39px 40px),
 repeating-linear-gradient(90deg, transparent 0 39px, var(--hero-line) 39px 40px);
 mask: linear-gradient(180deg, #000, rgba(0,0,0,.55)); -webkit-mask: linear-gradient(180deg, #000, rgba(0,0,0,.55)); }
 .hero .eyebrow { color: color-mix(in srgb, var(--hero-fg) 70%, transparent); }
+.hero .h-xl { font-size: clamp(26px, 3.2vw, 42px); line-height: 1.08; letter-spacing: -.035em; max-width: 18ch; }
 .hero .h-xl em { font-style: normal; color: var(--hero-acc); }
 .hero-l { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; align-content: center; min-width: 0; }
 .hero .eyebrow { display: block; } .hero .eyebrow svg { vertical-align: -2px; margin-right: 4px; }
@@ -323,7 +327,7 @@ mask: linear-gradient(180deg, #000, rgba(0,0,0,.55)); -webkit-mask: linear-gradi
 @keyframes float { 50% { translate: 0 -8px; } }
 @media (max-width: 920px) { .hero { grid-template-columns: minmax(0, 1fr); } .collage { transform: none; grid-template-columns: repeat(6, 1fr); gap: 8px; } .collage .tile { border-radius: 12px; } .collage .tile span { display: none; } .collage .tile:nth-child(2n) { transform: none; } }
 @media (max-width: 520px) { .collage { grid-template-columns: repeat(3, 1fr); } .collage .tile:nth-child(n+4) { display: none; } .askbar .btn span { display: none; } }
-.trust { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 12px; }
+.trust { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 12px; }
 .trust div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 14px 16px; display: grid; grid-template-columns: 36px 1fr; gap: 12px; align-items: center; }
 .trust .ti { width: 36px; height: 36px; border-radius: 10px; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; }
 .trust b { font-size: 14px; display: block; line-height: 1.25; }
@@ -1007,7 +1011,7 @@ html.fx .fx-btn.th-btn, .fx-btn.th-btn { background: var(--surface); color: var(
 .hero { margin-top: 6px; padding: 20px 18px 18px; gap: 14px; border-radius: 22px; }
 .hero-l { gap: 14px; }
 .hero .eyebrow { font-size: 10.5px; letter-spacing: .06em; }
-.hero .h-xl { font-size: 27px; }
+.hero .h-xl { font-size: 23px; }
 .hero .lead { display: none; }
 .hero-q { display: none; }
 .hero .collage { display: none; }
@@ -1574,6 +1578,7 @@ const UI = {
   menu: '<path d="M4 7h16M4 12h16M4 17h16"/>',
   mic: '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7"/>',
   camera: '<path d="M4 8h3l1.6-2.4h6.8L17 8h3v11H4z"/><circle cx="12" cy="13" r="3.6"/>',
+  tag: '<path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8Z"/><circle cx="7.5" cy="7.5" r="1.5"/>',
   calc: '<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8M8 12h.01M12 12h.01M16 12h.01M8 16h.01M12 16h.01M16 16h.01"/>',
   pkg: '<path d="M3 7l9-4 9 4v10l-9 4-9-4z"/><path d="M3 7l9 4 9-4M12 11v10"/>'
 };
@@ -2203,10 +2208,10 @@ function setLook(fx, theme) {
 const HOME_W = [
   ["hero", "Главный экран и Usta AI", "Bosh ekran va Usta AI", "Hero and Usta AI", true],
   ["tools", "Инструменты: калькуляторы, AI, дизайнер", "Asboblar: kalkulyatorlar, AI, dizayner", "Tools: calculators, AI, designer"],
+  ["bundles", "Акции и комплекты", "Aksiyalar va to‘plamlar", "Deals and kits"],
   ["bought", "Вы заказывали", "Siz buyurtma qilgansiz", "Ordered before"],
   ["cats", "Категории", "Toifalar", "Categories"],
   ["hits", "Хиты недели", "Hafta xitlari", "Hits of the week"],
-  ["bundles", "Комплекты под ключ", "Tayyor to‘plamlar", "Ready kits"],
   ["recent", "Вы смотрели", "Siz ko‘rganlar", "Recently viewed"],
   ["designer", "AI-дизайнер комнаты", "AI xona dizayneri", "AI room designer"],
   ["masters", "Мастера и спецтехника", "Ustalar va maxsus texnika", "Pros and machinery"],
@@ -2217,11 +2222,10 @@ const HOME_W = [
   ["delivery", "Как работает доставка", "Yetkazish qanday ishlaydi", "How delivery works"],
   ["fresh", "Новые цвета и модели", "Yangi ranglar va modellar", "New colours and models"],
   ["winter", "Готовимся к зиме", "Qishga tayyorgarlik", "Winter prep"],
-  ["vip", "Imorat Go VIP", "Imorat Go VIP", "Imorat Go VIP"],
   ["seller", "Для магазинов", "Do‘konlar uchun", "For stores"]
 ];
-const DESK_ORDER = ["hero", "tools", "trust", "marquee", "bought", "cats", "designer", "masters", "bundles", "recent", "hits", "delivery", "fresh", "winter", "calc", "vip", "stores", "seller"];
-const PHONE_OFF = ["trust", "marquee", "delivery", "fresh", "winter", "vip"];
+const DESK_ORDER = ["hero", "tools", "bundles", "trust", "marquee", "bought", "cats", "designer", "masters", "recent", "hits", "delivery", "fresh", "winter", "calc", "stores", "seller"];
+const PHONE_OFF = ["trust", "marquee", "delivery", "fresh", "winter"];
 const DESK_OFF = ["tools"]; // computers have the header rail and the ☰ panel; phones get the row of tools under the hero
 const mqPhone = matchMedia("(max-width: 760px)");
 const isPhone = () => mqPhone.matches;
@@ -2346,9 +2350,9 @@ function renderHeader() {
   <div class="wrap"><nav class="rail-nav" aria-label="${L("Популярные разделы", "Ommabop bo‘limlar")}">
     <button type="button" class="ai-l" data-act="ai">${ui("spark", 15)}Usta AI</button>
     <button type="button" class="ms-l" data-go="masters">${ui("wrench", 15)}${L("Мастера", "Ustalar")}</button>
+    <button type="button" class="ms-l" data-act="w-calc">${ui("calc", 15)}${L("Калькулятор", "Kalkulyator", "Calculator")}</button>
+    <button type="button" class="hl" data-scroll="bundles">${ui("tag", 15)}${L("Акции", "Aksiyalar", "Deals")}</button>
     ${quick.map(id => `<button type="button" data-go="cat-${id}">${catName(id)}</button>`).join("")}
-    <button type="button" class="hl" data-scroll="bundles">${L("Комплекты", "To‘plamlar")}</button>
-    ${storeDelivers() ? "" : `<button type="button" class="hl" data-scroll="vip">Imorat Go VIP</button>`}
     <button type="button" data-go="seller">${L("Продавцам", "Sotuvchilarga")}</button>
   </nav></div>`;
   $("#q").addEventListener("input", e => { f.q = e.target.value; f.photo = null; if (route.view === "catalog") renderList(); suggInput(); });
@@ -2422,7 +2426,7 @@ function card(p) {
   const from = n > 1 ? L("от " + fmt(mp), fmt(mp) + "dan", "from " + fmt(mp)) : fmt(mp);
   return `<article class="card">
     <button class="thumb studio" type="button" data-open="${p.id}" style="--h:${hueOf(p)}" aria-label="${esc(pName(p))}">${art(p)}
-      <span class="badges">${p.hit ? `<span class="badge">${L("Хит", "Xit")}</span>` : ""}${p.isNew ? `<span class="badge new">${L("Новинка", "Yangi")}</span>` : ""}${SERVICE[p.sub] && !stage0() ? `<span class="badge svc">${L("+ установка", "+ o‘rnatish")}</span>` : ""}</span></button>
+      <span class="badges">${p.hit ? `<span class="badge">${L("Хит", "Xit")}</span>` : ""}${p.isNew ? `<span class="badge new">${L("Новинка", "Yangi")}</span>` : ""}</span></button>
     <button class="fav ${fav ? "on" : ""}" type="button" data-fav="${p.id}" aria-pressed="${fav}" aria-label="${L("В избранное", "Saralanganlarga")}">${ui("heart", 18)}</button>
     <div class="cb">
       <div class="rate">${p.reviews ? `<span class="s">${ui("star", 13)}${p.rating.toFixed(1).replace(".", DEC)}</span><span>${p.reviews} ${L(plural(p.reviews, ["отзыв", "отзыва", "отзывов"]), "sharh", p.reviews === 1 ? "review" : "reviews")}</span>` : `<span>${L("Пока без отзывов", "Hali sharh yo‘q")}</span>`}</div>
@@ -2550,7 +2554,6 @@ function renderHome() {
       <div><span class="ti">${ui("truck", 20)}</span><span><b>${storeDelivers() ? L("Доставка магазином", "Do‘kon yetkazib beradi", "Delivery by the store") : L("Яндекс Доставка", "Yandex Yetkazish")}</b><small>${storeDelivers() ? L("Или самовывоз — заберите сами", "Yoki olib ketish — o‘zingiz oling", "Or pick it up yourself") : L("Курьер от 40 минут", "Kuryer 40 daqiqadan")}</small></span></div>
       <div><span class="ti">${ui("store", 20)}</span><span><b>${storesTxt()}</b><small>${L("Сравнение в карточке", "Kartochkada solishtirish")}</small></span></div>
       <div><span class="ti">${ui("wallet", 20)}</span><span><b>${stage0() ? L("Оплата при получении", "Olganda to‘lov", "Pay on receipt") : L("Оплата картой", "Karta bilan to‘lov", "Card payment")}</b><small>${stage0() ? L("Платите магазину за товары; доставку называет магазин", "Do‘konga mahsulotlar uchun to‘laysiz; yetkazishni do‘kon aytadi", "You pay the store for the goods; the store names the delivery") : L("Товар и доставка одним платежом", "Mahsulot va yetkazish bir to‘lovda", "Goods and delivery in one payment")}</small></span></div>
-      <div><span class="ti">${ui("wrench", 20)}</span><span><b>${L("Установка мастером", "Usta o‘rnatadi")}</b><small>${L("Добавьте в корзину вместе с товаром", "Mahsulot bilan savatga qo‘shing")}</small></span></div>
     </div>
     <div class="marquee" data-w="marquee" aria-label="${L("Популярное сейчас", "Hozir ommabop")}"><div class="mq-track">${[0, 1].map(k => PRODUCTS.filter(p => p.hit || p.isNew).concat(PRODUCTS.filter(p => p.key && !p.hit).slice(0, 8)).map(p => `<button class="mq-item" type="button" data-open="${p.id}" ${k ? 'tabindex="-1" aria-hidden="true"' : ""}>${mini(p)}${esc(pName(p))} <b>${fmt(minPrice(p))}</b></button>`).join("")).join("")}</div></div>
 
@@ -2564,7 +2567,7 @@ function renderHome() {
     ${mastersTeaser()}
 
     <section class="sec" id="bundles" data-w="bundles">
-      <div class="sec-head"><div><h2 class="h-l">${L("Комплекты под ключ", "Tayyor to‘plamlar")}</h2><p>${stage0() ? L("Всё для типовой задачи одной кнопкой", "Oddiy vazifa uchun hammasi bir tugmada", "Everything for a typical job in one tap") : L("Всё для типовой задачи одной кнопкой, на 5% дешевле", "Oddiy vazifa uchun hammasi bir tugmada, 5% arzonroq", "Everything for a typical job in one tap, 5% cheaper")}</p></div></div>
+      <div class="sec-head"><div><h2 class="h-l">${L("Акции и комплекты", "Aksiyalar va to‘plamlar", "Deals and kits")}</h2><p>${stage0() ? L("Всё для типовой задачи одной кнопкой", "Oddiy vazifa uchun hammasi bir tugmada", "Everything for a typical job in one tap") : L("Всё для типовой задачи одной кнопкой, на 5% дешевле", "Oddiy vazifa uchun hammasi bir tugmada, 5% arzonroq", "Everything for a typical job in one tap, 5% cheaper")}</p></div></div>
       <div class="bundles rv">${BUNDLES.filter(b => bundleItems(b).length === b.items.length).map(bundleCard).join("")}</div>
     </section>
 
@@ -2613,7 +2616,6 @@ function renderHome() {
       <div class="calc-more"><button class="btn btn-line" type="button" data-act="w-calc">${ui("calc", 18)} ${L(`Все ${CALCS.length} калькуляторов в виджете`, `Vidjetda barcha ${CALCS.length} ta kalkulyator`, `All ${CALCS.length} calculators in the widget`)}</button></div>`}
     </section>
 
-    ${storeDelivers() ? "" : `<section class="sec rv" id="vip" data-w="vip">${vipBlock()}</section>`}
 
     <section class="sec" id="stores" data-w="stores">
       <div class="sec-head"><div><h2 class="h-l">${L("Магазины-партнёры", "Hamkor do‘konlar")}</h2><p>${storeDelivers() ? L("Магазин собирает заказ и привозит его своим курьером", "Do‘kon buyurtmani yig‘adi va o‘z kuryeri bilan olib keladi", "The store packs the order and brings it with its own courier") : L("Курьер забирает заказ прямо со склада магазина", "Kuryer buyurtmani do‘kon omboridan oladi")}</p></div></div>
