@@ -1540,6 +1540,11 @@ const legalUrl = name => `${window.IMORAT_APP ? publicSiteUrl() : ""}legal/${nam
 /* "Stage 0" (server: no payment provider yet, ALLOW_PAY_AT_STORE=1): buyers pay the store on receipt, Imorat Go holds no money;
    with no carrier connected the store delivers with its own courier and names the delivery price itself. */
 const stage0 = () => !!(API && apiCfg?.pay_on_receipt);
+/* Discounts (bundle −5%, promo code, wholesale −3/−6%, the −10% "tomorrow 10–14" slot) are off for now (owner's decision).
+   With a server the switch is DISCOUNTS_ON in its .env (apiCfg.discounts) and the server computes every price; the demo follows DEMO_DISCOUNTS. */
+const DEMO_DISCOUNTS = false;
+const discOn = () => (API ? !!apiCfg?.discounts : DEMO_DISCOUNTS);
+const noDisc = () => stage0() || !discOn(); // stage 0: the buyer pays the store, so nothing the platform would pay for is offered either
 /* the buyer pays the store itself (every stage-0 order, or cash on pickup): promo codes, bundle discounts, points and installation do not apply */
 const payAtStore = d => stage0() || ["store", "cash"].includes((d || form)?.pay);
 const storeDelivers = () => !!(API && apiCfg?.delivery_by === "store");
@@ -2188,7 +2193,7 @@ const monthly = n => Math.ceil(n / 12 / 1000) * 1000;
 const fromP = n => L("от " + fmt(n), fmt(n) + "dan", "from " + fmt(n));
 /* Wholesale tiers for bulk materials: −3% from 10 units, −6% from 50 */
 const TIER_CATS = ["build", "metal", "fasten", "tile", "floor"];
-const tierOf = (p, q) => !TIER_CATS.includes(p.cat) ? 0 : q >= 50 ? .06 : q >= 10 || user?.role === "pro" ? .03 : 0;
+const tierOf = (p, q) => !discOn() || !TIER_CATS.includes(p.cat) ? 0 : q >= 50 ? .06 : q >= 10 || user?.role === "pro" ? .03 : 0;
 
 /* Studio render: the product's line drawing extruded with depth, highlight and floor shadow */
 function art(p, label, eager) {
@@ -2243,7 +2248,7 @@ let projects = LS.get("imorat.projects", []);
 let promo = LS.get("imorat.promoCode", "");
 const PROMO = { IMORAT5: { pct: .05, cap: 300000 } };
 const promoUsed = () => LS.get("imorat.promoUsed", []);
-function promoDisc(goods) { const pr = PROMO[promo]; if (!pr) return 0; if (promoUsed().includes(user ? user.id : "guest")) return 0; return Math.min(pr.cap, Math.round(goods * pr.pct / 1000) * 1000); }
+function promoDisc(goods) { const pr = PROMO[promo]; if (!pr || !discOn()) return 0; if (promoUsed().includes(user ? user.id : "guest")) return 0; return Math.min(pr.cap, Math.round(goods * pr.pct / 1000) * 1000); }
 let services = LS.get("imorat.svc", {});
 let bundlesOn = LS.get("imorat.bundles", []);
 let viewed = LS.get("imorat.viewed", []);
@@ -2276,6 +2281,7 @@ function groups() {
 function svcLines() { return Object.keys(services).map(id => { const p = PROD[id], q = p ? qtyOf(p.id) : 0; return p && q && SERVICE[p.sub] ? { p, q, price: SERVICE[p.sub] } : null; }).filter(Boolean); }
 const svcSum = () => svcLines().reduce((a, s) => a + s.price * s.q, 0);
 function bundleDisc() {
+  if (noDisc()) return 0;
   return bundlesOn.map(id => BUNDLES.find(b => b.id === id)).filter(Boolean)
     .filter(b => bundleItems(b).every(([p, q]) => qtyOf(p.id) >= q))
     .reduce((a, b) => a + Math.round(bundleSum(b) * BUNDLE_OFF / 1000) * 1000, 0);
@@ -2464,7 +2470,7 @@ function renderHeader() {
     <button type="button" class="ai-l" data-act="ai">${ui("spark", 15)}Usta AI</button>
     <button type="button" class="ms-l" data-go="masters">${ui("wrench", 15)}${L("Мастера", "Ustalar")}</button>
     <button type="button" class="ms-l" data-act="w-calc">${ui("calc", 15)}${L("Калькулятор", "Kalkulyator", "Calculator")}</button>
-    <button type="button" class="hl" data-scroll="bundles">${ui("tag", 15)}${L("Акции", "Aksiyalar", "Deals")}</button>
+    <button type="button" class="hl" data-scroll="bundles">${ui("tag", 15)}${noDisc() ? L("Комплекты", "To‘plamlar", "Kits") : L("Акции", "Aksiyalar", "Deals")}</button>
     ${quick.map(id => `<button type="button" data-go="cat-${id}">${catName(id)}</button>`).join("")}
     <button type="button" data-go="seller">${L("Продавцам", "Sotuvchilarga")}</button>
   </nav></div>`;
@@ -2680,7 +2686,7 @@ function renderHome() {
     ${mastersTeaser()}
 
     <section class="sec" id="bundles" data-w="bundles">
-      <div class="sec-head"><div><h2 class="h-l">${L("Акции и комплекты", "Aksiyalar va to‘plamlar", "Deals and kits")}</h2><p>${stage0() ? L("Всё для типовой задачи одной кнопкой", "Oddiy vazifa uchun hammasi bir tugmada", "Everything for a typical job in one tap") : L("Всё для типовой задачи одной кнопкой, на 5% дешевле", "Oddiy vazifa uchun hammasi bir tugmada, 5% arzonroq", "Everything for a typical job in one tap, 5% cheaper")}</p></div></div>
+      <div class="sec-head"><div><h2 class="h-l">${noDisc() ? L("Комплекты", "To‘plamlar", "Kits") : L("Акции и комплекты", "Aksiyalar va to‘plamlar", "Deals and kits")}</h2><p>${noDisc() ? L("Всё для типовой задачи одной кнопкой", "Oddiy vazifa uchun hammasi bir tugmada", "Everything for a typical job in one tap") : L("Всё для типовой задачи одной кнопкой, на 5% дешевле", "Oddiy vazifa uchun hammasi bir tugmada, 5% arzonroq", "Everything for a typical job in one tap, 5% cheaper")}</p></div></div>
       <div class="bundles rv">${BUNDLES.filter(b => bundleItems(b).length === b.items.length).map(bundleCard).join("")}</div>
     </section>
 
@@ -2752,10 +2758,10 @@ function renderHome() {
 }
 function bundleCard(b) {
   const items = bundleItems(b), sum = bundleSum(b), on = bundlesOn.includes(b.id) && items.every(([p, q]) => qtyOf(p.id) >= q);
-  return `<article class="bundle"><div class="bimg">${items.slice(0, 3).map(([p]) => `<div class="studio" style="--h:${hueOf(p)}">${art(p)}</div>`).join("")}${stage0() ? "" : `<span class="off">−5%</span>`}</div>
+  return `<article class="bundle"><div class="bimg">${items.slice(0, 3).map(([p]) => `<div class="studio" style="--h:${hueOf(p)}">${art(p)}</div>`).join("")}${noDisc() ? "" : `<span class="off">−5%</span>`}</div>
     <div class="bb"><b>${L(b.ru, b.uz)}</b><span style="font-size:13px;color:var(--muted)">${L(b.sru, b.suz)}</span>
       <ul>${items.slice(0, 4).map(([p, q]) => `<li>${esc(pName(p))} × ${q}</li>`).join("")}${items.length > 4 ? `<li>${L("и ещё", "yana")} ${items.length - 4}…</li>` : ""}</ul>
-      <div class="bp">${stage0() ? `<b>${fmt(sum)}</b>` : `<s class="num">${fmt(sum)}</s><b>${fmt(sum * (1 - BUNDLE_OFF))}</b>`}</div>
+      <div class="bp">${noDisc() ? `<b>${fmt(sum)}</b>` : `<s class="num">${fmt(sum)}</s><b>${fmt(sum * (1 - BUNDLE_OFF))}</b>`}</div>
       <button class="btn ${on ? "btn-line" : "btn-primary"}" type="button" data-bundle="${b.id}">${on ? ui("check", 18) + L(" В корзине", " Savatda") : ui("cart", 18) + L(" Добавить комплект", " To‘plamni qo‘shish")}</button></div></article>`;
 }
 let routeN = 0;
@@ -3030,7 +3036,7 @@ function openProduct(id) {
       ${svc && !stage0() ? `<label class="infobox" for="svcChk">${ui("wrench", 20)}<span><b>${L("Установка мастером", "Usta o‘rnatishi")}</b><small>${fmt(svc)} ${L("за", "har")} ${unitAcc(p.unit)} · ${L("мастер приедет после доставки", "usta yetkazilgandan keyin keladi")}</small></span><span class="check"><input type="checkbox" id="svcChk" data-svc="${p.id}" ${svcOn ? "checked" : ""}></span></label>` : ""}
       ${SUB_SPEC[p.sub] ? `<button class="infobox lnkbox" type="button" data-mfind="${SUB_SPEC[p.sub]}">${ui("wrench", 20)}<span><b>${L("Найти мастера", "Usta topish")}: ${esc(mSpecName(SUB_SPEC[p.sub]).toLowerCase())}</b><small>${L("С отзывами покупателей, в вашем районе", "Xaridorlar sharhlari bilan, tumaningizda")}</small></span>${ui("chev", 16)}</button>` : ""}
       <div class="infobox">${ui(t.icon, 20)}<span><b>${storeDelivers() ? L("Доставка магазином в", "Do‘kon yetkazadi:", "Store delivery to") : L("Доставка Яндекс в", "Yandex yetkazish:")} ${dName(district)}</b><small>${storeDelivers() ? `${tName(t)} · ${L("цену доставки назовёт магазин", "yetkazish narxini do‘kon aytadi", "the store names the delivery price")}` : `${tName(t)} · ${fromP(round(t.base + t.perKm * dist))} · ${etaStr(t)}`}</small></span></div>
-      ${TIER_CATS.includes(p.cat) ? `<div class="infobox">${ui("store", 20)}<span style="flex:1"><b>${L("Оптом дешевле — для мастеров и прорабов", "Ulgurji arzonroq — ustalar va prorablar uchun")}</b><span class="tier"><span class="on">${L("1–9", "1–9")}<b>${fmt(mp)}</b></span><span>${L("от 10", "10 dan")}<b>${fmt(round(mp * .97))}</b></span><span>${L("от 50", "50 dan")}<b>${fmt(round(mp * .94))}</b></span></span></span></div>` : ""}
+      ${discOn() && TIER_CATS.includes(p.cat) ? `<div class="infobox">${ui("store", 20)}<span style="flex:1"><b>${L("Оптом дешевле — для мастеров и прорабов", "Ulgurji arzonroq — ustalar va prorablar uchun")}</b><span class="tier"><span class="on">${L("1–9", "1–9")}<b>${fmt(mp)}</b></span><span>${L("от 10", "10 dan")}<b>${fmt(round(mp * .97))}</b></span><span>${L("от 50", "50 dan")}<b>${fmt(round(mp * .94))}</b></span></span></span></div>` : ""}
       <div class="m-actions"><button class="btn btn-ai" type="button" data-askp="${p.id}">${ui("spark", 18)} ${L("Спросить AI", "AI dan so‘rash")}</button><button class="btn btn-line" type="button" data-fav="${p.id}" aria-pressed="${fav}">${ui("heart", 18)} ${fav ? L("В избранном", "Saralanganlarda") : L("В избранное", "Saralanganlarga")}</button><button class="btn btn-line" type="button" data-cmp="${p.id}">${ui("filter", 18)} ${compare.includes(p.id) ? L("В сравнении", "Solishtirishda") : L("Сравнить", "Solishtirish")}</button><button class="btn btn-line" type="button" data-watch="${p.id}" aria-pressed="${watch.includes(p.id)}">${ui("bell", 18)} ${watch.includes(p.id) ? L("Слежу за ценой", "Narx kuzatilmoqda") : L("Следить за ценой", "Narxni kuzatish")}</button></div>
       ${rel.length ? `<div><h3 class="h-m" style="margin-bottom:10px">${L("С этим покупают", "Bu bilan birga olishadi")}</h3><div class="related">${rel.map(r => `<button class="rel" type="button" data-open="${r.id}">${mini(r)}<span>${esc(pName(r))}</span><b>${fmt(minPrice(r))}</b></button>`).join("")}</div></div>` : ""}
       <div class="prv-box" id="pRev" data-pid="${p.id}">${prodReviewsHTML(p)}</div>
@@ -3071,7 +3077,7 @@ function addBundle(bid) {
   const b = BUNDLES.find(x => x.id === bid); if (!b) return;
   bundleItems(b).forEach(([p, q]) => { const have = qtyOf(p.id); if (have < q) addToCart(p.id, null, q - have, true); });
   if (!bundlesOn.includes(bid)) bundlesOn.push(bid); LS.set("imorat.bundles", bundlesOn);
-  toast(L(`Комплект «${b.ru}» в корзине, скидка 5%`, `«${b.uz}» to‘plami savatda, 5% chegirma`, `Bundle “${L(b.ru, b.uz)}” added to cart, 5% off`)); refreshCards();
+  toast(noDisc() ? L(`Комплект «${b.ru}» в корзине`, `«${b.uz}» to‘plami savatda`, `Bundle “${L(b.ru, b.uz)}” added to cart`) : L(`Комплект «${b.ru}» в корзине, скидка 5%`, `«${b.uz}» to‘plami savatda, 5% chegirma`, `Bundle “${L(b.ru, b.uz)}” added to cart, 5% off`)); refreshCards();
 }
 
 /* ================= Drawer ================= */
@@ -3157,7 +3163,7 @@ function dCart() {
   </div>`; }).join("") +
   (sv.length && !stage0() ? `<div><div class="gh"><span><b>${L("Услуги мастеров", "Usta xizmatlari")}</b></span></div>${sv.map(s => `<div class="line"><span class="svc-ico">${ui("wrench", 22)}</span><div class="nm">${L("Установка", "O‘rnatish")}: ${esc(pName(s.p))}<small>${fmt(s.price)} × ${s.q}</small></div><div class="rt"><b class="num" style="font-size:14px">${fmt(s.price * s.q)}</b><button class="link" type="button" data-svcoff="${s.p.id}" style="font-size:12px;color:var(--muted)">${L("Убрать", "Olib tashlash")}</button></div></div>`).join("")}</div>` : "") +
   (gs.length > 1 ? `<div class="note">${storeDelivers() ? L(`Товары из ${gs.length} магазинов приедут ${gs.length} отдельными доставками — каждый магазин привозит своё.`, `${gs.length} ta do‘kondan mahsulotlar ${gs.length} ta alohida yetkazish bilan keladi — har bir do‘kon o‘zinikini olib keladi.`, `Goods from ${gs.length} stores arrive as ${gs.length} separate deliveries — each store brings its own.`) : L(`Товары из ${gs.length} магазинов приедут ${gs.length} отдельными доставками: Яндекс забирает заказ в каждом магазине.`, `${gs.length} ta do‘kondan mahsulotlar ${gs.length} ta alohida yetkazish bilan keladi: Yandex buyurtmani har bir do‘kondan alohida oladi.`, `Products from ${gs.length} stores will arrive as ${gs.length} separate deliveries: Yandex picks up the order at each store.`)}</div>` : "");
-  if (!stage0() && !promoUsed().includes(user ? user.id : "guest") && promo !== "IMORAT5") $("#dBody").insertAdjacentHTML("afterbegin", `<div class="hint-promo">${ui("gift", 16)} <span>${L("Первый заказ? Промокод", "Birinchi buyurtma? Promokod")} <b>IMORAT5</b> ${L("— скидка 5% на товары", "— mahsulotlarga 5% chegirma")}</span></div>`);
+  if (!noDisc() && !promoUsed().includes(user ? user.id : "guest") && promo !== "IMORAT5") $("#dBody").insertAdjacentHTML("afterbegin", `<div class="hint-promo">${ui("gift", 16)} <span>${L("Первый заказ? Промокод", "Birinchi buyurtma? Promokod")} <b>IMORAT5</b> ${L("— скидка 5% на товары", "— mahsulotlarga 5% chegirma")}</span></div>`);
   { const ph = cartPlanHTML(); if (ph) $("#dBody").insertAdjacentHTML("afterbegin", ph); }
   $("#dBody").insertAdjacentHTML("beforeend", `<div class="cart-note"><label for="cartNote">${ui("chat", 15)} ${L("Комментарий к заказу", "Buyurtmaga izoh", "Order comment")}</label><textarea id="cartNote" rows="2" maxlength="500" placeholder="${L("Что важно знать магазину при сборке: оттенок, партия, разгрузка, позвонить заранее…", "Do‘kon yig‘ishda nimani bilishi kerak: tus, partiya, tushirish, oldindan qo‘ng‘iroq…", "What the store should know when packing: shade, batch, unloading, call ahead…")}">${esc(form.comment || "")}</textarea></div>`);
   $("#cartNote").addEventListener("input", e => { form.comment = e.target.value.slice(0, 500); LS.set("imorat.form2", form); });
@@ -3187,7 +3193,7 @@ function quote(d) {
     let p = t.base + t.perKm * dist;
     const floors = d.private ? 0 : Math.max(0, (parseInt(d.floor, 10) || 1) - 1), loaders = helpers(d);
     if (loaders && t.id !== "courier") p += LOADER * loaders * Math.max(1, floors); // a loader costs LOADER per floor, at least one (truck → door)
-    if (d.when === "slot") p *= 0.9;
+    if (d.when === "slot" && discOn()) p *= 0.9;
     const price = round(p) + (d.when === "vip" ? VIP_HOUR_FEE : 0), full = price;
     return { g, t, dist, price, full };
   });
@@ -3247,7 +3253,7 @@ function dCheckout() {
       </div>${API && apiCfg?.yandex ? `<small class="mu" style="display:block;margin-top:6px">${L("Грузчика подтверждает перевозчик при назначении машины. Если на ваш рейс его не окажется, мы сразу сообщим, курьер привезёт заказ к подъезду, а плату за помощь вернём.", "Yuk tashuvchini mashina tayinlanganda tashuvchi tasdiqlaydi. Reysingizga topilmasa, darhol xabar beramiz, kuryer buyurtmani kirishgacha olib keladi, yordam haqini qaytaramiz.", "The carrier confirms the loader when a car is assigned. If none is available for your trip we tell you at once, the courier brings the order to the entrance and the help fee is refunded.")}</small>` : ""}</div>
       <div class="opts">
         <label class="opt"><input type="radio" name="when" value="asap" ${d.when === "asap" || storeDelivers() ? "checked" : ""}><span><b>${L("Как можно скорее", "Imkon qadar tez")}</b><small>${storeDelivers() ? L("Магазин привезёт после сборки и назовёт время", "Do‘kon yig‘ib bo‘lgach olib keladi va vaqtni aytadi", "The store delivers after packing and names the time") : L("Ищем исполнителя сразу после оплаты", "To‘lovdan so‘ng darhol ijrochi qidiramiz")}</small></span><span></span></label>
-        ${storeDelivers() ? `<p class="fine" style="margin:4px 0 0">${L("Удобное время можно написать в комментарии к заказу — магазин постарается его учесть.", "Qulay vaqtni buyurtma izohida yozishingiz mumkin — do‘kon hisobga olishga harakat qiladi.", "Write a convenient time in the order comment — the store will try to meet it.")}</p>` : `<label class="opt"><input type="radio" name="when" value="slot" ${d.when === "slot" ? "checked" : ""}><span><b>${L("Завтра, 10:00–14:00", "Ertaga, 10:00–14:00")}</b><small>${L("Скидка 10% на доставку", "Yetkazishga 10% chegirma")}</small></span><span class="tag">−10%</span></label>
+        ${storeDelivers() ? `<p class="fine" style="margin:4px 0 0">${L("Удобное время можно написать в комментарии к заказу — магазин постарается его учесть.", "Qulay vaqtni buyurtma izohida yozishingiz mumkin — do‘kon hisobga olishga harakat qiladi.", "Write a convenient time in the order comment — the store will try to meet it.")}</p>` : `<label class="opt"><input type="radio" name="when" value="slot" ${d.when === "slot" ? "checked" : ""}><span><b>${L("Завтра, 10:00–14:00", "Ertaga, 10:00–14:00")}</b><small>${discOn() ? L("Скидка 10% на доставку", "Yetkazishga 10% chegirma") : L("Курьер приедет с 10 до 14", "Kuryer 10 dan 14 gacha keladi", "The courier comes between 10 and 14")}</small></span>${discOn() ? `<span class="tag">−10%</span>` : ""}</label>
         <label class="opt"><input type="radio" name="when" value="vip" ${d.when === "vip" ? "checked" : ""}><span><b>${L("Точный час", "Aniq soat")}</b><small>${L("Курьер приедет в выбранный часовой интервал", "Kuryer tanlangan soatda keladi")}</small>
           <select class="sel" name="hour" id="fHour" style="margin-top:8px" aria-label="${L("Час доставки", "Yetkazish soati")}">${hours.map(h => `<option value="${h}" ${h === d.hour ? "selected" : ""}>${L("Завтра", "Ertaga")} ${h}:00–${String(+h + 1).padStart(2, "0")}:00</option>`).join("")}</select></span><span class="tag">+${fmt(VIP_HOUR_FEE)}</span></label>`}
       </div>
@@ -3505,7 +3511,7 @@ function dProfile() {
     try {
       if (API) { const r = await api("PATCH", "/api/me", { role: v }); user = fromApiUser(r.user); } else { user.role = v; accounts[digitsOf(user.phone).slice(-9)] = user; LS.set("imorat.accounts", accounts); }
       LS.set("imorat.user", user); renderMain(); dProfile();
-      toast(v === "pro" ? L("Включены цены для мастеров: −3% с первой штуки", "Ustalar narxi yoqildi: birinchi donadan −3%", "Pro prices on: −3% from the first unit") : L("Вы — покупатель", "Siz — xaridorsiz", "You are a buyer"));
+      toast(v === "pro" ? (discOn() ? L("Включены цены для мастеров: −3% с первой штуки", "Ustalar narxi yoqildi: birinchi donadan −3%", "Pro prices on: −3% from the first unit") : L("Вы — мастер или прораб", "Siz — usta yoki prorab", "You are a pro or contractor")) : L("Вы — покупатель", "Siz — xaridorsiz", "You are a buyer"));
     } catch (e2) { toast(apiErr(e2)); dProfile(); }
   });
 }
@@ -3532,7 +3538,7 @@ function renderWidgets() {
       ${tile('data-act="projects"', "folder", "Проекты ремонта", "Ta’mir loyihalari", "Списки материалов по комнатам", "Xonalar bo‘yicha ro‘yxatlar", projects.length)}
       ${tile('data-act="watch"', "bell", "Слежу за ценой", "Narx kuzatuvi", "Сообщим о снижении", "Tushsa xabar beramiz", watch.length)}
       ${tile('data-act="orders"', "clock", "Мои заказы", "Buyurtmalarim", "Статус и машина на карте", "Holat va xaritadagi mashina", orders.length)}
-      ${tile('data-scroll="bundles"', "gift", "Комплекты", "To‘plamlar", "Под ключ на 5% дешевле", "Tayyor, 5% arzonroq")}
+      ${tile('data-scroll="bundles"', "gift", "Комплекты", "To‘plamlar", noDisc() ? "Всё для задачи одной кнопкой" : "Под ключ на 5% дешевле", noDisc() ? "Vazifa uchun hammasi bir tugmada" : "Tayyor, 5% arzonroq")}
       ${tile('data-act="mega"', "grid", "Все категории", "Barcha toifalar", L(`${CATS.length} разделов, ${PRODUCTS.length} товаров`, `${CATS.length} bo‘lim, ${PRODUCTS.length} mahsulot`, `${CATS.length} categories, ${PRODUCTS.length} products`), `${CATS.length} bo‘lim, ${PRODUCTS.length} mahsulot`)}
       ${tile('data-go="seller"', "store", "Продавцам", "Sotuvchilarga", "Кабинет магазина", "Do‘kon kabineti")}
       ${canInstall() ? tile('data-act="install"', "pkg", "Приложение Imorat Go", "Imorat Go ilovasi", "Установить на телефон — заказы и уведомления в одно касание", "Telefonga o‘rnatish — buyurtma va bildirishnomalar bir bosishda") : ""}
@@ -3993,7 +3999,7 @@ function bindStoreForm() {
 /* the three kinds of people on Imorat Go — asked once after sign-up and changeable in the profile */
 const rolesHTML = (role, name = "role") => `<div class="roles opts">
   <label class="opt"><input type="radio" name="${name}" value="buyer" ${role === "buyer" ? "checked" : ""}><span><b>${L("Покупатель", "Xaridor")}</b><small>${L("Ремонт дома или квартиры", "Uy yoki kvartira ta’miri")}</small></span><span></span></label>
-  <label class="opt"><input type="radio" name="${name}" value="pro" ${role === "pro" ? "checked" : ""}><span><b>${L("Мастер или прораб", "Usta yoki prorab")}</b><small>${L("Оптовая цена −3% на материалы с первой штуки", "Materiallarga birinchi donadan −3% ulgurji narx")}</small></span><span class="tag">−3%</span></label>
+  <label class="opt"><input type="radio" name="${name}" value="pro" ${role === "pro" ? "checked" : ""}><span><b>${L("Мастер или прораб", "Usta yoki prorab")}</b><small>${discOn() ? L("Оптовая цена −3% на материалы с первой штуки", "Materiallarga birinchi donadan −3% ulgurji narx") : L("Делаете ремонт для клиентов: сметы, списки материалов, заявки", "Mijozlar uchun ta’mir: smeta, materiallar ro‘yxati, buyurtmalar", "You renovate for clients: estimates, material lists, requests")}</small></span>${discOn() ? `<span class="tag">−3%</span>` : ""}</label>
   <label class="opt"><input type="radio" name="${name}" value="store" ${role === "store" ? "checked" : ""}><span><b>${L("Хочу добавить свой магазин", "Do‘konimni qo‘shmoqchiman")}</b><small>${stage0() ? L("Продавайте на Imorat Go: витрина, заказы онлайн, 0% комиссии", "Imorat Go’da soting: vitrina, onlayn buyurtmalar, 0% komissiya", "Sell on Imorat Go: a storefront, online orders, 0% commission") : L("Продавайте на Imorat Go: витрина, заказы и доставка Яндекс", "Imorat Go’da soting: vitrina, buyurtmalar va Yandex yetkazish")}</small></span><span class="tag">${ui("store", 14)}</span></label>
 </div>`;
 function renderAuth() {
@@ -4370,9 +4376,9 @@ function aiRules() {
 - Доставка: Яндекс, тариф по общему весу из магазина: до 15 кг — курьер (40–60 мин), до 500 кг — грузовой малый кузов (Chevrolet Labo, 1–2 ч), тяжелее — большой кузов (Isuzu NQR). Из разных магазинов — отдельные доставки.
 - В меню «Виджеты» (кнопка ☰ слева) есть калькуляторы: подвал, ленточный фундамент, бетон и раствор, кладка, штукатурка, покраска, обои, гипсокартон, плитка, стяжка, наливной пол, ламинат, кровля, утепление, радиаторы и котёл, кондиционер. Для бетона на 1 м³ (цемент М400): М200 — 245 кг, М250 — 290 кг, М300 — 330 кг цемента; кладочный раствор 1:4 — 330 кг; стяжка 1:3 — 420 кг. Для несущих конструкций (подвал, фундамент) советуй проверить расчёт у инженера.
 - Есть AI-дизайнер комнаты (кнопка «Спроектировать комнату в 3D» на главной): фото и размеры → 3D-комната с мебелью и сметой. Если человек хочет обустроить или обставить комнату — предложи его. В каталоге есть мебель: кровати, диваны, кресла, столы, стулья, детская мебель, ковры и шторы.
-- Есть комплекты со скидкой 5%: «Ванная под ключ», «Покраска комнаты», «Электрика квартиры», «Тёплый дом к зиме». Есть рассрочка на 12 месяцев от 500 000 сум и доставка к точному часу.
+- Есть комплекты${noDisc() ? "" : " со скидкой 5%"}: «Ванная под ключ», «Покраска комнаты», «Электрика квартиры», «Тёплый дом к зиме». Есть рассрочка на 12 месяцев от 500 000 сум и доставка к точному часу.
 
-Контекст покупателя: ${user ? `имя — ${user.name}; роль — ${user.role === "pro" ? "мастер/прораб (оптовые цены −3%)" : user.role === "seller" ? "представитель магазина" : "покупатель"}; ` : ""}район доставки — ${DIST[district].ru}; в корзине: ${cartTxt}.
+Контекст покупателя: ${user ? `имя — ${user.name}; роль — ${user.role === "pro" ? (discOn() ? "мастер/прораб (оптовые цены −3%)" : "мастер/прораб") : user.role === "seller" ? "представитель магазина" : "покупатель"}; ` : ""}район доставки — ${DIST[district].ru}; в корзине: ${cartTxt}. Скидки: ${noDisc() ? "сейчас никаких — комплекты по обычной цене, промокодов и оптовых скидок нет; не обещай скидок" : "комплекты −5%, промокод IMORAT5, опт −3% от 10 шт и −6% от 50 шт"}.
 
 Каталог (ID | название | категория | цена | вес | магазины | рейтинг):
 ${catalogForAI()}`;

@@ -17,7 +17,7 @@ export function tierOf(ref, product, q, role) {
 }
 
 /* Loads cart lines from the DB and validates them. lines: [{id, store, q}] */
-export function loadLines(db, ref, rawLines, user) {
+export function loadLines(db, ref, rawLines, user, { tiers = true } = {}) {
   if (!Array.isArray(rawLines) || !rawLines.length) throw bad("empty_cart", "Cart is empty");
   if (rawLines.length > 150) throw bad("cart_too_big", "Too many lines in the cart");
   const merged = new Map();
@@ -33,7 +33,7 @@ export function loadLines(db, ref, rawLines, user) {
       JOIN offers o ON o.product_id=p.id JOIN stores s ON s.id=o.store_id WHERE p.id=? AND o.store_id=?`, Number(id), store);
     if (!row || !row.active || (row.review && row.review !== "ok") || row.store_status !== "active") { problems.push({ id: Number(id), store, reason: "unavailable" }); continue; }
     if (row.stock < q) problems.push({ id: row.id, store, reason: "stock", stock: row.stock });
-    const tier = tierOf(ref, row, q, user?.role);
+    const tier = tiers ? tierOf(ref, row, q, user?.role) : 0; // wholesale tiers only while discounts are on (cfg.discounts)
     out.push({ p: row, store, q, base: row.price, price: tier ? round(row.price * (1 - tier)) : row.price, tier });
   }
   return { lines: out, problems };
@@ -56,7 +56,7 @@ export function pickTariff(ref, kg, len = 0) {
   const need = T.findIndex(x => x.id === min), have = T.indexOf(byKg);
   return need > have ? T[need] : byKg;
 }
-export function quote(db, ref, { lines, services = [], bundles = [], form = {}, promo = "", user = null, yandexPrices = null, points = 0, maxShare = 0.2, bonusOn = true, storeDelivery = false }) {
+export function quote(db, ref, { lines, services = [], bundles = [], form = {}, promo = "", user = null, yandexPrices = null, points = 0, maxShare = 0.2, bonusOn = true, discounts = true, storeDelivery = false }) {
   const D = Object.fromEntries(ref.districts.map(d => [d.id, d]));
   const dest = (Object.hasOwn(D, form.district) && D[form.district]) || (Object.hasOwn(D, user?.district ?? "") && D[user.district]) || D.mirob;
   /* The buyer pays the store directly (stage 0 / cash on pickup): no money passes through Imorat Go, so nothing the platform
@@ -71,6 +71,7 @@ export function quote(db, ref, { lines, services = [], bundles = [], form = {}, 
     if (Number(points) > 0) dropped.push("points");
     services = []; bundles = []; promo = ""; points = 0;
   }
+  if (!discounts) { bundles = []; promo = ""; } // discounts switched off by the owner: no bundle discount, no promo code (the checkout does not offer them)
   const groups = new Map();
   for (const l of lines) {
     let g = groups.get(l.store);
@@ -97,7 +98,7 @@ export function quote(db, ref, { lines, services = [], bundles = [], form = {}, 
     if (storeDelivery) return { g, t, dist, price: null, full: null, source: "store" };
     let p = yp != null ? yp : t.base + t.perKm * dist;
     if (loaders && t.id !== "courier") p += ref.fees.LOADER * loaders * Math.max(1, floors); // a loader costs LOADER per floor, at least one (truck → door)
-    if (form.when === "slot") p *= 0.9;
+    if (form.when === "slot" && discounts) p *= 0.9;
     // when "vip" is the exact-hour delivery option (the key predates dropping the VIP plan): everyone pays VIP_HOUR_FEE for it
     const price = round(p) + (form.when === "vip" ? ref.fees.VIP_HOUR_FEE : 0), full = price;
     return { g, t, dist, price, full, source: yp != null ? "yandex" : "estimate" };

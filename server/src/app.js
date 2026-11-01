@@ -196,7 +196,7 @@ export function createApp(cfg, log = console) {
   r.get("/api/health", () => ({ ok: true, time: Date.now(), name: "imorat-api", version: PKG_VERSION, contract: API_CONTRACT, min_client: MIN_CLIENT }));
   r.get("/api/config", () => ({
     sms: sms.mode, google_client_id: cfg.google.clientId || null, apple_client_id: cfg.apple.clientId || null,
-    apple_redirect_uri: cfg.apple.redirectUri || null, ai: !!cfg.ai.key, yandex: !!cfg.yandex.token, pay_at_store: cfg.allowPayAtStore,
+    apple_redirect_uri: cfg.apple.redirectUri || null, ai: !!cfg.ai.key, yandex: !!cfg.yandex.token, pay_at_store: cfg.allowPayAtStore, discounts: cfg.discounts,
     payments: cfg.paymentsOnline, telegram_bot: tg.enabled ? tg.username || null : null, telegram_channel: /^@/.test(cfg.channel?.chat || "") ? cfg.channel.chat : null, push_key: push.publicKey,
     timers: cfg.timers, commission: cfg.commission, acquiring: cfg.acquiring, acquiring_by: cfg.acquiringBy, promo_months: cfg.promoMonths, demo: cfg.demoStores,
     ymaps_key: cfg.maps.jsKey || null, geo: geo.provider, bonus: cfg.bonus.enabled, // the site draws a Yandex map with the key; address search goes through /api/geo
@@ -423,9 +423,9 @@ export function createApp(cfg, log = console) {
   async function computeQuote(req, b) {
     const user = req.user;
     const form = cleanForm(b.form || {});
-    const { lines, problems } = loadLines(db, ref, b.lines, user);
+    const { lines, problems } = loadLines(db, ref, b.lines, user, { tiers: cfg.discounts });
     const yp = await yandexPrices(db, ref, cfg.yandex, lines, form, log);
-    const q = quote(db, ref, { lines, services: b.services || [], bundles: b.bundles || [], form, promo: b.promo, user, yandexPrices: yp, points: cfg.bonus.enabled ? b.points : 0, maxShare: cfg.bonus.maxShare, bonusOn: cfg.bonus.enabled, storeDelivery: cfg.deliveryBy === "store" });
+    const q = quote(db, ref, { lines, services: b.services || [], bundles: b.bundles || [], form, promo: b.promo, user, yandexPrices: yp, points: cfg.bonus.enabled ? b.points : 0, maxShare: cfg.bonus.maxShare, bonusOn: cfg.bonus.enabled, discounts: cfg.discounts, storeDelivery: cfg.deliveryBy === "store" });
     return { q, form, lines, problems };
   }
   r.post("/api/quote", async req => { lim.hit("quote-ip:" + req.ip, 120, 60_000); const b = await readJson(req); const { q, problems } = await computeQuote(req, b); return { quote: q, problems }; });
@@ -592,7 +592,7 @@ export function createApp(cfg, log = console) {
     const day = new Date().toISOString().slice(0, 10);
     if (u) lim.hit(`ai:${u.id}:${day}`, cfg.ai.dailyUser, 86400_000); else lim.hit(`ai-ip:${req.ip}:${day}`, cfg.ai.dailyGuest, 86400_000);
     lim.hit("ai-min:" + (u?.id || req.ip), 8, 60_000);
-    await streamChat(cfg.ai, buildRequest(db, ref, cfg.ai, b, u), res, log);
+    await streamChat(cfg.ai, buildRequest(db, ref, cfg.ai, b, u, { discounts: cfg.discounts }), res, log);
   });
 
   /* ---------- stores (registration and seller cabinet) ---------- */

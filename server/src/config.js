@@ -48,6 +48,8 @@ export function loadConfig(env = process.env) {
     origins: [...new Set([...list(env.ALLOWED_ORIGINS || "https://usmonovm7777-crypto.github.io,http://localhost:8080,http://127.0.0.1:8080"), "https://localhost", "capacitor://localhost", "http://localhost"])],
     jwtSecret: env.JWT_SECRET || randomBytes(32).toString("hex"),
     admins: list(env.ADMIN_PHONES).map(normPhone),
+    /* discounts (bundle −5%, promo codes, wholesale −3/−6%, the −10% "tomorrow 10–14" slot) are off until the owner turns them on: DISCOUNTS_ON=1 */
+    discounts: env.DISCOUNTS_ON === "1",
     productAutoApprove: env.PRODUCT_AUTO_APPROVE === "1", // 1: store products and review texts go live without the team's check (tests, a private demo)
     sms: {
       mode: smsMode, // "eskiz" sends real SMS, "dev" returns the code in the API response (testing only)

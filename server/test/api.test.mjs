@@ -89,7 +89,7 @@ before(async () => {
     JWT_SECRET: "test-secret", DB_PATH: join(dir, "t.db"), UPLOADS_DIR: join(dir, "up"), ADMIN_PHONES: "998901111111",
     GOOGLE_CLIENT_ID: "gid", GOOGLE_JWKS_URL: fakeBase + "/jwks", ANTHROPIC_API_KEY: "sk-test", ANTHROPIC_URL: fakeBase + "/ai", SMS_MODE: "dev",
     TELEGRAM_BOT_TOKEN: "TGTOKEN", TELEGRAM_API_URL: fakeBase + "/tg", TELEGRAM_POLL_TIMEOUT: "0", PAYME_MERCHANT_ID: "5e730e8e0b852a417aa49ceb", PAYME_KEY: "PAYME_SECRET", CLICK_SERVICE_ID: "12345", CLICK_MERCHANT_ID: "777", CLICK_SECRET_KEY: "CLICK_SECRET", PAY_TIMEOUT_MIN: "30", BACKUP_DIR: join(dir, "bk"), OTP_PER_IP_HOUR: "200", TELEGRAM_CHANNEL: "@imorat_test", CHANNEL_HOUR: "25",
-    ALLOW_PAY_AT_STORE: "1", BONUS_ON: "1", PROMO_MONTHS: "0", // most scenarios below pay the store on pickup; the card-only default and the free months have their own checks
+    ALLOW_PAY_AT_STORE: "1", BONUS_ON: "1", PROMO_MONTHS: "0", DISCOUNTS_ON: "1", // most scenarios below pay the store on pickup; the card-only default and the free months have their own checks
     OWNER_LOGIN: "umv_test", OWNER_PASSWORD_HASH: hashPassword("Owner-Pass-123!"), // the owner's password sign-in (the hash lives in .env on a real server)
     REVIEW_ACCOUNTS: "998900000001:246810", PRODUCT_AUTO_APPROVE: "1", // most scenarios publish at once; "Moderation" below switches the check on
     FCM_SERVICE_ACCOUNT_JSON: JSON.stringify({ client_email: "svc@test-proj.iam.gserviceaccount.com", private_key: privateKey.export({ type: "pkcs8", format: "pem" }), project_id: "test-proj", token_uri: fakeBase + "/fcm/token" }), FCM_URL: fakeBase + "/fcm",
@@ -1161,6 +1161,14 @@ test("Card only: no cash, the full address reaches the courier, the buyer watche
       assert.ok(none < one, `${none} < ${one}`); assert.equal(one - none, 3 * (priv - none), "floor 4 = 3 flights, a private house = 1");
       assert.equal(await q({ lift: true, help: undefined }), one, "old clients sending lift:true get one loader");
     }
+    { // discounts are off by default (DISCOUNTS_ON unset): no wholesale tier, no promo code, no bundle discount, no −10% slot
+      assert.equal((await c("GET", "/api/config")).data.discounts, false);
+      const qd = async (extra, f = {}) => (await c("POST", "/api/quote", { lines: [{ id: 1, store: "usta", q: 60 }], form: { ...form, ...f }, ...extra }, t)).data.quote;
+      const plain = await qd({}), withAll = await qd({ promo: "IMORAT5", bundles: ["bath", "paint"] });
+      assert.equal(plain.ships[0].lines[0].tier, 0); assert.equal(plain.ships[0].lines[0].price, plain.ships[0].lines[0].base, "60 bags at the full price");
+      assert.equal(withAll.pd, 0); assert.equal(withAll.promo, null); assert.equal(withAll.disc, 0); assert.equal(withAll.total, plain.total);
+      assert.equal((await qd({}, { when: "slot" })).del, plain.del, "tomorrow 10–14 costs the same as asap");
+    }
     const rpc = (method, params) => fetch(`http://127.0.0.1:${a.address().port}/api/pay/payme`, { method: "POST", headers: { "content-type": "application/json", authorization: "Basic " + Buffer.from("Paycom:PK").toString("base64") }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }) }).then(r => r.json());
     await rpc("CreateTransaction", { id: "c1", time: Date.now(), amount: o.data.order.total * 100, account: { order: o.data.order.num } }); assert.equal((await rpc("PerformTransaction", { id: "c1" })).result.state, 2);
     // the demo store "usta" belongs to nobody: move the shipment as admin
@@ -1337,7 +1345,7 @@ test("SMS_MODE=telegram: production start without an SMS contract, sign-in only 
 test("Stage 0: pay on receipt, the store delivers itself, no invented delivery price, no false debt, statuses and buttons", async () => {
   const d0 = mkdtempSync(join(tmpdir(), "imorat-s0-"));
   const cfg0 = loadConfig({ JWT_SECRET: "x", DB_PATH: join(d0, "s0.db"), UPLOADS_DIR: join(d0, "up"), ADMIN_PHONES: "998901111111", ADMIN_MFA: "0", SMS_MODE: "dev", OTP_PER_IP_HOUR: "500",
-    ALLOW_PAY_AT_STORE: "1", TELEGRAM_BOT_TOKEN: "TGTOKEN", TELEGRAM_API_URL: fakeBase + "/tg", TELEGRAM_POLL_TIMEOUT: "0" }); // no Payme/Click keys, no Yandex token
+    ALLOW_PAY_AT_STORE: "1", DISCOUNTS_ON: "1", TELEGRAM_BOT_TOKEN: "TGTOKEN", TELEGRAM_API_URL: fakeBase + "/tg", TELEGRAM_POLL_TIMEOUT: "0" }); // no Payme/Click keys, no Yandex token
   assert.equal(cfg0.payOnReceipt, true); assert.equal(cfg0.deliveryBy, "store");
   const a0 = createApp(cfg0, { info() {}, warn() {}, error: console.error });
   await new Promise(r => a0.listen(0, "127.0.0.1", r)); const b0 = `http://127.0.0.1:${a0.address().port}`;
