@@ -16,7 +16,7 @@
 | `tools/build_seo.py`, `tools/sw.template.js` | SEO-страницы `p/ c/ uz/` + `sitemap.xml`; service worker |
 | `tools/make_logo.py` | генератор логотипа/иконок (`brand/`, `icons/`) |
 | `config.js` | `window.IMORAT_API = "https://api…"` — адрес сервера; пустой = демо-режим (данные в localStorage) |
-| `server/` | API на Node 22 без зависимостей (`node:sqlite`); `npm test` — 35 тестов; `docker compose up -d --build` |
+| `server/` | API на Node 22 без зависимостей (`node:sqlite`); `npm test` — 36 тестов; `docker compose up -d --build` |
 | `server/src/app.js` | все маршруты; `bot.js` Telegram-бот; `masters.js`, `bonus.js`, `stats.js`, `pricing.js`, `delivery.js`, `ai.js` |
 | `templates/` | Excel-шаблоны прайса для магазинов (RU+UZ, EN) |
 | `app/` | Android-обёртка (WebView) |
@@ -163,7 +163,7 @@
   магазинов без аккаунта — «Как это работает» на условиях этапа 0.
 
 ## Тесты
-- Сервер: `cd server && npm test` (35 тестов).
+- Сервер: `cd server && npm test` (36 тестов).
 - Браузер: Playwright-скрипты в scratchpad (`t/*.js`): `qa.js` (все режимы/языки/темы), `e2e2.js` (полный путь с API),
   `ds*.js` (дизайнер), `shop.js`, `ms.js`, `en_smoke.js`. Локальные серверы: 8090 исходник, 8091 сборка, 8080 сборка + API 8787,
   8081 сборка + API 8788 в режиме запуска, 8799 мок-AI.
@@ -208,3 +208,9 @@
 складывается из комиссии после третьего месяца и не покрывает кешбэк 1–2%. Решение о ставках и включении бонусов —
 за владельцем; код ничего не включает сам.
 
+
+### Поддержка, комментарии, отмены (ноябрь 2026)
+- `server/src/support.js`: таблица `support_msgs`, `GET/POST /api/support` (свой тред, `?peek=1` — только счётчик непрочитанного), `GET /api/admin/support`, `GET/POST /api/admin/support/:uid` (владелец и помощники). Первое сообщение за 30 мин — тревога команде в Telegram; ответ уходит человеку в Telegram и push. Клиент: круглая кнопка «Поддержка» на всех страницах, `#support`, ссылка из заказа (номер заказа прикрепляется), раздел «Поддержка» первым в панели.
+- Отмена заказа покупателем: причина (`changed|cheaper|wrong|long|delivery|other`) + комментарий (для `other` обязателен) → `shipments.cancel_note`, магазин видит её в Telegram и кабинете.
+- «Нет в наличии» у продавца: необязательная записка `note` (чего нет, чем заменить) → покупатель получает её в уведомлении и в заказе.
+- Комментарий к заказу прямо в корзине (`form.comment`), тот же, что в оформлении; виден магазину и курьеру.

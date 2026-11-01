@@ -106,12 +106,12 @@ export function createNotify({ db, cfg, tg, push, sms, ref, log = console }) {
       // the store hears about a cancellation it did not make itself (the buyer, a timer, an admin, a failed payment): otherwise it keeps packing
       if (c.s.status === "cancelled" && c.s.cancel_reason !== "out_of_stock" && c.owner) {
         const why = { buyer: "покупатель отменил заказ", admin: "отменён администратором Imorat Go", not_accepted: "не подтверждён вовремя", not_shipped: "не передан курьеру вовремя", unpaid: "покупатель не оплатил картой", refund: "платёж отменён" }[c.s.cancel_reason] || "отменён";
-        const line = `❌ <b>Заказ ${h(c.o.num)} отменён</b>: ${why}. Собирать и везти его не нужно; товар снова в продаже.`;
+        const line = `❌ <b>Заказ ${h(c.o.num)} отменён</b>: ${why}.${c.s.cancel_note ? `\nПричина покупателя: «${h(c.s.cancel_note)}»` : ""} Собирать и везти его не нужно; товар снова в продаже.`;
         if (c.owner.tg_chat) safe(tg.send(c.owner.tg_chat, line));
         safe(push.toUser(c.owner.id, { title: `❌ Заказ ${c.o.num} отменён`, body: why, url: cabinet, tag: "ship-" + c.s.id }));
       }
       const text = c.s.status === "cancelled"
-        ? `Заказ ${c.o.num} из магазина ${c.st.name} отменён: ${CANCEL_TEXT[c.s.cancel_reason] || "отмена"}.${c.s.cancel_reason !== "buyer" ? " Оплачивать ничего не нужно. Попробуйте заказать этот товар в другом магазине." : ""}`
+        ? `Заказ ${c.o.num} из магазина ${c.st.name} отменён: ${CANCEL_TEXT[c.s.cancel_reason] || "отмена"}.${c.s.cancel_reason === "out_of_stock" && c.s.cancel_note ? ` Магазин пишет: «${c.s.cancel_note}».` : ""}${c.s.cancel_reason !== "buyer" ? " Оплачивать ничего не нужно. Попробуйте заказать этот товар в другом магазине." : ""}`
         : BUYER_TEXT[c.s.status]?.(c.o, c.st, c.f);
       if (!text || !c.buyer || c.s.cancel_reason === "buyer") return;
       if (c.buyer.tg_chat) safe(tg.send(c.buyer.tg_chat, h(text)));

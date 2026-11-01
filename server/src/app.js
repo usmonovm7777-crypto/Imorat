@@ -40,6 +40,7 @@ import { createPayments } from "./payments.js";
 import { createChannel } from "./channel.js";
 import { registerDisputes } from "./disputes.js";
 import { registerQuestions } from "./questions.js";
+import { registerSupport } from "./support.js";
 import { registerCatalogExtras } from "./catalogx.js";
 import { registerTeams } from "./teams.js";
 import { registerDashboard } from "./dashboard.js";
@@ -493,7 +494,7 @@ export function createApp(cfg, log = console) {
       del_store: ships.some(s => s.price_named_at) ? ships.reduce((a, s) => a + (s.price_named_at ? s.price : 0), 0) : null,
       ships: ships.map(s => ({ id: s.id, store: s.store_id, store_name: s.store_name, store_addr: s.store_addr, store_hours: s.store_hours, tariff: s.tariff, tracking_url: s.tracking_url || null, delivery_price: s.price_named_at ? s.price : null, live: !!(s.claim_id && !String(s.claim_id).startsWith("sim-")), price: s.price, kg: s.kg, dist: s.dist, status: s.status, status_at: s.status_at,
         step: (STEPS[flowOf(s, JSON.parse(o.form))].indexOf(s.status)), history: JSON.parse(s.history), lines: JSON.parse(s.lines), courier: s.courier,
-        cancel_reason: s.cancel_reason, accept_by: s.status === "new" ? (s.start_at || s.status_at) + cfg.timers.cancel * 60000 : null,
+        cancel_reason: s.cancel_reason, cancel_note: s.cancel_note || null, accept_by: s.status === "new" ? (s.start_at || s.status_at) + cfg.timers.cancel * 60000 : null,
         loaders_failed: !!s.loaders_failed, // the carrier refused the loader: the buyer meets the car at the entrance (see notify.loadersFailed)
         review: db.get("SELECT stars, text, reply FROM reviews WHERE ship_id=?", s.id) || null }))
     };
@@ -508,15 +509,21 @@ export function createApp(cfg, log = console) {
     if (!o || (o.user_id !== u.id && !adminOk(req))) throw new HttpError(404, "not_found", "Order not found");
     return { order: orderOut(o) };
   });
-  r.post("/api/orders/:num/cancel", (req, res, p) => {
-    const u = need(req);
+  /* the buyer cancels while nothing has left the stores; the reason and a comment go to the store with the cancellation */
+  const BUYER_WHY = { changed: "передумал", cheaper: "нашёл дешевле", wrong: "ошибся в заказе", long: "долго ждать", delivery: "не устраивает доставка", other: "другое" };
+  r.post("/api/orders/:num/cancel", async (req, res, p) => {
+    const u = need(req), b = await readJson(req).catch(() => ({}));
     const o = db.get("SELECT * FROM orders WHERE num=? AND user_id=?", p.num, u.id);
     if (!o) throw new HttpError(404, "not_found", "Order not found");
-    if (!cancelOrder(o, "buyer")) throw new HttpError(409, "too_late", "The order is already on its way");
+    const why = BUYER_WHY[b?.reason] ? b.reason : null, comment = str(b?.comment, 500);
+    if (b?.reason !== undefined && !why) throw bad("bad_reason", "Unknown reason");
+    if (why === "other" && comment.length < 3) throw bad("comment_required", "Tell the store why");
+    const note = why === "other" ? comment : why ? BUYER_WHY[why] + (comment ? ": " + comment : "") : comment || null;
+    if (!cancelOrder(o, "buyer", note)) throw new HttpError(409, "too_late", "The order is already on its way");
     return { order: orderOut(db.get("SELECT * FROM orders WHERE id=?", o.id)) };
   });
   /* Cancels a whole order while nothing has left the stores: stock back, points back (via setShipStatus), promo freed. False once a shipment is on its way. */
-  function cancelOrder(o, reason) {
+  function cancelOrder(o, reason, note = null) {
     if (o.status === "cancelled") return false; // cancelling twice must not run the side effects (promo use, points) again
     const ships = db.all("SELECT * FROM shipments WHERE order_id=?", o.id);
     if (ships.some(s => !["unpaid", "new", "assembling", "cancelled"].includes(s.status))) return false;
@@ -524,6 +531,7 @@ export function createApp(cfg, log = console) {
       for (const s of ships) {
         if (s.status === "cancelled") continue;
         for (const l of JSON.parse(s.lines)) db.run("UPDATE offers SET stock=stock+? WHERE product_id=? AND store_id=?", l.q, l.id, s.store_id);
+        if (note) db.run("UPDATE shipments SET cancel_note=? WHERE id=?", note, s.id); // before the status: the store's message carries it
         setShipStatus(s, "cancelled", reason);
       }
       db.run("UPDATE orders SET status='cancelled' WHERE id=?", o.id);
@@ -672,7 +680,7 @@ export function createApp(cfg, log = console) {
         const f = JSON.parse(x.form);
         return { ship_id: x.id, num: x.num, t: x.oc, status: x.status, tariff: x.tariff, price: x.price, kg: x.kg, pay: x.pay, pay_status: x.pay_status,
           buyer: f.name, phone: f.phone, district: f.district, street: f.mode === "pickup" ? "" : f.street, floor: f.private ? null : f.floor, entrance: f.entrance || "", private: !!f.private, help: f.help || (f.lift ? "one" : "none"), access: f.access || "door", elevator: f.elevator ?? null, loaders_failed: !!x.loaders_failed, when: f.when, hour: f.hour, comment: f.comment, lines: JSON.parse(x.lines),
-          cancel_reason: x.cancel_reason, accept_by: x.status === "new" ? (x.start_at || x.status_at) + cfg.timers.cancel * 60000 : null, commission: x.commission, acquiring: x.acquiring,
+          cancel_reason: x.cancel_reason, cancel_note: x.cancel_note || null, accept_by: x.status === "new" ? (x.start_at || x.status_at) + cfg.timers.cancel * 60000 : null, commission: x.commission, acquiring: x.acquiring,
           delivery_by: x.tariff ? (f.delivery_by === "store" ? "store" : "yandex") : null, // who delivers: the store's own courier (stage 0) or Yandex
           delivery_price: x.price_named_at ? x.price : null, // the price the store named to the buyer (store delivery), null until it does
           next: SELLER_MOVES[x.status]?.filter(n => (x.tariff ? n !== "ready" && (f.delivery_by === "store" ? n !== "searching" : !(n === "on_way" && x.status === "assembling")) : !["searching", "on_way"].includes(n))) || [] };
@@ -802,6 +810,7 @@ export function createApp(cfg, log = console) {
       if (b.status === undefined) return { ok: true, delivery_price: price };
     }
     if (!(SELLER_MOVES[sh.status] || []).includes(b.status) || (b.status === "ready" && sh.tariff) || (b.status === "searching" && (!sh.tariff || byStore)) || (b.status === "on_way" && sh.status === "assembling" && !byStore)) throw bad("bad_status", `Cannot move from ${sh.status} to ${b.status}`);
+    if (b.status === "cancelled" && b.note !== undefined) { const note = str(b.note, 300); if (note) db.run("UPDATE shipments SET cancel_note=? WHERE id=?", note, sh.id); } // which item is missing, what it can be replaced with
     moveShipment(sh, b.status, req);
     return { ok: true, status: b.status };
   });
@@ -1116,6 +1125,7 @@ export function createApp(cfg, log = console) {
   registerStats({ r, db, lim, needSeller });
   channel.routes(r, needOwner); // the Telegram channel speaks for the company: the owner only
   registerQuestions({ r, db, cfg, need, needSeller, lim, tg, push, log });
+  registerSupport({ r, db, cfg, need, needAdmin, lim, tg, push, notify, log });
   registerTeams({ r, db, cfg, need, lim, tg, log });
   registerDashboard({ r, db, needAdmin: needOwner }); // analytics: the owner only
   const cx = registerCatalogExtras({ r, db, cfg, need, lim, tg, push, saveImage, removeUpload, mediaUrl, log });

@@ -167,8 +167,10 @@ test("order: server prices, tiers, promo, stock, cancel", async () => {
   assert.equal(tooMany.data.error, "cart_changed");
   const list = await call("GET", "/api/orders", null, data.token);
   assert.equal(list.data.orders.length, 1);
-  const c = await call("POST", `/api/orders/${o.data.order.num}/cancel`, null, data.token);
-  assert.equal(c.data.order.status, "cancelled");
+  assert.equal((await call("POST", `/api/orders/${o.data.order.num}/cancel`, { reason: "nope" }, data.token)).data.error, "bad_reason");
+  assert.equal((await call("POST", `/api/orders/${o.data.order.num}/cancel`, { reason: "other", comment: "" }, data.token)).data.error, "comment_required", "«другое» needs a word of explanation");
+  const c = await call("POST", `/api/orders/${o.data.order.num}/cancel`, { reason: "cheaper", comment: "нашёл в соседнем магазине" }, data.token);
+  assert.equal(c.data.order.status, "cancelled"); assert.equal(c.data.order.ships[0].cancel_note, "нашёл дешевле: нашёл в соседнем магазине");
   const restored = (await call("GET", "/api/catalog")).data.products.find(p => p.id === 1).offers.find(o => o.store === "usta").stock;
   assert.equal(restored, before);
 });
@@ -1593,4 +1595,27 @@ test("App: push tokens, order notifications through FCM and APNs, dead tokens dr
   assert.equal(app.db.get("SELECT goods FROM orders WHERE num=?", o.data.order.num).goods, o.data.order.goods, "sums stay for the accounting");
   assert.equal(app.db.get("SELECT COUNT(*) n FROM devices WHERE user_id=?", row.id).n, 0);
   const again = (await login("998907000011")).data; assert.ok(again.token); assert.equal(again.is_new, true, "the same phone starts a fresh account");
+});
+
+test("Support chat: a person writes, the team sees the thread and answers, the answer reaches Telegram; helpers see it, strangers do not", async () => {
+  const u = (await login("998881234")).data.token;
+  assert.equal((await call("GET", "/api/support")).status, 401, "signed-in only");
+  assert.equal((await call("POST", "/api/support", { text: "" }, u)).data.error, "bad_text");
+  const m1 = await call("POST", "/api/support", { text: "Где мой заказ? Жду с утра", topic: "order", order: "IM-000000" }, u);
+  assert.equal(m1.status, 200); assert.equal(m1.data.messages.length, 1); assert.equal(m1.data.messages[0].order, null, "someone else's / unknown order number is dropped");
+  await until(() => tgSent.some(x => /Поддержка/.test(x.text) && /Где мой заказ/.test(x.text)));
+  const other = (await login("998881235")).data.token;
+  assert.equal((await call("GET", "/api/support", null, other)).data.messages.length, 0, "each person sees only their own thread");
+  assert.equal((await call("GET", "/api/admin/support", null, other)).status, 403);
+  const list = await call("GET", "/api/admin/support", null, globalThis.ADMIN); assert.equal(list.status, 200);
+  const uid = (await call("GET", "/api/me", null, u)).data.user.id;
+  const th = list.data.threads.find(t => t.user === uid); assert.ok(th, JSON.stringify(list.data)); assert.equal(th.unread, 1);
+  const open = await call("GET", `/api/admin/support/${th.user}`, null, globalThis.ADMIN); assert.equal(open.data.messages[0].text, "Где мой заказ? Жду с утра");
+  assert.equal((await call("GET", "/api/admin/support", null, globalThis.ADMIN)).data.threads.find(t => t.user === th.user).unread, 0, "opening marks it read");
+  const ans = await call("POST", `/api/admin/support/${th.user}`, { text: "Заказ у магазина, курьер выедет до 14:00" }, globalThis.ADMIN);
+  assert.equal(ans.status, 200); assert.equal(ans.data.messages.at(-1).from, "staff");
+  assert.equal((await call("GET", "/api/support?peek=1", null, u)).data.unread, 1);
+  const mine = await call("GET", "/api/support", null, u); assert.equal(mine.data.messages.length, 2); assert.equal(mine.data.messages[1].text, "Заказ у магазина, курьер выедет до 14:00");
+  assert.equal((await call("GET", "/api/support?peek=1", null, u)).data.unread, 0);
+  assert.equal((await call("POST", `/api/admin/support/${(await call("GET", "/api/me", null, other)).data.user.id}`, { text: "привет" }, globalThis.ADMIN)).data.error, "no_thread", "the team answers threads, it does not start them");
 });
