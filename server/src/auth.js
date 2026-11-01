@@ -103,12 +103,13 @@ export async function verifyIdToken(token, { jwksUrl, issuers, audience }) {
 /* ---------- Passwords (staff accounts: the owner and the helpers the owner adds) ----------
    scrypt with a random salt; the stored string carries its own parameters, so they can be raised later without breaking old hashes.
    The owner's hash lives in server/.env (OWNER_PASSWORD_HASH), never in the repository; helpers' hashes live in the database. */
-const SCRYPT = { N: 16384, r: 8, p: 1, len: 32 };
+const SCRYPT = { N: 32768, r: 8, p: 1, len: 32, maxmem: 128 * 1024 * 1024 }; // ~90 ms on a small VPS; maxmem must grow with N or scrypt throws
 export function hashPassword(password) {
-  const pw = String(password ?? "");
-  if (pw.length < 10) throw bad("weak_password", "Password must be at least 10 characters");
+  if (typeof password !== "string") throw bad("weak_password", "Password must be a string of at least 10 characters");
+  const pw = password;
+  if (pw.length < 10 || pw.length > 256) throw bad("weak_password", "Password must be 10 to 256 characters");
   const salt = randomBytes(16);
-  const key = scryptSync(pw.normalize("NFKC"), salt, SCRYPT.len, { N: SCRYPT.N, r: SCRYPT.r, p: SCRYPT.p });
+  const key = scryptSync(pw.normalize("NFKC"), salt, SCRYPT.len, { N: SCRYPT.N, r: SCRYPT.r, p: SCRYPT.p, maxmem: SCRYPT.maxmem });
   return `scrypt$${SCRYPT.N}$${SCRYPT.r}$${SCRYPT.p}$${salt.toString("base64url")}$${key.toString("base64url")}`;
 }
 const DUMMY_HASH = `scrypt$${SCRYPT.N}$${SCRYPT.r}$${SCRYPT.p}$${Buffer.alloc(16, 7).toString("base64url")}$${Buffer.alloc(32, 9).toString("base64url")}`;
@@ -117,7 +118,8 @@ export function verifyPassword(password, stored) {
   const m = String(stored || DUMMY_HASH).match(/^scrypt\$(\d+)\$(\d+)\$(\d+)\$([A-Za-z0-9_-]+)\$([A-Za-z0-9_-]+)$/);
   if (!m) return false;
   const [, N, r, p, salt, hash] = m, want = Buffer.from(hash, "base64url");
-  let got; try { got = scryptSync(String(password ?? "").normalize("NFKC"), Buffer.from(salt, "base64url"), want.length, { N: +N, r: +r, p: +p }); } catch { return false; }
+  if (typeof password !== "string" || password.length > 256) return false;
+  let got; try { got = scryptSync(password.normalize("NFKC"), Buffer.from(salt, "base64url"), want.length, { N: +N, r: +r, p: +p, maxmem: Math.max(SCRYPT.maxmem, 128 * +N * +r * 2) }); } catch { return false; }
   return !!stored && got.length === want.length && timingSafeEqual(got, want);
 }
 /* a temporary password for a new helper: 14 characters from an unambiguous alphabet, shown once */

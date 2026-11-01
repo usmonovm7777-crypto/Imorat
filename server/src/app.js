@@ -84,6 +84,8 @@ export function createApp(cfg, log = console) {
      acquiring fee — two separate lines in the cabinet. The end of the free months is set when a store is approved. */
   const addMonths = addMonthsClamped;
   const inPromo = (s, at = Date.now()) => !!(s?.free_until && s.free_until > at);
+  /* a delivery price typed by a store: a number, or a string of digits with spaces ("25 000"); anything else (null, true, [], "") is refused */
+  const deliveryPriceOf = v => { const n = typeof v === "number" ? v : typeof v === "string" && /^\s*\d[\d ]{0,9}\s*$/.test(v) ? Number(v.replace(/ /g, "")) : NaN; return Number.isInteger(n) && n >= 0 && n <= 5_000_000 ? n : null; };
   /* how long ago the seller last confirmed or edited prices: the newest offer change or the store-wide confirmation */
   const pricesFreshness = s => { const last = Math.max(s.prices_confirmed_at || 0, db.get("SELECT COALESCE(MAX(updated_at),0) m FROM offers WHERE store_id=?", s.id).m || 0); return { confirmed_at: last || null, days: last ? Math.floor((Date.now() - last) / 86400000) : null, stale: !last || Date.now() - last > 7 * 86400000 }; };
   const storeRates = s => ({ platform: cfg.commission, acquiring: cfg.acquiring, acquiring_by: cfg.acquiringBy, promo_months: cfg.promoMonths, free_until: s?.free_until || null, promo: inPromo(s) });
@@ -126,13 +128,14 @@ export function createApp(cfg, log = console) {
   const need = req => { if (!req.user) throw new HttpError(401, "auth_required", "Sign in first"); return req.user; };
   /* Who runs the place. "owner": the phone numbers in ADMIN_PHONES and the login from OWNER_LOGIN — everything, including money and
      analytics. "admin": a helper the owner added from the panel — moderation, orders and complaints, nothing about money. */
-  const staffOf = u => (u && u.role === "staff" ? db.get("SELECT * FROM staff WHERE user_id=?", u.id) : null) || null;
+  const staffOf = u => (u ? db.get("SELECT * FROM staff WHERE user_id=?", u.id) : null) || null; // the staff table is the truth; users.role is only a hint
   const roleOf = u => { if (!u) return null; if (u.phone && cfg.admins.includes(u.phone)) return "owner"; const st = staffOf(u); return st && !st.disabled ? st.role : null; };
   const isAdmin = u => !!roleOf(u);
   const isOwner = u => roleOf(u) === "owner";
   const adminOk = req => { try { needAdmin(req); return true; } catch { return false; } };
   const needAdmin = (req, { mfa = true } = {}) => {
     const u = need(req); if (!isAdmin(u)) throw new HttpError(403, "forbidden", "Admins only");
+    if (staffOf(u)?.must_change) throw new HttpError(403, "password_change_required", "Change the temporary password first");
     if (mfa && cfg.adminMfa) {
       if (!u.totp_on) throw new HttpError(403, "mfa_setup_required", "Turn on two-step verification for the admin account");
       if (!req.mfa) throw new HttpError(403, "mfa_required", "Enter the code from your authenticator app");
@@ -142,15 +145,22 @@ export function createApp(cfg, log = console) {
   const needOwner = (req, opts) => { const u = needAdmin(req, opts); if (!isOwner(u)) throw new HttpError(403, "owner_only", "Only the owner of Imorat Go can do this"); return u; };
   /* the owner's login/password from .env becomes (or refreshes) the owner's staff row: the hash in .env always wins */
   function ensureOwner() {
-    if (!cfg.owner.login) { db.run("UPDATE staff SET disabled=1 WHERE from_env=1 AND disabled=0"); return; }
+    const endSessions = id => db.run("UPDATE users SET token_ver=token_ver+1 WHERE id=?", id);
+    if (!cfg.owner.login) { for (const x of db.all("SELECT user_id FROM staff WHERE from_env=1 AND disabled=0")) { db.run("UPDATE staff SET disabled=1 WHERE user_id=?", x.user_id); endSessions(x.user_id); } return; }
     const now = Date.now();
-    let st = db.get("SELECT * FROM staff WHERE from_env=1");
-    if (st && st.login !== cfg.owner.login && db.get("SELECT 1 FROM staff WHERE login=? AND user_id<>?", cfg.owner.login, st.user_id)) log.warn(`[owner] OWNER_LOGIN ${cfg.owner.login} is taken by a helper account — rename that helper`);
+    const st = db.get("SELECT * FROM staff WHERE from_env=1");
+    // a helper created earlier under the same login (any case) would collide with the UNIQUE index: it is renamed and disabled, the owner keeps the login
+    const clash = db.get("SELECT user_id, login FROM staff WHERE lower(login)=lower(?) AND from_env=0", cfg.owner.login);
+    if (clash) { db.run("UPDATE staff SET login=?, disabled=1 WHERE user_id=?", (clash.login + ".old-" + randomBytes(2).toString("hex")).slice(0, 64), clash.user_id); endSessions(clash.user_id); log.warn(`[owner] helper account "${clash.login}" used OWNER_LOGIN — it was renamed and disabled; give the helper a new login from the panel`); }
     if (!st) {
       const id = "owner_" + randomBytes(4).toString("hex");
       db.run("INSERT INTO users(id,phone,name,email,role,district,created_at) VALUES(?,NULL,?,'','staff','mirob',?)", id, "Владелец Imorat Go", now);
       db.run("INSERT INTO staff(user_id,login,pass_hash,role,from_env,created_by,created_at) VALUES(?,?,?,'owner',1,'env',?)", id, cfg.owner.login, cfg.owner.hash, now);
-    } else db.run("UPDATE staff SET login=?, pass_hash=?, role='owner', disabled=0 WHERE user_id=?", cfg.owner.login, cfg.owner.hash, st.user_id);
+      return;
+    }
+    if (st.pass_hash !== cfg.owner.hash || st.login !== cfg.owner.login) endSessions(st.user_id); // a new password in .env signs the owner out everywhere (a stolen token dies with the old password)
+    db.run("UPDATE staff SET login=?, pass_hash=?, role='owner', disabled=0 WHERE user_id=?", cfg.owner.login, cfg.owner.hash, st.user_id);
+    db.run("UPDATE users SET role='staff' WHERE id=? AND role<>'staff'", st.user_id);
   }
   ensureOwner();
   const needSeller = req => {
@@ -270,14 +280,21 @@ export function createApp(cfg, log = console) {
   /* ---------- staff sign-in: the owner (login from .env) and the helpers the owner added, by login + password ---------- */
   r.post("/api/auth/staff", async req => {
     const b = await readJson(req);
-    const login = String(b.login || "").trim(), password = String(b.password || "");
+    const login = typeof b.login === "string" ? b.login.trim().slice(0, 64) : "", password = typeof b.password === "string" ? b.password : "";
+    const lkey = login.toLowerCase();
+    const failKey = "staff-fail:" + lkey + ":" + req.ip, loginKey = "staff-fail-login:" + lkey; // only FAILURES count, so a stranger guessing the owner's login cannot lock the owner out
     lim.hit("staff-ip:" + req.ip, 30, 15 * 60000);
-    if (login) lim.hit("staff-login:" + login.toLowerCase(), 10, 15 * 60000); // a brute force on one login stops after 10 tries a quarter hour
+    if (login) { lim.hit(failKey, 10, 15 * 60000, 0); lim.hit(loginKey, 300, 3600_000, 0); } // weight 0: a check — 10 failures per login+IP a quarter hour, 300 per login an hour from anywhere
     const st = login ? db.get("SELECT * FROM staff WHERE lower(login)=lower(?)", login) : null;
     const ok = verifyPassword(password, st?.pass_hash) && st && !st.disabled; // the dummy hash is checked when the login is unknown: same timing
-    if (!ok) { db.run("INSERT INTO audit(user_id,action,target,details,ip,created_at) VALUES(?,?,?,?,?,?)", st?.user_id || null, "staff.login_fail", login.slice(0, 64), "{}", req.ip, Date.now()); throw new HttpError(401, "bad_login", "Wrong login or password"); }
+    if (!ok) {
+      if (login) { try { lim.hit(failKey, 10, 15 * 60000); lim.hit(loginKey, 300, 3600_000); } catch { /* this attempt still answers 401; the next one gets 429 */ } }
+      db.run("INSERT INTO audit(user_id,action,target,details,ip,created_at) VALUES(?,?,?,?,?,?)", st?.user_id || null, "staff.login_fail", /^[A-Za-z0-9_.@-]{3,64}$/.test(login) ? login : "", "{}", req.ip, Date.now()); // the audit keeps real-looking logins only, not whatever was typed
+      throw new HttpError(401, "bad_login", "Wrong login or password");
+    }
     const u = db.get("SELECT * FROM users WHERE id=?", st.user_id);
     if (!u) throw new HttpError(401, "bad_login", "Wrong login or password");
+    lim.forget(failKey);
     db.run("UPDATE staff SET last_login_at=? WHERE user_id=?", Date.now(), st.user_id);
     audit(req, "staff.login", u.id);
     return session(u);
@@ -288,8 +305,9 @@ export function createApp(cfg, log = console) {
     if (!st) throw new HttpError(409, "no_password", "This account signs in by phone or Telegram, it has no password");
     if (st.from_env) throw new HttpError(409, "owner_env", "The owner's password is set on the server with `imorat owner`");
     lim.hit("pwchange:" + u.id, 10, 3600_000);
-    if (!verifyPassword(String(b.old || ""), st.pass_hash)) throw bad("bad_login", "The current password is wrong");
-    const hash = hashPassword(b.password); // throws weak_password under 10 characters
+    if (typeof b.old !== "string" || !verifyPassword(b.old, st.pass_hash)) throw bad("bad_login", "The current password is wrong");
+    if (b.password === b.old) throw bad("weak_password", "Choose a password you have not used here");
+    const hash = hashPassword(b.password); // throws weak_password when not a string of 10–256 characters
     db.run("UPDATE staff SET pass_hash=?, must_change=0 WHERE user_id=?", hash, u.id);
     db.run("UPDATE users SET token_ver=token_ver+1 WHERE id=?", u.id); // every other session of this helper ends
     audit(req, "staff.password", u.id);
@@ -339,6 +357,7 @@ export function createApp(cfg, log = console) {
     let role = u.role;
     if (b.role !== undefined) {
       if (!["buyer", "pro"].includes(b.role)) throw bad("bad_role", "Role must be buyer or pro; stores register via /api/seller/store");
+      if (staffOf(u)) throw new HttpError(409, "staff_account", "A staff account has no buyer or pro role — sign in by phone for shopping");
       if (u.role !== "seller") role = b.role;
     }
     const email = b.email !== undefined ? str(b.email, 120) : u.email;
@@ -549,7 +568,7 @@ export function createApp(cfg, log = console) {
         const goods = JSON.parse(s.lines).reduce((a, l) => a + l.price * l.q, 0), share = o.goods ? goods / o.goods : 1;
         const part = Math.max(0, Math.round(goods - (o.promo_disc || 0) * share - (o.points_used || 0) * share + (s.price || 0)));
         db.run("UPDATE orders SET pay_status='refund_due' WHERE id=?", o.id);
-        notify.admins(`💳 Возврат по заказу ${o.num}: ${part.toLocaleString("ru-RU")} сум (${o.pay}) — отправление отменено (${reason || "—"}). Сделайте возврат в кабинете ${o.pay === "payme" ? "Payme" : "Click"}.`);
+        notify.owners(`💳 Возврат по заказу ${o.num}: ${part.toLocaleString("ru-RU")} сум (${o.pay}) — отправление отменено (${reason || "—"}). Сделайте возврат в кабинете ${o.pay === "payme" ? "Payme" : "Click"}.`);
       }
     }
   }
@@ -604,6 +623,7 @@ export function createApp(cfg, log = console) {
   r.post("/api/seller/store", async req => {
     const u = need(req), b = await readJson(req);
     if (u.store_id) throw new HttpError(409, "store_exists", "You already have a store; edit it in the cabinet");
+    if (staffOf(u)) throw new HttpError(409, "staff_account", "A staff account cannot own a store — sign in by phone to register one");
     const s = storeInput(b);
     const base = s.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 20) || "store";
     let id = base + "-" + randomBytes(2).toString("hex");
@@ -774,10 +794,11 @@ export function createApp(cfg, log = console) {
     const fo = JSON.parse(db.get("SELECT form FROM orders WHERE id=?", sh.order_id)?.form || "{}"), byStore = sh.tariff && fo.delivery_by === "store";
     // the store names its delivery price (stage 0): kept on the shipment, shown to the buyer, paid to the store on receipt
     if (b.delivery_price !== undefined) {
+      if (sh.store_id !== s.id) throw new HttpError(403, "forbidden", "Only the store that delivers names its price");
       if (!byStore) throw bad("not_store_delivery", "The delivery price is named by the store only when the store delivers");
       if (!["new", "assembling", "on_way"].includes(sh.status)) throw bad("bad_status", "The delivery price can be named until the order is handed over");
-      const price = Math.round(Number(b.delivery_price)); if (!Number.isFinite(price) || price < 0 || price > 5_000_000) throw bad("bad_price", "Delivery price: 0 … 5 000 000 so'm");
-      if (price !== (sh.price || 0) || !sh.price_named_at) { db.run("UPDATE shipments SET price=?, price_named_at=? WHERE id=?", price, Date.now(), sh.id); audit(req, "ship.delivery_price", sh.id, { price }); setImmediate(() => notify.deliveryPriced(sh.id)); }
+      const price = deliveryPriceOf(b.delivery_price); if (price === null) throw bad("bad_price", "Delivery price: 0 … 5 000 000 so'm");
+      if (price !== (sh.price || 0) || !sh.price_named_at) { lim.hit("delprice:" + sh.id, 5, 3600_000); db.run("UPDATE shipments SET price=?, price_named_at=? WHERE id=?", price, Date.now(), sh.id); audit(req, "ship.delivery_price", sh.id, { price }); setImmediate(() => notify.deliveryPriced(sh.id)); }
       if (b.status === undefined) return { ok: true, delivery_price: price };
     }
     if (!(SELLER_MOVES[sh.status] || []).includes(b.status) || (b.status === "ready" && sh.tariff) || (b.status === "searching" && (!sh.tariff || byStore)) || (b.status === "on_way" && sh.status === "assembling" && !byStore)) throw bad("bad_status", `Cannot move from ${sh.status} to ${b.status}`);
@@ -972,7 +993,7 @@ export function createApp(cfg, log = console) {
     if (db.get("SELECT 1 FROM payouts WHERE store_id=? AND status='requested'", s.id)) throw new HttpError(409, "payout_pending", "The previous request is still being processed");
     const id = Number(db.run("INSERT INTO payouts(store_id,amount,payout_to,requested_at) VALUES(?,?,?,?)", s.id, amount, to, Date.now()).lastInsertRowid);
     audit(req, "payout.request", s.id, { amount });
-    notify.admins(`💸 Запрос выплаты #${id}: ${s.name.replace(/[<>&]/g, "")} — ${amount.toLocaleString("ru-RU")} сум на ${to.replace(/[<>&]/g, "")}. Отметьте «Выплачено» в админке после перевода.`);
+    notify.owners(`💸 Запрос выплаты #${id}: ${s.name.replace(/[<>&]/g, "")} — ${amount.toLocaleString("ru-RU")} сум на ${to.replace(/[<>&]/g, "")}. Отметьте «Выплачено» в админке после перевода.`);
     return { ok: true, finance: storeFinance(s.id), payout: db.get("SELECT * FROM payouts WHERE id=?", id) };
   });
   /* Monthly statement for the seller: every completed sale with the two deductions, refunds, payouts and other entries,
@@ -1021,9 +1042,10 @@ export function createApp(cfg, log = console) {
   r.get("/api/admin/audit", req => { needOwner(req); return { log: db.all("SELECT a.*, u.name, u.phone FROM audit a LEFT JOIN users u ON u.id=a.user_id ORDER BY a.id DESC LIMIT 100") }; });
   r.get("/api/admin/stores", req => { needAdmin(req); return { stores: db.all("SELECT s.*, u.name owner_name, u.phone owner_phone FROM stores s LEFT JOIN users u ON u.id=s.owner_id ORDER BY s.status='pending' DESC, s.created_at DESC").map(s => ({ ...publicStore(s), owner_name: s.owner_name, owner_phone: s.owner_phone, loc_src: s.loc_src, created: s.created_at, note: s.review_note, free_until: s.free_until, promo: inPromo(s) })) }; });
   r.patch("/api/admin/stores/:id", async (req, res, p) => {
-    needAdmin(req); const b = await readJson(req);
+    const adm = needAdmin(req), b = await readJson(req);
     const s = db.get("SELECT * FROM stores WHERE id=?", p.id); if (!s) throw new HttpError(404, "not_found", "Store not found");
     if (b.status && !["active", "pending", "rejected", "blocked"].includes(b.status)) throw bad("bad_status", "Unknown status");
+    if ((b.owner_phone !== undefined || b.free_until !== undefined) && !isOwner(adm)) throw new HttpError(403, "owner_only", "Only the owner of Imorat Go moves a store to another person or changes its free months");
     // validate everything before the first write, so a bad owner phone does not leave a half-applied change
     const newOwner = b.owner_phone ? db.get("SELECT * FROM users WHERE phone=?", parsePhone(b.owner_phone)) : null;
     if (b.owner_phone && !newOwner) throw new HttpError(404, "user_not_found", "The owner must sign in once first");
@@ -1084,7 +1106,8 @@ export function createApp(cfg, log = console) {
       if (!sh || !u || st?.owner_id !== u.id) return { error: "forbidden" };
       const fo = JSON.parse(db.get("SELECT form FROM orders WHERE id=?", sh.order_id)?.form || "{}");
       if (!(sh.tariff && fo.delivery_by === "store") || !["new", "assembling", "on_way"].includes(sh.status)) return { error: "bad_status" };
-      const p = Math.round(Number(price)); if (!Number.isFinite(p) || p < 0 || p > 5_000_000) return { error: "bad_price" };
+      const p = deliveryPriceOf(price); if (p === null) return { error: "bad_price" };
+      try { lim.hit("delprice:" + sh.id, 5, 3600_000); } catch { return { error: "rate_limited" }; }
       db.run("UPDATE shipments SET price=?, price_named_at=? WHERE id=?", p, Date.now(), sh.id); audit({ user: u, ip: "telegram" }, "ship.delivery_price", sh.id, { price: p });
       setImmediate(() => notify.deliveryPriced(sh.id)); return { ok: true };
     }
@@ -1120,7 +1143,7 @@ export function createApp(cfg, log = console) {
       if (!res.headersSent && out !== undefined) send(res, 200, out);
     } catch (e) {
       const status = e instanceof HttpError ? e.status : 500;
-      if (status === 500) { log.error("[error]", req.method, url.pathname, e); if (Date.now() - (server.lastAlert || 0) > 600000) { server.lastAlert = Date.now(); notify.admins(`⚠️ Ошибка сервера: ${req.method} ${url.pathname}\n${String(e?.message ?? e).slice(0, 200).replace(/[<>&]/g, "")}`); } }
+      if (status === 500) { log.error("[error]", req.method, url.pathname, e); if (Date.now() - (server.lastAlert || 0) > 600000) { server.lastAlert = Date.now(); notify.owners(`⚠️ Ошибка сервера: ${req.method} ${url.pathname}\n${String(e?.message ?? e).slice(0, 200).replace(/[<>&]/g, "")}`); } }
       if (!res.headersSent) send(res, status, { error: e instanceof HttpError ? e.code : "server_error", message: e instanceof HttpError ? e.message : "Something went wrong", ...(e.extra || {}) });
       else res.end();
     } finally {
@@ -1198,7 +1221,7 @@ export function createApp(cfg, log = console) {
       const day = new Date(Date.now() + 5 * 3600000).toISOString().slice(0, 10), file = join(cfg.backupDir, `imorat-${day}.db`);
       if (!existsSync(file)) { db.raw.exec(`VACUUM INTO '${file.replace(/'/g, "''")}'`); log.info("[backup] saved", file); }
       readdirSync(cfg.backupDir).filter(f => /^imorat-\d{4}-\d{2}-\d{2}\.db$/.test(f)).sort().slice(0, -14).forEach(f => unlinkSync(join(cfg.backupDir, f)));
-    } catch (e) { log.error("[backup] failed", e.message); notify.admins("⚠️ Резервная копия базы не сохранилась: " + String(e.message).slice(0, 150)); }
+    } catch (e) { log.error("[backup] failed", e.message); notify.owners("⚠️ Резервная копия базы не сохранилась: " + String(e.message).slice(0, 150)); }
   }
   const timers = [setInterval(() => { try { sweep(); } catch (e) { log.error("[sweep]", e); } if (channel.enabled()) channel.daily().catch(e => log.error("[channel]", e)); try { cx.stockSweep(); } catch (e) { log.error("[stock]", e); } }, 30000), setInterval(backup, 3600000)];
   server.on("listening", () => { tg.start(); backup(); });

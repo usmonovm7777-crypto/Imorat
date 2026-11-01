@@ -1375,12 +1375,15 @@ test("Stage 0: pay on receipt, the store delivers itself, no invented delivery p
     assert.equal(oP.data.order.del_store, null, "no delivery price until the store names one");
     const shP = a0.db.get("SELECT * FROM shipments WHERE order_id=(SELECT id FROM orders WHERE num=?)", oP.data.order.num);
     assert.equal((await c("PATCH", `/api/seller/shipments/${shP.id}`, { delivery_price: 9e6 }, seller)).data.error, "bad_price");
+    for (const v of [null, "", true, [], {}, "abc", 1.5, -1, "1e3"]) assert.equal((await c("PATCH", `/api/seller/shipments/${shP.id}`, { delivery_price: v }, seller)).data.error, "bad_price", "refused: " + JSON.stringify(v));
+    assert.equal((await c("PATCH", `/api/seller/shipments/${shP.id}`, { delivery_price: "30 000" }, seller)).data.delivery_price, 30000, "digits with spaces, as people type them");
     assert.equal((await c("PATCH", `/api/seller/shipments/${shP.id}`, { delivery_price: 25000, status: "assembling" }, seller)).status, 200, "price and the move in one call");
     const priced = await until(() => tgSent.find(m => String(m.chat_id) === "5151" && /доставка заказа .* — 25 000 сум/.test(m.text || "")));
     assert.match(priced.text, new RegExp(`К оплате при получении: ${(oP.data.order.total + 25000).toLocaleString("ru-RU").replace(/\u00a0/g, " ")} сум`.replace(/\s/g, "\\s")));
     const oP2 = (await c("GET", `/api/orders/${oP.data.order.num}`, null, t)).data.order; assert.equal(oP2.del_store, 25000); assert.equal(oP2.ships[0].delivery_price, 25000);
     assert.equal((await c("GET", "/api/seller/summary", null, seller)).data.orders.find(x => x.num === oP.data.order.num).delivery_price, 25000);
     assert.equal((await c("PATCH", `/api/seller/shipments/${shP.id}`, { delivery_price: 0 }, seller)).status, 200, "free delivery is a price too");
+    { let r; for (let i = 1; i <= 5; i++) r = await c("PATCH", `/api/seller/shipments/${shP.id}`, { delivery_price: 1000 * i }, seller); assert.equal(r.data.error, "rate_limited", "the price is not changed more than five times an hour (3 changes above + these)"); }
     await until(() => tgSent.find(m => String(m.chat_id) === "5151" && /доставка заказа .* — бесплатно/.test(m.text || "")));
     // the same from Telegram: after "Принять" the bot asks the store for the price, a typed number reaches the buyer
     const oT = await c("POST", "/api/orders", { lines: [{ id: 1, store: "usta", q: 1 }], form }, t); const shT = a0.db.get("SELECT * FROM shipments WHERE order_id=(SELECT id FROM orders WHERE num=?)", oT.data.order.num);
@@ -1432,7 +1435,7 @@ test("Stage 0: pay on receipt, the store delivers itself, no invented delivery p
 
 test("Owner by login/password from .env, helper accounts the owner adds: moderation yes, money and analytics no", async () => {
   assert.ok(verifyPassword("Owner-Pass-123!", hashPassword("Owner-Pass-123!"))); assert.equal(verifyPassword("Owner-Pass-123!", hashPassword("Other-Pass-123!")), false); assert.equal(verifyPassword("x", null), false);
-  assert.throws(() => hashPassword("short"), /weak_password|10 characters/);
+  assert.throws(() => hashPassword("short"), /weak_password|10 to 256/); assert.throws(() => hashPassword(1234567890123), /weak_password|must be a string/);
   // 1) wrong and right password; unknown login answers the same way
   assert.equal((await call("POST", "/api/auth/staff", { login: "umv_test", password: "nope-nope-nope" })).status, 401);
   assert.equal((await call("POST", "/api/auth/staff", { login: "nobody", password: "Owner-Pass-123!" })).data.error, "bad_login");
@@ -1481,11 +1484,69 @@ test("Owner by login/password from .env, helper accounts the owner adds: moderat
   assert.equal((await call("GET", "/api/me", null, globalThis.ADMIN)).data.user.owner, true);
   const buyer = (await login("998880099")).data.token; assert.equal((await call("GET", "/api/me", null, buyer)).data.user.owner, false); assert.equal((await call("GET", "/api/me", null, buyer)).data.user.admin, false);
   assert.equal((await call("POST", "/api/me/password", { old: "x", password: "Whatever-Pass-1" }, buyer)).data.error, "no_password");
-  // 7) brute force on one login stops after 10 tries in a quarter of an hour
+  // 7) a temporary password opens nothing but the password form, even with the authenticator on
+  const tmp = hl2.data.token; assert.equal((await call("GET", "/api/me", null, tmp)).status, 401, "disable+enable ended that session; sign in again");
+  assert.equal((await call("PATCH", `/api/admin/staff/${mk.data.staff.id}`, { reset_mfa: true }, owner)).data.staff.mfa, false, "the owner resets a lost authenticator");
+  const hl3 = await call("POST", "/api/auth/staff", { login: "dilshod", password: rs.data.password }); assert.equal(hl3.status, 200); assert.equal(hl3.data.user.staff.must_change, true);
+  assert.equal((await call("GET", "/api/admin/problems", null, hl3.data.token)).data.error, "password_change_required");
+  const rs2 = { data: { password: rs.data.password } };
+  assert.equal((await call("POST", "/api/me/password", { old: rs2.data.password, password: rs2.data.password }, hl3.data.token)).data.error, "weak_password", "the temporary password cannot be kept");
+  assert.equal((await call("POST", "/api/me/password", { old: rs2.data.password, password: 12345678901 }, hl3.data.token)).data.error, "weak_password", "a number is not a password");
+  assert.equal((await call("POST", "/api/me/password", { old: ["x"], password: "Helper-Pass-789!" }, hl3.data.token)).data.error, "bad_login");
+  const ch2 = await call("POST", "/api/me/password", { old: rs2.data.password, password: "Helper-Pass-789!" }, hl3.data.token); assert.equal(ch2.status, 200);
+  const hs2 = await call("POST", "/api/admin/mfa/setup", null, ch2.data.token); const helper2 = (await call("POST", "/api/admin/mfa/verify", { code: totp(hs2.data.secret, Date.now() + 30000) }, ch2.data.token)).data.token; assert.ok(helper2, "a new authenticator after the reset");
+  assert.equal((await call("GET", "/api/admin/problems", null, helper2)).status, 200);
+  // 8) a staff account keeps its role and owns no store; a helper may not move a store or change its free months
+  assert.equal((await call("PATCH", "/api/me", { role: "pro" }, helper2)).data.error, "staff_account");
+  assert.equal((await call("PATCH", "/api/me", { name: "Дильшод Х." }, helper2)).status, 200, "the name still changes");
+  assert.equal((await call("POST", "/api/seller/store", { name: "Магазин помощника", descr: "x".repeat(20), cats: ["build"], phone: "998712223344", addr: "ул. Такая, 1", district: "chil" }, helper2)).data.error, "staff_account");
+  const anyStore = (await call("GET", "/api/admin/stores", null, helper2)).data.stores[0];
+  assert.equal((await call("PATCH", `/api/admin/stores/${anyStore.id}`, { free_until: "" }, helper2)).data.error, "owner_only");
+  assert.equal((await call("PATCH", `/api/admin/stores/${anyStore.id}`, { owner_phone: "998880099" }, helper2)).data.error, "owner_only");
+  assert.equal((await call("PATCH", `/api/admin/stores/${anyStore.id}`, { note: "проверено" }, helper2)).status, 200, "moderation notes are the helper's job");
+  // 9) brute force: FAILURES are counted per login+IP, so a stranger guessing the owner's login cannot lock the owner out; a success clears the count
+  for (let i = 0; i < 8; i++) await call("POST", "/api/auth/staff", { login: "umv_test", password: "guess-" + i });
+  assert.equal((await call("POST", "/api/auth/staff", { login: "umv_test", password: "Owner-Pass-123!" })).status, 200, "the owner still signs in after 8 failures from this address");
   let last; for (let i = 0; i < 12; i++) last = await call("POST", "/api/auth/staff", { login: "dilshod", password: "guess-" + i });
   assert.equal(last.status, 429);
-  // the audit trail names the sign-ins and the failures
-  const log = (await call("GET", "/api/admin/audit", null, owner)).data.log; assert.ok(log.some(x => x.action === "staff.login_fail")); assert.ok(log.some(x => x.action === "staff.create"));
+  assert.equal((await call("POST", "/api/auth/staff", { login: ["dilshod"], password: { x: 1 } })).status, 401, "odd JSON types answer like a wrong password");
+  // the audit trail names the sign-ins and the failures, and keeps only real-looking logins
+  const log = (await call("GET", "/api/admin/audit", null, owner)).data.log; assert.ok(log.some(x => x.action === "staff.login_fail" && x.target === "dilshod")); assert.ok(log.some(x => x.action === "staff.create"));
+  await call("POST", "/api/auth/staff", { login: "<script>alert(1)</script>", password: "x" }); assert.ok(!(await call("GET", "/api/admin/audit", null, owner)).data.log.some(x => /script/.test(x.target || "")));
+});
+
+test("Owner restart: a new password in .env ends old sessions, no OWNER_LOGIN disables the row, a helper on the owner's login is renamed", async () => {
+  const d6 = mkdtempSync(join(tmpdir(), "imorat-own-"));
+  const env = { JWT_SECRET: "x", DB_PATH: join(d6, "o.db"), UPLOADS_DIR: join(d6, "up"), ADMIN_PHONES: "998901111111", SMS_MODE: "dev", OTP_PER_IP_HOUR: "200" };
+  const boot = async extra => { const a = createApp(loadConfig({ ...env, ...extra }), { info() {}, warn() {}, error: console.error }); await new Promise(r => a.listen(0, "127.0.0.1", r)); const b = `http://127.0.0.1:${a.address().port}`;
+    return { a, c: async (method, path, body, token) => { const r = await fetch(b + path, { method, headers: { "content-type": "application/json", ...(token ? { authorization: "Bearer " + token } : {}) }, body: body ? JSON.stringify(body) : undefined }); return { status: r.status, data: await r.json() }; }, stop() { a.stopJobs(); a.close(); a.closeAllConnections(); a.db.raw.close(); } }; };
+  try {
+    let s = await boot({ OWNER_LOGIN: "boss", OWNER_PASSWORD_HASH: hashPassword("First-Pass-123!") });
+    const t1 = (await s.c("POST", "/api/auth/staff", { login: "boss", password: "First-Pass-123!" })).data.token; assert.ok(t1);
+    // a helper is added under a login the owner will take later (the owner's env login wins on restart)
+    const adm = (await s.c("POST", "/api/auth/otp/verify", { phone: "998901111111", code: (await s.c("POST", "/api/auth/otp/send", { phone: "998901111111" })).data.dev_code })).data.token;
+    const setup = await s.c("POST", "/api/admin/mfa/setup", null, adm); const admM = (await s.c("POST", "/api/admin/mfa/verify", { code: totp(setup.data.secret, Date.now() + 30000) }, adm)).data.token;
+    const mk = await s.c("POST", "/api/admin/staff", { login: "Chief" }, admM); assert.equal(mk.status, 200, JSON.stringify(mk.data));
+    s.stop();
+    // 1) the same login with a new hash: the old owner token is dead, the new password works
+    s = await boot({ OWNER_LOGIN: "boss", OWNER_PASSWORD_HASH: hashPassword("Second-Pass-456!") });
+    assert.equal((await s.c("GET", "/api/me", null, t1)).status, 401, "rotating the password in .env signs the owner out everywhere");
+    assert.equal((await s.c("POST", "/api/auth/staff", { login: "boss", password: "First-Pass-123!" })).status, 401);
+    const t2 = (await s.c("POST", "/api/auth/staff", { login: "boss", password: "Second-Pass-456!" })).data.token; assert.ok(t2);
+    s.stop();
+    // 2) OWNER_LOGIN renamed onto the helper's login (case differs): the helper row is renamed and disabled, the owner signs in, no crash
+    s = await boot({ OWNER_LOGIN: "chief", OWNER_PASSWORD_HASH: hashPassword("Second-Pass-456!") });
+    assert.equal((await s.c("GET", "/api/me", null, t2)).status, 401, "a new login is a new identity for old tokens too");
+    const t3 = await s.c("POST", "/api/auth/staff", { login: "chief", password: "Second-Pass-456!" }); assert.equal(t3.status, 200); assert.equal(t3.data.user.owner, true);
+    assert.equal((await s.c("POST", "/api/auth/staff", { login: "Chief", password: mk.data.password })).status, 401, "the helper's old login now belongs to the owner");
+    const rows = s.a.db.all("SELECT login, disabled, from_env FROM staff ORDER BY from_env DESC"); assert.equal(rows[0].login, "chief"); assert.match(rows[1].login, /^Chief\.old-/); assert.equal(rows[1].disabled, 1);
+    s.stop();
+    // 3) no OWNER_LOGIN at all: the env row is disabled and its sessions end; phone admins still work
+    s = await boot({});
+    assert.equal((await s.c("GET", "/api/me", null, t3.data.token)).status, 401);
+    assert.equal((await s.c("POST", "/api/auth/staff", { login: "chief", password: "Second-Pass-456!" })).status, 401);
+    s.stop();
+  } finally { rmSync(d6, { recursive: true, force: true }); }
 });
 
 test("App: push tokens, order notifications through FCM and APNs, dead tokens dropped, reviewers' fixed code, account deletion", async () => {

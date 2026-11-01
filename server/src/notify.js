@@ -123,10 +123,15 @@ export function createNotify({ db, cfg, tg, push, sms, ref, log = console }) {
       const text = `Заказ ${c.o.num}: перевозчик не смог выделить грузчика на этот рейс — водитель привезёт заказ к подъезду, разгрузка у машины. Плату за помощь мы вернём; если нужна помощь с подъёмом, напишите в поддержку.`;
       if (c.buyer.tg_chat) safe(tg.send(c.buyer.tg_chat, h(text)));
       safe(push.toUser(c.buyer.id, { title: `Imorat Go · ${c.o.num}`, body: text, url: `${cfg.siteUrl}#orders`, tag: "order-" + c.o.num }));
-      this.admins(`🧰 Отправление #${c.s.id} (заказ ${c.o.num}): Яндекс не принял заявку с грузчиком, курьер заказан без него. Верните покупателю плату за разгрузку и при необходимости организуйте подъём.`);
+      this.owners(`🧰 Отправление #${c.s.id} (заказ ${c.o.num}): Яндекс не принял заявку с грузчиком, курьер заказан без него. Верните покупателю плату за разгрузку и при необходимости организуйте подъём.`);
     },
+    /* everyone who runs the place: the owner(s) and the helpers — moderation, orders, complaints */
     async admins(text) {
       for (const a of db.all(`SELECT u.* FROM users u LEFT JOIN staff s ON s.user_id=u.id WHERE u.tg_chat IS NOT NULL AND (u.phone IN (${cfg.admins.map(() => "?").join(",") || "''"}) OR (s.user_id IS NOT NULL AND s.disabled=0))`, ...cfg.admins)) safe(tg.send(a.tg_chat, text));
+    },
+    /* the owner(s) only: money (payouts, refunds), server errors, backups */
+    async owners(text) {
+      for (const a of db.all(`SELECT u.* FROM users u LEFT JOIN staff s ON s.user_id=u.id WHERE u.tg_chat IS NOT NULL AND (u.phone IN (${cfg.admins.map(() => "?").join(",") || "''"}) OR (s.user_id IS NOT NULL AND s.disabled=0 AND s.role='owner'))`, ...cfg.admins)) safe(tg.send(a.tg_chat, text));
     }
   };
 }

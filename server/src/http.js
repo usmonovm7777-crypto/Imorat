@@ -73,6 +73,7 @@ export class Limiter {
     if (v.n > max) throw new HttpError(429, "rate_limited", "Too many requests, try again later", { retry_in: Math.ceil((v.reset - t) / 1000) });
     return max - v.n;
   }
+  forget(key) { this.m.delete(key); } // a success clears a failure counter
 }
 
 /* X-Forwarded-For is trusted only behind our own proxy (TRUST_PROXY=1), otherwise anyone could fake it to dodge rate limits */

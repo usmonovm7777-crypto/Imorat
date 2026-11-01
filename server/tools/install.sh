@@ -84,7 +84,8 @@ if [ "$DRY" = 0 ] && [ "$SKIP_SYSTEM" = 0 ]; then (cd "$REPO_DIR/server" && dock
 if [ -n "$OWNER" ] && [ "$DRY" = 0 ]; then
   step "Owner's password sign-in ($OWNER)"
   echo "  Type a password for the panel (10+ characters). It is not shown and is not saved anywhere: only its hash goes to .env."
-  IMORAT_REPO_DIR="$REPO_DIR" bash "$REPO_DIR/server/tools/imorat.sh" owner --login "$OWNER" --no-restart || red "  owner password not set — run later: imorat owner --login $OWNER"
+  # the API was started in step 7 with no owner yet: `imorat owner` writes the hash to .env and restarts the API so the login works at once
+  IMORAT_REPO_DIR="$REPO_DIR" bash "$REPO_DIR/server/tools/imorat.sh" owner --login "$OWNER" || red "  owner password not set — run later: imorat owner --login $OWNER"
 fi
 
 echo; grn "Done."; echo
