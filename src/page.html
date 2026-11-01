@@ -1071,6 +1071,7 @@ html.fx .fx-btn.th-btn, .fx-btn.th-btn { background: var(--surface); color: var(
 .lm-nopos { display: inline-flex; align-items: center; gap: 4px; }
 .fresh { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); font-size: 12px; line-height: 1.3; } .fresh.stale { color: var(--signal); }
 .offer-fresh { grid-column: 1 / -1; }
+.shop-row.nostock { border-color: color-mix(in srgb, var(--signal) 45%, var(--line)); background: color-mix(in srgb, var(--signal) 5%, var(--surface)); }
 .fresh-panel { display: flex; gap: 10px 14px; align-items: center; flex-wrap: wrap; } .fresh-panel span { flex: 1 1 240px; } .fresh-panel.stale { border-color: color-mix(in srgb, var(--signal) 50%, var(--line)); background: color-mix(in srgb, var(--signal) 7%, var(--surface)); }
 .addr-line { display: flex; gap: 8px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; font-size: 14px; background: var(--bg); }
 .addr-line svg { flex: none; margin-top: 3px; color: var(--brand); }
@@ -2025,7 +2026,7 @@ let stockOv = LS.get("imorat.stock", {});
 let photos = LS.get("imorat.photos", {});
 const stockOf = (p, s) => { const k = p.id + "|" + s; return k in stockOv ? stockOv[k] : (p.offers.find(o => o.store === s)?.stock ?? 0); };
 const minPrice = p => Math.min(...p.offers.map(o => o.price));
-const bestOffer = p => [...p.offers].sort((a, b) => (stockOf(p, b.store) > 0) - (stockOf(p, a.store) > 0) || a.price - b.price)[0];
+const bestOffer = (p, q = 1) => [...p.offers].sort((a, b) => (stockOf(p, b.store) >= q) - (stockOf(p, a.store) >= q) || a.price - b.price)[0]; // the cheapest store that can supply the quantity
 const monthly = n => Math.ceil(n / 12 / 1000) * 1000;
 const fromP = n => L("от " + fmt(n), fmt(n) + "dan", "from " + fmt(n));
 /* Wholesale tiers for bulk materials: −3% from 10 units, −6% from 50 */
@@ -2858,7 +2859,7 @@ function closeModal() { setPanel($("#modal"), false); syncLock(); }
 /* ================= Cart actions ================= */
 function addToCart(id, store, q = 1, silent) {
   const p = PROD[id]; if (!p) return;
-  const s = store || bestOffer(p).store, k = p.id + "|" + s;
+  const s = store || bestOffer(p, q).store, k = p.id + "|" + s;
   cart[k] = (cart[k] || 0) + q; saveCart(); trackEv({ t: "cart", id: p.id, store: s });
   if (!silent) toast(`${pName(p)} — ${L("в корзине", "savatda")}`);
   refreshCards();
@@ -2892,7 +2893,62 @@ function closeDrawer() { drawerView = null; setPanel($("#drawer"), false); showS
 function renderDrawer() {
   $("#dBack").innerHTML = ui("back", 16); $("#dClose").innerHTML = ui("close", 16);
   $("#dBack").hidden = !["checkout", "track", "orders", "watch", "projects"].includes(drawerView);
-  ({ cart: dCart, checkout: dCheckout, track: dTrack, profile: dProfile, favs: dFavs, orders: dOrders, compare: dCompare, watch: dWatch, projects: dProjects, homeSetup: dHomeSetup })[drawerView]?.();
+  ({ cart: dCart, checkout: dCheckout, track: dTrack, profile: dProfile, favs: dFavs, orders: dOrders, compare: dCompare, watch: dWatch, projects: dProjects, homeSetup: dHomeSetup, repeat: dRepeat })[drawerView]?.();
+}
+/* ---- Repeat an order: nothing goes into the cart until the current prices and stock are checked (on the server in working
+   mode) and the buyer has seen what changed. A line whose store no longer has it is offered from another store only as a
+   choice the buyer confirms; a line nobody has stays out. ---- */
+let repeat = null; // { num, rows: [{ id, q, store, oldPrice, price, status: same|price|stock|unavailable, alt: [{store, price, stock}], pick, confirmed }], loading, error }
+async function repeatOrder(num) {
+  const o = orders.find(x => x.num === num); if (!o) return;
+  const lines = o.ships.filter(sh => sh.status !== "cancelled" || o.ships.length === 1).flatMap(sh => sh.lines.map(l => ({ id: l.id, q: l.q, store: sh.store, oldPrice: l.price, name: l.name || PROD[l.id]?.ru || ("#" + l.id) })));
+  if (!lines.length) return toast(L("В этом заказе нечего повторять", "Bu buyurtmada takrorlaydigan narsa yo‘q", "Nothing to repeat in this order"));
+  repeat = { num, rows: [], loading: true }; openDrawer("repeat", num);
+  let quote = null, problems = [];
+  if (API) {
+    try { const r = await api("POST", "/api/quote", { lines: lines.map(l => ({ id: l.id, store: l.store, q: l.q })), form: { mode: "pickup", district: form.district || district, name: "x", phone: "x" } }); quote = r.quote; problems = r.problems || []; }
+    catch (e) { if (e.code === "cart_changed") problems = e.data?.problems || []; else { repeat = { num, rows: [], error: apiErr(e) }; return renderDrawer(); } }
+  }
+  const srvLine = (id, store) => quote?.ships?.find(sh => sh.store === store)?.lines?.find(l => l.id === id);
+  repeat.rows = lines.map(l => {
+    const p = PROD[l.id], pr = problems.find(x => x.id === l.id && x.store === l.store), sl = srvLine(l.id, l.store);
+    const stockHere = p ? stockOf(p, l.store) : 0, offerHere = p?.offers.find(x => x.store === l.store);
+    const price = sl ? sl.price : offerHere ? offerHere.price : null;
+    const alt = p ? p.offers.filter(x => x.store !== l.store && stockOf(p, x.store) >= l.q).sort((a, b) => a.price - b.price).slice(0, 3).map(x => ({ store: x.store, price: x.price, stock: stockOf(p, x.store) })) : [];
+    let status = "same";
+    if (!p || !offerHere || pr?.reason === "unavailable") status = "unavailable";
+    else if (pr?.reason === "stock" || stockHere < l.q) status = "stock";
+    else if (price !== l.oldPrice) status = "price";
+    const ok = status === "same" || status === "price";
+    return { ...l, name: p ? pName(p) : l.name, price, stock: stockHere, status, alt, pick: ok ? l.store : null, confirmed: status === "same" };
+  });
+  repeat.loading = false; renderDrawer();
+}
+function dRepeat() {
+  $("#dTitle").textContent = L("Повтор заказа", "Buyurtmani takrorlash", "Repeat order") + (repeat?.num ? " " + repeat.num : "");
+  $("#dBack").hidden = false;
+  if (!repeat || repeat.loading) { $("#dBody").innerHTML = `<div class="note">${L("Проверяем сегодняшние цены и остатки…", "Bugungi narx va qoldiqlar tekshirilmoqda…", "Checking today's prices and stock…")}</div>`; $("#dFoot").innerHTML = ""; return; }
+  if (repeat.error) { $("#dBody").innerHTML = `<div class="note warnn">${esc(repeat.error)}</div>`; $("#dFoot").innerHTML = `<button class="btn btn-line" type="button" data-repeat="${esc(repeat.num)}" style="width:100%">${L("Проверить ещё раз", "Yana tekshirish", "Check again")}</button>`; return; }
+  const R = repeat.rows, changed = R.filter(r => r.status !== "same").length;
+  const oldSum = R.reduce((a, r) => a + r.oldPrice * r.q, 0);
+  const ready = R.filter(r => r.confirmed && r.pick && PROD[r.id]?.offers.some(x => x.store === r.pick));
+  const newSum = ready.reduce((a, r) => { const o = PROD[r.id].offers.find(x => x.store === r.pick); return a + (o ? o.price : 0) * r.q; }, 0);
+  const sn = id => STORE[id]?.name || id;
+  $("#dBody").innerHTML = `<div class="note">${changed ? L(`С прошлого раза изменилось: ${changed} ${plural(changed, ["позиция", "позиции", "позиций"])}. Подтвердите каждую — в корзину попадёт только то, что вы отметите.`, `O‘tgan safardan beri ${changed} ta pozitsiya o‘zgardi. Har birini tasdiqlang — savatga faqat belgilaganlaringiz tushadi.`, `${changed} ${changed === 1 ? "item has" : "items have"} changed since last time. Confirm each one — only what you tick goes to the cart.`) : L("Цены и наличие не изменились — всё готово к повтору.", "Narx va mavjudlik o‘zgarmadi — takrorlashga tayyor.", "Prices and stock have not changed — ready to repeat.")}</div>
+    ${R.map((r, i) => {
+      const st = r.status, badge = st === "same" ? "" : `<span class="pill ${st === "price" ? "acc" : "closed"}">${st === "price" ? L("цена изменилась", "narx o‘zgardi", "price changed") : st === "stock" ? (r.stock ? L(`осталось ${r.stock}`, `${r.stock} ta qoldi`, `${r.stock} left`) : L("нет в наличии", "mavjud emas", "out of stock")) : L("больше не продаётся", "endi sotilmaydi", "no longer sold")}</span>`;
+      const priceTxt = st === "unavailable" ? "" : st === "price" ? `<s class="mu">${fmt(r.oldPrice)}</s> <b class="num">${fmt(r.price)}</b>` : `<b class="num">${fmt(r.oldPrice)}</b>`;
+      const canHere = st === "same" || st === "price";
+      const choices = (canHere ? [{ store: r.store, price: r.price, stock: r.stock, here: true }] : []).concat(r.alt);
+      return `<div class="track" style="gap:8px"><div class="track-h" style="align-items:start"><b>${esc(r.name)} × ${r.q}</b>${badge}</div>
+        <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:14px"><span class="mu">${esc(sn(r.store))}</span><span>${priceTxt}</span></div>
+        ${choices.length ? `<div class="opts">${choices.map(c => `<label class="opt"><input type="radio" name="rp${i}" ${r.pick === c.store ? "checked" : ""} data-rp-store="${i}|${esc(c.store)}"><span><b>${esc(sn(c.store))}${c.here ? "" : ` <small class="mu">· ${L("замена магазина", "do‘kon almashtirish", "another store")}</small>`}</b><small>${L("в наличии", "mavjud", "in stock")} ${c.stock}</small></span><span class="num">${fmt(c.price * r.q)}</span></label>`).join("")}
+          <label class="opt"><input type="radio" name="rp${i}" ${!r.pick ? "checked" : ""} data-rp-store="${i}|"><span><b>${L("Пропустить", "O‘tkazib yuborish", "Skip")}</b></span><span></span></label></div>
+        ${r.pick && (st !== "same" || !r.confirmed) ? `<label class="check"><input type="checkbox" data-rp-ok="${i}" ${r.confirmed ? "checked" : ""}><span>${L("Подтверждаю эту позицию", "Bu pozitsiyani tasdiqlayman", "I confirm this item")}</span></label>` : ""}`
+        : `<small style="color:var(--signal)">${L("Сейчас нет ни в одном магазине — позиция не добавится", "Hozir hech bir do‘konda yo‘q — pozitsiya qo‘shilmaydi", "Not available at any store right now — the item will not be added")}</small>`}</div>`;
+    }).join("")}`;
+  $("#dFoot").innerHTML = `<div style="display:grid;gap:6px"><div class="sumrow"><span class="mu">${L("Было", "Oldin", "Then")}</span><span class="num">${fmt(oldSum)}</span></div><div class="sumrow total"><span>${L("Сейчас", "Hozir", "Now")} · ${ready.length} ${L("из", "/", "of")} ${R.length}</span><span class="num">${fmt(newSum)}</span></div></div>
+    <button class="btn btn-primary" type="button" data-act="repeat-add" ${ready.length ? "" : "disabled"} style="width:100%">${ui("cart", 16)} ${L("В корзину", "Savatga", "Add to cart")} · ${ready.length}</button>`;
 }
 function totalsHTML(goods, svc, disc, extra = "") {
   return `<div class="sumrow"><span class="mu">${L("Товары", "Mahsulotlar")}</span><span class="num">${fmt(goods)}</span></div>
@@ -6425,9 +6481,11 @@ function shopBuild(text) {
   });
   shop.rows = rows;
 }
+/* the most one store can supply right now; the list never promises more than that */
+const shopAvail = (p, q) => { const mx = Math.max(0, ...p.offers.map(o => stockOf(p, o.store))); return { ok: mx >= q, max: mx }; };
 function renderShop() {
   if (route.view !== "shop") return;
-  const rows = shop.rows, chosen = (rows || []).filter(r => PROD[r.pick]);
+  const rows = shop.rows, picked = (rows || []).filter(r => PROD[r.pick]), chosen = picked.filter(r => shopAvail(PROD[r.pick], r.qty).ok), short = picked.length - chosen.length;
   const total = chosen.reduce((a, r) => a + minPrice(PROD[r.pick]) * r.qty, 0);
   $("#app").innerHTML = `<div class="wrap shop">
     <nav class="crumbs"><button type="button" data-go="home">${L("Главная", "Asosiy")}</button>${ui("chev", 12)}<span>${L("Список покупок", "Xaridlar ro‘yxati")}</span></nav>
@@ -6442,10 +6500,11 @@ function renderShop() {
     </div>
     <div class="panel shop-out">${!rows ? `<p class="mu" style="margin:0">${L("Здесь появятся найденные товары.", "Topilgan mahsulotlar shu yerda chiqadi.")}</p>` : !rows.length ? `<p class="mu" style="margin:0">${L("Не нашли в тексте ни одного товара.", "Matnda birorta mahsulot topilmadi.")}</p>` : `
       <div class="panel-h"><h2 class="h-m">${L("Нашли", "Topildi")} ${chosen.length} ${L("из", "/")} ${rows.length}</h2><span class="num"><b>${fmt(total)}</b></span></div>
-      <div class="shop-rows">${rows.map((r, i) => { const p = PROD[r.pick]; return `<div class="shop-row ${p ? (r.sure ? "" : "chk") : "off"}"><div class="sr-l"><small class="mu">${esc(r.line)}</small>
+      ${short ? `<div class="note warnn">${ui("close", 14)} ${L(`${short} ${plural(short, ["позиция", "позиции", "позиций"])} сейчас нет в нужном количестве ни в одном магазине — они помечены и в корзину не попадут, пока вы не уменьшите количество или не выберете другой товар.`, `${short} ta pozitsiya hozir kerakli miqdorda hech bir do‘konda yo‘q — ular belgilangan va miqdorni kamaytirmaguningizcha yoki boshqa mahsulot tanlamaguningizcha savatga tushmaydi.`, `${short} ${short === 1 ? "item is" : "items are"} not in stock in the needed quantity at any store — marked below; they stay out of the cart until you lower the quantity or pick another product.`)}</div>` : ""}
+      <div class="shop-rows">${rows.map((r, i) => { const p = PROD[r.pick], av = p ? shopAvail(p, r.qty) : null; return `<div class="shop-row ${p ? (av.ok ? (r.sure ? "" : "chk") : "nostock") : "off"}"><div class="sr-l"><small class="mu">${esc(r.line)}</small>
         <label class="visually-hidden" for="shp${i}">${L("Товар", "Mahsulot")}</label><select class="sel" id="shp${i}" data-shoppick="${i}">${r.cands.map(c => `<option value="${c.id}" ${r.pick === c.id ? "selected" : ""}>${esc(pName(PROD[c.id]))}</option>`).join("")}<option value="skip" ${r.pick === "skip" ? "selected" : ""}>${r.cands.length ? L("Не нужно", "Kerak emas") : L("Не нашли в каталоге", "Katalogda topilmadi")}</option></select>
         ${!p && !r.cands.length ? `<button class="lnk" type="button" data-shopask="${i}">${ui("spark", 13)} ${L("Спросить Usta AI", "Usta AI dan so‘rash")}</button>` : ""}</div>
-        ${p ? `<div class="sr-r"><div class="qty"><button type="button" data-shopq="${i}|-1" aria-label="${L("Меньше", "Kamroq")}">−</button><span>${r.qty}</span><button type="button" data-shopq="${i}|1" aria-label="${L("Больше", "Ko‘proq")}">+</button></div><small class="mu">${unitName(p.unit)}</small><b class="num">${fmt(minPrice(p) * r.qty)}</b></div>` : ""}</div>`; }).join("")}</div>
+        ${p ? `<div class="sr-r"><div class="qty"><button type="button" data-shopq="${i}|-1" aria-label="${L("Меньше", "Kamroq")}">−</button><span>${r.qty}</span><button type="button" data-shopq="${i}|1" aria-label="${L("Больше", "Ko‘proq")}">+</button></div><small class="mu">${unitName(p.unit)}</small>${av.ok ? `<b class="num">${fmt(minPrice(p) * r.qty)}</b>` : `<b style="color:var(--signal);font-size:13px">${av.max ? L(`в наличии только ${av.max}`, `faqat ${av.max} ta bor`, `only ${av.max} in stock`) : L("нет в наличии", "mavjud emas", "out of stock")}</b>`}</div>` : ""}</div>`; }).join("")}</div>
       <button class="btn btn-primary" type="button" data-shop="cart" ${chosen.length ? "" : "disabled"}>${ui("cart", 16)} ${L("Добавить в корзину", "Savatga qo‘shish")} · ${chosen.length}</button>
       <small class="mu">${L("Цены — самые низкие в магазинах. В корзине сайт предложит, как собрать заказ из меньшего числа магазинов, чтобы сэкономить на доставке.", "Narxlar — do‘konlardagi eng past narxlar. Savatda sayt yetkazishni tejash uchun kamroq do‘kondan yig‘ishni taklif qiladi.")}</small>`}</div></div></div>`;
   $("#shopText")?.addEventListener("input", e => { shop.text = e.target.value; LS.set("imorat.shopText", shop.text); });
@@ -6471,7 +6530,7 @@ document.addEventListener("click", e => {
   const a = t.dataset.shop;
   if (a === "example") { shop.text = L("Цемент М400 — 20 мешков\nКирпич красный М150 1500 шт\nПрофиль ПП 60×27 30 шт\nСаморезы по дереву 3,5×35 2 кг\nШпаклёвка финишная 5\nГрунтовка глубокого проникновения 2", "Sement M400 — 20 qop\nQizil g‘isht M150 1500 dona\nProfil PP 60×27 30 dona\nYog‘och shuruplari 3,5×35 2 kg\nFinish shpaklyovka 5\nChuqur singuvchi gruntovka 2"); LS.set("imorat.shopText", shop.text); shopBuild(shop.text); return renderShop(); }
   if (a === "parse") { shop.text = $("#shopText").value; LS.set("imorat.shopText", shop.text); shopBuild(shop.text); return renderShop(); }
-  if (a === "cart") { const ch = shop.rows.filter(r => PROD[r.pick]); ch.forEach(r => addToCart(r.pick, null, r.qty, true)); toast(L(`В корзине: ${ch.length} товаров из списка`, `Savatda: ro‘yxatdan ${ch.length} ta mahsulot`, `In cart: ${ch.length} ${ch.length === 1 ? "product" : "products"} from the list`)); return openDrawer("cart"); }
+  if (a === "cart") { const ch = shop.rows.filter(r => PROD[r.pick] && shopAvail(PROD[r.pick], r.qty).ok); ch.forEach(r => addToCart(r.pick, null, r.qty, true)); toast(L(`В корзине: ${ch.length} товаров из списка`, `Savatda: ro‘yxatdan ${ch.length} ta mahsulot`, `In cart: ${ch.length} ${ch.length === 1 ? "product" : "products"} from the list`)); return openDrawer("cart"); }
 });
 
 /* ================= Problem with the order =================
@@ -7293,7 +7352,7 @@ document.addEventListener("change", e => {
   if (t.dataset && t.dataset.svc) { const id = +t.dataset.svc; if (t.checked) { services[id] = true; if (!qtyOf(id)) addToCart(id, null, 1, true); toast(L("Установка мастером добавлена в корзину", "Usta o‘rnatishi savatga qo‘shildi")); } else delete services[id]; LS.set("imorat.svc", services); }
 });
 document.addEventListener("click", e => {
-  const t = e.target.closest("[data-go],[data-act],[data-open],[data-add],[data-addo],[data-fav],[data-inc],[data-dec],[data-lang],[data-sub],[data-store],[data-q],[data-scroll],[data-calc],[data-clear],[data-order],[data-sst],[data-bundle],[data-ask],[data-askp],[data-aiadd],[data-aiall],[data-svcoff],[data-photo],[data-photodel],[data-cmp],[data-oauth],[data-authstep],[data-wview],[data-wcalc],[data-watch],[data-repeat],[data-projload],[data-projdel],[data-calccopy],[data-calcproj]");
+  const t = e.target.closest("[data-go],[data-act],[data-open],[data-add],[data-addo],[data-fav],[data-inc],[data-dec],[data-lang],[data-sub],[data-store],[data-q],[data-scroll],[data-calc],[data-clear],[data-order],[data-sst],[data-bundle],[data-ask],[data-askp],[data-aiadd],[data-aiall],[data-svcoff],[data-photo],[data-photodel],[data-cmp],[data-oauth],[data-authstep],[data-wview],[data-wcalc],[data-watch],[data-repeat],[data-rp-store],[data-rp-ok],[data-projload],[data-projdel],[data-calccopy],[data-calcproj]");
   if (!t) return;
   const ds = t.dataset;
   if (ds.go !== undefined) return go(ds.go, ds.sub);
@@ -7301,7 +7360,9 @@ document.addEventListener("click", e => {
   if (ds.open) { e.preventDefault(); if (aiOpen && window.innerWidth <= 760) closeAI(); return openProduct(+ds.open); }
   if (ds.add) { fly(t); return addToCart(+ds.add); }
   if (ds.watch) { const id = +ds.watch; watch = watch.includes(id) ? watch.filter(x => x !== id) : [...watch, id]; LS.set("imorat.watch", watch); toast(watch.includes(id) ? L("Следим за ценой — товар в профиле", "Narx kuzatilmoqda — profilda") : L("Больше не следим за ценой", "Narx kuzatilmaydi")); if ($("#modal").classList.contains("on")) openProduct(id); if (drawerView === "watch") renderDrawer(); return; }
-  if (ds.repeat) { const o = orders.find(x => x.num === ds.repeat); if (o) { o.ships.forEach(sh => sh.lines.forEach(l => { if (PROD[l.id]) { const k = l.id + "|" + sh.store; cart[k] = (cart[k] || 0) + l.q; } })); saveCart(); refreshCards(); toast(L("Товары заказа снова в корзине", "Buyurtma mahsulotlari yana savatda")); openDrawer("cart"); } return; }
+  if (ds.repeat) return repeatOrder(ds.repeat);
+  if (ds.rpStore != null) { const [i, st] = ds.rpStore.split("|"); const r = repeat?.rows[+i]; if (r) { r.pick = st || null; r.confirmed = !!st; renderDrawer(); } return; }
+  if (ds.rpOk != null) { const r = repeat?.rows[+ds.rpOk]; if (r) { r.confirmed = !r.confirmed; renderDrawer(); } return; }
   if (ds.projload) { const pr = projects.find(x => x.id === ds.projload); if (pr) { Object.entries(pr.cart).forEach(([k, q]) => { if (PROD[k.split("|")[0]]) cart[k] = Math.max(cart[k] || 0, q); }); saveCart(); refreshCards(); toast(L(`Проект «${pr.name}» в корзине`, `«${pr.name}» loyihasi savatda`, `Project “${pr.name}” added to cart`)); openDrawer("cart"); } return; }
   if (ds.projdel) { projects = projects.filter(x => x.id !== ds.projdel); LS.set("imorat.projects", projects); return renderDrawer(); }
   if (ds.wview) { wView = ds.wview; return renderWidgets(); }
@@ -7358,6 +7419,7 @@ document.addEventListener("click", e => {
     case "close-auth": return closeAuth();
     case "logout": return logout();
     case "prices-confirm": { const b = e.target.closest("button"); if (b) b.disabled = true; return api("POST", "/api/seller/offers/confirm").then(() => { toast(L("Спасибо! Покупатели видят сегодняшнюю дату подтверждения", "Rahmat! Xaridorlar bugungi tasdiqlash sanasini ko‘radi", "Thanks! Buyers now see today's confirmation date")); sellerData = null; renderSeller(); syncCatalog(); }).catch(er => { if (b) b.disabled = false; toast(apiErr(er)); }); }
+    case "repeat-add": { if (!repeat) return; const ready = repeat.rows.filter(r => r.confirmed && r.pick && PROD[r.id]?.offers.some(x => x.store === r.pick)); ready.forEach(r => { const k = r.id + "|" + r.pick; cart[k] = (cart[k] || 0) + r.q; }); saveCart(); refreshCards(); toast(L(`В корзине: ${ready.length} ${plural(ready.length, ["позиция", "позиции", "позиций"])} из заказа`, `Savatda: buyurtmadan ${ready.length} ta pozitsiya`, `In cart: ${ready.length} ${ready.length === 1 ? "item" : "items"} from the order`)); repeat = null; return openDrawer("cart"); }
     case "api-retry": { const b = e.target.closest("button"); if (b) { b.disabled = true; b.textContent = L("Проверяем…", "Tekshirilmoqda…", "Checking…"); } return apiBoot().then(() => { if (apiState !== "ok") renderApiBar(); }); }
     case "auth-resend": return sendCode();
     case "more": shownN += 36; return renderList(true);
@@ -7384,7 +7446,7 @@ document.addEventListener("click", e => {
     case "theme-toggle": return setLook(null, effTheme() === "dark" ? "light" : "dark");
     case "ai-calc": { const c = CALCS.find(x => x.id === wCalc), items = calcOut["w:" + wCalc] || []; const rows = [...document.querySelectorAll("#w-" + wCalc + "-res > div")].map(d => d.innerText.replace(/\s+/g, " ")).join("; "); return openAI(L(`Проверь мой расчёт «${c.ru}»: ${rows}. Материалы: ${items.map(([p, q]) => `[[${p.id}:${q}]]`).join(", ")}. Всё ли учтено и что ещё понадобится?`, `«${c.uz}» hisobimni tekshir: ${rows}. Materiallar: ${items.map(([p, q]) => `[[${p.id}:${q}]]`).join(", ")}. Hammasi hisobga olinganmi, yana nima kerak?`, `Check my “${L(c.ru, c.uz)}” estimate: ${rows}. Materials: ${items.map(([p, q]) => `[[${p.id}:${q}]]`).join(", ")}. Is everything accounted for, and what else will I need?`)); }
     case "close-modal": return closeModal();
-    case "d-back": return openDrawer(drawerView === "track" ? "orders" : ["orders", "watch", "projects"].includes(drawerView) ? "profile" : "cart");
+    case "d-back": return openDrawer(drawerView === "track" ? "orders" : drawerView === "repeat" ? "track" : ["orders", "watch", "projects"].includes(drawerView) ? "profile" : "cart");
     case "reset": f = { q: "", sub: null, stores: [], inStock: false, max: 0, sort: "pop" }; $("#q").value = ""; return renderCatalog();
     case "favs-all": favs.forEach(id => PROD[id] && addToCart(id, null, 1, true)); toast(L("Избранное добавлено в корзину", "Saralanganlar savatga qo‘shildi")); return openDrawer("cart");
     case "vip-on": if (API) return user ? setVipApi(true) : openAuth(); vip = true; LS.set("imorat.vip", vip); toast(L("VIP подключён: первый месяц бесплатно", "VIP ulandi: birinchi oy bepul")); if (route.view === "home") $("#vip").innerHTML = vipBlock(); if (drawerView) renderDrawer(); return;
