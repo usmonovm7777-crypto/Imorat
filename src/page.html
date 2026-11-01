@@ -518,6 +518,8 @@ footer { padding-block: 36px 40px; color: var(--muted); font-size: 13px; border-
 .sumrow.cash, .sumrow.disc { color: var(--ok); font-size: 13.5px; }
 .note { font-size: 12.5px; color: var(--muted); background: var(--raised); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
 .note.vipn { background: var(--signal-soft); border-color: transparent; color: var(--ink); }
+.note.nudge { background: var(--accent-soft); border-color: transparent; color: var(--ink); font-size: 13px; margin: 8px 0; }
+.note.nudge .lnk { font-size: 13px; }
 fieldset { border: 0; padding: 0; margin: 0; display: grid; gap: 10px; min-width: 0; }
 legend { font-family: var(--f-display); font-size: 15px; font-weight: 600; margin-bottom: 10px; padding: 0; letter-spacing: -.01em; }
 .f { display: grid; gap: 4px; min-width: 0; }
@@ -1437,7 +1439,8 @@ const fmt = n => fmtN(n) + L(" сум", " so‘m");
    The rates come from /api/config; the defaults are the server's own defaults, so the demo shows the same numbers. */
 const pct = v => String(Math.round(v * 1000) / 10).replace(".", DEC) + "%";
 /* totals rows when the store delivers: the delivery row says "the store will confirm", the total is for the goods */
-const delRowHTML = (del, byStore) => `<div class="sumrow"><span class="mu">${L("Доставка", "Yetkazish")}</span>${byStore ? `<span class="mu" style="font-size:13px">${L("уточнит магазин, оплата при получении", "do‘kon aniqlaydi, olganda to‘lanadi", "the store will confirm, paid on receipt")}</span>` : `<span class="num">${fmt(del)}</span>`}</div>`;
+/* store delivery: before the store names a price the row says so; once named (delStore ≠ null) it shows the figure, paid to the store on receipt */
+const delRowHTML = (del, byStore, delStore = null) => `<div class="sumrow"><span class="mu">${L("Доставка", "Yetkazish")}${byStore && delStore != null ? ` <small>${L("— назвал магазин, оплата при получении", "— do‘kon aytdi, olganda to‘lanadi", "— named by the store, paid on receipt")}</small>` : ""}</span>${byStore ? (delStore != null ? `<span class="num">${delStore ? fmt(delStore) : L("бесплатно", "bepul", "free")}</span>` : `<span class="mu" style="font-size:13px">${L("уточнит магазин, оплата при получении", "do‘kon aniqlaydi, olganda to‘lanadi", "the store will confirm, paid on receipt")}</span>`) : `<span class="num">${fmt(del)}</span>`}</div>`;
 const totalLabel = byStore => byStore ? L("Итого за товары", "Tovarlar uchun jami", "Total for goods") : L("Итого", "Jami");
 /* the legal pages live on the website; inside the app they open in the browser. The website address is an explicit setting
    (config.js IMORAT_SITE_URL, else the server's SITE_URL from /api/config) — never guessed from the API domain */
@@ -3251,6 +3254,7 @@ function dTrack() {
   const sched = o.d.when === "slot" ? L("Доставка завтра, 10:00–14:00", "Yetkazish ertaga, 10:00–14:00") : o.d.when === "vip" ? `VIP · ${L("завтра", "ertaga")} ${o.d.hour}:00–${String(+o.d.hour + 1).padStart(2, "0")}:00` : "";
   $("#dBody").innerHTML = `${o.api ? `<div class="note">${o.status === "cancelled" ? L("Заказ отменён.", "Buyurtma bekor qilindi.") : (o.d?.delivery_by === "store" || !apiCfg?.yandex ? L("Статусы обновляет магазин — страница обновляется сама.", "Holatlarni do‘kon yangilaydi — sahifa o‘zi yangilanadi.", "The store updates the statuses — the page refreshes by itself.") : L("Статусы обновляют магазин и Яндекс Доставка — страница обновляется сама.", "Holatlarni do‘kon va Yandex yangilaydi — sahifa o‘zi yangilanadi.", "The store and Yandex Delivery update the statuses — the page refreshes by itself."))}</div>` : `<div class="note">${L("Демо: статусы меняются каждые несколько секунд. В рабочей версии их присылает Яндекс Доставка, а клиент получает SMS или уведомление в Yandex Go.", "Demo: holatlar har necha soniyada o‘zgaradi. Ishchi versiyada ularni Yandex yuboradi, mijoz SMS yoki Yandex Go xabarini oladi.")}</div>`}
     ${payExtra(o)}
+    ${o.api && o.status === "active" ? notifyNudgeHTML("buyer") : ""}
     ${sched && o.d?.delivery_by !== "store" ? `<div class="note vipn">${ui("clock", 14)} ${sched}. ${L("Поиск курьера начнётся за 90 минут до интервала.", "Kuryer qidiruvi oraliqdan 90 daqiqa oldin boshlanadi.")}</div>` : ""}
     ${o.d?.mode !== "pickup" && o.d?.street ? `<div class="addr-line">${ui("pin", 14)} <span>${esc(o.d.street)}${o.d.private ? ", " + L("частный дом", "xususiy uy", "private house") : [o.d.entrance ? L("подъезд ", "kirish ", "entrance ") + esc(o.d.entrance) : "", o.d.flat ? L("кв. ", "xonadon ", "flat ") + esc(o.d.flat) : "", +o.d.floor > 1 ? L("этаж ", "qavat ", "floor ") + esc(o.d.floor) : ""].filter(Boolean).map(x => ", " + x).join("")}<small>${(o.d?.delivery_by === "store" && (o.d.help || (o.d.lift ? "one" : "none")) !== "none" ? L("Просили помочь занести — условия уточнит магазин", "Olib kirishga yordam so‘ralgan — shartlarni do‘kon aniqlaydi", "Help carrying in requested — the store confirms the terms") : HELP_TXT()[o.d.help || (o.d.lift ? "one" : "none")])}</small></span></div>` : ""}
     ${o.ships.map((s, i) => {
@@ -3263,7 +3267,7 @@ function dTrack() {
         ${t && cur >= 3 && s.plate ? `<div class="courier"><span>${lang === "ru" ? s.courier : ({ "Шерзод": "Sherzod", "Бобур": "Bobur", "Жасур": "Jasur", "Отабек": "Otabek", "Дилшод": "Dilshod", "Сардор": "Sardor" }[s.courier] || s.courier)} · ${t.veh}<small>${L("Телефон курьера придёт в SMS", "Kuryer telefoni SMSda keladi")}</small></span><span class="plate"><i>${s.plate[0]}</i>${s.plate[1]} ${s.plate[2]} ${s.plate[3]}</span></div>` : ""}
         ${!t ? `<div class="courier"><span>${esc(L(st.addr, st.addrUz))}<small>${esc(st.hours || "")} · ${L("назовите номер", "raqamni ayting")} ${o.num}</small></span></div>` : ""}</div>`;
     }).join("")}
-    <div style="display:grid;gap:6px">${totalsHTML(o.goods, o.svc || 0, o.bdisc != null ? o.bdisc : (o.disc || 0), delRowHTML(o.del, o.d?.delivery_by === "store") + (o.bdisc != null && o.pd ? `<div class="sumrow disc"><span>${L("Промокод", "Promokod")} ${esc(o.promo || o.d?.promo || "")}</span><span class="num">−${fmt(o.pd)}</span></div>` : "") + (o.bdisc != null && o.pts ? `<div class="sumrow disc"><span>${L("Бонусами", "Bonus bilan")}</span><span class="num">−${fmt(o.pts)}</span></div>` : ""))}${o.cash ? `<div class="sumrow cash"><span>${L("Кешбэк", "Keshbek")}</span><span>+${fmt(o.cash)}</span></div>` : ""}<div class="sumrow total"><span>${o.d.pay === "store" || o.d.pay === "cash" ? (o.d?.delivery_by === "store" ? L("К оплате при получении (товары)", "Olganda to‘lanadi (tovarlar)", "To pay on receipt (goods)") : L("К оплате в магазине", "Do‘konda to‘lanadi", "To pay at the store")) : o.api && o.pay_status !== "paid" ? L("К оплате картой", "Karta bilan to‘lanadi", "To pay by card") : L("Оплачено", "To‘langan")}</span><span class="num">${fmt(o.total)}</span></div></div>`;
+    <div style="display:grid;gap:6px">${totalsHTML(o.goods, o.svc || 0, o.bdisc != null ? o.bdisc : (o.disc || 0), delRowHTML(o.del, o.d?.delivery_by === "store", o.del_store ?? null) + (o.bdisc != null && o.pd ? `<div class="sumrow disc"><span>${L("Промокод", "Promokod")} ${esc(o.promo || o.d?.promo || "")}</span><span class="num">−${fmt(o.pd)}</span></div>` : "") + (o.bdisc != null && o.pts ? `<div class="sumrow disc"><span>${L("Бонусами", "Bonus bilan")}</span><span class="num">−${fmt(o.pts)}</span></div>` : ""))}${o.cash ? `<div class="sumrow cash"><span>${L("Кешбэк", "Keshbek")}</span><span>+${fmt(o.cash)}</span></div>` : ""}<div class="sumrow total"><span>${o.d.pay === "store" || o.d.pay === "cash" ? (o.d?.delivery_by === "store" ? (o.del_store != null ? L("К оплате при получении", "Olganda to‘lanadi", "To pay on receipt") : L("К оплате при получении (товары)", "Olganda to‘lanadi (tovarlar)", "To pay on receipt (goods)")) : L("К оплате в магазине", "Do‘konda to‘lanadi", "To pay at the store")) : o.api && o.pay_status !== "paid" ? L("К оплате картой", "Karta bilan to‘lanadi", "To pay by card") : L("Оплачено", "To‘langan")}</span><span class="num">${fmt(o.total + (o.d?.delivery_by === "store" && o.del_store ? o.del_store : 0))}</span></div></div>`;
   if (o.api && o.status === "active" && o.ships.every(s => ["unpaid", "new", "assembling", "cancelled"].includes(s.status))) $("#dBody").insertAdjacentHTML("beforeend", `<button class="lnk" type="button" data-act="order-cancel" style="justify-self:start;color:var(--muted)">${L("Отменить заказ", "Buyurtmani bekor qilish")}</button>`);
   $("#dFoot").innerHTML = `<div style="display:grid;grid-template-columns:auto 1fr;gap:8px"><button class="btn btn-line" type="button" data-repeat="${o.num}">${ui("repeat", 18)} ${L("Повторить", "Takrorlash")}</button><button class="btn btn-dark" type="button" data-act="close-drawer">${L("Продолжить покупки", "Xaridni davom ettirish")}</button></div>`;
   if (document.querySelector(".livemap[data-ship]")) setTimeout(liveTick, 30);
@@ -3276,7 +3280,7 @@ function orderStatus(o) {
 function dOrders() {
   fetchOrders();
   $("#dTitle").textContent = L("Мои заказы", "Buyurtmalarim");
-  $("#dBody").innerHTML = orders.length ? orders.map(o => { const [st, done] = orderStatus(o); return `<button class="order-row" type="button" data-order="${o.num}"><b>${o.num}</b><b class="num">${fmt(o.total)}</b><small>${new Date(o.t).toLocaleString(LOCALE, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })} · ${o.ships.length} ${L(plural(o.ships.length, ["доставка", "доставки", "доставок"]), "yetkazish", o.ships.length === 1 ? "delivery" : "deliveries")}</small><span class="pill ${done ? "ok" : "acc"}">${st}</span></button>`; }).join("") : `<div class="empty"><b>${L("Заказов пока нет", "Hali buyurtma yo‘q")}</b><span>${L("Оформите первый заказ, и он появится здесь со статусом доставки.", "Birinchi buyurtmani bering, u bu yerda holati bilan chiqadi.")}</span></div>`;
+  $("#dBody").innerHTML = (orders.some(o => o.api && o.status === "active") ? notifyNudgeHTML("buyer") : "") + (orders.length ? orders.map(o => { const [st, done] = orderStatus(o); return `<button class="order-row" type="button" data-order="${o.num}"><b>${o.num}</b><b class="num">${fmt(o.total + (o.d?.delivery_by === "store" && o.del_store ? o.del_store : 0))}</b><small>${new Date(o.t).toLocaleString(LOCALE, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })} · ${o.ships.length} ${L(plural(o.ships.length, ["доставка", "доставки", "доставок"]), "yetkazish", o.ships.length === 1 ? "delivery" : "deliveries")}</small><span class="pill ${done ? "ok" : "acc"}">${st}</span></button>`; }).join("") : `<div class="empty"><b>${L("Заказов пока нет", "Hali buyurtma yo‘q")}</b><span>${L("Оформите первый заказ, и он появится здесь со статусом доставки.", "Birinchi buyurtmani bering, u bu yerda holati bilan chiqadi.")}</span></div>`);
   $("#dFoot").innerHTML = `<button class="btn btn-line" type="button" data-go="catalog" style="width:100%">${L("В каталог", "Katalogga")}</button>`;
 }
 function dFavs() {
@@ -4536,14 +4540,43 @@ function fetchOrders() {
     if (drawerView === "orders" || drawerView === "profile") renderDrawer();
   }).catch(() => { ordersFetched = false; });
 }
+/* a status in words, for the in-app notice when an order moves (the server's Telegram/push texts say the same) */
+function shipStatusText(o, sh) {
+  const st = sh.status, store = sh.store_name || STORE[sh.store]?.name || "";
+  const T = { assembling: L(`${store} принял заказ и собирает его`, `${store} buyurtmani qabul qildi va yig‘moqda`, `${store} accepted the order and is packing it`),
+    searching: L("Заказ собран, ищем курьера", "Buyurtma yig‘ildi, kuryer qidirilmoqda", "Packed, looking for a courier"), to_store: L("Курьер едет в магазин", "Kuryer do‘konga ketmoqda", "The courier is heading to the store"),
+    on_way: o?.d?.delivery_by === "store" ? L(`Курьер магазина ${store} выехал к вам`, `${store} kuryeri sizga yo‘lga chiqdi`, `${store}'s courier is on the way to you`) : L("Курьер забрал заказ и едет к вам", "Kuryer buyurtmani oldi va sizga kelmoqda", "The courier has the order and is on the way"),
+    delivered: L("Заказ доставлен — оцените магазин", "Buyurtma yetkazildi — do‘konni baholang", "Delivered — rate the store"), ready: L(`Готов к выдаче: ${store}`, `Olib ketishga tayyor: ${store}`, `Ready for pickup: ${store}`), picked: L("Заказ выдан. Спасибо!", "Buyurtma topshirildi. Rahmat!", "Picked up. Thank you!"),
+    cancelled: L(`Заказ отменён: ${CANCEL_TXT()[sh.cancel_reason] || L("отмена", "bekor qilindi", "cancelled")}`, `Buyurtma bekor qilindi: ${CANCEL_TXT()[sh.cancel_reason] || "bekor qilindi"}`, `Cancelled: ${CANCEL_TXT()[sh.cancel_reason] || "cancelled"}`) };
+  return T[st] || st;
+}
+/* The buyer's active orders are watched wherever they are on the site: a change shows a notice (and a sound), the open
+   order view refreshes. Every 8 s while the orders are on screen, every 30 s otherwise. */
+let watchTick = 0;
 setInterval(async () => {
-  if (!API || !apiToken || document.hidden || (drawerView !== "track" && drawerView !== "orders")) return;
+  if (!API || !apiToken || document.hidden) return;
+  const onScreen = drawerView === "track" || drawerView === "orders"; watchTick++;
+  if (!onScreen && watchTick % 4) return; // 8 s on screen, ~30 s in the background
   const list = drawerView === "track" ? orders.filter(o => o.num === drawerOrder && o.api) : orders.filter(o => o.api && o.status === "active").slice(0, 5);
-  let changed = false;
+  let changed = false; const notes = [];
   for (const o of list) {
-    try { const r = await api("GET", "/api/orders/" + encodeURIComponent(o.num)); const n = mapOrder(r.order); if (JSON.stringify(n.ships.map(s => s.status)) !== JSON.stringify(o.ships.map(s => s.status)) || n.status !== o.status) changed = true; Object.assign(o, n); } catch (e) {}
+    try {
+      const r = await api("GET", "/api/orders/" + encodeURIComponent(o.num)); const n = mapOrder(r.order);
+      const before = JSON.stringify(o.ships.map(s => s.status)), after = JSON.stringify(n.ships.map(s => s.status));
+      if (before !== after || n.status !== o.status || (n.del_store ?? null) !== (o.del_store ?? null)) {
+        changed = true;
+        n.ships.forEach((sh, i) => { if (o.ships[i] && o.ships[i].status !== sh.status) notes.push(`${o.num}: ${shipStatusText(n, sh)}`); });
+        if ((n.del_store ?? null) !== (o.del_store ?? null) && n.del_store != null) notes.push(`${o.num}: ${n.del_store ? L(`доставка ${fmt(n.del_store)}, к оплате при получении ${fmt(n.total + n.del_store)}`, `yetkazish ${fmt(n.del_store)}, olganda to‘lanadi ${fmt(n.total + n.del_store)}`, `delivery ${fmt(n.del_store)}, to pay on receipt ${fmt(n.total + n.del_store)}`) : L("доставка бесплатно", "yetkazish bepul", "delivery is free")}`);
+      }
+      Object.assign(o, n);
+    } catch (e) {}
   }
-  if (changed) { LS.set("imorat.orders", orders.slice(0, 30)); const bd = $("#dBody"), y = bd.scrollTop; renderDrawer(); bd.scrollTop = y; }
+  if (changed) {
+    LS.set("imorat.orders", orders.slice(0, 30));
+    if (onScreen) { const bd = $("#dBody"), y = bd.scrollTop; renderDrawer(); bd.scrollTop = y; }
+    if (notes.length) { beep(); toast(notes.slice(0, 2).join(" · ")); }
+    renderTabbar(); counts();
+  }
 }, 8000);
 
 async function serverAI(bot, idx, file) {
@@ -4656,6 +4689,7 @@ function renderSellerApi() {
   $("#app").innerHTML = `<div class="wrap">${crumbs}
     <div class="s-head" style="padding-top:4px"><div><h1 class="h-l">${esc(s.name)}</h1><p>${dName(s.d)}, ${esc(s.addr)} · ${esc(s.hours)}</p></div></div>
     ${storeBanner(s)}
+    ${notifyNudgeHTML("seller")}
     ${sellerProblemsHTML(s.id)}
     ${sellerQuestionsHTML(s.id)}
     <div class="kpis">
@@ -4669,7 +4703,7 @@ function renderSellerApi() {
       ${ords.map(o => { const [lb, c] = lab[o.status] || [o.status, "mute"]; return `<tr><td><b class="mono">${esc(o.num)}</b><br><small style="color:var(--muted)">${esc(o.buyer || "")} · ${esc(o.phone || "")}<br>${o.tariff ? `${L(DIST[o.district]?.ru || "", DIST[o.district]?.uz || "")}, ${esc(o.street)}${o.private ? ", " + L("частный дом", "xususiy uy", "private house") : `${o.entrance ? ", " + L("подъезд", "kirish", "entrance") + " " + esc(o.entrance) : ""}${+o.floor > 1 ? ", " + L("этаж", "qavat", "floor") + " " + esc(o.floor) : ""}`}${o.help === "one" || o.help === "two" ? ` · <b>${o.delivery_by === "store" ? L("покупатель просит помочь занести — условия назовите сами", "xaridor olib kirishga yordam so‘raydi — shartlarni o‘zingiz ayting", "the buyer asks for help carrying in — name your terms") : L("курьер поможет спустить и занести", "kuryer tushirib, olib kirishga yordam beradi", "courier helps unload and carry in")}</b>` : o.help === "none" ? ` · ${L("покупатель заберёт у машины", "xaridor mashina oldidan oladi", "buyer takes it at the car")}` : ""}${o.access === "far" ? ` · <b style="color:var(--signal)">${L("машина не подъедет к подъезду", "mashina kirishgacha kelolmaydi", "no vehicle access to the entrance")}</b>` : ""}${+o.floor > 1 && !o.private && o.elevator != null ? ` · ${o.elevator ? L("есть лифт", "lift bor", "lift available") : L("без лифта", "liftsiz", "no lift")}` : ""}${o.loaders_failed ? ` · <b style="color:var(--signal)">${L("перевозчик не дал грузчика", "tashuvchi yuk tashuvchi bermadi", "carrier gave no loader")}</b>` : ""}` : L("Самовывоз", "Olib ketish")}${o.when === "vip" ? ` · ${L("завтра", "ertaga")} ${o.hour}:00` : o.when === "slot" ? ` · ${L("завтра 10–14", "ertaga 10–14")}` : ""}</small>${o.comment ? `<br><small>«${esc(o.comment)}»</small>` : ""}</td>
         <td style="min-width:180px;font-size:13px">${o.lines.map(l => `${esc(PROD[l.id] ? pName(PROD[l.id]) : l.name)} × ${l.q}`).join("<br>")}<br><small style="color:var(--muted)">${o.tariff ? `${o.delivery_by === "store" ? L("Ваш курьер", "Sizning kuryeringiz", "Your courier") + " · " + L("нужен", "kerak", "needs") + " " + tName(TARIFFS.find(t => t.id === o.tariff) || TARIFFS[0]).toLowerCase() : tName(TARIFFS.find(t => t.id === o.tariff) || TARIFFS[0])} · ${fmtKg(o.kg)}${o.delivery_by === "store" ? ` · <b>${L("цену доставки назовите покупателю", "yetkazish narxini xaridorga ayting", "tell the buyer the delivery price")}</b>` : ""}` : ""}</small></td>
         <td class="r">${fmt(o.lines.reduce((a, l) => a + l.price * l.q, 0))}<br><small style="color:var(--muted)">${["cash", "store"].includes(o.pay) ? L("оплата при получении", "olganda to‘lov", "paid on receipt") : o.pay_status === "paid" ? L("оплачен картой — выдавайте без оплаты", "karta bilan to‘langan — to‘lovsiz bering", "paid by card — hand over without payment") : L("ждёт оплаты", "to‘lov kutilmoqda")}</small></td>
-        <td><span class="pill ${c}">${lb}</span>${o.status === "new" && o.accept_by ? `<br><small data-until="${o.accept_by}"></small>` : ""}${o.status === "cancelled" && o.cancel_reason ? `<br><small style="color:var(--muted)">${CANCEL_TXT()[o.cancel_reason] || ""}</small>` : ""}</td><td style="white-space:nowrap">${o.next.map(n => `<button class="btn ${n === "cancelled" ? "btn-line" : "btn-primary"}" type="button" data-shipst="${o.ship_id}|${n}" style="margin:2px 0">${(o.delivery_by === "store" ? SH_NEXT(true) : nx)[n]}</button>`).join(" ")}</td></tr>`; }).join("")}
+        <td><span class="pill ${c}">${lb}</span>${o.status === "new" && o.accept_by ? `<br><small data-until="${o.accept_by}"></small>` : ""}${o.status === "cancelled" && o.cancel_reason ? `<br><small style="color:var(--muted)">${CANCEL_TXT()[o.cancel_reason] || ""}</small>` : ""}</td><td style="white-space:nowrap">${o.next.map(n => `<button class="btn ${n === "cancelled" ? "btn-line" : "btn-primary"}" type="button" data-shipst="${o.ship_id}|${n}" style="margin:2px 0">${(o.delivery_by === "store" ? SH_NEXT(true) : nx)[n]}</button>`).join(" ")}${o.delivery_by === "store" && ["new", "assembling", "on_way"].includes(o.status) ? `<form class="delp" data-shipprice="${o.ship_id}" style="display:flex;gap:4px;margin-top:6px;align-items:center"><label class="visually-hidden" for="dp${o.ship_id}">${L("Стоимость доставки", "Yetkazish narxi", "Delivery price")}</label><input id="dp${o.ship_id}" type="number" inputmode="numeric" min="0" max="5000000" step="1000" placeholder="${L("доставка, сум", "yetkazish, so‘m", "delivery, so'm")}" value="${o.delivery_price ?? ""}" style="width:118px;padding:6px 8px;border:1px solid var(--line-strong);border-radius:8px;background:var(--surface);color:inherit;font-size:13px"><button class="btn btn-line" type="submit" style="padding:6px 9px;font-size:12.5px">${o.delivery_price != null ? L("Изменить", "O‘zgartirish", "Change") : L("Сообщить", "Xabar berish", "Tell the buyer")}</button></form>${o.delivery_price != null ? `<small class="mu" style="display:block;margin-top:2px">${L("покупателю сообщили", "xaridorga xabar berildi", "the buyer was told")}: ${o.delivery_price ? fmt(o.delivery_price) : L("бесплатно", "bepul", "free")}</small>` : `<small class="mu" style="display:block;margin-top:2px">${L("покупатель ждёт цену доставки", "xaridor yetkazish narxini kutmoqda", "the buyer waits for the delivery price")}</small>`}` : ""}</td></tr>`; }).join("")}
       </tbody></table></div>` : `<p style="color:var(--muted);margin:0">${L("Заказов пока нет. Когда покупатель оформит заказ с вашими товарами, он появится здесь.", "Hozircha buyurtmalar yo‘q. Xaridor mahsulotlaringiz bilan buyurtma bersa, shu yerda chiqadi.")}</p>`}</div>
     ${sellerExtraHTML(sellerData)}
     ${sellerStatsHTML(s.id)}
@@ -4786,7 +4820,9 @@ function ratingHTML(s, long) {
 }
 function payExtra(o) {
   if (o.api && ["store", "cash"].includes(o.pay) && o.status !== "cancelled") return `<div class="note">${ui("wallet", 14)} ${o.d?.delivery_by === "store"
-    ? L(`Оплата при получении: ${fmt(o.total)} за товары + доставка, которую назовёт магазин. Imorat Go деньги не принимает.`, `Olganda to‘lov: tovarlar uchun ${fmt(o.total)} + do‘kon aytadigan yetkazish. Imorat Go pul qabul qilmaydi.`, `Pay on receipt: ${fmt(o.total)} for the goods + the delivery the store names. Imorat Go takes no money.`)
+    ? (o.del_store != null
+      ? L(`Оплата при получении: ${fmt(o.total + o.del_store)} — товары ${fmt(o.total)}${o.del_store ? ` + доставка ${fmt(o.del_store)} (назвал магазин)` : ", доставка бесплатно"}. Imorat Go деньги не принимает.`, `Olganda to‘lov: ${fmt(o.total + o.del_store)} — tovarlar ${fmt(o.total)}${o.del_store ? ` + yetkazish ${fmt(o.del_store)} (do‘kon aytdi)` : ", yetkazish bepul"}. Imorat Go pul qabul qilmaydi.`, `Pay on receipt: ${fmt(o.total + o.del_store)} — goods ${fmt(o.total)}${o.del_store ? ` + delivery ${fmt(o.del_store)} (named by the store)` : ", delivery free"}. Imorat Go takes no money.`)
+      : L(`Оплата при получении: ${fmt(o.total)} за товары + доставка, которую назовёт магазин (сумма придёт уведомлением). Imorat Go деньги не принимает.`, `Olganda to‘lov: tovarlar uchun ${fmt(o.total)} + do‘kon aytadigan yetkazish (summa bildirishnoma bilan keladi). Imorat Go pul qabul qilmaydi.`, `Pay on receipt: ${fmt(o.total)} for the goods + the delivery the store names (the sum arrives as a notification). Imorat Go takes no money.`))
     : L(`Оплата в магазине при получении: ${fmt(o.total)}.`, `Olganda do‘konda to‘lov: ${fmt(o.total)}.`, `Pay at the store on pickup: ${fmt(o.total)}.`)}</div>`;
   if (!o.api || ["store", "cash"].includes(o.pay)) return "";
   if (o.pay_status === "paid") return `<div class="note okn">${ui("check", 14)} ${L(`Оплачено картой (${{ click: "Click", payme: "Payme", uzum: "Uzum" }[o.pay] || o.pay}) — ${fmt(o.total)}, включая доставку. Курьеру ничего платить не нужно.`, `Karta bilan to‘langan (${{ click: "Click", payme: "Payme", uzum: "Uzum" }[o.pay] || o.pay}) — ${fmt(o.total)}, yetkazish bilan. Kuryerga hech narsa to‘lamaysiz.`, `Paid by card (${{ click: "Click", payme: "Payme", uzum: "Uzum" }[o.pay] || o.pay}) — ${fmt(o.total)}, delivery included. Nothing to pay the courier.`)}</div>`;
@@ -4907,6 +4943,20 @@ setInterval(() => document.querySelectorAll("[data-until]").forEach(el => {
 /* ---- Notifications: Telegram link and Web Push ---- */
 const pushOK = () => !!(API && apiCfg?.push_key && "serviceWorker" in navigator && "PushManager" in window && window.IMORAT_SITE);
 const b64u8 = s => { const b = atob((s + "===".slice((s.length + 3) % 4)).replace(/-/g, "+").replace(/_/g, "/")); return Uint8Array.from(b, c => c.charCodeAt(0)); };
+/* "Turn on notifications" — shown where it matters (an order placed, the orders list, the seller cabinet) to a signed-in
+   person who has neither Telegram nor push on this device; a dismissal rests it for 3 days. Push needs the browser's own
+   permission prompt, which only a tap can open, so the nudge is a button, never an automatic prompt. */
+const nudgeDismissed = () => Date.now() - (LS.get("imorat.nudgeAt", 0) || 0) < 3 * 86400000;
+function notifyNudgeHTML(kind = "buyer") {
+  if (!API || !user || user.staff || user.telegram || LS.get("imorat.push", false) || nudgeDismissed()) return "";
+  const canPush = pushOK() && typeof Notification !== "undefined" && Notification.permission !== "denied";
+  const native = NATIVE && pushState?.perm !== "granted";
+  if (!canPush && !native && !apiCfg?.telegram_bot) return "";
+  const why = kind === "seller" ? L("Чтобы не пропустить заказ: он придёт в Telegram и на телефон с кнопками «Принять» и «Нет в наличии», а через 20 минут без ответа отменится.", "Buyurtmani o‘tkazib yubormaslik uchun: u Telegram va telefonga «Qabul qilish» va «Mavjud emas» tugmalari bilan keladi, 20 daqiqa javob bo‘lmasa bekor bo‘ladi.", "So you never miss an order: it arrives in Telegram and on your phone with “Accept” and “Out of stock” buttons, and is cancelled after 20 minutes without an answer.")
+    : L("Статусы заказа — принят, собирается, курьер выехал, доставлен — будут приходить сами, даже когда сайт закрыт.", "Buyurtma holatlari — qabul qilindi, yig‘ilmoqda, kuryer yo‘lda, yetkazildi — sayt yopiq bo‘lsa ham o‘zi keladi.", "Order statuses — accepted, packing, courier on the way, delivered — will arrive by themselves, even with the site closed.");
+  return `<div class="note nudge" id="notifyNudge" style="display:grid;gap:8px"><span>${ui("bell", 14)} <b>${L("Включить уведомления?", "Bildirishnomalar yoqilsinmi?", "Turn on notifications?")}</b> ${why}</span>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">${canPush || native ? `<button class="btn btn-primary" type="button" data-act="push-on" style="padding:8px 12px">${ui("bell", 16)} ${L("На этом устройстве", "Shu qurilmada", "On this device")}</button>` : ""}${apiCfg?.telegram_bot ? `<button class="btn ${canPush || native ? "btn-line" : "btn-primary"}" type="button" data-act="tg-link" style="padding:8px 12px">${ui("send", 16)} Telegram</button>` : ""}<button class="lnk" type="button" data-act="nudge-later">${L("Позже", "Keyinroq", "Later")}</button></div></div>`;
+}
 async function enablePush() {
   if (!pushOK()) return toast(/iPhone|iPad/.test(navigator.userAgent) ? L("На iPhone уведомления работают, когда сайт добавлен на экран «Домой»: «Поделиться» → «На экран Домой».", "iPhone’da bildirishnomalar sayt «Uy ekraniga» qo‘shilganda ishlaydi: «Ulashish» → «Uy ekraniga».") : L("Этот браузер не поддерживает уведомления", "Bu brauzer bildirishnomalarni qo‘llab-quvvatlamaydi"));
   try {
@@ -7093,6 +7143,15 @@ function staffPanelHTML() {
       <button class="btn btn-primary" type="submit">${ui("plus", 16)} ${L("Добавить", "Qo‘shish", "Add")}</button>
     </form></div>`;
 }
+/* the store names (or changes) its delivery price for a store-delivered order: the buyer gets the sum to pay on receipt */
+document.addEventListener("submit", async e => {
+  const f = e.target.closest("[data-shipprice]"); if (!f) return; e.preventDefault();
+  const inp = f.querySelector("input"), v = inp.value.trim(), btn = f.querySelector("button");
+  if (v === "" || !/^\d+$/.test(v) || +v > 5000000) return toast(L("Введите стоимость доставки числом (0 — бесплатно)", "Yetkazish narxini raqam bilan kiriting (0 — bepul)", "Enter the delivery price as a number (0 = free)"));
+  btn.disabled = true;
+  try { await api("PATCH", `/api/seller/shipments/${f.dataset.shipprice}`, { delivery_price: +v }); toast(+v ? L(`Покупателю сообщили: доставка ${fmt(+v)}`, `Xaridorga xabar berildi: yetkazish ${fmt(+v)}`, `The buyer was told: delivery ${fmt(+v)}`) : L("Покупателю сообщили: доставка бесплатно", "Xaridorga xabar berildi: yetkazish bepul", "The buyer was told: delivery is free")); sellerData = null; renderSeller(); }
+  catch (er) { btn.disabled = false; toast(apiErr(er)); }
+});
 document.addEventListener("submit", async e => {
   const f = e.target.closest("#staffForm"); if (!f) return; e.preventDefault();
   const login = $("#stLogin").value.trim(), name = $("#stName").value.trim(), btn = f.querySelector("button[type=submit]");
@@ -7690,6 +7749,7 @@ document.addEventListener("click", e => {
     case "tg-link": return linkTelegram();
     case "tg-unlink": return unlinkTelegram();
     case "push-on": return enablePush();
+    case "nudge-later": LS.set("imorat.nudgeAt", Date.now()); document.querySelectorAll("#notifyNudge").forEach(n => n.remove()); return;
     case "logout-all": return logoutAll();
     case "push-native-on": return nativePushSetup({ ask: true }).then(r => { if (r === "granted") toast(L("Уведомления включены", "Bildirishnomalar yoqildi", "Notifications are on")); else if (r === "denied") toast(L("Разрешите уведомления в настройках телефона", "Telefon sozlamalarida bildirishnomalarga ruxsat bering", "Allow notifications in the phone settings")); if (drawerView === "profile") renderDrawer(); });
     case "del-account": return deleteAccountFlow();

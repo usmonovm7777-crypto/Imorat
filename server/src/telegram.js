@@ -33,6 +33,7 @@ export function createTelegram(cfg, log = console) {
     enabled,
     get username() { return username; },
     on(name, fn) { handlers[name] = fn; },
+    feed(u) { return handlers[u.callback_query ? "callback" : "message"]?.(u.callback_query || u.message); }, // tests: hand one update to the handlers directly
     async start() {
       if (!enabled) return;
       const me = await call("getMe");

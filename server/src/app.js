@@ -452,7 +452,7 @@ export function createApp(cfg, log = console) {
     });
     bumpCatalog();
     log.info(`[order] ${order} by ${u.id}: ${q.total} so'm, ${q.ships.length} shipment(s)`);
-    if (!online) for (const sh of db.all("SELECT id FROM shipments WHERE order_id=(SELECT id FROM orders WHERE num=?)", order)) notify.shipmentNew(sh.id);
+    if (!online) { for (const sh of db.all("SELECT id FROM shipments WHERE order_id=(SELECT id FROM orders WHERE num=?)", order)) notify.shipmentNew(sh.id); setImmediate(() => notify.orderPlaced(db.get("SELECT id FROM orders WHERE num=?", order).id)); }
     return { order: orderOut(db.get("SELECT * FROM orders WHERE num=?", order)) };
   });
   /* a fresh checkout link for an order that is still waiting for its card payment */
@@ -470,7 +470,9 @@ export function createApp(cfg, log = console) {
       goods: o.goods, del: o.del, svc: o.svc, disc: o.disc + o.promo_disc, bdisc: o.disc, pd: o.promo_disc, pts: o.points_used || 0, total: o.total, cash: o.cash, promo: o.promo,
       paid_at: o.paid_at || null, pay_url: o.pay_status === "pending" && !["store", "cash"].includes(o.pay) && o.status !== "cancelled" ? payments.payUrl(o) : null,
       pay_deadline: o.pay_status === "pending" && !["store", "cash"].includes(o.pay) ? o.created_at + cfg.payTimeoutMin * 60000 : null,
-      ships: ships.map(s => ({ id: s.id, store: s.store_id, store_name: s.store_name, store_addr: s.store_addr, store_hours: s.store_hours, tariff: s.tariff, tracking_url: s.tracking_url || null, live: !!(s.claim_id && !String(s.claim_id).startsWith("sim-")), price: s.price, kg: s.kg, dist: s.dist, status: s.status, status_at: s.status_at,
+      // store delivery: the price the store named (null until it does) and what the buyer pays on receipt for the whole order
+      del_store: ships.some(s => s.price_named_at) ? ships.reduce((a, s) => a + (s.price_named_at ? s.price : 0), 0) : null,
+      ships: ships.map(s => ({ id: s.id, store: s.store_id, store_name: s.store_name, store_addr: s.store_addr, store_hours: s.store_hours, tariff: s.tariff, tracking_url: s.tracking_url || null, delivery_price: s.price_named_at ? s.price : null, live: !!(s.claim_id && !String(s.claim_id).startsWith("sim-")), price: s.price, kg: s.kg, dist: s.dist, status: s.status, status_at: s.status_at,
         step: (STEPS[flowOf(s, JSON.parse(o.form))].indexOf(s.status)), history: JSON.parse(s.history), lines: JSON.parse(s.lines), courier: s.courier,
         cancel_reason: s.cancel_reason, accept_by: s.status === "new" ? (s.start_at || s.status_at) + cfg.timers.cancel * 60000 : null,
         loaders_failed: !!s.loaders_failed, // the carrier refused the loader: the buyer meets the car at the entrance (see notify.loadersFailed)
@@ -652,6 +654,7 @@ export function createApp(cfg, log = console) {
           buyer: f.name, phone: f.phone, district: f.district, street: f.mode === "pickup" ? "" : f.street, floor: f.private ? null : f.floor, entrance: f.entrance || "", private: !!f.private, help: f.help || (f.lift ? "one" : "none"), access: f.access || "door", elevator: f.elevator ?? null, loaders_failed: !!x.loaders_failed, when: f.when, hour: f.hour, comment: f.comment, lines: JSON.parse(x.lines),
           cancel_reason: x.cancel_reason, accept_by: x.status === "new" ? (x.start_at || x.status_at) + cfg.timers.cancel * 60000 : null, commission: x.commission, acquiring: x.acquiring,
           delivery_by: x.tariff ? (f.delivery_by === "store" ? "store" : "yandex") : null, // who delivers: the store's own courier (stage 0) or Yandex
+          delivery_price: x.price_named_at ? x.price : null, // the price the store named to the buyer (store delivery), null until it does
           next: SELLER_MOVES[x.status]?.filter(n => (x.tariff ? n !== "ready" && (f.delivery_by === "store" ? n !== "searching" : !(n === "on_way" && x.status === "assembling")) : !["searching", "on_way"].includes(n))) || [] };
       }),
       products
@@ -769,6 +772,14 @@ export function createApp(cfg, log = console) {
     const sh = db.get("SELECT * FROM shipments WHERE id=?", Number(p.id));
     if (!sh || (sh.store_id !== s.id && !adminOk(req))) throw new HttpError(404, "not_found", "Shipment not found");
     const fo = JSON.parse(db.get("SELECT form FROM orders WHERE id=?", sh.order_id)?.form || "{}"), byStore = sh.tariff && fo.delivery_by === "store";
+    // the store names its delivery price (stage 0): kept on the shipment, shown to the buyer, paid to the store on receipt
+    if (b.delivery_price !== undefined) {
+      if (!byStore) throw bad("not_store_delivery", "The delivery price is named by the store only when the store delivers");
+      if (!["new", "assembling", "on_way"].includes(sh.status)) throw bad("bad_status", "The delivery price can be named until the order is handed over");
+      const price = Math.round(Number(b.delivery_price)); if (!Number.isFinite(price) || price < 0 || price > 5_000_000) throw bad("bad_price", "Delivery price: 0 … 5 000 000 so'm");
+      if (price !== (sh.price || 0) || !sh.price_named_at) { db.run("UPDATE shipments SET price=?, price_named_at=? WHERE id=?", price, Date.now(), sh.id); audit(req, "ship.delivery_price", sh.id, { price }); setImmediate(() => notify.deliveryPriced(sh.id)); }
+      if (b.status === undefined) return { ok: true, delivery_price: price };
+    }
     if (!(SELLER_MOVES[sh.status] || []).includes(b.status) || (b.status === "ready" && sh.tariff) || (b.status === "searching" && (!sh.tariff || byStore)) || (b.status === "on_way" && sh.status === "assembling" && !byStore)) throw bad("bad_status", `Cannot move from ${sh.status} to ${b.status}`);
     moveShipment(sh, b.status, req);
     return { ok: true, status: b.status };
@@ -900,6 +911,7 @@ export function createApp(cfg, log = console) {
     const target = { acc: "assembling", oos: "cancelled", rdy: sh.tariff ? (fo.delivery_by === "store" ? "on_way" : "searching") : "ready", pick: "picked", dlv: "delivered" }[act];
     if (!target || !(SELLER_MOVES[sh.status] || []).includes(target)) { await tg.answer(q.id, "Статус уже изменён"); return notify.sellerRefresh(sh.id); }
     moveShipment(sh, target, { user: ow, ip: "telegram" });
+    if (act === "acc" && sh.tariff && fo.delivery_by === "store" && !sh.price_named_at) setTimeout(() => bot.askDeliveryPrice(ow.tg_chat, sh.id), 600); // the store delivers: ask what it costs the buyer
     await tg.answer(q.id, { on_way: "Покупателю сообщили, что курьер выехал", delivered: "Доставлено — спасибо!", assembling: "Принято! Соберите заказ", cancelled: "Заказ отменён, товар скрыт из наличия", searching: "Вызываем курьера", ready: "Покупатель получит уведомление", picked: "Готово" }[target]);
   });
 
@@ -1065,7 +1077,18 @@ export function createApp(cfg, log = console) {
   });
 
   const mastersApi = registerMasters({ r, db, cfg, ref, need, needAdmin, audit, lim, tg, push, sms, log });
-  bot = registerBot({ db, cfg, ref, tg, bonus, masters: mastersApi, log });
+  bot = registerBot({ db, cfg, ref, tg, bonus, masters: mastersApi, log, hooks: {
+    /* the store's delivery price typed in the bot: the same rules as the cabinet (store-delivered, not handed over yet, 0 … 5 000 000) */
+    deliveryPrice(shipId, price, u) {
+      const sh = db.get("SELECT * FROM shipments WHERE id=?", Number(shipId)), st = sh && db.get("SELECT owner_id FROM stores WHERE id=?", sh.store_id);
+      if (!sh || !u || st?.owner_id !== u.id) return { error: "forbidden" };
+      const fo = JSON.parse(db.get("SELECT form FROM orders WHERE id=?", sh.order_id)?.form || "{}");
+      if (!(sh.tariff && fo.delivery_by === "store") || !["new", "assembling", "on_way"].includes(sh.status)) return { error: "bad_status" };
+      const p = Math.round(Number(price)); if (!Number.isFinite(p) || p < 0 || p > 5_000_000) return { error: "bad_price" };
+      db.run("UPDATE shipments SET price=?, price_named_at=? WHERE id=?", p, Date.now(), sh.id); audit({ user: u, ip: "telegram" }, "ship.delivery_price", sh.id, { price: p });
+      setImmediate(() => notify.deliveryPriced(sh.id)); return { ok: true };
+    }
+  } });
   bonus.routes(r, need, lim);
   registerStats({ r, db, lim, needSeller });
   channel.routes(r, needOwner); // the Telegram channel speaks for the company: the owner only
@@ -1186,6 +1209,6 @@ export function createApp(cfg, log = console) {
   server.channel = channel;
   server.stockSweep = () => cx.stockSweep();
   server.db = db;
-  server.notify = notify;
+  server.notify = notify; server.bot = bot; server.tg = tg;
   return server;
 }

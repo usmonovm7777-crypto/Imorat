@@ -84,7 +84,7 @@ export function openDb(path, catalogPath, opts = {}) {
   raw.exec(SCHEMA);
   // Columns added after the first release (safe to run on an existing database)
   const addCol = (t, c, def) => { if (!raw.prepare(`PRAGMA table_info(${t})`).all().some(x => x.name === c)) raw.exec(`ALTER TABLE ${t} ADD COLUMN ${c} ${def}`); };
-  addCol("tg_logins", "ip", "TEXT"); addCol("users", "tg_chat", "TEXT"); addCol("users", "token_ver", "INTEGER NOT NULL DEFAULT 0");
+  addCol("tg_logins", "ip", "TEXT"); addCol("shipments", "price_named_at", "INTEGER"); addCol("users", "tg_chat", "TEXT"); addCol("users", "token_ver", "INTEGER NOT NULL DEFAULT 0");
   addCol("users", "points", "INTEGER NOT NULL DEFAULT 0"); addCol("users", "ref_code", "TEXT"); addCol("users", "ref_by", "TEXT"); addCol("users", "ref_paid", "INTEGER NOT NULL DEFAULT 0");
   addCol("stores", "verified", "INTEGER NOT NULL DEFAULT 0"); addCol("stores", "payout_to", "TEXT NOT NULL DEFAULT ''");
   raw.exec("CREATE TABLE IF NOT EXISTS payouts(id INTEGER PRIMARY KEY AUTOINCREMENT, store_id TEXT NOT NULL, amount INTEGER NOT NULL, status TEXT NOT NULL DEFAULT 'requested', note TEXT NOT NULL DEFAULT '', payout_to TEXT NOT NULL DEFAULT '', admin_id TEXT, requested_at INTEGER NOT NULL, done_at INTEGER); CREATE INDEX IF NOT EXISTS payouts_store ON payouts(store_id, status)");

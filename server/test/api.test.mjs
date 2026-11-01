@@ -1367,6 +1367,36 @@ test("Stage 0: pay on receipt, the store delivers itself, no invented delivery p
     // the store owes Imorat Go nothing for a delivery Imorat Go did not order
     const f = (await c("GET", "/api/seller/summary", null, seller)).data.finance; assert.equal(f.delivery_due, 0); assert.equal(f.balance, 0); assert.equal(f.commission_total, 0);
     const st = (await c("GET", "/api/seller/statement", null, seller)).data; assert.equal(st.totals.sales_store, st.totals.sales); assert.equal(st.totals.due, 0);
+    // the buyer got one message when the order was placed (what happens next), and the store's named delivery price reaches the buyer
+    a0.db.run("UPDATE users SET tg_chat='5151' WHERE phone='998901234567'");
+    const oP = await c("POST", "/api/orders", { lines: [{ id: 1, store: "usta", q: 1 }], form }, t); assert.equal(oP.status, 200);
+    const placed = await until(() => tgSent.find(m => String(m.chat_id) === "5151" && new RegExp("Заказ " + oP.data.order.num + " оформлен").test(m.text || "")));
+    assert.match(placed.text, /назовёт стоимость доставки/); assert.match(placed.text, /в течение 20 минут/);
+    assert.equal(oP.data.order.del_store, null, "no delivery price until the store names one");
+    const shP = a0.db.get("SELECT * FROM shipments WHERE order_id=(SELECT id FROM orders WHERE num=?)", oP.data.order.num);
+    assert.equal((await c("PATCH", `/api/seller/shipments/${shP.id}`, { delivery_price: 9e6 }, seller)).data.error, "bad_price");
+    assert.equal((await c("PATCH", `/api/seller/shipments/${shP.id}`, { delivery_price: 25000, status: "assembling" }, seller)).status, 200, "price and the move in one call");
+    const priced = await until(() => tgSent.find(m => String(m.chat_id) === "5151" && /доставка заказа .* — 25 000 сум/.test(m.text || "")));
+    assert.match(priced.text, new RegExp(`К оплате при получении: ${(oP.data.order.total + 25000).toLocaleString("ru-RU").replace(/\u00a0/g, " ")} сум`.replace(/\s/g, "\\s")));
+    const oP2 = (await c("GET", `/api/orders/${oP.data.order.num}`, null, t)).data.order; assert.equal(oP2.del_store, 25000); assert.equal(oP2.ships[0].delivery_price, 25000);
+    assert.equal((await c("GET", "/api/seller/summary", null, seller)).data.orders.find(x => x.num === oP.data.order.num).delivery_price, 25000);
+    assert.equal((await c("PATCH", `/api/seller/shipments/${shP.id}`, { delivery_price: 0 }, seller)).status, 200, "free delivery is a price too");
+    await until(() => tgSent.find(m => String(m.chat_id) === "5151" && /доставка заказа .* — бесплатно/.test(m.text || "")));
+    // the same from Telegram: after "Принять" the bot asks the store for the price, a typed number reaches the buyer
+    const oT = await c("POST", "/api/orders", { lines: [{ id: 1, store: "usta", q: 1 }], form }, t); const shT = a0.db.get("SELECT * FROM shipments WHERE order_id=(SELECT id FROM orders WHERE num=?)", oT.data.order.num);
+    await a0.tg.feed({ callback_query: { id: "cbT1", data: `acc:${shT.id}`, from: { id: 4242 }, message: { chat: { id: 4242, type: "private" }, message_id: 9 } } });
+    const askP = await until(() => tgSent.find(m => String(m.chat_id) === "4242" && /Сколько будет стоить доставка/.test(m.text || "")), 4000);
+    assert.ok(askP); assert.equal(a0.db.get("SELECT status FROM shipments WHERE id=?", shT.id).status, "assembling");
+    await a0.tg.feed({ message: { chat: { id: 4242, type: "private" }, from: { id: 4242 }, text: "abc" } });
+    await until(() => tgSent.find(m => String(m.chat_id) === "4242" && /числом в сумах/.test(m.text || "")));
+    await a0.tg.feed({ message: { chat: { id: 4242, type: "private" }, from: { id: 4242 }, text: "30 000" } });
+    await until(() => tgSent.find(m => String(m.chat_id) === "4242" && /Покупателю сообщили: доставка 30 000/.test(m.text || "")));
+    await until(() => tgSent.find(m => String(m.chat_id) === "5151" && new RegExp(oT.data.order.num + " — 30 000 сум").test(m.text || "")));
+    assert.equal((await c("GET", `/api/orders/${oT.data.order.num}`, null, t)).data.order.del_store, 30000);
+    // a pickup order has no delivery price to name
+    const oK = await c("POST", "/api/orders", { lines: [{ id: 1, store: "usta", q: 1 }], form: { ...form, mode: "pickup" } }, t);
+    const shK = a0.db.get("SELECT * FROM shipments WHERE order_id=(SELECT id FROM orders WHERE num=?)", oK.data.order.num);
+    assert.equal((await c("PATCH", `/api/seller/shipments/${shK.id}`, { delivery_price: 1000 }, seller)).data.error, "not_store_delivery");
     // pickup with cash still works too
     const o2 = await c("POST", "/api/orders", { lines: [{ id: 1, store: "usta", q: 1 }], form: { ...form, mode: "pickup" } }, t); assert.equal(o2.status, 200); assert.equal(o2.data.order.d.delivery_by, undefined);
     // money the platform never touches cannot be discounted or sold: promo codes, bundles, installation and bonus points are ignored when the buyer pays the store

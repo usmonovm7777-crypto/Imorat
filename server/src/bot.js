@@ -29,7 +29,7 @@ const BTN = {
 };
 const LANGS = { ru: "Русский 🇷🇺", uz: "Özbekça 🇺🇿", en: "English 🇬🇧" };
 
-export function registerBot({ db, cfg, ref, tg, bonus, masters, log = console }) {
+export function registerBot({ db, cfg, ref, tg, bonus, masters, hooks = {}, log = console }) {
   const site = cfg.siteUrl.replace(/#.*$/, "");
   const channel = (cfg.channel?.chat || "").replace(/^@/, "");
   const search = createSearch(ref.cats || []);
@@ -260,6 +260,16 @@ export function registerBot({ db, cfg, ref, tg, bonus, masters, log = console })
       setState(ch, "mreq_when", { ...ch.data, text: text.slice(0, 1000) });
       return tg.send(ch.id, ch.L("🕒 <b>Когда нужно?</b>", "🕒 <b>Qaçon kerak?</b>", "🕒 <b>When do you need it?</b>"), [...chunk(Object.entries(WHEN).map(([k, v]) => ({ text: ch.t(v), callback_data: "wh:" + k })), 2), [{ text: ch.L("✖️ Отмена", "✖️ Bekor qiliş", "✖️ Cancel"), callback_data: "x" }]]);
     }
+    // the store names the delivery price right after accepting an order it delivers itself (stage 0)
+    if (ch.c.state === "delprice") {
+      if (/^\/skip$/i.test(text) || /пропустить|o‘tkazib|skip/i.test(text)) { setState(ch, null); return menu(ch, ch.L("Хорошо — назовите цену доставки покупателю по телефону или позже в кабинете.", "Yaxşi — yetkaziş narxini xaridorga telefonda yoki keyinroq kabinetda ayting.", "OK — tell the buyer the delivery price by phone or later in the cabinet.")); }
+      const n = parseInt(text.replace(/[^\d]/g, ""), 10);
+      if (!Number.isFinite(n) || n > 5_000_000) return tg.send(ch.id, ch.L("Напишите стоимость доставки числом в сумах, например <b>30000</b>, или <b>0</b>, если бесплатно. /skip — пропустить.", "Yetkaziş narxini raqam bilan sömda yozing, masalan <b>30000</b>, yoki bepul bölsa <b>0</b>. /skip — ötkazib yuboriş.", "Type the delivery price as a number in so'm, e.g. <b>30000</b>, or <b>0</b> if free. /skip to skip."));
+      setState(ch, null);
+      const r = hooks.deliveryPrice ? hooks.deliveryPrice(ch.data.ship, n, ch.user) : { error: "no_hook" };
+      if (r?.error) return menu(ch, ch.L("Не получилось сохранить цену: заказ уже закрыт или это не ваш заказ.", "Narxni saqlab bölmadi: buyurtma yopilgan yoki bu sizning buyurtmangiz emas.", "Could not save the price: the order is closed or not yours."));
+      return menu(ch, ch.L(`✅ Покупателю сообщили: доставка ${n ? money(n) : "бесплатно"}. Он увидит сумму к оплате при получении.`, `✅ Xaridorga xabar berildi: yetkaziş ${n ? money(n, true) : "bepul"}. U olganda tölanadigan summani köradi.`, `✅ The buyer has been told: delivery ${n ? money(n, "en") : "free"}. They see the sum to pay on receipt.`));
+    }
     if (ch.c.state === "review_text") { db.run("UPDATE master_requests SET review=? WHERE id=? AND user_id=?", text.slice(0, 1000), ch.data.rid, ch.user?.id || ""); setState(ch, null); masters.reviewed(ch.data.rid); return menu(ch, ch.L("Спасибо за отзыв! 🙏", "Şarh uçun rahmat! 🙏", "Thank you for the review! 🙏")); }
     return doSearch(ch, text);
   });
@@ -328,6 +338,11 @@ export function registerBot({ db, cfg, ref, tg, bonus, masters, log = console })
     }
     return false;
   }
-  return { callback };
+  /* app.js calls this right after the store accepts an order it delivers itself */
+  function askDeliveryPrice(chatId, shipId) {
+    const ch = chatOf(chatId); setState(ch, "delprice", { ship: shipId });
+    return safe(tg.send(ch.id, ch.L("🚚 <b>Сколько будет стоить доставка для покупателя?</b>\nНапишите число в сумах, например <b>30000</b>, или <b>0</b> — бесплатно. Покупатель сразу получит сумму к оплате при получении. /skip — назову сам.", "🚚 <b>Xaridor uçun yetkaziş qança turadi?</b>\nSömda raqam yozing, masalan <b>30000</b>, yoki <b>0</b> — bepul. Xaridor darhol olganda tölanadigan summani oladi. /skip — özim aytaman.", "🚚 <b>How much will delivery cost the buyer?</b>\nType a number in so'm, e.g. <b>30000</b>, or <b>0</b> for free. The buyer gets the sum to pay on receipt at once. /skip — I will tell them myself.")));
+  }
+  return { callback, askDeliveryPrice };
 }
 function chunk(a, n) { const out = []; for (let i = 0; i < a.length; i += n) out.push(a.slice(i, i + n)); return out; }
