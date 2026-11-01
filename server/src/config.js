@@ -49,6 +49,7 @@ export function loadConfig(env = process.env) {
     jwtSecret: env.JWT_SECRET || randomBytes(32).toString("hex"),
     admins: list(env.ADMIN_PHONES).map(normPhone),
     vipFree: env.VIP_FREE !== "0",
+    productAutoApprove: env.PRODUCT_AUTO_APPROVE === "1", // 1: store products and review texts go live without the team's check (tests, a private demo)
     sms: {
       mode: smsMode, // "eskiz" sends real SMS, "dev" returns the code in the API response (testing only)
       eskizUrl: (env.ESKIZ_URL || "https://notify.eskiz.uz/api").replace(/\/$/, ""),

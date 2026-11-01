@@ -31,7 +31,7 @@ export function loadLines(db, ref, rawLines, user) {
     const [id, store] = k.split("|");
     const row = db.get(`SELECT p.*, o.price, o.stock, s.status AS store_status FROM products p
       JOIN offers o ON o.product_id=p.id JOIN stores s ON s.id=o.store_id WHERE p.id=? AND o.store_id=?`, Number(id), store);
-    if (!row || !row.active || row.store_status !== "active") { problems.push({ id: Number(id), store, reason: "unavailable" }); continue; }
+    if (!row || !row.active || (row.review && row.review !== "ok") || row.store_status !== "active") { problems.push({ id: Number(id), store, reason: "unavailable" }); continue; }
     if (row.stock < q) problems.push({ id: row.id, store, reason: "stock", stock: row.stock });
     const tier = tierOf(ref, row, q, user?.role);
     out.push({ p: row, store, q, base: row.price, price: tier ? round(row.price * (1 - tier)) : row.price, tier });

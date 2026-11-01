@@ -2,7 +2,7 @@ import { HttpError, bad, readJson, readBody, str, int } from "./http.js";
 import { escHtml as h } from "./telegram.js";
 
 /* Back-in-stock alerts and product reviews with a photo (only from buyers who received the product). */
-export function registerCatalogExtras({ r, db, cfg, need, lim, tg, push, saveImage, removeUpload = () => {}, mediaUrl, log }) {
+export function registerCatalogExtras({ r, db, cfg, need, lim, tg, push, saveImage, removeUpload = () => {}, mediaUrl, log, moderation }) {
   const safe = p => Promise.resolve(p).catch(e => log.warn("[catalogx]", e.message));
   /* ---- back in stock ---- */
   r.get("/api/me/stock-watch", req => { const u = need(req); return { ids: db.all("SELECT product_id FROM stock_watch WHERE user_id=?", u.id).map(x => x.product_id) }; });
@@ -33,9 +33,9 @@ export function registerCatalogExtras({ r, db, cfg, need, lim, tg, push, saveIma
     .some(s => JSON.parse(s.lines).some(l => l.id === pid));
   r.get("/api/products/:id/reviews", (req, res, p) => {
     const pid = Number(p.id), u = req.user;
-    const list = db.all("SELECT r.*, u.name FROM product_reviews r LEFT JOIN users u ON u.id=r.user_id WHERE r.product_id=? ORDER BY r.created_at DESC LIMIT 50", pid)
-      .map(x => ({ id: x.id, stars: x.stars, text: x.text, photo: x.photo ? mediaUrl(x.photo) : null, t: x.created_at, name: (x.name || "").split(" ")[0], mine: !!u && x.user_id === u.id }));
-    const agg = db.get("SELECT AVG(stars) a, COUNT(*) n FROM product_reviews WHERE product_id=?", pid);
+    const list = db.all("SELECT r.*, u.name FROM product_reviews r LEFT JOIN users u ON u.id=r.user_id WHERE r.product_id=? AND (r.mod IS NULL OR r.mod='ok' OR r.user_id=?) ORDER BY r.created_at DESC LIMIT 50", pid, u?.id || "")
+      .map(x => ({ id: x.id, stars: x.stars, text: x.text, photo: x.photo ? mediaUrl(x.photo) : null, t: x.created_at, name: (x.name || "").split(" ")[0], mine: !!u && x.user_id === u.id, pending: x.mod === "pending" }));
+    const agg = db.get("SELECT AVG(stars) a, COUNT(*) n FROM product_reviews WHERE product_id=? AND (mod IS NULL OR mod<>'rejected')", pid);
     return { reviews: list, stars: agg.n ? Math.round(agg.a * 10) / 10 : null, count: agg.n, can_review: !!u && !list.some(x => x.mine) && bought(u.id, pid) };
   });
   r.post("/api/products/:id/reviews", async (req, res, p) => {
@@ -44,8 +44,10 @@ export function registerCatalogExtras({ r, db, cfg, need, lim, tg, push, saveIma
     if (!bought(u.id, pid)) throw new HttpError(403, "not_bought", "You can review products you have received");
     const stars = int(b.stars, 1, 5); if (!stars) throw bad("bad_stars", "Stars from 1 to 5");
     if (db.get("SELECT 1 FROM product_reviews WHERE product_id=? AND user_id=?", pid, u.id)) throw new HttpError(409, "already_reviewed", "You have already reviewed this product");
-    const id = Number(db.run("INSERT INTO product_reviews(product_id,user_id,stars,text,created_at) VALUES(?,?,?,?,?)", pid, u.id, stars, str(b.text, 1500), Date.now()).lastInsertRowid);
-    return { review: { id } };
+    const text = str(b.text, 1500), wait = !cfg.productAutoApprove && text.length > 0; // the words and a photo are checked by the team; stars count at once
+    const id = Number(db.run("INSERT INTO product_reviews(product_id,user_id,stars,text,created_at,mod) VALUES(?,?,?,?,?,?)", pid, u.id, stars, text, Date.now(), wait ? "pending" : "ok").lastInsertRowid);
+    if (wait) moderation?.reviewAdded("product", id, text);
+    return { review: { id, pending: wait } };
   });
   r.post("/api/product-reviews/:id/photo", async (req, res, p) => {
     const u = need(req), rv = db.get("SELECT * FROM product_reviews WHERE id=? AND user_id=?", Number(p.id), u.id);
@@ -53,7 +55,7 @@ export function registerCatalogExtras({ r, db, cfg, need, lim, tg, push, saveIma
     lim.hit("rphoto:" + u.id, 20, 86400_000); // a photo is replaced, not collected: a few retries a day are plenty
     const path = saveImage(await readBody(req, 5 * 1024 * 1024), "r" + rv.id);
     removeUpload(rv.photo); // the previous file of this review is not kept
-    db.run("UPDATE product_reviews SET photo=? WHERE id=?", path, rv.id);
+    db.run("UPDATE product_reviews SET photo=?, mod=? WHERE id=?", path, cfg.productAutoApprove ? "ok" : "pending", rv.id); // a new photo is checked again
     return { photo: mediaUrl(path) };
   });
   return { stockSweep };

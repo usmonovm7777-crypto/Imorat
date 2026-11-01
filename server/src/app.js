@@ -41,6 +41,7 @@ import { createChannel } from "./channel.js";
 import { registerDisputes } from "./disputes.js";
 import { registerQuestions } from "./questions.js";
 import { registerSupport } from "./support.js";
+import { registerModeration } from "./moderation.js";
 import { registerCatalogExtras } from "./catalogx.js";
 import { registerTeams } from "./teams.js";
 import { registerDashboard } from "./dashboard.js";
@@ -111,7 +112,7 @@ export function createApp(cfg, log = console) {
     for (const r of db.all(`SELECT store_id, SUM(status IN ('delivered','picked')) done, SUM(status='cancelled' AND cancel_reason IN ('not_accepted','out_of_stock','not_shipped')) fail,
         AVG(CASE WHEN accepted_at IS NOT NULL AND start_at IS NOT NULL AND accepted_at>=start_at THEN (accepted_at-start_at)/60000.0 END) acc
         FROM shipments WHERE status_at>=? GROUP BY store_id`, since)) out[r.store_id] = { done: r.done || 0, fail: r.fail || 0, accept_min: r.acc == null ? null : Math.max(1, Math.round(r.acc)) };
-    for (const r of db.all("SELECT store_id, AVG(stars) a, COUNT(*) n FROM reviews GROUP BY store_id")) (out[r.store_id] ||= { done: 0, fail: 0, accept_min: null }).stars = Math.round(r.a * 10) / 10, out[r.store_id].reviews = r.n;
+    for (const r of db.all("SELECT store_id, AVG(stars) a, COUNT(*) n FROM reviews WHERE mod IS NULL OR mod<>'rejected' GROUP BY store_id")) (out[r.store_id] ||= { done: 0, fail: 0, accept_min: null }).stars = Math.round(r.a * 10) / 10, out[r.store_id].reviews = r.n;
     for (const k in out) { const x = out[k]; x.reliability = x.done + x.fail >= 3 ? Math.round(x.done * 100 / (x.done + x.fail)) : null; x.reviews ||= 0; x.stars ??= null; }
     return out;
   }
@@ -174,6 +175,7 @@ export function createApp(cfg, log = console) {
   };
   const session = (u, extra = {}) => { const st = staffOf(u); return { token: signJwt({ sub: u.id, typ: "session", v: u.token_ver || 0, ...extra }, cfg.jwtSecret, extra.mfa ? 12 * 3600 : st ? STAFF_TTL : SESSION_TTL), user: { ...publicUser(u, cfg.admins, st), telegram: !!u.tg_chat, mfa: !!u.totp_on } }; };
   const mediaUrl = p => (p && p.startsWith("/uploads/") ? cfg.publicUrl + p : p);
+  const moderation = registerModeration({ r, db, cfg, needAdmin, tg, push, notify, bumpCatalog, mediaUrl, log, audit });
   /* Saves an uploaded JPEG/PNG/WEBP (checked by its first bytes) and returns its /uploads path */
   const saveImage = (buf, prefix) => {
     const ext = buf[0] === 0xff && buf[1] === 0xd8 ? ".jpg" : buf.slice(0, 4).toString("hex") === "89504e47" ? ".png" : buf.slice(0, 4).toString() === "RIFF" && buf.slice(8, 12).toString() === "WEBP" ? ".webp" : null;
@@ -387,7 +389,7 @@ export function createApp(cfg, log = console) {
     const offers = db.all("SELECT o.product_id, o.store_id, o.price, o.stock, MAX(COALESCE(o.updated_at,0), COALESCE(s.prices_confirmed_at,0)) upd FROM offers o JOIN stores s ON s.id=o.store_id AND s.status='active' ORDER BY o.product_id, o.price");
     const by = new Map();
     for (const o of offers) { const a = by.get(o.product_id) || []; a.push({ store: o.store_id, price: o.price, stock: o.stock, upd: o.upd ? Math.floor(o.upd / 1000) : 0 }); by.set(o.product_id, a); }
-    const products = db.all("SELECT * FROM products WHERE active=1 ORDER BY id").filter(p => by.has(p.id)).map(p => ({
+    const products = db.all("SELECT * FROM products WHERE active=1 AND (review IS NULL OR review='ok') ORDER BY id").filter(p => by.has(p.id)).map(p => ({
       id: p.id, cat: p.cat, sub: p.sub, icon: p.icon, ru: p.ru, uz: p.uz, unit: p.unit, kg: p.kg, img: mediaUrl(p.img), group: p.grp, hit: !!p.hit, isNew: !!p.is_new,
       key: p.key, rating: p.rating, reviews: p.reviews, country: JSON.parse(p.country), warranty: p.warranty, desc: p.descr, offers: by.get(p.id),
       dims: dimsOf(ref, p) // package size [l,w,h] m (the seller's or typical for the subcategory); long goods need a cargo van whatever they weigh
@@ -665,7 +667,7 @@ export function createApp(cfg, log = console) {
     const since = Date.now() - 30 * 86400_000;
     const ships = db.all("SELECT sh.*, o.num, o.form, o.created_at oc, o.pay, o.pay_status FROM shipments sh JOIN orders o ON o.id=sh.order_id WHERE sh.store_id=? AND sh.status<>'unpaid' ORDER BY sh.id DESC LIMIT 100", s.id);
     const revenue = ships.filter(x => x.oc >= since && x.status !== "cancelled").reduce((a, x) => a + JSON.parse(x.lines).reduce((b, l) => b + l.price * l.q, 0), 0);
-    const products = db.all(`SELECT p.id,p.ru,p.uz,p.cat,p.sub,p.unit,p.kg,p.img,p.active,p.store_id, o.price,o.stock FROM offers o JOIN products p ON p.id=o.product_id WHERE o.store_id=? ORDER BY p.id`, s.id)
+    const products = db.all(`SELECT p.id,p.ru,p.uz,p.cat,p.sub,p.unit,p.kg,p.img,p.active,p.store_id,p.review,p.review_note, o.price,o.stock FROM offers o JOIN products p ON p.id=o.product_id WHERE o.store_id=? ORDER BY p.id`, s.id)
       .map(p => ({ ...p, img: mediaUrl(p.img), own: p.store_id === s.id }));
     return {
       store: ownerStore(s),
@@ -729,6 +731,7 @@ export function createApp(cfg, log = console) {
       return ru.length >= 3 && c && c.subs.some(k => k[0] === x.sub) && price ? { ru, uz: str(x.uz, 140) || ru, c, sub: x.sub, unit: subUnit(c.id, x.sub, x.unit), price, kg, stock: int(x.stock ?? 0, 0, 1e7) ?? 0, dims: dimsFrom(x) } : (bad1.push("n" + i), null);
     }).filter(Boolean);
     let updated = 0, added = 0, created = 0;
+    const newIds = [];
     db.tx(() => {
       const now = Date.now();
       for (const x of ok) {
@@ -740,11 +743,13 @@ export function createApp(cfg, log = console) {
         const nid = Math.max(10000, (db.get("SELECT MAX(id) m FROM products")?.m || 0) + 1);
         db.run(`INSERT INTO products(id,cat,sub,icon,ru,uz,unit,kg,img,hit,is_new,rating,reviews,country,warranty,descr,store_id,active,created_at,dims)
           VALUES(?,?,?,?,?,?,?,?,'',0,1,0,0,?,0,'',?,1,?,?)`, nid, x.c.id, x.sub, subIcon(x.c.id, x.sub), x.ru, x.uz, x.unit, x.kg, JSON.stringify(["Узбекистан", "O‘zbekiston"]), s.id, now, x.dims);
+        if (!cfg.productAutoApprove) db.run("UPDATE products SET review='pending' WHERE id=?", nid); newIds.push(nid);
         db.run("INSERT INTO offers(product_id,store_id,price,stock,updated_at) VALUES(?,?,?,?,?)", nid, s.id, x.price, x.stock, now);
         created++;
       }
     });
     if (updated + added + created) bumpCatalog();
+    if (!cfg.productAutoApprove) moderation.productsAdded(s.id, newIds);
     audit(req, "seller.import", s.id, { updated, added, created, skipped: bad1.length });
     return { updated, added, created, skipped: bad1.length };
   });
@@ -775,10 +780,12 @@ export function createApp(cfg, log = console) {
       db.run(`INSERT INTO products(id,cat,sub,icon,ru,uz,unit,kg,img,hit,is_new,rating,reviews,country,warranty,descr,store_id,active,created_at,dims)
         VALUES(?,?,?,?,?,?,?,?,'',0,1,0,0,?,?,?,?,1,?,?)`, nid, cat, sub, subIcon(cat, sub), ru, uz, unit, kg, JSON.stringify(["Узбекистан", "O‘zbekiston"]), int(b.warranty, 0, 120) || 0, str(b.desc, 1000), s.id, Date.now(), dimsFrom(b));
       db.run("INSERT INTO offers(product_id,store_id,price,stock,updated_at) VALUES(?,?,?,?,?)", nid, s.id, price, stock, Date.now());
+      if (!cfg.productAutoApprove) db.run("UPDATE products SET review='pending' WHERE id=?", nid);
       return nid;
     });
     bumpCatalog();
-    return { product: { id, ru, uz, cat, sub, unit, kg, price, stock } };
+    if (!cfg.productAutoApprove) moderation.productsAdded(s.id, [id]);
+    return { product: { id, ru, uz, cat, sub, unit, kg, price, stock, review: cfg.productAutoApprove ? null : "pending" } };
   });
   r.post("/api/seller/products/:pid/photo", async (req, res, p) => {
     const { s } = needSeller(req);
@@ -845,14 +852,16 @@ export function createApp(cfg, log = console) {
     if (!sh) throw new HttpError(404, "not_found", "Shipment not found");
     if (!["delivered", "picked"].includes(sh.status)) throw bad("too_early", "You can rate the store after you receive the order");
     const stars = int(b.stars, 1, 5); if (!stars) throw bad("bad_stars", "Rate from 1 to 5 stars");
-    try { db.run("INSERT INTO reviews(ship_id,order_id,store_id,user_id,stars,text,created_at) VALUES(?,?,?,?,?,?,?)", sh.id, o.id, sh.store_id, u.id, stars, str(b.text, 500), Date.now()); }
+    const rtext = str(b.text, 500);
+    try { db.run("INSERT INTO reviews(ship_id,order_id,store_id,user_id,stars,text,created_at,mod) VALUES(?,?,?,?,?,?,?,?)", sh.id, o.id, sh.store_id, u.id, stars, rtext, Date.now(), rtext && !cfg.productAutoApprove ? "pending" : "ok"); }
     catch { throw new HttpError(409, "already_rated", "You have already rated this order"); }
+    if (rtext && !cfg.productAutoApprove) moderation.reviewAdded("store", 0, rtext);
     const st = db.get("SELECT owner_id FROM stores WHERE id=?", sh.store_id), ow = st?.owner_id && db.get("SELECT tg_chat FROM users WHERE id=?", st.owner_id);
     if (ow?.tg_chat) tg.send(ow.tg_chat, `${"⭐".repeat(stars)} Новый отзыв к заказу ${o.num}${b.text ? `:\n«${str(b.text, 500).replace(/[<>&]/g, "")}»` : ""}`);
     return { ok: true };
   });
   r.get("/api/stores/:id/reviews", (req, res, p) => {
-    const rows = db.all("SELECT r.stars, r.text, r.reply, r.created_at, u.name FROM reviews r LEFT JOIN users u ON u.id=r.user_id WHERE r.store_id=? ORDER BY r.created_at DESC LIMIT 30", p.id);
+    const rows = db.all("SELECT r.stars, r.text, r.reply, r.created_at, u.name FROM reviews r LEFT JOIN users u ON u.id=r.user_id WHERE r.store_id=? AND (r.mod IS NULL OR r.mod='ok') ORDER BY r.created_at DESC LIMIT 30", p.id);
     return { reviews: rows.map(x => ({ stars: x.stars, text: x.text, reply: x.reply, t: x.created_at, name: (x.name || "").split(" ")[0] || "Покупатель" })), rating: storeStats()[p.id] || null };
   });
   r.post("/api/seller/reviews/:ship/reply", async (req, res, p) => {
@@ -1128,7 +1137,7 @@ export function createApp(cfg, log = console) {
   registerSupport({ r, db, cfg, need, needAdmin, lim, tg, push, notify, log });
   registerTeams({ r, db, cfg, need, lim, tg, log });
   registerDashboard({ r, db, needAdmin: needOwner }); // analytics: the owner only
-  const cx = registerCatalogExtras({ r, db, cfg, need, lim, tg, push, saveImage, removeUpload, mediaUrl, log });
+  const cx = registerCatalogExtras({ r, db, cfg, need, lim, tg, push, saveImage, removeUpload, mediaUrl, log, moderation });
   registerDisputes({ r, db, cfg, need, needSeller, needAdmin, isAdmin, audit, lim, tg, push, saveImage, mediaUrl, log });
 
   /* ---------- HTTP server ---------- */

@@ -91,11 +91,11 @@ before(async () => {
     TELEGRAM_BOT_TOKEN: "TGTOKEN", TELEGRAM_API_URL: fakeBase + "/tg", TELEGRAM_POLL_TIMEOUT: "0", PAYME_MERCHANT_ID: "5e730e8e0b852a417aa49ceb", PAYME_KEY: "PAYME_SECRET", CLICK_SERVICE_ID: "12345", CLICK_MERCHANT_ID: "777", CLICK_SECRET_KEY: "CLICK_SECRET", PAY_TIMEOUT_MIN: "30", BACKUP_DIR: join(dir, "bk"), OTP_PER_IP_HOUR: "200", TELEGRAM_CHANNEL: "@imorat_test", CHANNEL_HOUR: "25",
     ALLOW_PAY_AT_STORE: "1", BONUS_ON: "1", PROMO_MONTHS: "0", // most scenarios below pay the store on pickup; the card-only default and the free months have their own checks
     OWNER_LOGIN: "umv_test", OWNER_PASSWORD_HASH: hashPassword("Owner-Pass-123!"), // the owner's password sign-in (the hash lives in .env on a real server)
-    REVIEW_ACCOUNTS: "998900000001:246810",
+    REVIEW_ACCOUNTS: "998900000001:246810", PRODUCT_AUTO_APPROVE: "1", // most scenarios publish at once; "Moderation" below switches the check on
     FCM_SERVICE_ACCOUNT_JSON: JSON.stringify({ client_email: "svc@test-proj.iam.gserviceaccount.com", private_key: privateKey.export({ type: "pkcs8", format: "pem" }), project_id: "test-proj", token_uri: fakeBase + "/fcm/token" }), FCM_URL: fakeBase + "/fcm",
     APNS_KEY_P8: apnsKey, APNS_KEY_ID: "KEY123", APNS_TEAM_ID: "TEAM42", APNS_URL: apnsBase
   });
-  app = createApp(cfg, { info() {}, warn() {}, error: console.error });
+  app = createApp(cfg, { info() {}, warn() {}, error: console.error }); globalThis.CFG = cfg;
   await new Promise(r => app.listen(0, "127.0.0.1", r));
   base = `http://127.0.0.1:${app.address().port}`;
 });
@@ -1618,4 +1618,39 @@ test("Support chat: a person writes, the team sees the thread and answers, the a
   const mine = await call("GET", "/api/support", null, u); assert.equal(mine.data.messages.length, 2); assert.equal(mine.data.messages[1].text, "Заказ у магазина, курьер выедет до 14:00");
   assert.equal((await call("GET", "/api/support?peek=1", null, u)).data.unread, 0);
   assert.equal((await call("POST", `/api/admin/support/${(await call("GET", "/api/me", null, other)).data.user.id}`, { text: "привет" }, globalThis.ADMIN)).data.error, "no_thread", "the team answers threads, it does not start them");
+});
+
+test("Moderation: a store's new product and a review text wait for the team; rejection needs a note; approval publishes", async () => {
+  CFG.productAutoApprove = false;
+  try {
+    const seller = (await login("997770001")).data.token;
+    const st = await call("POST", "/api/seller/store", { name: "Moder Test", descr: "Магазин для проверки модерации товаров", cats: ["build"], phone: "71 200 30 41", addr: "ул. Тестовая, 1", district: "chil" }, seller);
+    assert.equal(st.status, 200, JSON.stringify(st.data));
+    assert.equal((await call("PATCH", `/api/admin/stores/${st.data.store.id}`, { status: "active" }, globalThis.ADMIN)).status, 200);
+    const np = await call("POST", "/api/seller/products", { ru: "Клей плиточный Moder, 25 кг", cat: "build", sub: "dry", unit: "bag50", price: 41000, stock: 30, kg: 25 }, seller);
+    assert.equal(np.status, 200); assert.equal(np.data.product.review, "pending");
+    const pid = np.data.product.id;
+    assert.ok(!(await call("GET", "/api/catalog")).data.products.some(p => p.id === pid), "not in the catalogue before the check");
+    const q = await call("POST", "/api/quote", { lines: [{ id: pid, store: st.data.store.id, q: 1 }], form: { mode: "pickup", district: "chil", name: "x", phone: "x" } }, seller);
+    assert.equal(q.data.quote.ships.length, 0, "not orderable before the check"); assert.ok(q.data.problems?.some(x => x.id === pid && x.reason === "unavailable") ?? true);
+    await until(() => tgSent.some(x => /Новые товары на проверке/.test(x.text) && /Клей плиточный Moder/.test(x.text)));
+    const mod = await call("GET", "/api/admin/moderation", null, globalThis.ADMIN); assert.ok(mod.data.products.some(p => p.id === pid && p.store_name === "Moder Test"));
+    assert.equal((await call("GET", "/api/admin/moderation", null, seller)).status, 403);
+    assert.equal((await call("POST", `/api/admin/products/${pid}/review`, { ok: false }, globalThis.ADMIN)).data.error, "note_required");
+    const summary = (await call("GET", "/api/seller/summary", null, seller)).data.products.find(p => p.id === pid); assert.equal(summary.review, "pending", "the store sees the status");
+    assert.equal((await call("POST", `/api/admin/products/${pid}/review`, { ok: true }, globalThis.ADMIN)).status, 200);
+    assert.ok((await call("GET", "/api/catalog")).data.products.some(p => p.id === pid), "published after approval");
+    assert.equal((await call("POST", `/api/admin/products/${pid}/review`, { ok: false, note: "x x x" }, globalThis.ADMIN)).data.error, "already_decided");
+    const np2 = await call("POST", "/api/seller/products", { ru: "Гвозди непонятные", cat: "build", sub: "dry", unit: "bag50", price: 1000, stock: 3, kg: 1 }, seller);
+    assert.equal((await call("POST", `/api/admin/products/${np2.data.product.id}/review`, { ok: false, note: "Нет описания и фото, неверная категория" }, globalThis.ADMIN)).status, 200);
+    assert.equal((await call("GET", "/api/seller/summary", null, seller)).data.products.find(p => p.id === np2.data.product.id).review_note, "Нет описания и фото, неверная категория");
+    // a review text waits; its author sees it, others do not
+    const buyer = (await login("997770002")).data.token, bid = (await call("GET", "/api/me", null, buyer)).data.user.id;
+    const rid = Number(app.db.run("INSERT INTO product_reviews(product_id,user_id,stars,text,created_at,mod) VALUES(?,?,?,?,?,?)", pid, bid, 5, "Отличный клей", Date.now(), "pending").lastInsertRowid);
+    assert.equal((await call("GET", `/api/products/${pid}/reviews`)).data.reviews.length, 0);
+    assert.equal((await call("GET", `/api/products/${pid}/reviews`, null, buyer)).data.reviews[0].pending, true);
+    assert.ok((await call("GET", "/api/admin/moderation", null, globalThis.ADMIN)).data.reviews.some(r => r.kind === "product" && r.id === rid));
+    assert.equal((await call("POST", `/api/admin/reviews/product/${rid}`, { ok: true }, globalThis.ADMIN)).status, 200);
+    assert.equal((await call("GET", `/api/products/${pid}/reviews`)).data.reviews[0].text, "Отличный клей");
+  } finally { CFG.productAutoApprove = true; }
 });
