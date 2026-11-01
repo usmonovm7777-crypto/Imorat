@@ -290,9 +290,7 @@ html.cv-all #app .sec ~ .sec { content-visibility: visible; }
 .hero { margin-top: 20px; background: var(--hero-bg); color: var(--hero-fg); border-radius: var(--r-lg); display: grid; grid-template-columns: 1.15fr 1fr; gap: 24px; padding: clamp(24px, 4.5vw, 56px); position: relative; overflow: hidden; isolation: isolate; }
 .hero::before { content: ""; position: absolute; inset: 0; z-index: -1; background:
 radial-gradient(600px 300px at 85% 10%, rgba(255, 214, 120, .22), transparent 70%),
-radial-gradient(500px 260px at 10% 110%, rgba(60, 10, 0, .35), transparent 70%),
-url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='84' height='40' viewBox='0 0 84 40'%3E%3Cg fill='none' stroke='white' stroke-opacity='.075' stroke-width='1.4'%3E%3Cpath d='M0 .7H84M0 20.7H84M.7 0V20M42.7 20V40'/%3E%3C/g%3E%3Cg fill='white' fill-opacity='.018'%3E%3Crect x='3' y='3' width='37' height='15' rx='1'/%3E%3Crect x='45' y='3' width='37' height='15' rx='1'/%3E%3Crect x='24' y='23' width='37' height='15' rx='1'/%3E%3C/g%3E%3C/svg%3E") 0 0 / 84px 40px repeat;
-mask: linear-gradient(180deg, rgba(0,0,0,.55), #000 70%); -webkit-mask: linear-gradient(180deg, rgba(0,0,0,.55), #000 70%); }
+radial-gradient(500px 260px at 10% 110%, rgba(60, 10, 0, .35), transparent 70%); }
 .hero::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: min(230px, 38%); z-index: -1; pointer-events: none; background:
 repeating-linear-gradient(-45deg, #FFD43B 0 12px, #2A1A12 12px 24px) left bottom / 100% 6px no-repeat,
 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1200' height='230' viewBox='0 0 1200 230' preserveAspectRatio='xMaxYMax meet'%3E%3Cg fill='white' fill-opacity='.06'%3E%3Crect x='0' y='176' width='70' height='54'/%3E%3Crect x='78' y='158' width='54' height='72'/%3E%3Crect x='140' y='186' width='90' height='44'/%3E%3Crect x='238' y='166' width='48' height='64'/%3E%3Crect x='296' y='190' width='120' height='40'/%3E%3Crect x='426' y='172' width='60' height='58'/%3E%3Crect x='494' y='194' width='100' height='36'/%3E%3Crect x='604' y='120' width='96' height='110'/%3E%3Crect x='708' y='150' width='70' height='80'/%3E%3Crect x='1060' y='140' width='90' height='90'/%3E%3Crect x='1156' y='170' width='44' height='60'/%3E%3C/g%3E%3Cg fill='white' fill-opacity='.07'%3E%3Crect x='616' y='134' width='10' height='12'/%3E%3Crect x='616' y='156' width='10' height='12'/%3E%3Crect x='616' y='178' width='10' height='12'/%3E%3Crect x='616' y='200' width='10' height='12'/%3E%3Crect x='636' y='134' width='10' height='12'/%3E%3Crect x='636' y='156' width='10' height='12'/%3E%3Crect x='636' y='178' width='10' height='12'/%3E%3Crect x='636' y='200' width='10' height='12'/%3E%3Crect x='656' y='134' width='10' height='12'/%3E%3Crect x='656' y='156' width='10' height='12'/%3E%3Crect x='656' y='178' width='10' height='12'/%3E%3Crect x='656' y='200' width='10' height='12'/%3E%3Crect x='676' y='134' width='10' height='12'/%3E%3Crect x='676' y='156' width='10' height='12'/%3E%3Crect x='676' y='178' width='10' height='12'/%3E%3Crect x='676' y='200' width='10' height='12'/%3E%3C/g%3E%3Cg fill='none' stroke='white' stroke-opacity='.13' stroke-width='2'%3E%3Cpath d='M800 230V96M840 230V96M880 230V96M920 230V96M960 230V96'/%3E%3Cpath d='M796 96H964M796 130H964M796 164H964M796 198H964'/%3E%3Cpath d='M800 130L840 96M840 164L880 130M880 198L920 164M920 130L960 96M800 198L840 164' stroke-opacity='.08'/%3E%3C/g%3E%3Crect x='804' y='132' width='152' height='98' fill='white' fill-opacity='.05'/%3E%3Cg fill='none' stroke='white' stroke-opacity='.16' stroke-width='2'%3E%3Cpath d='M1000 230V40M1016 230V40'/%3E%3Cpath d='M1000, 212L1016,196M1016,196L1000,180M1000, 180L1016,164M1016,164L1000,148M1000, 148L1016,132M1016,132L1000,116M1000, 116L1016,100M1016,100L1000,84M1000, 84L1016,68M1016,68L1000,52' stroke-opacity='.10'/%3E%3Cpath d='M820 40H1180M820 52H1180M1000 40L1008 12L1016 40M1008 12L820 40M1008 12L1180 40' /%3E%3Cpath d='M820,40L832,52L844,40M844,40L856,52L868,40M868,40L880,52L892,40M892,40L904,52L916,40M916,40L928,52L940,40M940,40L952,52L964,40M964,40L976,52L988,40M988,40L1000,52L1012,40M1012,40L1024,52L1036,40M1036,40L1048,52L1060,40M1060,40L1072,52L1084,40M1084,40L1096,52L1108,40M1108,40L1120,52L1132,40M1132,40L1144,52L1156,40M1156,40L1168,52L1180,40' stroke-opacity='.10'/%3E%3Cpath d='M1100 52V128' stroke-opacity='.22' stroke-width='1.5'/%3E%3C/g%3E%3Crect x='1088' y='128' width='24' height='14' fill='white' fill-opacity='.14'/%3E%3Crect x='1020' y='44' width='24' height='18' fill='white' fill-opacity='.14'/%3E%3Crect x='1150' y='52' width='30' height='16' fill='white' fill-opacity='.12'/%3E%3C/svg%3E") right 6px / auto calc(100% - 6px) no-repeat; }
@@ -305,7 +303,7 @@ url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1200' h
 .hero .hero-q .hq-ds:hover { background: rgba(255, 255, 255, .28); }
 .hero .lead { color: rgba(255, 248, 240, .93); } .hero .eyebrow { color: rgba(255, 248, 240, .85); } .hero .stats small, .hero .stats span { color: rgba(255, 248, 240, .86); }
 @media (min-width: 761px) {
-.hero { --bleed: clamp(0px, calc((100vw - 1300px) / 2), 96px); margin-inline: calc(-1 * var(--bleed)); grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); align-items: center;
+.hero { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); align-items: center;
 padding: clamp(18px, 2.2vw, 28px) clamp(24px, 3.6vw, 52px); gap: 24px; border-radius: 22px; }
 .hero .h-xl { font-size: clamp(28px, 3.5vw, 46px); line-height: 1.04; }
 .hero .eyebrow { font-size: 11px; }
@@ -368,7 +366,7 @@ padding: clamp(18px, 2.2vw, 28px) clamp(24px, 3.6vw, 52px); gap: 24px; border-ra
 .bundle .bimg { display: flex; height: 132px; position: relative; }
 .bundle .bimg > div { flex: 1; min-width: 0; }
 .bundle .bimg .off { position: absolute; right: 10px; top: 10px; background: var(--signal); color: var(--signal-ink); font-weight: 700; font-size: 12px; padding: 3px 8px; border-radius: 6px; }
-.bundle .bb { padding: 14px 16px 16px; display: grid; gap: 8px; flex: 1; align-content: start; }
+.bundle .bb { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
 .bundle b { font-weight: 600; font-size: 16px; }
 .bundle ul { margin: 0; padding: 0; list-style: none; font-size: 13px; color: var(--muted); display: grid; gap: 2px; }
 .bundle .bp { display: flex; align-items: baseline; gap: 8px; margin-top: auto; flex-wrap: wrap; }
@@ -1250,6 +1248,13 @@ html.fx .fx-btn.th-btn, .fx-btn.th-btn { background: var(--surface); color: var(
 .ds-teaser-v { display: block; padding: 0; border-radius: 16px; background: color-mix(in srgb, var(--surface) 70%, transparent); }
 .ds-teaser-v svg { width: 100%; height: auto; display: block; max-height: 340px; }
 html.fx .ds-teaser-v { transition: transform .3s; } html.fx .ds-teaser-v:hover { transform: translateY(-4px) rotate(-.5deg); }
+@media (prefers-reduced-motion: no-preference) {
+.ds-teaser-v.pre [data-dsuid], .ds-teaser-v.pre .ds-sh { opacity: 0; }
+.ds-teaser-v.fall [data-dsuid] { animation: dsFall .8s cubic-bezier(.4, 0, .2, 1) var(--fd, 0s) both; }
+.ds-teaser-v.fall .ds-sh { animation: dsShIn 1s ease-out .3s both; }
+}
+@keyframes dsFall { 0% { transform: translateY(-2.6px); opacity: 0; } 25% { opacity: var(--o, 1); } 60% { transform: translateY(0); } 74% { transform: translateY(-.14px); } 86% { transform: translateY(0); } 93% { transform: translateY(-.035px); } 100% { transform: none; opacity: var(--o, 1); } }
+@keyframes dsShIn { from { opacity: 0; } to { opacity: 1; } }
 @media (max-width: 860px) { .ds-layout, .ds-teaser { grid-template-columns: minmax(0, 1fr); } .ds-view { position: static; } .ds-teaser { padding: 16px; } .ds-layout:not([data-st="4"]) .ds-view { order: 2; } }
 @media (max-width: 560px) { .ds-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .ds-actions { grid-template-columns: 1fr; } }
 .fx-btn { width: 36px; height: 36px; border-radius: 11px; display: grid; place-items: center; flex: none; color: var(--muted); border: 1px solid var(--line-strong); transition: color .2s, box-shadow .3s, background .2s; }
@@ -2347,7 +2352,21 @@ const routeRO = "ResizeObserver" in window ? new ResizeObserver(es => es.forEach
 /* the sticky header's height, for everything that sticks under it (seller tabs, master request panel) */
 { const h = document.getElementById("hdr"), setH = () => document.documentElement.style.setProperty("--hdr-h", Math.round(h.getBoundingClientRect().bottom) + "px"); if (h) { if ("ResizeObserver" in window) new ResizeObserver(setH).observe(h); window.addEventListener("load", setH); setTimeout(setH, 0); } }
 function watchRoutes() { document.querySelectorAll(".route-box:not([data-io])").forEach(el => { el.dataset.io = 1; routeIO?.observe(el); routeRO?.observe(el); }); }
-new MutationObserver(() => { if (document.querySelector(".route-box:not([data-io])")) watchRoutes(); }).observe(document.body, { childList: true, subtree: true });
+/* home 3D teaser: the furniture falls into the room each time the room comes into view (it hides again once the room has left the screen) */
+const fallIO = "IntersectionObserver" in window ? new IntersectionObserver(es => es.forEach(x => {
+  const el = x.target;
+  if (x.isIntersecting && x.intersectionRatio >= .3) { if (el.classList.contains("pre")) { el.classList.remove("pre"); el.classList.add("fall"); } }
+  else if (!x.isIntersecting) { el.classList.remove("fall"); el.classList.add("pre"); }
+}), { threshold: [0, .3] }) : null;
+function watchFall() {
+  document.querySelectorAll(".ds-teaser-v:not([data-fall])").forEach(el => {
+    el.dataset.fall = 1; if (!fallIO || !animOK()) return;
+    const ids = []; // one delay per piece (a piece is drawn as several groups), in drawing order = back to front
+    el.querySelectorAll("[data-dsuid]").forEach(g => { const u = g.getAttribute("data-dsuid"); let i = ids.indexOf(u); if (i < 0) { i = ids.length; ids.push(u); } g.style.setProperty("--fd", (i * .12).toFixed(2) + "s"); const o = g.getAttribute("opacity"); if (o) g.style.setProperty("--o", o); });
+    el.classList.add("pre"); fallIO.observe(el);
+  });
+}
+new MutationObserver(() => { if (document.querySelector(".route-box:not([data-io])")) watchRoutes(); if (document.querySelector(".ds-teaser-v:not([data-fall])")) watchFall(); }).observe(document.body, { childList: true, subtree: true });
 document.addEventListener("pointermove", e => { if (!motionOK()) return; pmEv = e; if (!pmRaf) pmRaf = requestAnimationFrame(pointerFrame); }, { passive: true });
 window.addEventListener("scroll", () => { heroRect = null; tiltRect = null; }, { passive: true });
 window.addEventListener("resize", () => { heroRect = null; tiltRect = null; }, { passive: true });
@@ -2381,7 +2400,6 @@ function renderHeader() {
     <button class="cat-btn" type="button" data-act="mega">${ui("grid", 18)}${L("Каталог", "Katalog")}</button>
     <div class="search" role="search">${ui("search", 18)}<input id="q" type="search" enterkeyhint="search" role="combobox" aria-controls="sugg" aria-expanded="false" aria-autocomplete="list" value="${esc(f.q)}" placeholder="${L("Цемент, смеситель, ламинат…", "Sement, aralashtirgich, laminat…")}" aria-label="${L("Поиск по каталогу", "Katalog bo‘yicha qidiruv")}" autocomplete="off"><div class="sugg" id="sugg" role="listbox" aria-label="${L("Подсказки поиска", "Qidiruv takliflari")}" hidden></div><span class="s-tools"><button class="s-ic" type="button" data-act="voice" ${SRec ? "" : "hidden"} aria-label="${L("Поиск голосом", "Ovozli qidiruv")}" title="${L("Поиск голосом", "Ovozli qidiruv")}">${ui("mic", 18)}</button><button class="s-ic" type="button" data-act="photo-search" ${photoAIon() ? "" : "hidden"} aria-label="${L("Поиск по фото", "Rasm bo‘yicha qidiruv")}" title="${L("Поиск по фото", "Rasm bo‘yicha qidiruv")}">${ui("camera", 18)}</button><button class="ask" type="button" data-act="ask-search">${ui("spark", 14)}<span class="t">${L("Спросить AI", "AI dan so‘rash")}</span></button></span><input type="file" id="psFile" accept="image/*" hidden></div>
     <label class="where" title="${L("Район доставки", "Yetkazish tumani")}">${ui("pin", 16)}<span class="visually-hidden">${L("Район доставки", "Yetkazish tumani")}</span><select id="distSel">${DISTRICTS.map(d => `<option value="${d.id}" ${d.id === district ? "selected" : ""}>${L(d.ru, d.uz)}</option>`).join("")}</select></label>
-    <button class="fx-btn" type="button" data-act="fx-toggle" aria-pressed="${motionOK()}" aria-label="${motionOK() ? L("Яркий режим включён — переключить на простой", "Yorqin rejim yoqilgan — oddiyga o‘tish") : L("Простой режим — включить яркий", "Oddiy rejim — yorqinni yoqish")}" title="${motionOK() ? L("Яркий режим", "Yorqin rejim") : L("Простой режим", "Oddiy rejim")}">${ui("spark", 18)}</button>
     <button class="fx-btn th-btn" type="button" data-act="theme-toggle" aria-label="${effTheme() === "dark" ? L("Тёмная тема — включить светлую", "Qorong‘i mavzu — yorug‘ini yoqish", "Dark theme — switch to light") : L("Светлая тема — включить тёмную", "Yorug‘ mavzu — qorong‘isini yoqish", "Light theme — switch to dark")}" title="${effTheme() === "dark" ? L("Тёмная тема", "Qorong‘i mavzu", "Dark theme") : L("Светлая тема", "Yorug‘ mavzu", "Light theme")}">${effTheme() === "dark" ? ui("moon", 18) : ui("sun", 18)}</button>
     <div class="seg" role="group" aria-label="Язык / Til / Language"><button type="button" data-lang="ru" aria-pressed="${lang === "ru"}">RU</button><button type="button" data-lang="uz" aria-pressed="${lang === "uz"}">UZ</button><button type="button" data-lang="en" aria-pressed="${lang === "en"}">EN</button></div>
     <button class="hb" type="button" data-act="favs" aria-label="${L("Избранное", "Saralanganlar")}">${ui("heart", 22)}<span class="dot" id="favDot" hidden></span></button>
@@ -5769,7 +5787,7 @@ function roomSVG(d, opt = {}) {
   }
   } // end of the room itself
   /* ---- furniture: soft shadows first, then the parts back to front ---- */
-  let shadows = `<g clip-path="url(#${id}fc)" pointer-events="none">`;
+  let shadows = `<g class="ds-sh" clip-path="url(#${id}fc)" pointer-events="none">`;
   for (const it of items) {
     if (!it.ok || it.x == null || it.flat || it.air || ["ceiling", "hang", "above", "curtain"].includes(it.place)) continue;
     const r = it.r || dsRect(it, it.x, it.z, it.rot || 0), a = V.xf(r.x0, r.z0), b = V.xf(r.x1, r.z1);
@@ -5785,6 +5803,7 @@ function roomSVG(d, opt = {}) {
       const x0 = Math.min(c1[0], c2[0]), x1 = Math.max(c1[0], c2[0]), z0 = Math.min(c1[1], c2[1]), z1 = Math.max(c1[1], c2[1]);
       const front = (it.tall || it.place === "curtain" || it.place === "hang" || it.place === "above") && (() => { const cc = V.xf(it.x, it.z); return cc[0] > W - (it.d || .6) - .05 || cc[1] > Lr - (it.d || .6) - .05; })();
       if (front && it.place === "curtain") continue; // curtains on a wall behind the viewer would only hang in the air
+      if (front && opt.noGhost) continue; // the home teaser is a picture, not an editor: no see-through wardrobe over the bed
       faces.push({ ghost: front, bad: it.coll, uid: it.uid, ceil: it.place === "ceiling", k: it.flat ? -100 : (x0 + x1 + z0 + z1) / 2 + (f.py - f.hy) * 1.1 + (x1 - x0 + z1 - z0) * .25, b: [x0, f.py - f.hy, z0, x1, f.py + f.hy, z1], c: f.q.c, m: f.q.m || 1, s: f.q.s, cx: ctr[0], cz: ctr[1], cy: f.py, rx: (x1 - x0) / 2, ry: f.hy, rz: (z1 - z0) / 2 });
     }
   }
@@ -6196,7 +6215,7 @@ document.addEventListener("click", e => {
 });
 function designTeaser() {
   const demo = { ...dsNew(), type: "kids", W: 3.4, L: 4, H: 2.7, items: [] };
-  const keep = DS, saved = LS.get(DS_KEY, null); DS = demo; demo.q.who = "girl"; demo.q.age = "4-7"; dsApplyTemplate(); const svg = roomSVG(demo); DS = keep; LS.set(DS_KEY, saved);
+  const keep = DS, saved = LS.get(DS_KEY, null); DS = demo; demo.q.who = "girl"; demo.q.age = "4-7"; dsApplyTemplate(); const svg = roomSVG(demo, { noGhost: true }); DS = keep; LS.set(DS_KEY, saved);
   return `<section class="sec rv" id="designer" data-w="designer"><div class="ds-teaser"><div><span class="eyebrow">${ui("spark", 14)} ${L("Новое", "Yangi")}</span><h2 class="h-l">${L("AI-дизайнер комнаты", "AI xona dizayneri")}</h2>
     <p>${L("Сфотографируйте комнату, введите размеры и ответьте на пару вопросов — получите готовую комнату в 3D с мебелью, цветом стен, полом и точной сметой. Не нравится — уберите, замените или напишите AI, что поменять.", "Xonani suratga oling, o‘lchamlarini kiriting va bir nechta savolga javob bering — mebel, devor rangi, pol va aniq smetali tayyor 3D xonani oling. Yoqmasa — olib tashlang, almashtiring yoki AI ga nimani o‘zgartirishni yozing.")}</p>
     <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-primary" type="button" data-go="design">${ui("spark", 16)} ${L("Спроектировать комнату", "Xonani loyihalash")}</button></div></div>
