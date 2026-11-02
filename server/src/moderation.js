@@ -39,7 +39,7 @@ export function registerModeration({ r, db, cfg, needAdmin, tg, push, notify, bu
     audit(req, ok ? "product.approve" : "product.reject", String(pr.id), { note });
     if (ok) bumpCatalog();
     const { u } = ownerOf(pr.store_id);
-    const text = ok ? `✅ Товар «${pr.ru}» прошёл проверку и виден покупателям на Qurilish Go.` : `❌ Товар «${pr.ru}» не прошёл проверку: ${note}\nИсправьте и добавьте заново в кабинете.`;
+    const text = ok ? `✅ Товар «${pr.ru}» прошёл проверку и виден покупателям на Quriliş Go.` : `❌ Товар «${pr.ru}» не прошёл проверку: ${note}\nИсправьте и добавьте заново в кабинете.`;
     if (u?.tg_chat) safe(tg.send(u.tg_chat, h(text)));
     if (u) safe(push.toUser(u.id, { title: ok ? "Товар одобрен" : "Товар не прошёл проверку", body: text.slice(0, 160), url: `${cfg.siteUrl}#seller`, tag: "prod-" + pr.id }));
     return { ok: true };

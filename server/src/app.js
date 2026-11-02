@@ -83,7 +83,7 @@ export function createApp(cfg, log = console) {
   const channel = createChannel({ db, cfg, tg, log });
   const PCAT = new Map(db.all("SELECT id, cat FROM products").map(p => [p.id, p.cat]));
   const rateOf = cat => cfg.commission[cat] ?? cfg.commission["*"] ?? 0;
-  /* What a store pays from a card-paid order: Qurilish Go's commission (0% during the store's first free months) and the bank's
+  /* What a store pays from a card-paid order: Quriliş Go's commission (0% during the store's first free months) and the bank's
      acquiring fee — two separate lines in the cabinet. The end of the free months is set when a store is approved. */
   const addMonths = addMonthsClamped;
   const inPromo = (s, at = Date.now()) => !!(s?.free_until && s.free_until > at);
@@ -145,7 +145,7 @@ export function createApp(cfg, log = console) {
     }
     return u;
   };
-  const needOwner = (req, opts) => { const u = needAdmin(req, opts); if (!isOwner(u)) throw new HttpError(403, "owner_only", "Only the owner of Qurilish Go can do this"); return u; };
+  const needOwner = (req, opts) => { const u = needAdmin(req, opts); if (!isOwner(u)) throw new HttpError(403, "owner_only", "Only the owner of Quriliş Go can do this"); return u; };
   /* the owner's login/password from .env becomes (or refreshes) the owner's staff row: the hash in .env always wins */
   function ensureOwner() {
     const endSessions = id => db.run("UPDATE users SET token_ver=token_ver+1 WHERE id=?", id);
@@ -157,7 +157,7 @@ export function createApp(cfg, log = console) {
     if (clash) { db.run("UPDATE staff SET login=?, disabled=1 WHERE user_id=?", (clash.login + ".old-" + randomBytes(2).toString("hex")).slice(0, 64), clash.user_id); endSessions(clash.user_id); log.warn(`[owner] helper account "${clash.login}" used OWNER_LOGIN — it was renamed and disabled; give the helper a new login from the panel`); }
     if (!st) {
       const id = "owner_" + randomBytes(4).toString("hex");
-      db.run("INSERT INTO users(id,phone,name,email,role,district,created_at) VALUES(?,NULL,?,'','staff','mirob',?)", id, "Владелец Qurilish Go", now);
+      db.run("INSERT INTO users(id,phone,name,email,role,district,created_at) VALUES(?,NULL,?,'','staff','mirob',?)", id, "Владелец Quriliş Go", now);
       db.run("INSERT INTO staff(user_id,login,pass_hash,role,from_env,created_by,created_at) VALUES(?,?,?,'owner',1,'env',?)", id, cfg.owner.login, cfg.owner.hash, now);
       return;
     }
@@ -171,7 +171,7 @@ export function createApp(cfg, log = console) {
     const s = u.store_id && db.get("SELECT * FROM stores WHERE id=?", u.store_id);
     if (!s) throw new HttpError(403, "no_store", "Register your store first");
     // A pending store may prepare its goods (they stay hidden until approval); a blocked or rejected one only sees its own page
-    if ((s.status === "blocked" || s.status === "rejected") && !/^\/api\/seller\/(store|summary)(\?|$)/.test(req.url) && !isAdmin(u)) throw new HttpError(403, "store_" + s.status, "The store is " + s.status + "; contact Qurilish Go support");
+    if ((s.status === "blocked" || s.status === "rejected") && !/^\/api\/seller\/(store|summary)(\?|$)/.test(req.url) && !isAdmin(u)) throw new HttpError(403, "store_" + s.status, "The store is " + s.status + "; contact Quriliş Go support");
     return { u, s };
   };
   const session = (u, extra = {}) => { const st = staffOf(u); return { token: signJwt({ sub: u.id, typ: "session", v: u.token_ver || 0, ...extra }, cfg.jwtSecret, extra.mfa ? 12 * 3600 : st ? STAFF_TTL : SESSION_TTL), user: { ...publicUser(u, cfg.admins, st), telegram: !!u.tg_chat, mfa: !!u.totp_on } }; };
@@ -459,13 +459,13 @@ export function createApp(cfg, log = console) {
         VALUES(?,?,?,'active',?,?,?,?,?,?,?,?,?,?,?,?,?)`,
         "tmp-" + randomBytes(6).toString("hex"), u.id, now, form.pay, ["cash", "store"].includes(form.pay) ? "to_store" : "pending", JSON.stringify({ ...form, lang: String(b.lang || "ru").slice(0, 2), ...(b.app === true ? { app: true } : {}), ...(q.delivery_by === "store" ? { delivery_by: "store" } : {}) }),
         q.goods, q.del ?? 0, q.svc, q.disc, q.pd, q.total, q.cash, q.promo, JSON.stringify(q.services), q.pts || 0);
-      const id = Number(ins.lastInsertRowid), num = "QG-" + (100000 + id); // order numbers start with QG (Qurilish Go); older IM- numbers stay valid everywhere they are looked up
+      const id = Number(ins.lastInsertRowid), num = "QG-" + (100000 + id); // order numbers start with QG (Quriliş Go); older IM- numbers stay valid everywhere they are looked up
       if (q.pts) db.run("INSERT INTO points_log(user_id,delta,reason,ref,created_at) VALUES(?,?,?,?,?)", u.id, -q.pts, "spent", "order:" + id, now);
       db.run("UPDATE orders SET num=? WHERE id=?", num, id);
       for (const s of q.ships) {
         const goods = s.lines.reduce((a, l) => a + l.price * l.q, 0), st = db.get("SELECT hours, free_until FROM stores WHERE id=?", s.store);
         // commission and the acquiring fee only on orders paid through the platform; a reservation paid at the store is free for the store.
-        // During a store's free months Qurilish Go's own commission is 0, the bank's fee on the card payment stays.
+        // During a store's free months Quriliş Go's own commission is 0, the bank's fee on the card payment stays.
         const commission = online && !inPromo(st, now) ? s.lines.reduce((a, l) => a + Math.round(l.price * l.q * rateOf(PCAT.get(l.id) || db.get("SELECT cat FROM products WHERE id=?", l.id)?.cat)), 0) : 0;
         const acquiring = online ? Math.round(goods * cfg.acquiringOf(form.pay)) : 0; // the contract rate of the provider the buyer pays through
         const start = storeStartAt(st, now);
@@ -780,6 +780,9 @@ export function createApp(cfg, log = console) {
     if (!price) throw bad("bad_price", "Price must be at least 100 so'm");
     if (stock === null) throw bad("bad_stock", "Stock must be 0 or more");
     if (!(kg > 0 && kg <= 5000)) throw bad("bad_weight", "Weight per unit (kg) is needed for delivery");
+    // "the same product as before": its photo and 3D model are copied instead of a new photo (model3d.js, look library)
+    const src = b.from != null ? model3d.lookSource(b.from, s.id) : null;
+    if (b.from != null && !src) throw bad("bad_source", "That product's photo and model cannot be reused");
     const id = db.tx(() => {
       const nid = Math.max(10000, (db.get("SELECT MAX(id) m FROM products")?.m || 0) + 1);
       db.run(`INSERT INTO products(id,cat,sub,icon,ru,uz,unit,kg,img,hit,is_new,rating,reviews,country,warranty,descr,store_id,active,created_at,dims)
@@ -790,7 +793,9 @@ export function createApp(cfg, log = console) {
     });
     bumpCatalog();
     if (!cfg.productAutoApprove) moderation.productsAdded(s.id, [id]);
-    return { product: { id, ru, uz, cat, sub, unit, kg, price, stock, review: cfg.productAutoApprove ? null : "pending" } };
+    let look = {};
+    if (src) { try { const np = model3d.copyLook(src, id); look = { img: mediaUrl(np.img), model3d: model3d.out(np) }; } catch (e) { log.warn(`[look] product ${id} from ${src.id}: ${e.message}`); } }
+    return { product: { id, ru, uz, cat, sub, unit, kg, price, stock, review: cfg.productAutoApprove ? null : "pending" }, ...look };
   });
   r.post("/api/seller/products/:pid/photo", async (req, res, p) => {
     const { s } = needSeller(req);
@@ -940,7 +945,7 @@ export function createApp(cfg, log = console) {
   });
   r.del("/api/me/devices", async req => { const u = need(req), b = await readJson(req); db.run("DELETE FROM devices WHERE token=? AND user_id=?", str(b.token, 4096), u.id); return { ok: true }; });
   r.post("/api/push/unsubscribe", async req => { const u = need(req), b = await readJson(req); db.run("DELETE FROM push_subs WHERE endpoint=? AND user_id=?", str(b.endpoint, 1000), u.id); return { ok: true }; });
-  r.post("/api/push/test", async req => { const u = need(req); const n = await push.toUser(u.id, { title: "Qurilish Go", body: "Уведомления работают ✅", url: cfg.siteUrl }); return { sent: n }; });
+  r.post("/api/push/test", async req => { const u = need(req); const n = await push.toUser(u.id, { title: "Quriliş Go", body: "Уведомления работают ✅", url: cfg.siteUrl }); return { sent: n }; });
   r.post("/api/me/logout-all", req => {
     const u = need(req);
     db.run("UPDATE users SET token_ver=token_ver+1 WHERE id=?", u.id); db.run("DELETE FROM push_subs WHERE user_id=?", u.id); db.run("DELETE FROM devices WHERE user_id=?", u.id);
@@ -969,8 +974,8 @@ export function createApp(cfg, log = console) {
     const [a, b, month] = monthRange(m);
     const mon = db.get("SELECT COALESCE(SUM(goods),0) goods, COALESCE(SUM(commission),0) commission, COALESCE(SUM(acquiring),0) acquiring, COUNT(*) n FROM shipments WHERE store_id=? AND status IN ('delivered','picked') AND status_at>=? AND status_at<?", storeId, a, b);
     const tot = db.get("SELECT COALESCE(SUM(commission),0) c, COALESCE(SUM(acquiring),0) q FROM shipments WHERE store_id=? AND status IN ('delivered','picked')", storeId), all = tot.c + tot.q;
-    // Money that crossed sides: for orders paid to the store the buyer also handed it the delivery fee that Qurilish Go paid to Yandex;
-    // for orders paid by card online Qurilish Go holds the goods money and owes the store its share (goods minus commission and the bank's fee).
+    // Money that crossed sides: for orders paid to the store the buyer also handed it the delivery fee that Quriliş Go paid to Yandex;
+    // for orders paid by card online Quriliş Go holds the goods money and owes the store its share (goods minus commission and the bank's fee).
     const flow = db.get(`SELECT COALESCE(SUM(CASE WHEN o.pay IN ('store','cash') AND sh.tariff IS NOT NULL AND sh.claim_id IS NOT NULL AND sh.claim_id NOT LIKE 'sim-%' THEN sh.price ELSE 0 END),0) delivery_due,
         COALESCE(SUM(CASE WHEN o.pay NOT IN ('store','cash') AND o.pay_status IN ('paid','refund_due','refunded') THEN sh.goods - sh.commission - sh.acquiring ELSE 0 END),0) payout_due,
         COALESCE(SUM(CASE WHEN o.pay NOT IN ('store','cash') AND o.pay_status IN ('paid','refund_due','refunded') THEN sh.goods ELSE 0 END),0) online_held,
@@ -978,8 +983,8 @@ export function createApp(cfg, log = console) {
         FROM shipments sh JOIN orders o ON o.id=sh.order_id WHERE sh.store_id=? AND sh.status IN ('delivered','picked')`, a, b, storeId);
     const paid = db.get("SELECT COALESCE(SUM(amount),0) s FROM settlements WHERE store_id=?", storeId).s;
     const po = db.get("SELECT COALESCE(SUM(CASE WHEN status='paid' THEN amount ELSE 0 END),0) paid, COALESCE(SUM(CASE WHEN status='requested' THEN amount ELSE 0 END),0) pending FROM payouts WHERE store_id=?", storeId);
-    // balance > 0: the store owes Qurilish Go; < 0: Qurilish Go owes the store. Commission and fees on card-paid orders are already inside
-    // the goods money Qurilish Go holds, so they are counted once: all commissions and fees + delivery fees handed to the store − goods money held + what was paid out.
+    // balance > 0: the store owes Quriliş Go; < 0: Quriliş Go owes the store. Commission and fees on card-paid orders are already inside
+    // the goods money Quriliş Go holds, so they are counted once: all commissions and fees + delivery fees handed to the store − goods money held + what was paid out.
     return { month, goods: mon.goods, commission: mon.commission, acquiring: mon.acquiring, orders: mon.n, online_month: flow.online_month, commission_total: tot.c, acquiring_total: tot.q, delivery_due: flow.delivery_due, payout_due: flow.payout_due,
       payout_paid: po.paid, payout_pending: po.pending, payout_available: Math.max(0, flow.payout_due - po.paid - po.pending), settled: paid, balance: all + flow.delivery_due - flow.online_held - paid + po.paid };
   }
@@ -1035,7 +1040,7 @@ export function createApp(cfg, log = console) {
       WHERE sh.store_id=? AND sh.status='cancelled' AND o.pay NOT IN ('store','cash') AND o.pay_status IN ('refund_due','refunded') AND sh.status_at>=? AND sh.status_at<? ORDER BY sh.status_at`, s.id, a, b)
       .map(x => ({ ship_id: x.ship_id, at: x.at, num: x.num, goods: x.goods, reason: x.cancel_reason, refunded: x.pay_status === "refunded" }));
     const payouts = db.all("SELECT id, amount, status, payout_to, requested_at, done_at, note FROM payouts WHERE store_id=? AND requested_at>=? AND requested_at<? ORDER BY requested_at", s.id, a, b);
-    const other = db.all("SELECT id, amount, note, created_at FROM settlements WHERE store_id=? AND created_at>=? AND created_at<? ORDER BY created_at", s.id, a, b); // payments the store made to Qurilish Go (e.g. for pay-at-store orders), entered by the admin
+    const other = db.all("SELECT id, amount, note, created_at FROM settlements WHERE store_id=? AND created_at>=? AND created_at<? ORDER BY created_at", s.id, a, b); // payments the store made to Quriliş Go (e.g. for pay-at-store orders), entered by the admin
     const sum = (arr, k) => arr.reduce((n, x) => n + (x[k] || 0), 0);
     const f = storeFinance(s.id, month);
     return {
@@ -1072,7 +1077,7 @@ export function createApp(cfg, log = console) {
     const adm = needAdmin(req), b = await readJson(req);
     const s = db.get("SELECT * FROM stores WHERE id=?", p.id); if (!s) throw new HttpError(404, "not_found", "Store not found");
     if (b.status && !["active", "pending", "rejected", "blocked"].includes(b.status)) throw bad("bad_status", "Unknown status");
-    if ((b.owner_phone !== undefined || b.free_until !== undefined) && !isOwner(adm)) throw new HttpError(403, "owner_only", "Only the owner of Qurilish Go moves a store to another person or changes its free months");
+    if ((b.owner_phone !== undefined || b.free_until !== undefined) && !isOwner(adm)) throw new HttpError(403, "owner_only", "Only the owner of Quriliş Go moves a store to another person or changes its free months");
     // validate everything before the first write, so a bad owner phone does not leave a half-applied change
     const newOwner = b.owner_phone ? db.get("SELECT * FROM users WHERE phone=?", parsePhone(b.owner_phone)) : null;
     if (b.owner_phone && !newOwner) throw new HttpError(404, "user_not_found", "The owner must sign in once first");
@@ -1082,7 +1087,7 @@ export function createApp(cfg, log = console) {
     db.run("UPDATE stores SET status=COALESCE(?,status), review_note=COALESCE(?,review_note), verified=COALESCE(?,verified), free_until=COALESCE(?,free_until) WHERE id=?", b.status || null, b.note != null ? str(b.note, 300) : null, b.verified == null ? null : b.verified ? 1 : 0, freeUntil ?? null, s.id);
     audit(req, "store." + (b.status || "edit"), s.id, { note: str(b.note, 300), owner_phone: str(b.owner_phone, 20) });
     if (b.status === "active" && s.status !== "active") channel.storeApproved(s).catch(e => log.warn("[channel]", e.message));
-    if (b.status && s.owner_id) { const ow = db.get("SELECT tg_chat FROM users WHERE id=?", s.owner_id); if (ow?.tg_chat) tg.send(ow.tg_chat, b.status === "active" ? `🎉 Магазин «${s.name.replace(/[<>&]/g, "")}» одобрен и виден покупателям на Qurilish Go.` : `Статус магазина «${s.name.replace(/[<>&]/g, "")}»: ${b.status}.${b.note ? " " + str(b.note, 300).replace(/[<>&]/g, "") : ""}`); }
+    if (b.status && s.owner_id) { const ow = db.get("SELECT tg_chat FROM users WHERE id=?", s.owner_id); if (ow?.tg_chat) tg.send(ow.tg_chat, b.status === "active" ? `🎉 Магазин «${s.name.replace(/[<>&]/g, "")}» одобрен и виден покупателям на Quriliş Go.` : `Статус магазина «${s.name.replace(/[<>&]/g, "")}»: ${b.status}.${b.note ? " " + str(b.note, 300).replace(/[<>&]/g, "") : ""}`); }
     if (newOwner) {
       const ou = newOwner;
       db.tx(() => { db.run("UPDATE stores SET owner_id=? WHERE id=?", ou.id, s.id); db.run("UPDATE users SET role='seller', store_id=? WHERE id=?", s.id, ou.id);

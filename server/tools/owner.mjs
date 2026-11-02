@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* The owner's password for the Qurilish Go panel.
+/* The owner's password for the Quriliş Go panel.
      node tools/owner.mjs hash            asks for a password (not echoed) and prints the OWNER_PASSWORD_HASH line for .env
      node tools/owner.mjs hash --stdin    reads the password from stdin (used by `imorat owner`, so it never appears in argv or history)
      node tools/owner.mjs check HASH      asks for a password and says whether it matches the hash

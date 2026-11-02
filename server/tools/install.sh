@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Qurilish Go — one-command server install on a fresh Ubuntu 22.04 / 24.04 VPS (1 GB RAM is enough).
+# Quriliş Go — one-command server install on a fresh Ubuntu 22.04 / 24.04 VPS (1 GB RAM is enough).
 #
 #   curl -fsSL https://raw.githubusercontent.com/usmonovm7777-crypto/Imorat/main/server/tools/install.sh -o install.sh
 #   sudo bash install.sh --site imorat.uz --api api.imorat.uz --admin 998901234567 --bot 123456:ABC...
@@ -64,7 +64,7 @@ else
     setv ALLOWED_ORIGINS "https://$SITE,https://www.$SITE,https://usmonovm7777-crypto.github.io"
     setv SITE_URL "https://$SITE/"; setv DEMO_STORES 0; setv SITE_DOMAIN "$SITE"
     setv TELEGRAM_BOT_TOKEN "$BOT"; setv SMS_MODE telegram
-    # "stage 0": no payment provider yet → buyers pay the store on receipt, the store delivers itself, Qurilish Go takes no
+    # "stage 0": no payment provider yet → buyers pay the store on receipt, the store delivers itself, Quriliş Go takes no
     # commission and holds no money. Once Payme/Click keys are set, card payment switches on and pay-at-store narrows to
     # pickup only by itself (set ALLOW_PAY_AT_STORE=0 to make the site card-only).
     setv ALLOW_PAY_AT_STORE 1

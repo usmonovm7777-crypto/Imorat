@@ -27,4 +27,4 @@ export function checkTotp(secret, code, t = Date.now()) {
   for (const d of [-30000, 0, 30000]) if (timingSafeEqual(Buffer.from(totp(secret, t + d)), Buffer.from(c))) return Math.floor((t + d) / 30000);
   return false;
 }
-export const otpauthUrl = (secret, label) => `otpauth://totp/${encodeURIComponent("Qurilish Go:" + label)}?secret=${secret}&issuer=Qurilish Go&digits=6&period=30`;
+export const otpauthUrl = (secret, label) => `otpauth://totp/${encodeURIComponent("Quriliş Go:" + label)}?secret=${secret}&issuer=${encodeURIComponent("Quriliş Go")}&digits=6&period=30`;

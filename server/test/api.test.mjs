@@ -743,7 +743,7 @@ test("Telegram bot: search, sign-in by contact, request to a master with buttons
   const sentTo = (chat, re) => tgSent.filter(x => String(x.chat_id) === String(chat) && re.test(x.text || ""));
   // welcome with the menu
   send(7001, { text: "/start" });
-  const w = await until(() => sentTo(7001, /Qurilish/)[0]);
+  const w = await until(() => sentTo(7001, /Quriliş/)[0]);
   assert.ok(w.reply_markup.keyboard.flat().some(b => b.request_contact), "sign-in button for a new chat");
   // search with a typo and in Uzbek Latin
   send(7001, { text: "перфаратор" });
@@ -819,7 +819,7 @@ test("Telegram bot: search, sign-in by contact, request to a master with buttons
   await until(() => sentTo(7001, /Topildi[\s\S]*Laminat/).length);
   // English: a chat whose Telegram is in English starts in English; menu, search and pros are translated
   tgUpdates.push({ update_id: ++uid, message: { chat: { id: 7003, type: "private" }, from: { id: 7003, language_code: "en" }, text: "/start" } });
-  const en = await until(() => sentTo(7003, /I am the <b>Qurilish Go<\/b> bot/)[0]);
+  const en = await until(() => sentTo(7003, /I am the <b>Quriliş Go<\/b> bot/)[0]);
   assert.ok(en.reply_markup.keyboard.flat().some(b => b.text === "🔎 Find a product"));
   send(7003, { text: "cement" });
   const es = await until(() => sentTo(7003, /Found: <b>\d+<\/b>/)[0]);
@@ -940,8 +940,8 @@ test("Finance with card payments: money held once, a partner's share survives an
   const fin = async (tok) => (await call("GET", "/api/seller/summary", null, tok)).data.finance;
   const ship = async (tok, num) => (await call("GET", "/api/seller/summary", null, tok)).data.orders.find(x => x.num === num);
   const advance = async (tok, num, states) => { const s = await ship(tok, num); for (const st of states) assert.equal((await call("PATCH", `/api/seller/shipments/${s.ship_id}`, { status: st }, tok)).status, 200, st); };
-  // 1) one store, 100 000 by card: Qurilish Go's commission 1% = 1 000 and the bank's acquiring fee 2% = 2 000 are two separate lines;
-  //    Qurilish Go holds 100 000 and owes the store 97 000 — not 94 000
+  // 1) one store, 100 000 by card: Quriliş Go's commission 1% = 1 000 and the bank's acquiring fee 2% = 2 000 are two separate lines;
+  //    Quriliş Go holds 100 000 and owes the store 97 000 — not 94 000
   const rates = (await call("GET", "/api/seller/summary", null, sellerA)).data.rates;
   assert.deepEqual(rates.platform, { "*": 0.01 }); assert.equal(rates.acquiring, 0.02); assert.equal(rates.promo, false);
   const o1 = (await call("POST", "/api/orders", { lines: [{ id: 1, store: A, q: 1 }], form }, buyer)).data.order;
@@ -958,7 +958,7 @@ test("Finance with card payments: money held once, a partner's share survives an
   const adminFin = (await call("GET", "/api/admin/finance", null, globalThis.ADMIN)).data;
   const req1 = adminFin.payouts.find(x => x.id === pr.data.payout.id); assert.equal(req1.status, "requested"); assert.equal(req1.payout_to, "8600 1234 5678 9012");
   assert.equal((await call("PATCH", `/api/admin/payouts/${req1.id}`, { status: "paid" }, globalThis.ADMIN)).status, 200);
-  f = await fin(sellerA); assert.equal(f.payout_paid, 50000); assert.equal(f.payout_available, 47000); assert.equal(f.balance, -47000, "after the transfer Qurilish Go owes the rest");
+  f = await fin(sellerA); assert.equal(f.payout_paid, 50000); assert.equal(f.payout_available, 47000); assert.equal(f.balance, -47000, "after the transfer Quriliş Go owes the rest");
   assert.equal((await call("POST", "/api/seller/payout", { amount: 99999999 }, sellerA)).data.error, "bad_amount");
   const pr2 = await call("POST", "/api/seller/payout", {}, sellerA); assert.equal(pr2.data.payout.amount, 47000, "no amount = everything available");
   assert.equal((await call("PATCH", `/api/admin/payouts/${pr2.data.payout.id}`, { status: "rejected", note: "неверная карта" }, globalThis.ADMIN)).status, 200);
@@ -994,7 +994,7 @@ test("Finance with card payments: money held once, a partner's share survives an
   const got = (await call("GET", `/api/orders/${o3.num}`, null, buyer)).data.order; assert.equal(got.pay_status, "paid"); assert.ok(got.paid_at);
   await advance(sellerA, o3.num, ["assembling"]); app.sweep(Date.now() + 31 * 60000);
   assert.equal((await call("GET", `/api/orders/${o3.num}`, null, buyer)).data.order.status, "active", "a paid order is not expired by the payment sweep");
-  // 4) free months: the admin gives store B three months — Qurilish Go's 1% is 0, the bank's 2% stays; ending them brings the 1% back
+  // 4) free months: the admin gives store B three months — Quriliş Go's 1% is 0, the bank's 2% stays; ending them brings the 1% back
   const untilDay = new Date(Date.now() + 90 * 86400_000).toISOString().slice(0, 10);
   assert.equal((await call("PATCH", `/api/admin/stores/${B}`, { free_until: untilDay }, globalThis.ADMIN)).status, 200);
   const sumB = (await call("GET", "/api/seller/summary", null, sellerB)).data; assert.equal(sumB.rates.promo, true); assert.ok(sumB.store.free_until > Date.now());
@@ -1008,7 +1008,7 @@ test("Finance with card payments: money held once, a partner's share survives an
   await pay(o5, "fin-5"); await advance(sellerB, o5.num, ["assembling", "ready", "picked"]);
   f = await fin(sellerB); assert.equal(f.commission_total, 1000); assert.equal(f.acquiring_total, 4000); assert.equal(f.payout_due, 98000 + 97000);
   assert.ok((await call("GET", "/api/admin/stores", null, globalThis.ADMIN)).data.stores.some(x => x.id === B && x.promo === false && x.free_until <= Date.now()));
-  { // the free-period boundary: an order placed while free_until is still ahead carries 0% Qurilish Go commission, one placed
+  { // the free-period boundary: an order placed while free_until is still ahead carries 0% Quriliş Go commission, one placed
     // the moment it has passed carries the full rate — and the three months are counted date to date, clamped to month ends
     const soon = Date.now() + 1500;
     app.db.run("UPDATE stores SET free_until=? WHERE id=?", soon, B);
@@ -1378,7 +1378,7 @@ test("Stage 0: pay on receipt, the store delivers itself, no invented delivery p
     const ord = (await c("GET", `/api/orders/${o.data.order.num}`, null, t)).data.order; assert.equal(ord.ships[0].step, 2, "step 2 of the 4-step store flow");
     const cr = (await c("GET", `/api/orders/${o.data.order.num}/courier?ship=${sh.id}`, null, t)).data.courier; assert.equal(cr.pos, null); assert.ok(cr.unavailable);
     assert.equal((await c("PATCH", `/api/seller/shipments/${sh.id}`, { status: "delivered" }, seller)).status, 200);
-    // the store owes Qurilish Go nothing for a delivery Qurilish Go did not order
+    // the store owes Quriliş Go nothing for a delivery Quriliş Go did not order
     const f = (await c("GET", "/api/seller/summary", null, seller)).data.finance; assert.equal(f.delivery_due, 0); assert.equal(f.balance, 0); assert.equal(f.commission_total, 0);
     const st = (await c("GET", "/api/seller/statement", null, seller)).data; assert.equal(st.totals.sales_store, st.totals.sales); assert.equal(st.totals.due, 0);
     // the buyer got one message when the order was placed (what happens next), and the store's named delivery price reaches the buyer
@@ -1721,6 +1721,20 @@ test("AI 3D model from the seller's photo: off without a key, made on a new phot
     // other stores cannot touch it
     const other = (await login("997770032")).data.token;
     assert.equal((await call("POST", `/api/seller/products/${pid}/model3d/use`, { use: false }, other)).status, 403);
+    // the look library: another store puts up the same product at once — copies of the still and the model, no new photo, no new paid model
+    const st2 = await call("POST", "/api/seller/store", { name: "3D Copy", descr: "Второй магазин для библиотеки 3D-моделей", cats: ["build"], phone: "71 200 30 78", addr: "ул. Объёмная, 5", district: "chil" }, other);
+    assert.equal((await call("PATCH", `/api/admin/stores/${st2.data.store.id}`, { status: "active" }, globalThis.ADMIN)).status, 200);
+    const lib = (await call("GET", "/api/seller/look-library?q=" + encodeURIComponent("цемент 3D"), null, other)).data.items;
+    const hit = lib.find(x => x.id === pid); assert.ok(hit && hit.m3d && !hit.own && hit.store_name === "3D Test", JSON.stringify(lib));
+    assert.equal((await call("GET", "/api/seller/look-library?q=" + encodeURIComponent("цемент"), null, seller)).data.items.find(x => x.id === pid).own, true, "the store sees its own products too");
+    const before = calls.length;
+    const cp = await call("POST", "/api/seller/products", { ru: "Цемент 3D-тест (наш склад), 50 кг", cat: "build", sub: "dry", unit: "bag50", price: 59000, stock: 4, kg: 50, from: pid }, other);
+    assert.equal(cp.status, 200, JSON.stringify(cp.data)); assert.equal(cp.data.model3d.state, "used"); assert.notEqual(cp.data.model3d.url, ready.url, "its own copy of the model");
+    assert.equal((await fetch(cp.data.model3d.url.replace(CFG.publicUrl, base))).status, 200); assert.equal((await fetch(cp.data.img.replace(CFG.publicUrl, base))).status, 200);
+    assert.equal(calls.length, before, "no new model was ordered");
+    // a product of another store without a model buyers see cannot be copied
+    const plain = (await call("POST", "/api/seller/products", { ru: "Песок без модели, 50 кг", cat: "build", sub: "dry", unit: "bag50", price: 20000, stock: 4, kg: 50 }, seller)).data.product.id;
+    assert.equal((await call("POST", "/api/seller/products", { ru: "Песок чужой, 50 кг", cat: "build", sub: "dry", unit: "bag50", price: 20000, stock: 4, kg: 50, from: plain }, other)).data.error, "bad_source");
     // 4) a failed attempt for the same photo keeps the model buyers already see, and says why
     answer = 402;
     assert.equal((await call("POST", `/api/seller/products/${pid}/model3d`, {}, seller)).data.model3d.state, "working");

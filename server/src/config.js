@@ -91,9 +91,9 @@ export function loadConfig(env = process.env) {
     // Seller deadlines (minutes): reminder, SMS, auto-cancel if not accepted; hours to hand the order over
     timers: { remind: Number(env.ACCEPT_REMIND_MIN) || 5, sms: Number(env.ACCEPT_SMS_MIN) || 10, cancel: Number(env.ACCEPT_TIMEOUT_MIN) || 20, handover: Number(env.HANDOVER_HOURS) || 4 },
     /* What a store pays on a card-paid order, from the goods money:
-       - Qurilish Go's own commission by category, %: "*:1" (a category may differ: "build:1,*:2")
+       - Quriliş Go's own commission by category, %: "*:1" (a category may differ: "build:1,*:2")
        - the Payme/Click acquiring fee that the bank charges on the payment, passed on as it is: 2%
-       - a new store's first PROMO_MONTHS after approval: Qurilish Go's part is 0%, the acquiring fee stays */
+       - a new store's first PROMO_MONTHS after approval: Quriliş Go's part is 0%, the acquiring fee stays */
     commission: Object.fromEntries(String(env.COMMISSION || "*:1").split(",").map(x => x.split(":")).filter(x => x.length === 2).map(([k, v]) => [k.trim(), Math.round(Math.max(0, Number(v) || 0) * 1e4) / 1e6])),
     // "2" = the same for every provider; "payme:2,click:1.8" = each provider's contract rate (the one without a name is the default)
     ...(() => { const by = {}; let def = null; for (const x of String(env.ACQUIRING_PERCENT ?? "2").split(",").map(v => v.trim()).filter(Boolean)) { const [k, v] = x.includes(":") ? x.split(":") : ["*", x]; const n = Math.round(Math.max(0, Number(v) || 0) * 1e4) / 1e6; if (k.trim() === "*") def = n; else by[k.trim()] = n; }
@@ -124,7 +124,7 @@ export function loadConfig(env = process.env) {
     /* "stage 0": no payment provider yet and pay-at-store allowed — buyers pay the store on receipt, the platform holds no money */
     get payOnReceipt() { return this.allowPayAtStore && !this.paymentsOnline.length; },
     /* who delivers: Yandex when its token is set; in stage 0 (pay on receipt) the store itself with its own courier, price
-       agreed with the buyer; with card payments but no Yandex yet — Qurilish Go arranges the courier by hand at the tariff price */
+       agreed with the buyer; with card payments but no Yandex yet — Quriliş Go arranges the courier by hand at the tariff price */
     get deliveryBy() { return this.yandex.token ? "yandex" : this.payOnReceipt ? "store" : "platform"; },
     get paymentsOnline() { const have = [...(this.payme.id && this.payme.key ? ["payme"] : []), ...(this.click.serviceId && this.click.secret ? ["click"] : [])]; const want = list(env.PAYMENTS); return want.length ? have.filter(p => want.includes(p)) : have; }
   };

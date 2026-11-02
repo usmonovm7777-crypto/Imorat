@@ -1,6 +1,6 @@
 {
   "appId": "uz.imorat.app",
-  "appName": "Qurilish Go",
+  "appName": "Quriliş Go",
   "webDir": "www",
   "server": { "androidScheme": "https" },
   "plugins": {

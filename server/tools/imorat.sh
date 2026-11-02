@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# imorat — the one command for the Qurilish Go server (installed to /usr/local/bin/imorat by tools/install.sh).
+# imorat — the one command for the Quriliş Go server (installed to /usr/local/bin/imorat by tools/install.sh).
 #   imorat status        what is running, API health, disk, last backup
 #   imorat logs [api|caddy]   live logs (Ctrl+C to stop)
 #   imorat env           edit server/.env in nano, then restart the API
@@ -80,7 +80,7 @@ case "$cmd" in
     # the file must be a healthy SQLite database before anything is touched
     node -e "const{DatabaseSync}=require('node:sqlite');const d=new DatabaseSync(process.argv[1],{readOnly:true});const r=d.prepare('PRAGMA integrity_check').get();if(r.integrity_check!=='ok')throw new Error(r.integrity_check);console.log('backup is a healthy database:',d.prepare('SELECT count(*) n FROM orders').get().n,'orders')" "$1" 2>/dev/null \
       || dc run --rm --no-deps -T -v "$(cd "$(dirname "$1")" && pwd)/$(basename "$1"):/restore.db:ro" --entrypoint node api -e "const{DatabaseSync}=require('node:sqlite');const d=new DatabaseSync('/restore.db',{readOnly:true});const r=d.prepare('PRAGMA integrity_check').get();if(r.integrity_check!=='ok')throw new Error(r.integrity_check);console.log('backup is a healthy database:',d.prepare('SELECT count(*) n FROM orders').get().n,'orders')" \
-      || die "$1 is not a valid Qurilish Go database — nothing was changed"
+      || die "$1 is not a valid Quriliş Go database — nothing was changed"
     read -r -p "Replace the live database with $1? Current data after that backup will be lost. [yes/NO] " ok; [ "$ok" = yes ] || exit 1
     dc stop api
     dc cp "$1" api:/data/imorat.db

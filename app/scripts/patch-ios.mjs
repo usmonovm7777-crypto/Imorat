@@ -1,4 +1,4 @@
-/* Applies Qurilish Go's native settings to the generated iOS project (ios/ is created by `npx cap add ios` on a Mac
+/* Applies Quriliş Go's native settings to the generated iOS project (ios/ is created by `npx cap add ios` on a Mac
    and is not committed). Safe to run again. What it does and why:
    - Info.plist usage descriptions — iOS terminates an app that touches the camera, photos or location without them.
      The site uses them: photo search and product photos (camera / photo library), "detect my location" at checkout.
@@ -29,9 +29,9 @@ const setRaw = (key, xml) => { if (new RegExp(`<key>${key}</key>`).test(plist)) 
 
 setString("CFBundleShortVersionString", version.versionName);
 setString("CFBundleVersion", String(version.versionCode));
-setString("NSCameraUsageDescription", "Qurilish Go использует камеру, чтобы сфотографировать товар для поиска или для сообщения о проблеме с заказом. Qurilish Go tovarni qidirish yoki buyurtma muammosi haqida xabar berish uchun kameradan foydalanadi.");
-setString("NSPhotoLibraryUsageDescription", "Qurilish Go открывает фото, чтобы найти товар по снимку или приложить его к заказу. Qurilish Go rasm bo‘yicha tovar topish yoki uni buyurtmaga qo‘shish uchun suratlarni ochadi.");
-setString("NSLocationWhenInUseUsageDescription", "Qurilish Go определяет ваше местоположение, когда вы открываете карту адреса доставки или магазина, чтобы поставить метку туда, где вы находитесь. Qurilish Go yetkazish manzili yoki do‘kon xaritasini ochganingizda belgini turgan joyingizga qo‘yish uchun joylashuvingizni aniqlaydi.");
+setString("NSCameraUsageDescription", "Quriliş Go использует камеру, чтобы сфотографировать товар для поиска или для сообщения о проблеме с заказом. Quriliş Go tovarni qidirish yoki buyurtma muammosi haqida xabar berish uchun kameradan foydalanadi.");
+setString("NSPhotoLibraryUsageDescription", "Quriliş Go открывает фото, чтобы найти товар по снимку или приложить его к заказу. Quriliş Go rasm bo‘yicha tovar topish yoki uni buyurtmaga qo‘shish uchun suratlarni ochadi.");
+setString("NSLocationWhenInUseUsageDescription", "Quriliş Go определяет ваше местоположение, когда вы открываете карту адреса доставки или магазина, чтобы поставить метку туда, где вы находитесь. Quriliş Go yetkazish manzili yoki do‘kon xaritasini ochganingizda belgini turgan joyingizga qo‘yish uchun joylashuvingizni aniqlaydi.");
 setRaw("ITSAppUsesNonExemptEncryption", "<false/>");
 setRaw("CFBundleURLTypes", `<array>\n\t\t<dict>\n\t\t\t<key>CFBundleURLName</key>\n\t\t\t<string>uz.imorat.app</string>\n\t\t\t<key>CFBundleURLSchemes</key>\n\t\t\t<array>\n\t\t\t\t<string>imoratgo</string>\n\t\t\t</array>\n\t\t</dict>\n\t</array>`);
 writeFileSync(plistPath, plist);

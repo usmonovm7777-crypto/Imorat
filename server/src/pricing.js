@@ -59,7 +59,7 @@ export function pickTariff(ref, kg, len = 0) {
 export function quote(db, ref, { lines, services = [], bundles = [], form = {}, promo = "", user = null, yandexPrices = null, points = 0, maxShare = 0.2, bonusOn = true, discounts = true, storeDelivery = false }) {
   const D = Object.fromEntries(ref.districts.map(d => [d.id, d]));
   const dest = (Object.hasOwn(D, form.district) && D[form.district]) || (Object.hasOwn(D, user?.district ?? "") && D[user.district]) || D.mirob;
-  /* The buyer pays the store directly (stage 0 / cash on pickup): no money passes through Qurilish Go, so nothing the platform
+  /* The buyer pays the store directly (stage 0 / cash on pickup): no money passes through Quriliş Go, so nothing the platform
      would finance can be applied — promo codes, bundle discounts, bonus points, and no installation service is sold
      (the store never agreed to any of it and would not receive the difference). The quote says what was dropped. */
   const payAtStore = ["store", "cash"].includes(form.pay);

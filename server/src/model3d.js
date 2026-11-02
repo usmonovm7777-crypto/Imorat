@@ -1,6 +1,6 @@
 import { HttpError, bad, readJson } from "./http.js";
 import { randomBytes } from "node:crypto";
-import { readFileSync, writeFileSync, unlinkSync } from "node:fs";
+import { readFileSync, writeFileSync, unlinkSync, copyFileSync } from "node:fs";
 import { join, extname } from "node:path";
 
 /* AI 3D model of a store's product, made from the seller's own photo.
@@ -80,5 +80,34 @@ export function registerModel3d({ r, db, cfg, needSeller, lim, mediaUrl, bumpCat
     bumpCatalog();
     return { model3d: out(db.get("SELECT * FROM products WHERE id=?", prod.id)) };
   });
-  return { start, photoChanged, out, on, catalogUrl: p => (p.m3d && p.m3d_state === "used" ? mediaUrl(p.m3d) : undefined) };
+  /* The library of finished looks: a product photographed (and modelled) once can be put up again at once — no new photo, no new
+     paid model. It offers any store's product whose model buyers already see (approved), and the seller's own products with a photo. */
+  const words = t => String(t || "").toLowerCase().replace(/ё/g, "е").split(/[^\p{L}\p{N}]+/u).filter(w => w.length >= 2);
+  function lookSource(id, storeId) {
+    const p = db.get("SELECT * FROM products WHERE id=?", Number(id));
+    if (!p || !p.img?.startsWith("/uploads/")) return null;
+    const shared = p.active && (!p.review || p.review === "ok") && p.m3d && p.m3d_state === "used";
+    return p.store_id === storeId || shared ? p : null;
+  }
+  r.get("/api/seller/look-library", req => {
+    const { s } = needSeller(req), q = words(new URL(req.url, "http://x").searchParams.get("q")).slice(0, 8);
+    if (!q.length) return { items: [] };
+    const rows = db.all(`SELECT p.id, p.ru, p.uz, p.img, p.m3d, p.m3d_state, p.store_id, st.name store_name FROM products p LEFT JOIN stores st ON st.id=p.store_id
+      WHERE p.img LIKE '/uploads/%' AND (p.store_id=? OR (p.active=1 AND (p.review IS NULL OR p.review='ok') AND p.m3d IS NOT NULL AND p.m3d_state='used'))
+      ORDER BY p.id DESC LIMIT 3000`, s.id);
+    const items = rows.map(p => { const w = words(p.ru + " " + p.uz); return { p, sc: q.filter(t => w.some(x => x.startsWith(t))).length / q.length + (p.m3d_state === "used" ? 0.05 : 0) }; })
+      .filter(x => x.sc >= 0.6).sort((a, b) => b.sc - a.sc).slice(0, 6)
+      .map(({ p }) => ({ id: p.id, ru: p.ru, uz: p.uz, img: mediaUrl(p.img), m3d: p.m3d && ["ready", "used"].includes(p.m3d_state) ? mediaUrl(p.m3d) : null, own: p.store_id === s.id, store_name: p.store_id === s.id ? null : p.store_name }));
+    return { items };
+  });
+  /* the new product gets its own copies of the files (the source may change its photo later), the model in the same state */
+  function copyLook(src, pid) {
+    const dup = (path, prefix) => { const name = path.slice(9).replace(/[^\w.-]/g, ""), to = `${prefix}-${randomBytes(5).toString("hex")}${extname(name)}`; copyFileSync(join(cfg.uploadsDir, name), join(cfg.uploadsDir, to)); return "/uploads/" + to; };
+    const hasModel = !!src.m3d && ["ready", "used"].includes(src.m3d_state);
+    const img = dup(src.img, "p" + pid), m3d = hasModel ? dup(src.m3d, "m" + pid) : null;
+    db.run("UPDATE products SET img=?, m3d=?, m3d_state=?, m3d_err=NULL, m3d_at=? WHERE id=?", img, m3d, hasModel ? src.m3d_state : null, Date.now(), pid);
+    bumpCatalog();
+    return db.get("SELECT * FROM products WHERE id=?", pid);
+  }
+  return { start, photoChanged, out, on, lookSource, copyLook, catalogUrl: p => (p.m3d && p.m3d_state === "used" ? mediaUrl(p.m3d) : undefined) };
 }

@@ -79,7 +79,7 @@ export function createNotify({ db, cfg, tg, push, sms, ref, log = console }) {
       const c = ctx(shipId); if (!c.s || !c.o || !c.st || !c.buyer) return;
       const text = `Оплата по заказу ${c.o.num} получена (${c.o.total.toLocaleString("ru-RU")} сум, включая доставку). Магазин ${c.st.name} получил заказ.`;
       if (c.buyer.tg_chat) safe(tg.send(c.buyer.tg_chat, h(text)));
-      safe(push.toUser(c.buyer.id, { title: `Qurilish Go · ${c.o.num}`, body: text, url: `${cfg.siteUrl}#orders`, tag: "order-" + c.o.num }));
+      safe(push.toUser(c.buyer.id, { title: `Quriliş Go · ${c.o.num}`, body: text, url: `${cfg.siteUrl}#orders`, tag: "order-" + c.o.num }));
     },
     /* the order is placed: the buyer gets one message with what happens next (card orders get it from paid()) */
     async orderPlaced(orderId) {
@@ -98,14 +98,14 @@ export function createNotify({ db, cfg, tg, push, sms, ref, log = console }) {
       const all = db.all("SELECT price, price_named_at FROM shipments WHERE order_id=? AND status<>'cancelled'", c.o.id), named = all.every(x => x.price_named_at), delSum = all.reduce((a, x) => a + (x.price_named_at ? x.price : 0), 0);
       const text = `${c.st.name}: доставка заказа ${c.o.num} — ${c.s.price ? money(c.s.price) : "бесплатно"}.${named ? ` К оплате при получении: ${money(c.o.total + delSum)} (товары ${money(c.o.total)}${delSum ? ` + доставка ${money(delSum)}` : ""}).` : ""}`;
       if (c.buyer.tg_chat) safe(tg.send(c.buyer.tg_chat, h(text)));
-      safe(push.toUser(c.buyer.id, { title: `Qurilish Go · ${c.o.num}`, body: text, url: `${cfg.siteUrl}#orders`, tag: "order-" + c.o.num }));
+      safe(push.toUser(c.buyer.id, { title: `Quriliş Go · ${c.o.num}`, body: text, url: `${cfg.siteUrl}#orders`, tag: "order-" + c.o.num }));
     },
     async status(shipId) {
       const c = ctx(shipId); if (!c.s || !c.o || !c.st) return; // a shipment whose order or store row is gone (dropped demo stores) must not crash the job
       this.sellerRefresh(shipId);
       // the store hears about a cancellation it did not make itself (the buyer, a timer, an admin, a failed payment): otherwise it keeps packing
       if (c.s.status === "cancelled" && c.s.cancel_reason !== "out_of_stock" && c.owner) {
-        const why = { buyer: "покупатель отменил заказ", admin: "отменён администратором Qurilish Go", not_accepted: "не подтверждён вовремя", not_shipped: "не передан курьеру вовремя", unpaid: "покупатель не оплатил картой", refund: "платёж отменён" }[c.s.cancel_reason] || "отменён";
+        const why = { buyer: "покупатель отменил заказ", admin: "отменён администратором Quriliş Go", not_accepted: "не подтверждён вовремя", not_shipped: "не передан курьеру вовремя", unpaid: "покупатель не оплатил картой", refund: "платёж отменён" }[c.s.cancel_reason] || "отменён";
         const line = `❌ <b>Заказ ${h(c.o.num)} отменён</b>: ${why}.${c.s.cancel_note ? `\nПричина покупателя: «${h(c.s.cancel_note)}»` : ""} Собирать и везти его не нужно; товар снова в продаже.`;
         if (c.owner.tg_chat) safe(tg.send(c.owner.tg_chat, line));
         safe(push.toUser(c.owner.id, { title: `❌ Заказ ${c.o.num} отменён`, body: why, url: cabinet, tag: "ship-" + c.s.id }));
@@ -115,14 +115,14 @@ export function createNotify({ db, cfg, tg, push, sms, ref, log = console }) {
         : BUYER_TEXT[c.s.status]?.(c.o, c.st, c.f);
       if (!text || !c.buyer || c.s.cancel_reason === "buyer") return;
       if (c.buyer.tg_chat) safe(tg.send(c.buyer.tg_chat, h(text)));
-      safe(push.toUser(c.buyer.id, { title: `Qurilish Go · ${c.o.num}`, body: text, url: `${cfg.siteUrl}#orders`, tag: "order-" + c.o.num }));
+      safe(push.toUser(c.buyer.id, { title: `Quriliş Go · ${c.o.num}`, body: text, url: `${cfg.siteUrl}#orders`, tag: "order-" + c.o.num }));
     },
     /* the carrier could not give a loader for this trip: the buyer hears it before the car arrives, the admins settle the fee */
     async loadersFailed(shipId) {
       const c = ctx(shipId); if (!c.s || !c.o || !c.buyer) return;
       const text = `Заказ ${c.o.num}: перевозчик не смог выделить грузчика на этот рейс — водитель привезёт заказ к подъезду, разгрузка у машины. Плату за помощь мы вернём; если нужна помощь с подъёмом, напишите в поддержку.`;
       if (c.buyer.tg_chat) safe(tg.send(c.buyer.tg_chat, h(text)));
-      safe(push.toUser(c.buyer.id, { title: `Qurilish Go · ${c.o.num}`, body: text, url: `${cfg.siteUrl}#orders`, tag: "order-" + c.o.num }));
+      safe(push.toUser(c.buyer.id, { title: `Quriliş Go · ${c.o.num}`, body: text, url: `${cfg.siteUrl}#orders`, tag: "order-" + c.o.num }));
       this.owners(`🧰 Отправление #${c.s.id} (заказ ${c.o.num}): Яндекс не принял заявку с грузчиком, курьер заказан без него. Верните покупателю плату за разгрузку и при необходимости организуйте подъём.`);
     },
     /* everyone who runs the place: the owner(s) and the helpers — moderation, orders, complaints */
