@@ -98,6 +98,8 @@ export function openDb(path, catalogPath, opts = {}) {
   // the bank's acquiring fee on a card-paid order (kept apart from Quriliş Go's commission) and the end of a store's free months
   addCol("shipments", "acquiring", "INTEGER NOT NULL DEFAULT 0"); addCol("stores", "free_until", "INTEGER");
   addCol("products", "m3d", "TEXT"); addCol("products", "m3d_state", "TEXT"); addCol("products", "m3d_err", "TEXT"); addCol("products", "m3d_at", "INTEGER"); // AI 3D model from the photo (model3d.js)
+  // AI photo studio (model3d.js): white background made from the seller's photo; img_orig keeps the untouched original while the cut-out is shown
+  addCol("products", "img_orig", "TEXT"); addCol("products", "cut_img", "TEXT"); addCol("products", "cut_state", "TEXT"); addCol("products", "cut_err", "TEXT"); addCol("products", "cut_warn", "TEXT"); addCol("products", "cut_at", "INTEGER");
   addCol("products", "dims", "TEXT"); addCol("shipments", "loaders_failed", "INTEGER NOT NULL DEFAULT 0"); // package size [l,w,h] m; the carrier refused the loader
   addCol("stores", "prices_confirmed_at", "INTEGER"); addCol("stores", "prices_reminded_at", "INTEGER"); // the seller's "prices and stock are current" stamp and the last reminder
   addCol("users", "deleted_at", "INTEGER"); // account deleted by its owner: personal data wiped, the row keeps the orders' accounting trail

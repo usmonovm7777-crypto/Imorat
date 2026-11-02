@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Quriliş Go — AI 3D worker.
+"""Quriliş Go — AI worker: 3D models (kind "m3d") and the photo studio's white background (kind "cutout", see cutout.py:
+the AI only builds a mask, the product's own pixels are copied onto #FFFFFF, lossless).
 
 Makes a real 3D model (binary glTF, .glb) of a product from ONE seller photo with TripoSR
 (open source, MIT: https://github.com/VAST-AI-Research/TripoSR) and hands it to the Quriliş Go API.
@@ -17,6 +18,7 @@ import argparse, gc, http.client, io, json, logging, os, platform, signal, socke
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import meshkit  # noqa: E402
+import cutout  # noqa: E402
 
 log = logging.getLogger("ai3d")
 
@@ -41,10 +43,10 @@ class Api:
         self.name = (name or socket.gethostname())[:60]
         self.timeout = timeout
 
-    def _req(self, method, path, body=None, ctype=None, timeout=None):
+    def _req(self, method, path, body=None, ctype=None, timeout=None, extra=None):
         url = path if path.startswith("http") else self.base + path
         data = None
-        headers = {"Authorization": "Bearer " + self.token, "X-Worker": self.name, "User-Agent": "QurilishGo-ai3d/1.0"}
+        headers = {"Authorization": "Bearer " + self.token, "X-Worker": self.name, "User-Agent": "QurilishGo-ai3d/1.0", **(extra or {})}
         if body is not None:
             if isinstance(body, (bytes, bytearray)):
                 data = bytes(body); headers["Content-Type"] = ctype or "application/octet-stream"
@@ -70,8 +72,8 @@ class Api:
             raise RuntimeError(f"{what}: HTTP {status} {j.get('error') or raw[:200]!r}")
         return j
 
-    def next(self):
-        return self._json(*self._req("POST", "/api/worker/model3d/next", {}), "next").get("job")
+    def next(self, kinds=("m3d",)):
+        return self._json(*self._req("POST", "/api/worker/model3d/next", {"kinds": list(kinds)}), "next").get("job")
 
     def photo(self, url):
         st, raw = self._req("GET", url, timeout=120)
@@ -81,8 +83,8 @@ class Api:
             raise RuntimeError(f"photo: HTTP {st}")
         return raw
 
-    def result(self, job_id, glb):
-        return self._json(*self._req("POST", f"/api/worker/model3d/{job_id}/result", glb, "model/gltf-binary", timeout=300), "result")
+    def result(self, job_id, body, ctype="model/gltf-binary", extra=None):
+        return self._json(*self._req("POST", f"/api/worker/model3d/{job_id}/result", body, ctype, timeout=300, extra=extra), "result")
 
     def fail(self, job_id, error, retry=True):
         return self._json(*self._req("POST", f"/api/worker/model3d/{job_id}/fail", {"error": str(error)[:300], "retry": bool(retry)}), "fail")
@@ -256,12 +258,14 @@ _stop = False
 
 
 def run(api, engine, poll=5.0, once=False, keep_dir=None):
-    """The queue loop: take a job, make the model, upload it; errors are reported (recoverable ones go back to the queue)."""
+    """The queue loop: take a job, make the result, upload it; errors are reported (recoverable ones go back to the queue).
+    engine: one engine for 3D jobs, or {"m3d": …, "cutout": …} — the server hands out only the kinds listed here."""
     global _stop
+    engines = engine if isinstance(engine, dict) else {"m3d": engine}
     backoff = poll
     while not _stop:
         try:
-            job = api.next()
+            job = api.next(tuple(engines))
             backoff = poll
         except SystemExit:
             raise
@@ -276,22 +280,27 @@ def run(api, engine, poll=5.0, once=False, keep_dir=None):
                 return 0
             time.sleep(poll)
             continue
-        jid = job["id"]
-        log.info("job %s: product %s %r", jid, job.get("product_id"), job.get("name", ""))
+        jid, kind = job["id"], job.get("kind") or "m3d"
+        log.info("job %s (%s): product %s %r", jid, kind, job.get("product_id"), job.get("name", ""))
         t0 = time.time()
         with tempfile.TemporaryDirectory(prefix="ai3d-") as td:  # libraries' temporary files for this job land here; always removed
             tempfile.tempdir = td
             try:
                 photo = api.photo(job["photo_url"])
-                glb = engine.make(photo)
-                if keep_dir:
-                    try:
-                        os.makedirs(keep_dir, exist_ok=True); open(os.path.join(keep_dir, f"job{jid}.glb"), "wb").write(glb)
-                    except OSError as e:
-                        log.warning("could not keep a copy in %s: %s", keep_dir, e)
-                res = api.result(jid, glb)
+                eng = engines[kind]
+                if kind == "cutout":
+                    data, ctype, warns, info = eng.make(photo)
+                    ext = "webp" if ctype == "image/webp" else "png"
+                    _keep(keep_dir, f"job{jid}-white.{ext}", data)
+                    res = api.result(jid, data, ctype, extra={"X-Cutout-Warn": ",".join(warns)})
+                    log.info("job %s: white background %s, %d KB%s%s in %.1f s", jid, info.get("size"), len(data) // 1024,
+                             f", warnings: {', '.join(warns)}" if warns else "", "" if info.get("hand_check") else " (hand check unavailable)", time.time() - t0)
+                else:
+                    glb = eng.make(photo)
+                    _keep(keep_dir, f"job{jid}.glb", glb)
+                    res = api.result(jid, glb)
                 log.info("job %s done in %.0f s%s", jid, time.time() - t0, " (photo changed meanwhile, discarded)" if res.get("discarded") else "")
-            except NoObject as e:
+            except (NoObject, cutout.NoProduct) as e:
                 log.warning("job %s: %s", jid, e); _safe_fail(api, jid, e, retry=False)
             except MemoryError as e:
                 log.error("job %s: out of memory", jid); _safe_fail(api, jid, "out of memory", retry=True)
@@ -304,6 +313,15 @@ def run(api, engine, poll=5.0, once=False, keep_dir=None):
         if once:
             return 0
     return 0
+
+
+def _keep(keep_dir, name, data):
+    if not keep_dir:
+        return
+    try:
+        os.makedirs(keep_dir, exist_ok=True); open(os.path.join(keep_dir, name), "wb").write(data)
+    except OSError as e:
+        log.warning("could not keep a copy in %s: %s", keep_dir, e)
 
 
 def _safe_fail(api, jid, err, retry):
@@ -327,6 +345,8 @@ def main(argv=None):
     p.add_argument("--once", action="store_true", help="process at most one job and exit")
     p.add_argument("--keep", default=None, help="also save each GLB into this folder (for checking)")
     p.add_argument("--check", action="store_true", help="only check the connection to the server and exit")
+    p.add_argument("--kinds", default=os.environ.get("AI3D_KINDS", "m3d,cutout"), help="jobs to take: m3d (TripoSR 3D), cutout (white background)")
+    p.add_argument("--cut-model", default=os.environ.get("AI3D_CUT_MODEL", "isnet-general-use"), help="rembg segmentation model for the white background")
     a = p.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     if not a.token:
@@ -335,14 +355,26 @@ def main(argv=None):
     log.info("server %s: %s pending job(s)", a.server, api.ping().get("pending"))
     if a.check:
         return 0
-    engine = TripoSREngine(a.triposr, a.device, a.mc_resolution, a.foreground_ratio, a.chunk_size, a.max_faces)
+    kinds = [k.strip() for k in a.kinds.split(",") if k.strip() in ("m3d", "cutout")]
+    if not kinds:
+        raise SystemExit("--kinds must list m3d and/or cutout")
+    engines = {}
+    if "cutout" in kinds:
+        hands = cutout.mediapipe_hands()
+        if hands is None:
+            log.warning("mediapipe is not installed: a hand on the product cannot be detected (pip install mediapipe)")
+        engines["cutout"] = cutout.Cutout(cutout.rembg_mask(a.cut_model), hands)
+        log.info("photo studio ready: mask by rembg/%s — the product's pixels are copied as they are", a.cut_model)
+    if "m3d" in kinds:
+        engines["m3d"] = TripoSREngine(a.triposr, a.device, a.mc_resolution, a.foreground_ratio, a.chunk_size, a.max_faces)
+    engine = engines
 
     def stop(*_):
         global _stop
         _stop = True
         log.info("stopping after the current job …")
     signal.signal(signal.SIGINT, stop); signal.signal(signal.SIGTERM, stop)
-    log.info("waiting for jobs (%s, %s)", platform.machine(), engine.device)
+    log.info("waiting for jobs: %s (%s%s)", ", ".join(engines), platform.machine(), ", " + engines["m3d"].device if "m3d" in engines else "")
     return run(api, engine, a.poll, a.once, a.keep)
 
 

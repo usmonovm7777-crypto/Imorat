@@ -6,7 +6,8 @@
                 ANDROID_KEYSTORE_FILE, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD
                 (CI decodes the keystore from a secret into a temp file; nothing is ever written into the repository)
    - push:      google-services.json from GOOGLE_SERVICES_JSON (raw or base64) when provided — without it the app
-                builds and runs, only native push stays off on Android */
+                builds and runs, only native push stays off on Android
+   - webview:   no system scrollbar line and no edge glow/stretch (MainActivity): the page scrolls like a native screen */
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -38,6 +39,37 @@ edit("app/src/main/AndroidManifest.xml", m => {
   if (!/android\.permission\.ACCESS_FINE_LOCATION/.test(m)) m = m.replace(/(\n\s*)<\/manifest>/, `$1<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />$1<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />$1</manifest>`);
   return m;
 });
+
+/* ---- MainActivity: the WebView draws no scrollbar line and no overscroll glow/stretch ---- */
+{
+  const cfg = JSON.parse(readFileSync(join(app, "capacitor.config.json"), "utf8"));
+  const rel = join("app", "src", "main", "java", ...cfg.appId.split("."), "MainActivity.java");
+  if (existsSync(join(android, rel))) edit(rel, j => {
+    if (/setVerticalScrollBarEnabled\(false\)/.test(j)) return j;
+    if (!/public\s+class\s+MainActivity\s+extends\s+BridgeActivity\s*\{\s*\}/.test(j)) { console.log("· MainActivity has custom code: add wv.setVerticalScrollBarEnabled(false) by hand (see this script)"); return j; }
+    const pkg = (j.match(/^package\s+[\w.]+;/m) || [`package ${cfg.appId};`])[0];
+    return `${pkg}
+
+import android.os.Bundle;
+import android.view.View;
+import android.webkit.WebView;
+import com.getcapacitor.BridgeActivity;
+
+public class MainActivity extends BridgeActivity {
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        // Quriliş Go: no system scrollbar line and no glow/stretch at the ends — the page scrolls like a native screen
+        WebView wv = getBridge().getWebView();
+        wv.setVerticalScrollBarEnabled(false);
+        wv.setHorizontalScrollBarEnabled(false);
+        wv.setOverScrollMode(View.OVER_SCROLL_NEVER);
+    }
+}
+`;
+  });
+  else console.log(`· ${rel} not found (Kotlin template?) — the scrollbar line is hidden by the page's CSS only`);
+}
 
 /* ---- google-services.json for Firebase Cloud Messaging ---- */
 const gs = process.env.GOOGLE_SERVICES_JSON;

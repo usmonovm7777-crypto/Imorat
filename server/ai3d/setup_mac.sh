@@ -1,8 +1,9 @@
 #!/bin/bash
-# Quriliş Go AI 3D worker on a Mac with Apple Silicon (M1–M4): a private Python environment, PyTorch with MPS, TripoSR (MIT)
-# at a fixed commit, the worker's packages; checks that MPS works. Nothing is installed system-wide; everything is in ./venv
+# Quriliş Go AI worker on a Mac with Apple Silicon (M1–M4): 3D models (TripoSR) and the photo studio's white background (rembg
+# segmentation, the product's pixels untouched). A private Python environment, PyTorch with MPS, TripoSR (MIT) at a fixed commit,
+# the worker's packages; checks that MPS works. Nothing is installed system-wide; everything is in ./venv
 # and ./TripoSR next to this script. Free and open source; the first run downloads the model weights (~1.7 GB, Hugging Face)
-# and the background-removal model (~170 MB).
+# and the segmentation model for the white background and for TripoSR (IS-Net / U²-Net, ~170 MB each).
 #
 #   bash setup_mac.sh                 install / update
 #   bash setup_mac.sh --autostart     also start the worker at login and keep it running (LaunchAgent)
@@ -30,6 +31,7 @@ echo "• worker packages…"
 python -m pip install -q -r requirements.txt
 python -m pip install -q fast-simplification || echo "  (fast-simplification skipped: models are kept without simplification)"
 python -m pip install -q PyMCubes || echo "  (PyMCubes skipped: scikit-image does the marching cubes)"
+python -m pip install -q mediapipe || echo "  (mediapipe skipped: the photo studio cannot warn about a hand on the product)"
 
 python - <<'PY'
 import torch, sys

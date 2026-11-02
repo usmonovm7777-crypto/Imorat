@@ -2,16 +2,24 @@
 a running Quriliş Go API, with a TEST-ONLY engine in place of TripoSR, so the queue part is checked where torch and the
 model weights are not available (CI, this repo's server tests). It is never used by worker.py itself.
 
-    python3 worker_live.py http://127.0.0.1:8787 <MODEL3D_WORKER_TOKEN> [ok|noobject|crash|transient]
+    python3 worker_live.py http://127.0.0.1:8787 <MODEL3D_WORKER_TOKEN> [ok|noobject|crash|transient|cutout|cutout-hand]
 
-The test engine makes a plain coloured block the size of the photo's proportions — NOT a reconstruction of the product."""
+The 3D test engine makes a plain coloured block the size of the photo's proportions — NOT a reconstruction of the product.
+"cutout" runs the REAL photo-studio code (cutout.Cutout: compose, centring, lossless file) with a test mask instead of the
+rembg model: pixels that differ from the photo's corner colour."""
 import io, os, sys
 import numpy as np
 from PIL import Image
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, ".."))
-import meshkit, worker  # noqa: E402
+import cutout, meshkit, worker  # noqa: E402
+
+
+def corner_mask(img):
+    """TEST-ONLY segmentation: everything that differs from the top-left corner colour is the product."""
+    a = np.asarray(img.convert("RGB")).astype(int)
+    return Image.fromarray(((np.abs(a - a[0, 0]).sum(-1) > 30) * 255).astype(np.uint8))
 
 
 class BlockTestEngine:
@@ -43,4 +51,7 @@ if __name__ == "__main__":
     mode = sys.argv[3] if len(sys.argv) > 3 else "ok"
     api = worker.Api(base, token, name="test-worker")
     import logging; logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
+    if mode.startswith("cutout"):
+        hands = (lambda rgb: [(rgb.shape[1] * 0.4, rgb.shape[0] * 0.4, rgb.shape[1] * 0.6, rgb.shape[0] * 0.6)]) if mode == "cutout-hand" else None
+        sys.exit(worker.run(api, {"cutout": cutout.Cutout(corner_mask, hands)}, poll=0.2, once=True))
     sys.exit(worker.run(api, BlockTestEngine(mode), poll=0.2, once=True))

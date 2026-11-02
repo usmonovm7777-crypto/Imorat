@@ -1803,3 +1803,82 @@ test("the Python AI 3D worker takes jobs from the queue, uploads a GLB, reports 
     assert.equal(app.db.get("SELECT COUNT(*) n FROM m3d_jobs WHERE status IN ('pending','processing')").n, 0, "nothing left hanging");
   } finally { Object.assign(M, keep); }
 });
+
+/* AI photo studio: the worker's photo-studio code (ai3d/cutout.py) runs for real; only the segmentation model is replaced by a
+   test mask (ai3d/tests/worker_live.py). Checks the queue, the lossless-only rule, before/after, the kept original. */
+test("AI photo studio: white background, the product's pixels untouched, the original always kept", async t => {
+  const { spawn, spawnSync } = await import("node:child_process");
+  const { writeFileSync } = await import("node:fs");
+  if (spawnSync("python3", ["-c", "import numpy, PIL, scipy, skimage"]).status !== 0) return t.skip("python3 with numpy, Pillow, scipy and scikit-image is not installed");
+  const M = CFG.model3d, keep = { ...M };
+  const AI3D = join(import.meta.dirname, "..", "ai3d", "tests");
+  const env = { ...process.env, NO_PROXY: "127.0.0.1,localhost", no_proxy: "127.0.0.1,localhost" };
+  const run = (file, ...args) => new Promise((ok, no) => { const ch = spawn("python3", [join(AI3D, file), ...args], { env }); let out = ""; ch.stdout.on("data", d => (out += d)); ch.stderr.on("data", d => (out += d)); ch.on("error", no); ch.on("close", code => ok({ code, out })); });
+  const W = (path, body, extra = {}) => fetch(base + path, { method: body === undefined ? "GET" : "POST", headers: { authorization: "Bearer w-live-88", ...(Buffer.isBuffer(body) ? {} : body !== undefined ? { "content-type": "application/json" } : {}), ...extra }, body: Buffer.isBuffer(body) ? body : body !== undefined ? JSON.stringify(body) : undefined });
+  try {
+    M.workerToken = "w-live-88"; M.perDay = 100;
+    const seller = (await login("997770051")).data.token;
+    const st = await call("POST", "/api/seller/store", { name: "Фото Студия", descr: "Магазин для проверки AI-фотостудии", cats: ["build"], phone: "71 200 30 81", addr: "ул. Белая, 1", district: "chil" }, seller);
+    assert.equal((await call("PATCH", `/api/admin/stores/${st.data.store.id}`, { status: "active" }, globalThis.ADMIN)).status, 200);
+    const pid = (await call("POST", "/api/seller/products", { ru: "Ведро малярное, 12 л", cat: "build", sub: "dry", unit: "bag50", price: 30000, stock: 5, kg: 50 }, seller)).data.product.id;
+    // the seller's photo: a product with a fine pattern on a blue table
+    const png = pngRGBA(120, 90, (x, y) => (x > 30 && x < 90 && y > 15 && y < 80 ? [180 + (x * 7 + y * 3) % 60, 90 + (x * y) % 70, 30 + (x + 2 * y) % 50, 255] : [40, 90, 200, 255]));
+    const up = await fetch(`${base}/api/seller/products/${pid}/photo`, { method: "POST", headers: { authorization: "Bearer " + seller, "content-type": "image/png" }, body: png }).then(r => r.json());
+    const origPath = app.db.get("SELECT img FROM products WHERE id=?", pid).img;
+    const cut = async () => (await call("GET", `/api/seller/products/${pid}/cutout`, null, seller)).data.cutout;
+    assert.equal(up.cutout.state, null); assert.ok(up.cutout.orig);
+    // queued; a worker that only knows 3D (old version: no "kinds") is not given this job
+    assert.equal((await call("POST", `/api/seller/products/${pid}/cutout`, {}, seller)).data.cutout.state, "pending");
+    assert.equal((await (await W("/api/worker/model3d/next", {})).json()).job, null, "an old 3D-only worker gets nothing");
+    const r1 = await run("worker_live.py", base, "w-live-88", "cutout"); assert.equal(r1.code, 0, r1.out);
+    const c1 = await cut(); assert.equal(c1.state, "ready", r1.out); assert.equal(c1.applied, false); assert.equal(c1.warn, null);
+    const file = Buffer.from(await (await fetch(c1.url.replace(CFG.publicUrl, base))).arrayBuffer());
+    const { losslessImage } = await import("../src/model3d.js");
+    assert.ok(["webp", "png"].includes(losslessImage(file)), "stored lossless");
+    const dir = mkdtempSync(join(tmpdir(), "cut-")); writeFileSync(join(dir, "orig.png"), png); writeFileSync(join(dir, "white"), file);
+    const v = await run("verify_cutout.py", join(dir, "orig.png"), join(dir, "white")); assert.equal(v.code, 0, v.out); assert.match(v.out, /product pixels identical/);
+    rmSync(dir, { recursive: true, force: true });
+    assert.equal((await call("GET", "/api/catalog")).data.products.find(p => p.id === pid).img, mediaUrlOf(origPath), "nothing changes for buyers before «Использовать»");
+    // «Использовать белый фон»: the card shows it, the original is kept aside; «Вернуть оригинал» puts it back
+    const ap = await call("POST", `/api/seller/products/${pid}/cutout/apply`, {}, seller); assert.equal(ap.data.cutout.applied, true);
+    let row = app.db.get("SELECT img, img_orig, cut_img FROM products WHERE id=?", pid);
+    assert.equal(row.img, row.cut_img); assert.equal(row.img_orig, origPath);
+    assert.equal((await call("GET", "/api/catalog")).data.products.find(p => p.id === pid).img, mediaUrlOf(row.cut_img));
+    assert.equal((await fetch(mediaUrlOf(origPath).replace(CFG.publicUrl, base))).status, 200, "the original file is still there");
+    // a 3D model is still made from the ORIGINAL photo
+    await call("POST", `/api/seller/products/${pid}/model3d`, {}, seller);
+    const j3 = (await (await W("/api/worker/model3d/next", { kinds: ["m3d"] })).json()).job; assert.equal(j3.kind, "m3d");
+    assert.ok(Buffer.from(await (await W(j3.photo_url)).arrayBuffer()).equals(png));
+    await W(`/api/worker/model3d/${j3.id}/fail`, { error: "test", retry: false });
+    const rv = await call("POST", `/api/seller/products/${pid}/cutout/revert`, {}, seller); assert.equal(rv.data.cutout.state, "ready");
+    row = app.db.get("SELECT img, img_orig FROM products WHERE id=?", pid); assert.equal(row.img, origPath); assert.equal(row.img_orig, null);
+    // only lossless results are accepted: a JPEG or a lossy WebP would have re-encoded the product
+    await call("POST", `/api/seller/products/${pid}/cutout`, {}, seller);
+    const jc = (await (await W("/api/worker/model3d/next", { kinds: ["cutout"] })).json()).job; assert.equal(jc.kind, "cutout");
+    const jpeg = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(200)]);
+    const bad = await W(`/api/worker/model3d/${jc.id}/result`, jpeg, { "content-type": "image/jpeg" }); assert.equal(bad.status, 400); assert.equal((await bad.json()).error, "bad_cutout");
+    const lossyWebp = Buffer.concat([Buffer.from("RIFF"), Buffer.from([60, 0, 0, 0]), Buffer.from("WEBPVP8 "), Buffer.from([40, 0, 0, 0]), Buffer.alloc(48)]);
+    assert.equal(losslessImage(lossyWebp), null);
+    assert.equal((await cut()).state, "failed");
+    // a hand touching the product: the warning comes back; the seller is asked to shoot again
+    await call("POST", `/api/seller/products/${pid}/cutout`, {}, seller);
+    const r2 = await run("worker_live.py", base, "w-live-88", "cutout-hand"); assert.equal(r2.code, 0, r2.out);
+    assert.equal((await cut()).warn, "hand");
+    // a new photo while the white version is on the card: both old files go, the new photo is the original
+    await call("POST", `/api/seller/products/${pid}/cutout/apply`, {}, seller);
+    const before = app.db.get("SELECT img, img_orig FROM products WHERE id=?", pid);
+    await fetch(`${base}/api/seller/products/${pid}/photo`, { method: "POST", headers: { authorization: "Bearer " + seller, "content-type": "image/png" }, body: pngRGBA(40, 40, () => [9, 9, 9, 255]) });
+    row = app.db.get("SELECT img, img_orig, cut_img, cut_state FROM products WHERE id=?", pid);
+    assert.equal(row.img_orig, null); assert.equal(row.cut_img, null); assert.equal(row.cut_state, null);
+    for (const f of [before.img, before.img_orig]) assert.equal((await fetch(mediaUrlOf(f).replace(CFG.publicUrl, base))).status, 404);
+    // «Оставить оригинал» on a fresh result: the white version goes, the photo stays
+    await call("POST", `/api/seller/products/${pid}/cutout`, {}, seller);
+    assert.equal((await run("worker_live.py", base, "w-live-88", "cutout")).code, 0);
+    const del = await fetch(`${base}/api/seller/products/${pid}/cutout`, { method: "DELETE", headers: { authorization: "Bearer " + seller } }).then(r => r.json());
+    assert.equal(del.cutout.state, null); assert.ok(app.db.get("SELECT img FROM products WHERE id=?", pid).img.startsWith("/uploads/p"));
+    // other stores cannot touch it
+    const other = (await login("997770052")).data.token;
+    assert.equal((await call("POST", `/api/seller/products/${pid}/cutout`, {}, other)).status, 403);
+  } finally { Object.assign(M, keep); }
+});
+const mediaUrlOf = p => (p && p.startsWith("/uploads/") ? CFG.publicUrl + p : p);

@@ -125,6 +125,11 @@ a { color: inherit; }
 @media (max-width: 560px) { .m3d-pair { grid-template-columns: 1fr; } .m3d-ph, .m3d-pair .glb-box { aspect-ratio: 4 / 3; } }
 .m3d-sheet .row { display: flex; gap: 8px; flex-wrap: wrap; }
 .btn.danger { color: var(--signal); }
+.cut-ph { background: var(--raised); }
+.cut-ph.cut-white { background: #fff; box-shadow: inset 0 0 0 1px var(--line); }
+.cut-warn { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: 12px; background: var(--signal-soft); color: var(--signal); font-weight: 600; font-size: 14px; line-height: 1.4; }
+.cut-warn svg { flex: none; margin-top: 1px; }
+.cut-note { padding: 10px 14px; border-radius: 12px; background: var(--raised); color: var(--muted); font-size: 13px; line-height: 1.45; }
 /* the look library under the new product's name */
 .lib-box { display: grid; gap: 8px; padding: 10px 12px; border-radius: 12px; background: var(--accent-soft); }
 .lib-h { font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
@@ -380,37 +385,67 @@ html.cv-all #app .sec ~ .sec { content-visibility: visible; }
 /* the building site along the bottom of the banner is alive: the crane carries slabs from the trucks, the building grows floor by floor,
    the conveyor runs, KAMAZ trucks come and go; after the last floor it starts over. White at low opacity, so the text stays readable;
    paused while the banner is off screen; still with reduced motion. One 18 s cycle = six crane trips. */
-.hs { position: absolute; left: 0; right: 0; bottom: 6px; width: 100%; height: min(230px, 38%); z-index: -1; pointer-events: none; overflow: visible; }
-.hs * { transform-box: fill-box; }
-.hero.paused .hs *, .hero.paused .hs { animation-play-state: paused !important; }
+.hs { position: absolute; left: 0; right: 0; bottom: 6px; width: 100%; height: min(230px, 38%); z-index: -1; pointer-events: none; container-type: size; }
+/* the 1200×230 drawing, fitted like an SVG with preserveAspectRatio="xMaxYMax meet": as large as fits, at the bottom right */
+.hs-st { position: absolute; right: 0; bottom: 0; width: 100%; width: min(100cqw, 100cqh * 1200 / 230); aspect-ratio: 1200 / 230; }
+.hs-st .hl, .hs-st .hs-bg { position: absolute; display: block; }
+.hs-st .hs-bg { inset: 0; width: 100%; height: 100%; overflow: visible; }
+.hs-st .hl > svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.hero.paused .hs * { animation-play-state: paused !important; }
 @media (max-width: 760px) { .hs { height: 112px; opacity: .6; } }
 .hs .trol { animation: hsTrol 3s cubic-bezier(.45, 0, .55, 1) infinite; }
 .hs .cab { animation: hsCab 3s cubic-bezier(.45, 0, .55, 1) infinite; transform-origin: 50% 0; }
 .hs .load { animation: hsLoad 3s cubic-bezier(.45, 0, .55, 1) infinite; }
-@keyframes hsTrol { 0%, 22% { transform: translateX(0); } 50%, 72% { transform: translateX(-290px); } 100% { transform: translateX(0); } }
+/* trolley 40 units wide: −290 units = −725 %; the slab layer is 14 units tall: on the truck bed +78 units, on the building +14 */
+@keyframes hsTrol { 0%, 22% { transform: translateX(0); } 50%, 72% { transform: translateX(-725%); } 100% { transform: translateX(0); } }
 @keyframes hsCab { 0% { transform: scaleY(2.3); } 15%, 25% { transform: scaleY(1); } 55% { transform: scaleY(1.15); } 62% { transform: scaleY(1.15); } 72%, 92% { transform: scaleY(1); } 100% { transform: scaleY(2.3); } }
-@keyframes hsLoad { 0% { transform: translateY(128px); opacity: 1; } 15%, 25% { transform: translateY(0); opacity: 1; } 55%, 61% { transform: translateY(14px); opacity: 1; } 62%, 99% { opacity: 0; transform: translateY(14px); } 100% { transform: translateY(128px); opacity: 0; } }
+@keyframes hsLoad { 0% { transform: translateY(557.14%); opacity: 1; } 15%, 25% { transform: translateY(0); opacity: 1; } 55%, 61% { transform: translateY(100%); opacity: 1; } 62%, 99% { opacity: 0; transform: translateY(100%); } 100% { transform: translateY(557.14%); opacity: 0; } }
 .hs .fl { animation: 18s linear infinite both; }
 .hs .fl0 { animation-name: hsF0; } .hs .fl1 { animation-name: hsF1; } .hs .fl2 { animation-name: hsF2; } .hs .fl3 { animation-name: hsF3; } .hs .fl4 { animation-name: hsF4; }
 .hs .truck { animation: hsTruck 18s linear infinite; }
-.hs .truck.t2 { animation-delay: -9s; }
-.hs .bed { animation: hsBed 18s ease-in-out infinite; transform-box: fill-box; transform-origin: 100% 100%; }
-.hs .truck.t2 .bed { animation-delay: -9s; }
-@keyframes hsTruck { 0%, 30% { transform: translateX(0); opacity: 1; } 47% { transform: translateX(-1150px); opacity: 1; } 47.1%, 82.9% { transform: translateX(-1150px); opacity: 0; } 83% { transform: translateX(380px); opacity: 1; } 100% { transform: translateX(0); opacity: 1; } }
+.hs .truck.t2, .hs .truck.t2 .bed { animation-delay: -9s; }
+.hs .bed { animation: hsBed 18s ease-in-out infinite; transform-origin: 100% 100%; }
+/* truck 82 units wide: −1150 units = −1402.44 %, +380 units = +463.41 % */
+@keyframes hsTruck { 0%, 30% { transform: translateX(0); opacity: 1; } 47% { transform: translateX(-1402.44%); opacity: 1; } 47.1%, 82.9% { transform: translateX(-1402.44%); opacity: 0; } 83% { transform: translateX(463.41%); opacity: 1; } 100% { transform: translateX(0); opacity: 1; } }
 @keyframes hsBed { 0%, 4% { transform: none; } 9%, 14% { transform: rotate(14deg); } 19%, 100% { transform: none; } }
-.hs .wheel { animation: hsWheel .6s linear infinite; transform-box: fill-box; transform-origin: center; } /* the spin sits on an inner group: a CSS transform would replace the translate() that puts the wheel under the truck */
+.hs .wheel { animation: hsWheel .6s linear infinite; transform-origin: 50% 50%; }
 @keyframes hsWheel { to { transform: rotate(1turn); } }
-.hs .belt { stroke-dasharray: 5 7; animation: hsBelt .8s linear infinite; }
-@keyframes hsBelt { to { stroke-dashoffset: -12; } }
-.hs .box { animation: hsBox 2.4s linear infinite; offset-path: path("M470 216 L586 166"); offset-rotate: 0deg; }
+.hs .belt { transform-origin: 0 50%; overflow: hidden; }
+.hs .belt i { position: absolute; top: 0; height: 100%; background-image: linear-gradient(90deg, rgba(0, 0, 0, .27) 0 41.667%, transparent 41.667%); background-repeat: repeat-x; animation: hsBelt .8s linear infinite; }
+@keyframes hsBelt { from { transform: translateX(0); } to { transform: translateX(8.677%); } }
+.hs .boxes .box { inset: 0; width: 100%; height: 100%; animation: hsBox 2.4s linear infinite; }
 .hs .box.b2 { animation-delay: -.8s; } .hs .box.b3 { animation-delay: -1.6s; }
-@keyframes hsBox { from { offset-distance: 0%; opacity: 0; } 8% { opacity: 1; } 92% { opacity: 1; } to { offset-distance: 100%; opacity: 0; } }
-@keyframes hsF0 { 0%, 10.0% { opacity: 0; transform: translateY(-10px); } 12.2%, 91% { opacity: 1; transform: none; } 96%, 100% { opacity: 0; transform: none; } }
-@keyframes hsF1 { 0%, 26.7% { opacity: 0; transform: translateY(-10px); } 28.9%, 91% { opacity: 1; transform: none; } 96%, 100% { opacity: 0; transform: none; } }
-@keyframes hsF2 { 0%, 43.3% { opacity: 0; transform: translateY(-10px); } 45.5%, 91% { opacity: 1; transform: none; } 96%, 100% { opacity: 0; transform: none; } }
-@keyframes hsF3 { 0%, 60.0% { opacity: 0; transform: translateY(-10px); } 62.2%, 91% { opacity: 1; transform: none; } 96%, 100% { opacity: 0; transform: none; } }
-@keyframes hsF4 { 0%, 76.7% { opacity: 0; transform: translateY(-10px); } 78.9%, 91% { opacity: 1; transform: none; } 96%, 100% { opacity: 0; transform: none; } }
+/* the box layer is as big as the run (126 × 57 units): +116 units = 92.06 %, −50 units = −87.72 % */
+@keyframes hsBox { from { transform: translate(0, 0); opacity: 0; } 8% { opacity: 1; } 92% { opacity: 1; } to { transform: translate(92.06%, -87.72%); opacity: 0; } }
+/* a floor layer is 12 units tall: −10 units = −83.33 % */
+@keyframes hsF0 { 0%, 10.0% { opacity: 0; transform: translateY(-83.33%); } 12.2%, 91% { opacity: 1; transform: none; } 96%, 100% { opacity: 0; transform: none; } }
+@keyframes hsF1 { 0%, 26.7% { opacity: 0; transform: translateY(-83.33%); } 28.9%, 91% { opacity: 1; transform: none; } 96%, 100% { opacity: 0; transform: none; } }
+@keyframes hsF2 { 0%, 43.3% { opacity: 0; transform: translateY(-83.33%); } 45.5%, 91% { opacity: 1; transform: none; } 96%, 100% { opacity: 0; transform: none; } }
+@keyframes hsF3 { 0%, 60.0% { opacity: 0; transform: translateY(-83.33%); } 62.2%, 91% { opacity: 1; transform: none; } 96%, 100% { opacity: 0; transform: none; } }
+@keyframes hsF4 { 0%, 76.7% { opacity: 0; transform: translateY(-83.33%); } 78.9%, 91% { opacity: 1; transform: none; } 96%, 100% { opacity: 0; transform: none; } }
 
+/* Touch screens and the app: no system scrollbar line, no grey tap flash, no hover states stuck after a tap,
+   a short press feedback instead, and no live blur under fixed bars (re-blurred on every scrolled frame on weak phones) */
+html { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+html.app, html.app * { scrollbar-width: none; }
+html.app ::-webkit-scrollbar { display: none; width: 0; height: 0; }
+@media (pointer: coarse) {
+  html, body { scrollbar-width: none; }
+  ::-webkit-scrollbar { display: none; width: 0; height: 0; }
+}
+@media (hover: none) {
+  .card:hover, .cat-tile:hover, .wtile:hover, .fab:hover, .sup-btn:hover { transform: none; box-shadow: none; }
+  .card:hover .thumb .art, .card:hover .thumb img.photo, .cat-tile:hover .cat-img img, .th-btn:hover svg { transform: none; }
+  .btn, .ib, .hb, .card, .cat-tile, .wtile, .chip, .ph-btn, .tools-row button, .tabbar button, .tabbar a, .menu-btn { transition: transform .14s ease, opacity .14s ease, background-color .2s, border-color .2s, color .2s; }
+  .btn:active, .ib:active, .hb:active, .chip:active, .ph-btn:active, .menu-btn:active, .tabbar button:active, .tabbar a:active { transform: scale(.94); }
+  .card:active:not(:has(:is(button, a):active)), .cat-tile:active, .wtile:active { transform: scale(.98); }
+  .tools-row button:active .tr-i { transform: scale(.92); }
+  .tr-i { transition: transform .14s ease; }
+  .tabbar, .hdr, .stabs { backdrop-filter: none; -webkit-backdrop-filter: none; }
+  .tabbar { background: var(--surface); }
+  .hdr { background: var(--surface); }
+  .stabs { background: var(--bg); }
+}
 .hero .eyebrow { color: color-mix(in srgb, var(--hero-fg) 70%, transparent); }
 .hero .h-xl em { font-style: normal; color: var(--hero-acc); }
 .hero-l { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; align-content: center; min-width: 0; }
@@ -1820,7 +1855,8 @@ const UI = {
   headset: '<path d="M4 14v-2a8 8 0 0 1 16 0v2"/><rect x="3" y="14" width="4" height="6" rx="1.5"/><rect x="17" y="14" width="4" height="6" rx="1.5"/><path d="M20 20a3 3 0 0 1-3 2h-3"/>',
   tag: '<path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8Z"/><circle cx="7.5" cy="7.5" r="1.5"/>',
   calc: '<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8M8 12h.01M12 12h.01M16 12h.01M8 16h.01M12 16h.01M16 16h.01"/>',
-  pkg: '<path d="M3 7l9-4 9 4v10l-9 4-9-4z"/><path d="M3 7l9 4 9-4M12 11v10"/>'
+  pkg: '<path d="M3 7l9-4 9 4v10l-9 4-9-4z"/><path d="M3 7l9 4 9-4M12 11v10"/>',
+  alert: '<path d="M12 3.5 2.5 20h19z"/><path d="M12 10v4.5M12 17.5v.01"/>'
 };
 const ui = (k, s = 20) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${UI[k]}</svg>`;
 
@@ -2351,27 +2387,43 @@ const MARK_TILES = [
   `<rect x="53" y="53" width="45" height="45" rx="12" fill="url(#qg4)"/><g fill="#fff"><rect x="70.4" y="63.4" width="11.2" height="6" rx="1.1"/><rect x="64.4" y="71.6" width="11.2" height="6" rx="1.1"/><rect x="76.4" y="71.6" width="11.2" height="6" rx="1.1"/><rect x="58.6" y="79.8" width="10.6" height="6" rx="1.1"/><rect x="70.2" y="79.8" width="11.6" height="6" rx="1.1"/><rect x="83.4" y="79.8" width="8.2" height="6" rx="1.1"/></g>`];
 /* the live building site behind the hero (see .hs in the CSS); 1200×230, aligned to the right edge */
 const HERO_SITE = (() => {
+  /* Built from layers: two still SVGs (back and front) and small animated layers placed on the same 1200×230 grid. Every moving part
+     is an HTML box animated with transform/opacity only, so the phone's GPU moves them and the page itself is never repainted per
+     frame (one animated SVG cost ~25 % of the main thread at rest and made scrolling on weak phones stutter). */
   const W = "#fff", sky = [[0, 176, 70, 54], [78, 158, 54, 72], [140, 186, 90, 44], [238, 166, 48, 64], [296, 190, 120, 40], [1080, 140, 70, 90], [1156, 170, 44, 60]].map(([x, y, w, h]) => `<rect x="${x}" y="${y}" width="${w}" height="${h}"/>`).join("");
-  const floor = (y, cls = "") => `<g class="${cls}"><rect x="606" y="${y}" width="92" height="12" fill-opacity=".195"/><g fill-opacity=".15">${[0, 1, 2, 3, 4, 5].map(i => `<rect x="${612 + i * 14}" y="${y + 3}" width="8" height="5"/>`).join("")}</g></g>`;
+  const pc = n => +n.toFixed(4) + "%";
+  const at = (x, y, w, h, P = [0, 0, 1200, 230]) => `left:${pc((x - P[0]) / P[2] * 100)};top:${pc((y - P[1]) / P[3] * 100)};width:${pc(w / P[2] * 100)};height:${pc(h / P[3] * 100)}`;
+  const layer = (cls, box, svg, P, inner = "") => `<div class="hl ${cls}" style="${at(...box, P)}"><svg viewBox="${box.join(" ")}" preserveAspectRatio="none" fill="${W}">${svg}</svg>${inner}</div>`;
+  const floorSvg = y => `<rect x="606" y="${y}" width="92" height="12" fill-opacity=".195"/><g fill-opacity=".15">${[0, 1, 2, 3, 4, 5].map(i => `<rect x="${612 + i * 14}" y="${y + 3}" width="8" height="5"/>`).join("")}</g>`;
   const lattice = (x0, y0, x1, y1, n) => { let d = `M${x0} ${y0}H${x1}M${x0} ${y1}H${x1}`; const st = (x1 - x0) / n; for (let i = 0; i < n; i++) d += `M${x0 + i * st} ${i % 2 ? y0 : y1}L${x0 + (i + 1) * st} ${i % 2 ? y1 : y0}`; return d; };
   const mast = (() => { let d = "M800 226V48M812 226V48"; for (let y = 226; y > 52; y -= 12) d += `M800 ${y}L812 ${y - 12}M800 ${y - 12}H812`; return d; })();
-  // a KAMAZ dump truck heading left (cab in front, on the left); it stops with its body under the hook and tips the body back
-  const truck = cls => `<g class="truck ${cls}"><g transform="translate(887 190)"><path d="M2 8h14l6-4h4v22H2z" fill-opacity=".36"/><path d="M6 10h8l-3 6H6z" fill-opacity=".18"/><g class="bed"><path d="M26 4h54v18H30z" fill-opacity=".3"/><path d="M30 1h48" stroke="${W}" stroke-opacity=".375" stroke-width="2"/></g><rect x="0" y="22" width="82" height="5" fill-opacity=".33"/>${[12, 54, 70].map(x => `<g transform="translate(${x} 30)"><g class="wheel"><circle r="6" fill-opacity=".39"/><path d="M-4 0h8M0 -4v8" stroke="#000" stroke-opacity=".3" stroke-width="1.4"/></g></g>`).join("")}</g></g>`;
-  return `<svg class="hs" viewBox="0 0 1200 230" preserveAspectRatio="xMaxYMax meet" aria-hidden="true" focusable="false"><g fill="${W}">
-    <g fill-opacity=".09">${sky}</g>
-    <path d="M0 226.5H1200" stroke="${W}" stroke-opacity=".21"/>
-    ${floor(214)}${floor(202)}${[190, 178, 166, 154, 142].map((y, k) => floor(y, "fl fl" + k)).join("")}
+  const back = `<svg class="hs-bg" viewBox="0 0 1200 230" fill="${W}"><g fill-opacity=".09">${sky}</g><path d="M0 226.5H1200" stroke="${W}" stroke-opacity=".21"/>${floorSvg(214)}${floorSvg(202)}</svg>`;
+  const floors = [190, 178, 166, 154, 142].map((y, k) => layer("fl fl" + k, [606, y, 92, 12], floorSvg(y))).join("");
+  const front = `<svg class="hs-bg" viewBox="0 0 1200 230" fill="${W}">
     <path d="M601 226V128M703 226V128${[214, 202, 190, 178, 166, 154, 142].map(y => `M601 ${y}H703`).join("")}" stroke="${W}" stroke-opacity=".15" stroke-width="1.2" fill="none"/>
     <path d="${mast}" stroke="${W}" stroke-opacity=".3" stroke-width="1.4" fill="none"/>
     <path d="${lattice(560, 40, 1062, 48, 42)}" stroke="${W}" stroke-opacity=".3" stroke-width="1.3" fill="none"/>
     <path d="M806 14 806 40M806 14 566 40M806 14 1056 40" stroke="${W}" stroke-opacity=".21" fill="none"/>
     <rect x="1010" y="48" width="44" height="22" fill-opacity=".24"/><rect x="814" y="50" width="22" height="16" rx="2" fill-opacity=".27"/>
-    <g class="trol"><rect x="930" y="47" width="20" height="5" fill-opacity=".45"/><g class="cab"><path d="M940 52v60" stroke="${W}" stroke-opacity=".45" stroke-width="1.2"/></g><g class="load"><path d="M935 112h10l-5 5z" fill-opacity=".45"/><rect x="922" y="117" width="36" height="9" fill-opacity=".42"/></g></g>
-    <path d="M470 216 586 166" stroke="${W}" stroke-opacity=".3" stroke-width="7" stroke-linecap="round" fill="none"/><path class="belt" d="M470 216 586 166" stroke="#000" stroke-opacity=".27" stroke-width="2" fill="none"/>
-    <path d="M478 216v10M520 198v28M562 180v46" stroke="${W}" stroke-opacity=".24" stroke-width="2"/>
-    ${["b1", "b2", "b3"].map(b => `<rect class="box ${b}" x="-5" y="-11" width="10" height="7" fill-opacity=".45"/>`).join("")}
-    ${truck("t1")}${truck("t2")}
-  </g></svg>`;
+    <path d="M470 216 586 166" stroke="${W}" stroke-opacity=".3" stroke-width="7" stroke-linecap="round" fill="none"/>
+    <path d="M478 216v10M520 198v28M562 180v46" stroke="${W}" stroke-opacity=".24" stroke-width="2"/></svg>`;
+  // the crane trolley: runs along the jib; its cable reels out and in; the slab rides from the truck bed to the top of the building
+  const TB = [920, 47, 40, 210];
+  const trolley = `<div class="hl trol" style="${at(...TB)}"><svg viewBox="${TB.join(" ")}" preserveAspectRatio="none" fill="${W}"><rect x="930" y="47" width="20" height="5" fill-opacity=".45"/></svg>`
+    + layer("cab", [939, 52, 2, 60], `<path d="M940 52v60" stroke="${W}" stroke-opacity=".45" stroke-width="1.2"/>`, TB)
+    + layer("load", [922, 112, 36, 14], `<path d="M935 112h10l-5 5z" fill-opacity=".45"/><rect x="922" y="117" width="36" height="9" fill-opacity=".42"/>`, TB) + `</div>`;
+  // the conveyor: its dashes run up the belt, boxes ride on it
+  const BL = Math.hypot(116, 50), BA = Math.atan2(-50, 116) * 180 / Math.PI;
+  const belt = `<div class="hl belt" style="left:${pc(470 / 12)};top:${pc(215 / 2.3)};width:${pc(BL / 12)};height:${pc(2 / 2.3)};transform:rotate(${BA.toFixed(2)}deg)"><i style="left:${pc(-12 / BL * 100)};width:${pc((BL + 12) / BL * 100)};background-size:${pc(12 / (BL + 12) * 100)} 100%"></i></div>`;
+  const BX = [465, 155, 126, 57];
+  const boxes = `<div class="hl boxes" style="${at(...BX)}">${["b1", "b2", "b3"].map(b => layer("box " + b, BX, `<rect x="465" y="205" width="10" height="7" fill-opacity=".45"/>`, BX)).join("")}</div>`;
+  // a KAMAZ dump truck heading left (cab in front, on the left); it stops with its body under the hook and tips the body back
+  const K = [0, 0, 82, 37];
+  const truck = cls => `<div class="hl truck ${cls}" style="${at(887, 190, 82, 37)}">`
+    + layer("bed", [26, 0, 54, 22], `<path d="M26 4h54v18H30z" fill-opacity=".3"/><path d="M30 1h48" stroke="${W}" stroke-opacity=".375" stroke-width="2"/>`, K)
+    + `<svg class="hs-bg" viewBox="0 0 82 37" fill="${W}"><path d="M2 8h14l6-4h4v22H2z" fill-opacity=".36"/><path d="M6 10h8l-3 6H6z" fill-opacity=".18"/><rect x="0" y="22" width="82" height="5" fill-opacity=".33"/></svg>`
+    + [12, 54, 70].map(x => layer("wheel", [x - 6, 24, 12, 12], `<circle cx="${x}" cy="30" r="6" fill-opacity=".39"/><path d="M${x - 4} 30h8M${x} 26v8" stroke="#000" stroke-opacity=".3" stroke-width="1.4"/>`, K)).join("") + `</div>`;
+  return `<div class="hs" aria-hidden="true"><div class="hs-st">${back}${floors}${front}${trolley}${belt}${boxes}${truck("t1")}${truck("t2")}</div></div>`;
 })();
 /* the launch animation; skipped with reduced motion and in automated browsers (tests) unless ?intro=1 asks for it */
 function showIntro() {
@@ -2850,7 +2902,7 @@ function activityHTML() {
 setInterval(() => { // steps move on: refresh the widget in place while the home page is open
   if (route.view !== "home" || document.hidden) return;
   const el = $("#actW"), h = activityHTML();
-  if (el && h) { const tmp = document.createElement("div"); tmp.innerHTML = h; el.replaceWith(tmp.firstElementChild); } else if (el) el.remove();
+  if (el && h) { if (el.__h === h) return; const tmp = document.createElement("div"); tmp.innerHTML = h; const n = tmp.firstElementChild; n.__h = h; el.replaceWith(n); } else if (el) el.remove(); // only when something changed: no relayout every 4 s
 }, 4000);
 document.addEventListener("click", e => { const b = e.target.closest("[data-actw]"); if (b) openDrawer("track", b.dataset.actw); });
 document.addEventListener("click", e => { // seller tab bar: open the cabinet (if needed) and its section
@@ -3280,7 +3332,7 @@ function openProduct(id) {
 /* a soft fade at the bottom of the product sheet while there is more to scroll */
 function moreHint() { const mb = $("#mBox"); if (mb) mb.classList.toggle("at-end", mb.scrollTop + mb.clientHeight >= mb.scrollHeight - 6); }
 $("#mBox")?.addEventListener("scroll", moreHint, { passive: true });
-function closeModal() { setPanel($("#modal"), false); syncLock(); m3dSheetEnd(); }
+function closeModal() { setPanel($("#modal"), false); syncLock(); m3dSheetEnd(); cutSheetEnd(); }
 
 /* ================= Cart actions ================= */
 function addToCart(id, store, q = 1, silent) {
@@ -5183,7 +5235,7 @@ function renderSellerApi() {
     ${(pf => pf && products.length ? `<div class="panel fresh-panel ${pf.stale ? "stale" : ""}" style="margin-top:12px">${ui(pf.stale ? "clock" : "check", 20)}<span><b>${pf.confirmed_at ? L(`Цены и остатки подтверждены ${pf.days === 0 ? "сегодня" : pf.days === 1 ? "вчера" : pf.days + " дн. назад"}`, `Narx va qoldiqlar ${pf.days === 0 ? "bugun" : pf.days === 1 ? "kecha" : pf.days + " kun oldin"} tasdiqlangan`, `Prices and stock confirmed ${pf.days === 0 ? "today" : pf.days === 1 ? "yesterday" : pf.days + " days ago"}`) : L("Цены и остатки ещё не подтверждались", "Narx va qoldiqlar hali tasdiqlanmagan", "Prices and stock have not been confirmed yet")}</b><br><small style="color:var(--muted)">${L("Покупатели видят дату подтверждения у каждой цены; старше недели — с предупреждением. Нажмите, если всё актуально, или поправьте цены в таблице ниже.", "Xaridorlar har bir narx yonida tasdiqlash sanasini ko‘radi; bir haftadan eski — ogohlantirish bilan. Hammasi dolzarb bo‘lsa bosing yoki quyidagi jadvalda narxlarni to‘g‘rilang.", "Buyers see the confirmation date next to every price; older than a week shows a warning. Press if everything is current, or fix the prices in the table below.")}</small></span><button class="btn ${pf.stale ? "btn-primary" : "btn-line"}" type="button" data-act="prices-confirm">${ui("check", 16)} ${L("Всё актуально", "Hammasi dolzarb", "All current")}</button></div>` : "")(sellerData.prices)}
     <div class="panel" style="margin-top:12px"><div class="panel-h"><h2 class="h-m">${L("Товары, цены и остатки", "Mahsulotlar, narxlar va qoldiqlar")}</h2><span style="font-size:13px;color:var(--muted)">${L("Изменения сразу видны покупателям", "O‘zgarishlar darhol xaridorlarga ko‘rinadi")}</span></div>
       ${products.length ? `<div class="tbl-wrap"><table><thead><tr><th>${L("Товар", "Mahsulot")}</th><th class="r">${L("Цена, сум", "Narx, so‘m")}</th><th class="r">${L("Остаток", "Qoldiq")}</th></tr></thead><tbody>
-      ${shown.map(p => { const lp = PROD[p.id]; return `<tr><td><div class="pcell">${lp ? mini(lp) : ""}<span>${esc(p.ru)}${p.review === "pending" ? ` <span class="pill warn">${L("на проверке", "tekshiruvda", "under review")}</span>` : p.review === "rejected" ? ` <span class="pill sig">${L("не прошёл проверку", "tekshiruvdan o‘tmadi", "rejected")}</span><br><small class="mu">${esc(p.review_note || "")}</small>` : ""}${p.own ? ` <span class="pill acc">${L("ваш", "sizniki")}</span><br><button class="ph-btn" type="button" data-sphoto="${p.id}">${ui("photo", 14)} ${p.img ? L("Заменить фото", "Rasmni almashtirish") : L("Загрузить фото", "Rasm yuklash")}</button>${m3dRowHTML(p)}` : ""}</span></div></td>
+      ${shown.map(p => { const lp = PROD[p.id]; return `<tr><td><div class="pcell">${lp ? mini(lp) : ""}<span>${esc(p.ru)}${p.review === "pending" ? ` <span class="pill warn">${L("на проверке", "tekshiruvda", "under review")}</span>` : p.review === "rejected" ? ` <span class="pill sig">${L("не прошёл проверку", "tekshiruvdan o‘tmadi", "rejected")}</span><br><small class="mu">${esc(p.review_note || "")}</small>` : ""}${p.own ? ` <span class="pill acc">${L("ваш", "sizniki")}</span><br><button class="ph-btn" type="button" data-sphoto="${p.id}">${ui("photo", 14)} ${p.img ? L("Заменить фото", "Rasmni almashtirish") : L("Загрузить фото", "Rasm yuklash")}</button>${cutRowHTML(p)}${m3dRowHTML(p)}` : ""}</span></div></td>
         <td class="r"><label class="visually-hidden" for="opr${p.id}">${L("Цена", "Narx")}</label><input class="stk num" id="opr${p.id}" type="number" min="100" step="100" value="${p.price}" data-offp="${p.id}" style="width:110px"></td>
         <td class="r"><label class="visually-hidden" for="ost${p.id}">${L("Остаток", "Qoldiq")}</label><input class="stk num" id="ost${p.id}" type="number" min="0" value="${p.stock}" data-offs="${p.id}"></td></tr>`; }).join("")}
       </tbody></table></div>${products.length > 40 && !sellerAll ? `<button class="btn btn-line" type="button" data-act="seller-all" style="justify-self:start">${L("Показать все", "Hammasi")} · ${products.length}</button>` : ""}` : `<p style="color:var(--muted);margin:0">${L("Пока нет товаров. Добавьте свои или выберите из каталога Quriliş Go те, что есть у вас в наличии.", "Hozircha mahsulot yo‘q. O‘zingiznikini qo‘shing yoki Quriliş Go katalogidan mavjudlarini tanlang.")}</p>`}</div>
@@ -5260,7 +5312,7 @@ function renderSellerApi() {
       sellerData = null; renderSeller(); syncCatalog();
     } catch (e2) { btn.disabled = false; const er = $("#addErr"); er.textContent = apiErr(e2); er.hidden = false; }
   });
-  m3dWatch();
+  m3dWatch(); cutWatch();
 }
 document.addEventListener("click", async e => {
   const t = e.target.closest("[data-shipst],[data-sphoto],[data-adm]"); if (!t) return;
@@ -6812,6 +6864,117 @@ document.addEventListener("click", e => {
     box.querySelector(".glb-box")?.remove(); box.classList.toggle("in3d", to3d);
     if (to3d) { const host = document.createElement("div"); host.className = "glb-box studio"; host.style.setProperty("--h", hueOf(p)); box.insertBefore(host, t.parentElement); m3dShow(host, p.m3d, { label: pName(p) }); }
   }
+});
+/* ================= AI photo studio: white background, the product untouched =================
+   «Белый фон (AI)» queues a job for our own worker (server/ai3d/cutout.py). The AI only finds the outline of the product (a mask);
+   the photo's own pixels are copied onto pure white — colour, shape, labels, scratches and texture stay exactly as shot, nothing is
+   generated or retouched, and the file is lossless. The seller compares «До / После» and decides; the original is always kept. */
+const CUT_ERR = () => ({
+  bad_image: L("на фото не нашёлся товар — снимите его целиком, на однотонном фоне", "rasmda mahsulot topilmadi — uni to‘liq, bir xil fonda suratga oling", "no product was found in the photo — shoot the whole product on a plain background"),
+  timeout: L("AI-обработчик не закончил вовремя", "AI ishlovchi o‘z vaqtida tugatmadi", "the AI worker didn't finish in time"),
+  error: L("AI-обработчик не смог обработать фото — попробуйте ещё раз", "AI ishlovchi rasmni ishlay olmadi — yana urinib ko‘ring", "the AI worker couldn't process the photo — try again") });
+const CUT_HAND = () => L("Пожалуйста, сфотографируйте товар без рук и посторонних предметов", "Iltimos, mahsulotni qo‘l va begona narsalarsiz suratga oling", "Please photograph the product without hands or other objects");
+function cutRowHTML(p) {
+  if (!API || !p.own) return "";
+  const c = p.cutout || {}, on = !!apiCfg?.model3d;
+  let h = "";
+  if (c.state === "pending" || c.state === "processing") h = `<button class="ph-btn" type="button" data-cut="${p.id}"><span class="glb-spin sm" aria-hidden="true"></span> ${c.state === "pending" ? L("Белый фон: в очереди", "Oq fon: navbatda", "White background: queued") : L("AI убирает фон…", "AI fonni olib tashlamoqda…", "AI is removing the background…")}</button>`;
+  else if (c.state === "ready") h = `<button class="ph-btn hot" type="button" data-cut="${p.id}">${ui("photo", 14)} ${c.warn === "hand" ? L("Белый фон — есть замечание", "Oq fon — eslatma bor", "White background — see the note") : L("Белый фон готов — До / После", "Oq fon tayyor — Oldin / Keyin", "White background ready — Before / After")}</button>`;
+  else if (c.state === "applied") h = `<button class="ph-btn" type="button" data-cut="${p.id}">${ui("check", 14)} ${L("На белом фоне · До / После", "Oq fonda · Oldin / Keyin", "On white · Before / After")}</button>`;
+  else if (c.state === "failed") h = `<span class="pill sig">${L("Белый фон не получился", "Oq fon chiqmadi", "White background failed")}</span>${on ? `<button class="ph-btn" type="button" data-cut="${p.id}">${L("Подробнее", "Batafsil", "Details")}</button>` : ""}`;
+  else if (on && p.img) h = `<button class="ph-btn" type="button" data-cutgo="${p.id}">${ui("spark", 14)} ${L("Белый фон (AI)", "Oq fon (AI)", "White background (AI)")}</button>`;
+  return `<span class="m3d-row" id="cut${p.id}"${h ? "" : " hidden"}>${h}</span>`;
+}
+let cutPoll = 0, cutSheet = null;
+function cutSetRow(p) { const el = document.getElementById("cut" + p.id); if (el) el.outerHTML = cutRowHTML(p); }
+function cutWatch() {
+  clearTimeout(cutPoll);
+  const list = (sellerData?.products || []).filter(p => p.own && ["pending", "processing"].includes(p.cutout?.state));
+  if (!list.length || route.view !== "seller") return;
+  cutPoll = setTimeout(async () => {
+    for (const p of list) {
+      try {
+        const r = await api("GET", `/api/seller/products/${p.id}/cutout`); p.cutout = r.cutout; cutSetRow(p);
+        if (cutSheet?.pid !== p.id && r.cutout.state === "ready") toast(L(`Белый фон для «${p.ru}» готов — сравните До / После`, `«${p.uz || p.ru}» uchun oq fon tayyor — solishtiring`, `The white background for “${p.ru}” is ready — compare`), 4500);
+      } catch (e) {}
+    }
+    cutWatch();
+  }, 4000);
+}
+const m3dQueueText = m => m.queue > 1 ? L(`В очереди: ${m.queue}-я`, `Navbatda: ${m.queue}-chi`, `In the queue: #${m.queue}`) : L("В очереди, следующая", "Navbatda, keyingisi", "In the queue, next");
+function cutBodyHTML(p) {
+  const c = p.cutout || {}, spin = `<span class="glb-spin" aria-hidden="true"></span>`;
+  const before = `<figure><div class="m3d-ph cut-ph">${c.orig ? `<img src="${esc(m3dAbs(c.orig))}" alt="${L("До", "Oldin", "Before")}">` : ""}</div><figcaption><b>${L("До", "Oldin", "Before")}</b> · ${L("оригинал, сохраняется всегда", "asl rasm, doim saqlanadi", "the original, always kept")}</figcaption></figure>`;
+  let after;
+  if (c.url && (c.state === "ready" || c.state === "applied")) after = `<div class="m3d-ph cut-ph cut-white"><img src="${esc(m3dAbs(c.url))}" alt="${L("После", "Keyin", "After")}"></div>`;
+  else if (c.state === "pending") after = `<div class="m3d-ph cut-ph"><div class="glb-msg" role="status">${spin}<b>${m3dQueueText(c)}</b><small>${c.worker_online ? L("AI-обработчик на связи, скоро начнёт", "AI ishlovchi ulangan, tez orada boshlaydi", "The AI worker is online and will start soon") : L("AI-обработчик сейчас не в сети — задача сохранена и начнётся, как только он запустится", "AI ishlovchi hozir tarmoqda emas — vazifa saqlangan", "The AI worker is offline — the job is saved and starts when it runs")}</small></div></div>`;
+  else if (c.state === "processing") after = `<div class="m3d-ph cut-ph"><div class="glb-msg" role="status">${spin}<b>${L("AI находит границы товара…", "AI mahsulot chegaralarini topmoqda…", "AI is finding the product's outline…")}</b><small>${L("Обычно несколько секунд", "Odatda bir necha soniya", "Usually a few seconds")}</small></div></div>`;
+  else if (c.state === "failed") after = `<div class="m3d-ph cut-ph"><div class="glb-msg" role="status"><b>${L("Не получилось", "Chiqmadi", "Didn't work out")}</b><small>${esc(CUT_ERR()[c.err] || CUT_ERR().error)}</small></div></div>`;
+  else after = `<div class="m3d-ph cut-ph"><div class="glb-msg"><small>${L("Белого фона пока нет", "Hozircha oq fon yo‘q", "No white background yet")}</small></div></div>`;
+  const note = c.warn === "hand" ? `<div class="cut-warn" role="alert">${ui("alert", 18)} <span>${CUT_HAND()}</span></div>`
+    : c.warn === "edge" ? `<div class="cut-note">${L("Товар касается края кадра — лучше снять его целиком, с запасом по краям. Обрезанную часть мы не дорисовываем.", "Mahsulot kadr chetiga tegib turibdi — uni to‘liq, chetlarida joy qoldirib suratga oling. Kesilgan qismini chizib qo‘shmaymiz.", "The product touches the frame — better shoot it whole with room around. A cut-off part is never drawn in.")}</div>` : "";
+  return `<div class="m3d-pair">${before}<figure>${after}<figcaption><b>${L("После", "Keyin", "After")}</b> · ${c.state === "applied" ? L("сейчас в карточке", "hozir kartochkada", "on the card now") : L("белый фон #FFFFFF", "oq fon #FFFFFF", "white background #FFFFFF")}</figcaption></figure></div>${note}`;
+}
+function cutActsHTML(p) {
+  const c = p.cutout || {}, b = (cls, act, txt, icon) => `<button class="btn ${cls}" type="button" data-cutact="${act}" data-pid="${p.id}">${icon ? ui(icon, 16) + " " : ""}${txt}</button>`;
+  const close = `<button class="btn btn-line" type="button" data-act="close-modal">${L("Закрыть", "Yopish", "Close")}</button>`;
+  if (c.state === "ready") return (c.warn === "hand" ? b("btn-primary", "reshoot", L("Переснять фото", "Qayta suratga olish", "Retake the photo"), "camera") + b("btn-line", "apply", L("Всё равно использовать", "Baribir ishlatish", "Use anyway")) : b("btn-primary", "apply", L("Использовать белый фон", "Oq fonni ishlatish", "Use the white background"), "check")) + b("btn-line", "del", L("Оставить оригинал", "Asl rasmni qoldirish", "Keep the original")) + b("btn-line", "again", L("Повторить", "Qayta", "Try again"));
+  if (c.state === "applied") return b("btn-line", "revert", L("Вернуть оригинал", "Asl rasmni qaytarish", "Put the original back")) + close;
+  if (c.state === "pending" || c.state === "processing") return b("btn-line", "del", L("Отменить", "Bekor qilish", "Cancel")) + close;
+  if (c.state === "failed") return b("btn-primary", "again", L("Повторить", "Qayta", "Try again")) + b("btn-line", "reshoot", L("Заменить фото", "Rasmni almashtirish", "Replace the photo"), "camera") + close;
+  return b("btn-primary", "again", L("Белый фон (AI)", "Oq fon (AI)", "White background (AI)"), "spark") + close;
+}
+function cutPaint() {
+  const sh = cutSheet; if (!sh) return;
+  const p = m3dProd(sh.pid), body = $("#cutBody"), acts = $("#cutActs");
+  if (!p || !body || !body.isConnected) { cutSheetEnd(); return; }
+  const sig = JSON.stringify(p.cutout || {});
+  if (sig !== sh.sig) { sh.sig = sig; body.innerHTML = cutBodyHTML(p); acts.innerHTML = cutActsHTML(p); }
+  clearTimeout(sh.timer);
+  if (["pending", "processing"].includes(p.cutout?.state)) sh.timer = setTimeout(async () => {
+    if (cutSheet !== sh || !$("#cutBody")) return cutSheetEnd();
+    try { const r = await api("GET", `/api/seller/products/${sh.pid}/cutout`); p.cutout = r.cutout; cutSetRow(p); } catch (e) {}
+    cutPaint();
+  }, 2500);
+}
+function cutSheetEnd() { if (!cutSheet) return; clearTimeout(cutSheet.timer); cutSheet = null; }
+function cutOpen(pid) {
+  const p = m3dProd(pid); if (!p) return;
+  m3dSheetEnd(); cutSheetEnd();
+  $("#mBox").innerHTML = `<button class="ib m-close" type="button" data-act="close-modal" aria-label="${L("Закрыть", "Yopish", "Close")}">${ui("close", 18)}</button>
+    <div class="m3d-sheet"><div><h2 class="h-m" style="margin:0">${L("AI-фотостудия: белый фон", "AI fotostudiya: oq fon", "AI photo studio: white background")}</h2><p class="mu" style="margin:6px 0 0">${esc(p.ru)}</p></div>
+    <div id="cutBody"></div><div class="row" id="cutActs"></div>
+    <p class="fine" style="margin:0">${L("Меняем только фон. Сам товар остаётся пиксель в пиксель: цвет, форма, надписи, маркировка, царапины и фактура не меняются, ничего не дорисовывается и не ретушируется. AI только находит границы товара, а пиксели фото переносятся на белый фон как есть. Оригинальное фото всегда сохраняется — его можно вернуть в один клик.", "Faqat fonni almashtiramiz. Mahsulotning o‘zi pikselma-piksel qoladi: rang, shakl, yozuvlar, belgilar, tirnalishlar va faktura o‘zgarmaydi, hech narsa chizilmaydi va retush qilinmaydi. AI faqat mahsulot chegaralarini topadi, rasm piksellari oq fonga o‘zgarishsiz ko‘chiriladi. Asl rasm doim saqlanadi — uni bir bosishda qaytarish mumkin.", "Only the background changes. The product stays pixel for pixel: colour, shape, labels, markings, scratches and texture are not changed, nothing is drawn in or retouched. The AI only finds the product's outline; the photo's pixels are moved onto white as they are. The original photo is always kept and comes back in one tap.")}</p></div>`;
+  setPanel($("#modal"), true); syncLock();
+  cutSheet = { pid, sig: null, timer: 0 };
+  cutPaint();
+}
+async function cutAct(act, pid, btn) {
+  const p = m3dProd(pid); if (!p) return;
+  if (act === "reshoot") { closeModal(); photoTarget = "api:" + pid; return $("#photoIn").click(); }
+  if (btn) btn.disabled = true;
+  try {
+    let r;
+    if (act === "again") r = await api("POST", `/api/seller/products/${pid}/cutout`, {});
+    else if (act === "apply") r = await api("POST", `/api/seller/products/${pid}/cutout/apply`, {});
+    else if (act === "revert") r = await api("POST", `/api/seller/products/${pid}/cutout/revert`, {});
+    else if (act === "del") r = await api("DELETE", `/api/seller/products/${pid}/cutout`);
+    p.cutout = r.cutout; if (r.img) p.img = r.img; cutSetRow(p);
+    if (act === "apply") toast(L("Фото на белом фоне теперь в карточке. Оригинал сохранён — «Вернуть оригинал» в любой момент", "Oq fondagi rasm kartochkada. Asl rasm saqlangan", "The white-background photo is on the card now. The original is kept"), 4000);
+    if (act === "revert") toast(L("Оригинальное фото снова в карточке", "Asl rasm yana kartochkada", "The original photo is back on the card"));
+    if (act === "del") toast(L("Оставили оригинальное фото", "Asl rasm qoldirildi", "Kept the original photo"));
+    if (act === "again" && p.cutout.state === "pending" && !p.cutout.worker_online) toast(L("Задача в очереди. AI-обработчик сейчас не в сети — начнёт, как только запустится", "Vazifa navbatda. AI ishlovchi hozir tarmoqda emas", "Queued. The AI worker is offline now — it starts as soon as it runs"), 4500);
+    if (act === "apply" || act === "revert" || act === "del") syncCatalog();
+    if (cutSheet?.pid === pid) { cutSheet.sig = null; cutPaint(); }
+    cutWatch();
+  } catch (e) { if (btn) btn.disabled = false; toast(m3dApiErr(e), 4000); }
+}
+document.addEventListener("click", e => {
+  const t = e.target.closest("[data-cut],[data-cutgo],[data-cutact]"); if (!t) return;
+  const d = t.dataset;
+  if (d.cut) return cutOpen(+d.cut);
+  if (d.cutgo) { const pid = +d.cutgo; cutOpen(pid); return cutAct("again", pid); }
+  if (d.cutact) return cutAct(d.cutact, +d.pid, t);
 });
 /* ================= Price list import (Excel / CSV / text from Telegram) =================
    The file is read in the browser: .xlsx is a zip of XML, unpacked with DecompressionStream.

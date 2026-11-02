@@ -672,8 +672,9 @@ export function createApp(cfg, log = console) {
     const since = Date.now() - 30 * 86400_000;
     const ships = db.all("SELECT sh.*, o.num, o.form, o.created_at oc, o.pay, o.pay_status FROM shipments sh JOIN orders o ON o.id=sh.order_id WHERE sh.store_id=? AND sh.status<>'unpaid' ORDER BY sh.id DESC LIMIT 100", s.id);
     const revenue = ships.filter(x => x.oc >= since && x.status !== "cancelled").reduce((a, x) => a + JSON.parse(x.lines).reduce((b, l) => b + l.price * l.q, 0), 0);
-    const products = db.all(`SELECT p.id,p.ru,p.uz,p.cat,p.sub,p.unit,p.kg,p.img,p.active,p.store_id,p.review,p.review_note,p.m3d,p.m3d_state,p.m3d_err,p.m3d_at, o.price,o.stock FROM offers o JOIN products p ON p.id=o.product_id WHERE o.store_id=? ORDER BY p.id`, s.id)
-      .map(({ m3d, m3d_state, m3d_err, m3d_at, ...p }) => ({ ...p, img: mediaUrl(p.img), own: p.store_id === s.id, model3d: p.store_id === s.id ? model3d.out({ id: p.id, m3d, m3d_state, m3d_err, m3d_at }) : undefined }));
+    const products = db.all(`SELECT p.id,p.ru,p.uz,p.cat,p.sub,p.unit,p.kg,p.img,p.active,p.store_id,p.review,p.review_note,p.m3d,p.m3d_state,p.m3d_err,p.m3d_at,p.img_orig,p.cut_img,p.cut_state,p.cut_err,p.cut_warn, o.price,o.stock FROM offers o JOIN products p ON p.id=o.product_id WHERE o.store_id=? ORDER BY p.id`, s.id)
+      .map(({ m3d, m3d_state, m3d_err, m3d_at, img_orig, cut_img, cut_state, cut_err, cut_warn, ...p }) => ({ ...p, img: mediaUrl(p.img), own: p.store_id === s.id, model3d: p.store_id === s.id ? model3d.out({ id: p.id, m3d, m3d_state, m3d_err, m3d_at }) : undefined,
+        cutout: p.store_id === s.id ? model3d.outCut({ id: p.id, img: p.img, img_orig, cut_img, cut_state, cut_err, cut_warn }) : undefined }));
     return {
       store: ownerStore(s),
       kpi: { revenue30: revenue, orders30: ships.filter(x => x.oc >= since).length, open: ships.filter(x => !["delivered", "picked", "cancelled"].includes(x.status)).length, products: products.length, out_of_stock: products.filter(p => p.stock <= 0).length },
@@ -813,7 +814,7 @@ export function createApp(cfg, log = console) {
     // a new photo makes an existing 3D model wrong: it goes; the seller asks for a new one with «Создать 3D с помощью AI»
     model3d.photoChanged(prod);
     const fresh = db.get("SELECT * FROM products WHERE id=?", prod.id);
-    return { img: mediaUrl("/uploads/" + name), model3d: model3d.out(fresh) };
+    return { img: mediaUrl("/uploads/" + name), model3d: model3d.out(fresh), cutout: model3d.outCut(fresh) };
   });
   r.patch("/api/seller/shipments/:id", async (req, res, p) => {
     const { u, s } = needSeller(req), b = await readJson(req);
