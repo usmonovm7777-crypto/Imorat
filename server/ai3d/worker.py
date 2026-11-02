@@ -13,7 +13,7 @@ Steps for every job: download the seller's photo → remove the background (remb
 inference → marching cubes (vertex colours from the model) → drop loose crumbs → optional decimation (colours asked
 from the model again) → glTF orientation (Y up), standing on the floor → GLB → upload. Nothing is written to disk except a temporary folder that is always deleted.
 """
-import argparse, io, json, logging, os, platform, signal, socket, sys, tempfile, time, traceback, urllib.error, urllib.request
+import argparse, gc, http.client, io, json, logging, os, platform, signal, socket, sys, tempfile, time, traceback, urllib.error, urllib.request
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import meshkit  # noqa: E402
@@ -22,7 +22,14 @@ log = logging.getLogger("ai3d")
 
 
 class NoObject(Exception):
-    """The photo has no object we can separate from the background (nothing to model)."""
+    """The photo has no object we can separate from the background (nothing to model). Final: not retried."""
+
+
+class Transient(Exception):
+    """The server or the network failed for a moment (5xx, 429, a dropped connection): the job goes back to the queue."""
+
+
+RETRYABLE = (Transient, TimeoutError, ConnectionError, http.client.HTTPException, urllib.error.URLError)
 
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -57,6 +64,8 @@ class Api:
             j = {}
         if status == 401:
             raise SystemExit(f"{what}: the server refused the worker token (check MODEL3D_WORKER_TOKEN on both sides)")
+        if status >= 500 or status == 429:
+            raise Transient(f"{what}: HTTP {status}")
         if status >= 400:
             raise RuntimeError(f"{what}: HTTP {status} {j.get('error') or raw[:200]!r}")
         return j
@@ -66,6 +75,8 @@ class Api:
 
     def photo(self, url):
         st, raw = self._req("GET", url, timeout=120)
+        if st >= 500 or st == 429:
+            raise Transient(f"photo: HTTP {st}")
         if st != 200:
             raise RuntimeError(f"photo: HTTP {st}")
         return raw
@@ -135,9 +146,11 @@ class TripoSREngine:
         def forward_cpu(helper, level):
             dev = level.device
             v, f = _orig_forward(helper, level.detach().cpu())
+            if v.shape[0] == 0 or f.shape[0] == 0:  # the density never reaches the surface: nothing was reconstructed
+                raise NoObject("no_object: TripoSR found no surface in this photo")
             return v.to(dev), f.to(dev)
         iso.MarchingCubeHelper.forward = forward_cpu
-        self.device = pick_device(device)
+        self.device = self.home_device = pick_device(device)
         self.mc_resolution, self.foreground_ratio, self.max_faces = mc_resolution, foreground_ratio, max_faces
         t0 = time.time()
         log.info("loading TripoSR (%s) on %s, marching cubes: %s …", model, self.device, self.mc_impl)
@@ -157,7 +170,11 @@ class TripoSREngine:
         img.thumbnail((1024, 1024))  # TripoSR looks at 512 px anyway; smaller is faster for the background removal
         if img.mode not in ("RGB", "RGBA"):
             img = img.convert("RGBA")
-        img = self._remove_bg(img, self.rembg).convert("RGBA")
+        if img.mode == "RGBA" and (np.array(img)[..., 3] < 128).mean() > 0.05:
+            pass  # already cut out (a PNG with a transparent background)
+        else:
+            img = self._remove_bg(img.convert("RGB"), self.rembg, force=True)  # TripoSR would skip rembg for any PNG with a soft edge
+        img = img.convert("RGBA")
         a = np.array(img)[..., 3]
         if (a > 10).mean() < 0.01:
             raise NoObject("no_object: the background removal found no product in the photo")
@@ -173,17 +190,41 @@ class TripoSREngine:
         mesh = self.model.extract_mesh(codes, True, resolution=self.mc_resolution)[0]
         return codes, mesh
 
+    def _free(self):
+        gc.collect()
+        torch = self.torch
+        if self.home_device.startswith("cuda"):
+            torch.cuda.empty_cache()
+        elif self.home_device == "mps" and hasattr(torch, "mps"):
+            torch.mps.empty_cache()
+
+    @staticmethod
+    def _gpu_problem(e):
+        m = str(e).lower()
+        return any(k in m for k in ("out of memory", "mps", "metal", "cuda", "cublas", "cudnn", "not implemented for", "not currently implemented"))
+
     def make(self, photo_bytes):
         image = self._prepare(photo_bytes)
         t0 = time.time()
+        if self.home_device == "cpu":
+            return self._make(image, t0)
+        fallback = None
         try:
-            codes, mesh = self._run(image)
+            return self._make(image, t0)
         except RuntimeError as e:
-            if self.device == "cpu":
+            if not self._gpu_problem(e):
                 raise
-            log.warning("inference on %s failed (%s) — retrying on CPU", self.device, e)
-            self.device = "cpu"; self.model.to("cpu")
-            codes, mesh = self._run(image)
+            fallback = f"{type(e).__name__}: {str(e)[:160]}"  # leave the except block first: its traceback keeps GPU tensors alive
+        log.warning("job on %s failed (%s) — this job runs on the CPU", self.home_device, fallback)
+        self._free()
+        self.device = "cpu"; self.model.to("cpu")
+        try:
+            return self._make(image, t0)
+        finally:  # only this job: the next one is tried on the GPU again
+            self.device = self.home_device; self.model.to(self.home_device); self._free()
+
+    def _make(self, image, t0):
+        codes, mesh = self._run(image)
         np = self.np
         v = np.asarray(mesh.vertices, np.float32); f = np.asarray(mesh.faces, np.int64)
         col = np.asarray(mesh.visual.vertex_colors)[:, :3] if len(v) else None
@@ -226,6 +267,8 @@ def run(api, engine, poll=5.0, once=False, keep_dir=None):
             raise
         except Exception as e:  # the server is unreachable: wait and try again
             log.warning("queue unreachable: %s", e)
+            if once:
+                return 1
             time.sleep(min(backoff, 60)); backoff *= 2
             continue
         if not job:
@@ -236,15 +279,17 @@ def run(api, engine, poll=5.0, once=False, keep_dir=None):
         jid = job["id"]
         log.info("job %s: product %s %r", jid, job.get("product_id"), job.get("name", ""))
         t0 = time.time()
-        with tempfile.TemporaryDirectory(prefix="ai3d-") as td:  # always removed, even after an error
+        with tempfile.TemporaryDirectory(prefix="ai3d-") as td:  # libraries' temporary files for this job land here; always removed
+            tempfile.tempdir = td
             try:
                 photo = api.photo(job["photo_url"])
-                if keep_dir:
-                    open(os.path.join(td, "photo"), "wb").write(photo)
                 glb = engine.make(photo)
-                res = api.result(jid, glb)
                 if keep_dir:
-                    os.makedirs(keep_dir, exist_ok=True); open(os.path.join(keep_dir, f"job{jid}.glb"), "wb").write(glb)
+                    try:
+                        os.makedirs(keep_dir, exist_ok=True); open(os.path.join(keep_dir, f"job{jid}.glb"), "wb").write(glb)
+                    except OSError as e:
+                        log.warning("could not keep a copy in %s: %s", keep_dir, e)
+                res = api.result(jid, glb)
                 log.info("job %s done in %.0f s%s", jid, time.time() - t0, " (photo changed meanwhile, discarded)" if res.get("discarded") else "")
             except NoObject as e:
                 log.warning("job %s: %s", jid, e); _safe_fail(api, jid, e, retry=False)
@@ -252,8 +297,10 @@ def run(api, engine, poll=5.0, once=False, keep_dir=None):
                 log.error("job %s: out of memory", jid); _safe_fail(api, jid, "out of memory", retry=True)
             except Exception as e:
                 msg = f"{type(e).__name__}: {e}"
-                log.error("job %s failed: %s\n%s", jid, msg, traceback.format_exc(limit=3))
-                _safe_fail(api, jid, msg, retry="out of memory" in msg.lower() or isinstance(e, (TimeoutError, urllib.error.URLError)))
+                log.error("job %s failed: %s\n%s", jid, msg, traceback.format_exc(limit=-6))
+                _safe_fail(api, jid, msg, retry="out of memory" in msg.lower() or isinstance(e, RETRYABLE))
+            finally:
+                tempfile.tempdir = None
         if once:
             return 0
     return 0

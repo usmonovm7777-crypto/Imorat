@@ -1793,6 +1793,13 @@ test("the Python AI 3D worker takes jobs from the queue, uploads a GLB, reports 
     await call("POST", `/api/seller/products/${c}/model3d`, {}, seller);
     assert.equal((await py("crash")).code, 0);
     assert.equal((await state(c)).state, "failed");
+    // a passing network/server problem: the job goes back to the queue and the next run finishes it
+    const d = await mk("Шпаклёвка со сбоем сети 3D-воркер, 25 кг");
+    await call("POST", `/api/seller/products/${d}/model3d`, {}, seller);
+    assert.equal((await py("transient")).code, 0);
+    assert.equal((await state(d)).state, "pending");
+    assert.equal((await py("ok")).code, 0);
+    assert.equal((await state(d)).state, "completed");
     assert.equal(app.db.get("SELECT COUNT(*) n FROM m3d_jobs WHERE status IN ('pending','processing')").n, 0, "nothing left hanging");
   } finally { Object.assign(M, keep); }
 });

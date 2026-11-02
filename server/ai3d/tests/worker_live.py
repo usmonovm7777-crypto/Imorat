@@ -2,7 +2,7 @@
 a running Quriliş Go API, with a TEST-ONLY engine in place of TripoSR, so the queue part is checked where torch and the
 model weights are not available (CI, this repo's server tests). It is never used by worker.py itself.
 
-    python3 worker_live.py http://127.0.0.1:8787 <MODEL3D_WORKER_TOKEN> [ok|noobject|crash]
+    python3 worker_live.py http://127.0.0.1:8787 <MODEL3D_WORKER_TOKEN> [ok|noobject|crash|transient]
 
 The test engine makes a plain coloured block the size of the photo's proportions — NOT a reconstruction of the product."""
 import io, os, sys
@@ -26,6 +26,8 @@ class BlockTestEngine:
             raise worker.NoObject("no_object: test engine")
         if self.mode == "crash":
             raise RuntimeError("test engine crashed")
+        if self.mode == "transient":
+            raise worker.Transient("test: server answered 502")
         w, h = img.size
         r = 48; x = np.linspace(0, 1, r); X, Y, Z = np.meshgrid(x, x, x, indexing="ij")
         hz = 0.38; hx = hz * min(1.0, w / h); hy = 0.12
