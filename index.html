@@ -3307,6 +3307,7 @@ function showScrim() { $("#scrim").classList.toggle("on", !!drawerView || aiOpen
 function openDrawer(vw, extra) { if (aiOpen) closeAI(); if (widOpen) closeWidgets(); closeModal(); drawerView = vw; if (extra) drawerOrder = extra; setPanel($("#drawer"), true); showScrim(); renderDrawer(); renderTabbar(); syncLock(); }
 function closeDrawer() { drawerView = null; setPanel($("#drawer"), false); showScrim(); renderTabbar(); syncLock(); setTimeout(refreshBoughtRail, 0); supBadge(); }
 function renderDrawer() {
+  if (drawerView === "profile" && !user) { closeDrawer(); openAuth("profile"); return; } // the profile exists only after signing in
   $("#dBack").innerHTML = ui("back", 16); $("#dClose").innerHTML = ui("close", 16);
   $("#dBack").hidden = !["checkout", "track", "orders", "watch", "projects"].includes(drawerView);
   ({ cart: dCart, checkout: dCheckout, track: dTrack, profile: dProfile, favs: dFavs, orders: dOrders, compare: dCompare, watch: dWatch, projects: dProjects, homeSetup: dHomeSetup, repeat: dRepeat, support: dSupport })[drawerView]?.();
@@ -3932,7 +3933,7 @@ function finishAuth(u, token) {
   const then = auth.then; closeAuth(); renderHeader(); renderTabbar(); counts();
   if (u.api) { bonusApi = null; loadBonus(); loadStockWatch(); fetchOrders(); teamProj = null; if (LS.get("imorat.teamPending", "")) loadTeams(); } else if (LS.get("imorat.refPending", "")) { const rc = LS.get("imorat.refPending", ""); LS.set("imorat.refPending", ""); setTimeout(() => applyRefCode(rc, true), 400); }
   toast(then === "seller" ? L("Магазин отправлен на проверку", "Do‘kon tekshiruvga yuborildi") : L(`Добро пожаловать, ${u.name}!`, `Xush kelibsiz, ${u.name}!`, `Welcome, ${u.name}!`));
-  if (then === "checkout") openDrawer("checkout"); else if (then === "seller") { sellerData = null; go("seller"); } else if (typeof then === "function") setTimeout(then, 0); else if (drawerView === "profile") renderDrawer();
+  if (then === "checkout") openDrawer("checkout"); else if (then === "profile") openDrawer("profile"); else if (then === "seller") { sellerData = null; go("seller"); } else if (typeof then === "function") setTimeout(then, 0); else if (drawerView === "profile") renderDrawer();
   if (route.view === "masters" && typeof then !== "function") { mApi.list = null; mApi.me = undefined; renderMasters(); }
   if (["admin", "store", "shop", "flat"].includes(route.view) && typeof then !== "function") { dash = null; renderMain(); }
   if (route.view === "catalog") renderList(true); else if (route.view === "seller" && then !== "seller") { sellerData = null; renderSeller(); }
@@ -8882,7 +8883,7 @@ document.addEventListener("click", e => {
     case "close-mega": return closeMega();
     case "cart": return openDrawer("cart");
     case "favs": return openDrawer("favs");
-    case "profile": return openDrawer("profile");
+    case "profile": return user ? openDrawer("profile") : openAuth("profile"); // signed out: only the sign-in / registration, the profile opens after it
     case "orders": return openDrawer("orders");
     case "checkout": return user ? openDrawer("checkout") : openAuth("checkout");
     case "login": return openAuth();
@@ -8952,7 +8953,7 @@ document.addEventListener("click", e => {
     case "theme-toggle": return setLook(null, effTheme() === "dark" ? "light" : "dark");
     case "ai-calc": { const c = CALCS.find(x => x.id === wCalc), items = calcOut["w:" + wCalc] || []; const rows = [...document.querySelectorAll("#w-" + wCalc + "-res > div")].map(d => d.innerText.replace(/\s+/g, " ")).join("; "); return openAI(L(`Проверь мой расчёт «${c.ru}»: ${rows}. Материалы: ${items.map(([p, q]) => `[[${p.id}:${q}]]`).join(", ")}. Всё ли учтено и что ещё понадобится?`, `«${c.uz}» hisobimni tekshir: ${rows}. Materiallar: ${items.map(([p, q]) => `[[${p.id}:${q}]]`).join(", ")}. Hammasi hisobga olinganmi, yana nima kerak?`, `Check my “${L(c.ru, c.uz)}” estimate: ${rows}. Materials: ${items.map(([p, q]) => `[[${p.id}:${q}]]`).join(", ")}. Is everything accounted for, and what else will I need?`)); }
     case "close-modal": return closeModal();
-    case "d-back": return openDrawer(drawerView === "track" ? "orders" : drawerView === "repeat" ? "track" : ["orders", "watch", "projects"].includes(drawerView) ? "profile" : "cart");
+    case "d-back": { const to = drawerView === "track" ? "orders" : drawerView === "repeat" ? "track" : ["orders", "watch", "projects"].includes(drawerView) ? "profile" : "cart"; return to === "profile" && !user ? closeDrawer() : openDrawer(to); }
     case "reset": f = { q: "", sub: null, stores: [], inStock: false, max: 0, sort: "pop" }; $("#q").value = ""; return renderCatalog();
     case "favs-all": favs.forEach(id => PROD[id] && addToCart(id, null, 1, true)); toast(L("Избранное добавлено в корзину", "Saralanganlar savatga qo‘shildi")); return openDrawer("cart");
     case "ai": return openAI();
