@@ -61,14 +61,14 @@ export function loadConfig(env = process.env) {
     },
     google: { clientId: env.GOOGLE_CLIENT_ID || "", jwksUrl: env.GOOGLE_JWKS_URL || "https://www.googleapis.com/oauth2/v3/certs" },
     apple: { clientId: env.APPLE_CLIENT_ID || "", redirectUri: env.APPLE_REDIRECT_URI || "", jwksUrl: env.APPLE_JWKS_URL || "https://appleid.apple.com/auth/keys" },
-    /* AI 3D model of a product from the seller's photo (Stability AI image-to-3D). Off without a key; each model is paid by the owner:
-       stable-point-aware-3d = 4 credits, stable-fast-3d = 10 credits (1 credit = $0.01, docs.stability.ai/pricing); a daily cap per store */
+    /* AI 3D model of a product from ONE seller photo, made by our own worker (server/ai3d/worker.py, open-source TripoSR, no paid API).
+       The worker pulls jobs with this token; without it the feature is off. A strong random value, e.g. `openssl rand -hex 32`. */
     model3d: {
-      key: env.STABILITY_API_KEY || "",
-      url: (env.STABILITY_API_URL || "https://api.stability.ai").replace(/\/$/, ""),
-      endpoint: ["stable-point-aware-3d", "stable-fast-3d"].includes(env.MODEL3D_ENDPOINT) ? env.MODEL3D_ENDPOINT : "stable-point-aware-3d",
-      perDay: Number(env.MODEL3D_PER_STORE_DAY) || 20,
-      timeoutMs: Number(env.MODEL3D_TIMEOUT_MS) || 180_000
+      workerToken: env.MODEL3D_WORKER_TOKEN || "",
+      perDay: Number(env.MODEL3D_PER_STORE_DAY) || 30,          // models a store may order per day
+      maxQueue: Number(env.MODEL3D_MAX_QUEUE) || 200,           // waiting jobs at most
+      jobTimeoutMs: Number(env.MODEL3D_JOB_TIMEOUT_MS) || 20 * 60_000, // a job the worker did not finish goes back to the queue
+      maxGlbMb: Number(env.MODEL3D_MAX_GLB_MB) || 40
     },
     ai: {
       key: env.ANTHROPIC_API_KEY || "",

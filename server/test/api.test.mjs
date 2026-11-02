@@ -1679,75 +1679,120 @@ test("Moderation: a store's new product and a review text wait for the team; rej
   } finally { CFG.productAutoApprove = true; }
 });
 
-test("AI 3D model from the seller's photo: off without a key, made on a new photo, the seller decides, buyers get the model", async () => {
-  // a stand-in for Stability AI's image-to-3D endpoint: checks the key and the multipart image, answers with a GLB (or an error)
-  const calls = []; let answer = "glb";
-  const stab = createServer(async (req, res) => {
-    const chunks = []; for await (const c of req) chunks.push(c); const raw = Buffer.concat(chunks);
-    calls.push({ url: req.url, auth: req.headers.authorization, type: req.headers["content-type"], hasImage: /name="image"; filename=/.test(raw.toString("latin1")), hasPng: raw.includes(Buffer.from([0x89, 0x50, 0x4e, 0x47])), tex: /name="texture_resolution"\r\n\r\n1024/.test(raw.toString("latin1")) });
-    if (answer === "glb") { res.writeHead(200, { "content-type": "model/gltf-binary" }); res.end(boxGlb()); }
-    else { res.writeHead(answer, { "content-type": "application/json" }); res.end(JSON.stringify({ name: "payment_required", errors: ["insufficient credits"] })); }
-  });
-  await new Promise(r => stab.listen(0, "127.0.0.1", r));
+test("AI 3D model from one photo: our own worker pulls jobs, the GLB is checked, the seller publishes, buyers get it, the photo stays", async () => {
   const M = CFG.model3d, keep = { ...M };
+  const W = (path, body, tok = "w-secret-123", raw = false) => fetch(base + path, { method: body === undefined ? "GET" : "POST", headers: { authorization: "Bearer " + tok, "x-worker": "test-mac", ...(raw ? { "content-type": "model/gltf-binary" } : body !== undefined ? { "content-type": "application/json" } : {}) }, body: raw ? body : body !== undefined ? JSON.stringify(body) : undefined });
   try {
     const seller = (await login("997770031")).data.token;
     const st = await call("POST", "/api/seller/store", { name: "3D Test", descr: "Магазин для проверки 3D-моделей товаров", cats: ["build"], phone: "71 200 30 77", addr: "ул. Объёмная, 3", district: "chil" }, seller);
     assert.equal((await call("PATCH", `/api/admin/stores/${st.data.store.id}`, { status: "active" }, globalThis.ADMIN)).status, 200);
     const pid = (await call("POST", "/api/seller/products", { ru: "Цемент 3D-тест, 50 кг", cat: "build", sub: "dry", unit: "bag50", price: 60000, stock: 10, kg: 50 }, seller)).data.product.id;
     const png = pngRGBA(96, 96, (x, y) => [200, 180 + (x % 30), 140, 255]);
-    const photo = (q = "") => fetch(`${base}/api/seller/products/${pid}/photo${q}`, { method: "POST", headers: { authorization: "Bearer " + seller, "content-type": "image/png" }, body: png }).then(r => r.json());
-    // 1) no key: the photo is saved, no model is attempted, asking for one says the service is off
-    M.key = "";
+    const photo = () => fetch(`${base}/api/seller/products/${pid}/photo`, { method: "POST", headers: { authorization: "Bearer " + seller, "content-type": "image/png" }, body: png }).then(r => r.json());
+    const ph = await photo();
+    // 1) no worker token: off, honestly; nothing queued; worker endpoints closed
+    M.workerToken = "";
     assert.equal((await call("GET", "/api/config")).data.model3d, false);
-    assert.equal((await photo()).model3d.state, null);
     const off = await call("POST", `/api/seller/products/${pid}/model3d`, {}, seller); assert.equal(off.status, 503); assert.equal(off.data.error, "model3d_off");
-    assert.equal(calls.length, 0, "nothing is sent anywhere without a key");
-    // 2) with a key: a new photo starts the model at once; the stand-in gets the photo and the key; the GLB is saved and served
-    Object.assign(M, { key: "sk-test-3d", url: `http://127.0.0.1:${stab.address().port}` });
+    assert.equal((await W("/api/worker/model3d/next", {})).status, 401);
+    // 2) with a token: the seller asks → pending; a second ask does not queue twice; a wrong token is refused
+    M.workerToken = "w-secret-123";
     assert.equal((await call("GET", "/api/config")).data.model3d, true);
-    const up = await photo(); assert.equal(up.model3d.state, "working");
-    const ready = await until(async () => { const m = (await call("GET", `/api/seller/products/${pid}/model3d`, null, seller)).data.model3d; return m.state === "ready" && m; });
-    assert.equal(calls.length, 1); assert.equal(calls[0].url, "/v2beta/3d/stable-point-aware-3d"); assert.equal(calls[0].auth, "Bearer sk-test-3d");
-    assert.match(calls[0].type, /^multipart\/form-data; boundary=/); assert.ok(calls[0].hasImage && calls[0].hasPng && calls[0].tex, JSON.stringify(calls[0]));
-    const glbRes = await fetch(ready.url.replace(CFG.publicUrl, base)); assert.equal(glbRes.status, 200); assert.equal(glbRes.headers.get("content-type"), "model/gltf-binary");
-    assert.equal(Buffer.from(await glbRes.arrayBuffer()).slice(0, 4).toString(), "glTF");
-    assert.equal((await call("GET", "/api/seller/summary", null, seller)).data.products.find(p => p.id === pid).model3d.state, "ready", "the cabinet sees it");
-    assert.equal((await call("GET", "/api/catalog")).data.products.find(p => p.id === pid).m3d, undefined, "buyers do not see it before the seller chooses");
-    // 3) the seller uses it: the still made from the model replaces the photo without starting a new model; buyers get the model
-    const still = await photo("?from=3d"); assert.equal(still.model3d.state, "ready"); assert.equal(calls.length, 1, "the still does not cost a new model");
-    assert.equal((await call("POST", `/api/seller/products/${pid}/model3d/use`, { use: true }, seller)).data.model3d.state, "used");
+    const q1 = await call("POST", `/api/seller/products/${pid}/model3d`, {}, seller); assert.equal(q1.data.model3d.state, "pending"); assert.equal(q1.data.model3d.queue, 1);
+    await call("POST", `/api/seller/products/${pid}/model3d`, {}, seller);
+    assert.equal(app.db.get("SELECT COUNT(*) n FROM m3d_jobs WHERE product_id=? AND status='pending'", pid).n, 1, "one job per product");
+    assert.equal((await W("/api/worker/model3d/next", {}, "wrong")).status, 401);
+    // 3) the worker takes the job, downloads the original photo, the state follows
+    const nx = await (await W("/api/worker/model3d/next", {})).json(); assert.equal(nx.job.product_id, pid);
+    assert.equal((await call("GET", `/api/seller/products/${pid}/model3d`, null, seller)).data.model3d.state, "processing");
+    assert.equal((await call("GET", `/api/seller/products/${pid}/model3d`, null, seller)).data.model3d.worker_online, true);
+    const got = Buffer.from(await (await W(nx.job.photo_url)).arrayBuffer()); assert.ok(got.equals(png), "the worker gets exactly the seller's photo");
+    assert.equal((await (await W("/api/worker/model3d/next", {})).json()).job, null, "nothing else to do");
+    // 4) a broken file is refused and never published; the seller sees "failed"; asking again queues a new job
+    const bad = await W(`/api/worker/model3d/${nx.job.id}/result`, Buffer.from("not a glb at all, just text"), undefined, true);
+    assert.equal(bad.status, 400); assert.equal((await bad.json()).error, "bad_glb");
+    assert.equal((await call("GET", `/api/seller/products/${pid}/model3d`, null, seller)).data.model3d.state, "failed");
+    await call("POST", `/api/seller/products/${pid}/model3d`, {}, seller);
+    const nx2 = await (await W("/api/worker/model3d/next", {})).json();
+    // a recoverable error goes back to the queue, then the worker delivers a real GLB
+    assert.equal((await (await W(`/api/worker/model3d/${nx2.job.id}/fail`, { error: "MPS out of memory", retry: true })).json()).retry, true);
+    const nx3 = await (await W("/api/worker/model3d/next", {})).json(); assert.equal(nx3.job.id, nx2.job.id);
+    const glb = boxGlb();
+    const ok = await (await W(`/api/worker/model3d/${nx3.job.id}/result`, glb, undefined, true)).json(); assert.equal(ok.ok, true);
+    const ready = (await call("GET", `/api/seller/products/${pid}/model3d`, null, seller)).data.model3d;
+    assert.equal(ready.state, "completed"); const glbRes = await fetch(ready.url.replace(CFG.publicUrl, base));
+    assert.equal(glbRes.headers.get("content-type"), "model/gltf-binary"); assert.ok(Buffer.from(await glbRes.arrayBuffer()).equals(glb));
+    assert.equal(app.db.get("SELECT img FROM products WHERE id=?", pid).img, ph.img.replace(CFG.publicUrl, ""), "the original photo is untouched");
+    assert.equal((await call("GET", "/api/catalog")).data.products.find(p => p.id === pid).m3d, undefined, "buyers see it only after the seller saves it");
+    // 5) «Сохранить 3D» → buyers get it; other stores cannot touch it
+    assert.equal((await call("POST", `/api/seller/products/${pid}/model3d/publish`, { publish: true }, seller)).data.model3d.state, "published");
     assert.equal((await call("GET", "/api/catalog")).data.products.find(p => p.id === pid).m3d, ready.url);
-    // other stores cannot touch it
     const other = (await login("997770032")).data.token;
-    assert.equal((await call("POST", `/api/seller/products/${pid}/model3d/use`, { use: false }, other)).status, 403);
-    // the look library: another store puts up the same product at once — copies of the still and the model, no new photo, no new paid model
+    assert.equal((await call("POST", `/api/seller/products/${pid}/model3d/publish`, { publish: false }, other)).status, 403);
+    // the look library: another store puts up the same product at once — copies of the photo and the model, no new job
     const st2 = await call("POST", "/api/seller/store", { name: "3D Copy", descr: "Второй магазин для библиотеки 3D-моделей", cats: ["build"], phone: "71 200 30 78", addr: "ул. Объёмная, 5", district: "chil" }, other);
     assert.equal((await call("PATCH", `/api/admin/stores/${st2.data.store.id}`, { status: "active" }, globalThis.ADMIN)).status, 200);
     const lib = (await call("GET", "/api/seller/look-library?q=" + encodeURIComponent("цемент 3D"), null, other)).data.items;
     const hit = lib.find(x => x.id === pid); assert.ok(hit && hit.m3d && !hit.own && hit.store_name === "3D Test", JSON.stringify(lib));
-    assert.equal((await call("GET", "/api/seller/look-library?q=" + encodeURIComponent("цемент"), null, seller)).data.items.find(x => x.id === pid).own, true, "the store sees its own products too");
-    const before = calls.length;
+    const jobsBefore = app.db.get("SELECT COUNT(*) n FROM m3d_jobs").n;
     const cp = await call("POST", "/api/seller/products", { ru: "Цемент 3D-тест (наш склад), 50 кг", cat: "build", sub: "dry", unit: "bag50", price: 59000, stock: 4, kg: 50, from: pid }, other);
-    assert.equal(cp.status, 200, JSON.stringify(cp.data)); assert.equal(cp.data.model3d.state, "used"); assert.notEqual(cp.data.model3d.url, ready.url, "its own copy of the model");
-    assert.equal((await fetch(cp.data.model3d.url.replace(CFG.publicUrl, base))).status, 200); assert.equal((await fetch(cp.data.img.replace(CFG.publicUrl, base))).status, 200);
-    assert.equal(calls.length, before, "no new model was ordered");
-    // a product of another store without a model buyers see cannot be copied
+    assert.equal(cp.status, 200, JSON.stringify(cp.data)); assert.equal(cp.data.model3d.state, "published"); assert.notEqual(cp.data.model3d.url, ready.url);
+    assert.equal(app.db.get("SELECT COUNT(*) n FROM m3d_jobs").n, jobsBefore, "no new job");
     const plain = (await call("POST", "/api/seller/products", { ru: "Песок без модели, 50 кг", cat: "build", sub: "dry", unit: "bag50", price: 20000, stock: 4, kg: 50 }, seller)).data.product.id;
     assert.equal((await call("POST", "/api/seller/products", { ru: "Песок чужой, 50 кг", cat: "build", sub: "dry", unit: "bag50", price: 20000, stock: 4, kg: 50, from: plain }, other)).data.error, "bad_source");
-    // 4) a failed attempt for the same photo keeps the model buyers already see, and says why
-    answer = 402;
-    assert.equal((await call("POST", `/api/seller/products/${pid}/model3d`, {}, seller)).data.model3d.state, "working");
-    const kept = await until(async () => { const m = (await call("GET", `/api/seller/products/${pid}/model3d`, null, seller)).data.model3d; return m.state !== "working" && m; });
-    assert.equal(kept.state, "used"); assert.equal(kept.err, "no_credits"); assert.equal(kept.url, ready.url);
-    // 5) a new real photo makes the old model wrong: it goes; a failure then leaves no model at all
-    const again = await photo(); assert.equal(again.model3d.state, "working");
-    const failed = await until(async () => { const m = (await call("GET", `/api/seller/products/${pid}/model3d`, null, seller)).data.model3d; return m.state !== "working" && m; });
-    assert.equal(failed.state, "failed"); assert.equal(failed.url, null); assert.equal(failed.err, "no_credits");
+    // 6) «Удалить 3D»: the model goes, the photo stays, buyers lose the 3D view
+    assert.equal((await fetch(`${base}/api/seller/products/${pid}/model3d`, { method: "DELETE", headers: { authorization: "Bearer " + seller } }).then(r => r.json())).model3d.state, null);
+    assert.equal((await fetch(ready.url.replace(CFG.publicUrl, base))).status, 404);
     assert.equal((await call("GET", "/api/catalog")).data.products.find(p => p.id === pid).m3d, undefined);
-    assert.equal((await fetch(ready.url.replace(CFG.publicUrl, base))).status, 404, "the old model file is deleted");
-    // 6) the daily cap per store protects the owner's money
-    answer = "glb"; M.perDay = calls.length - 1;
-    const capped = await call("POST", `/api/seller/products/${pid}/model3d`, {}, seller); assert.equal(capped.status, 429);
-  } finally { Object.assign(M, keep); stab.close(); stab.closeAllConnections(); }
+    assert.ok(app.db.get("SELECT img FROM products WHERE id=?", pid).img.startsWith("/uploads/"));
+    // 7) a job the worker abandoned goes back to the queue; a new photo cancels an unfinished job
+    await call("POST", `/api/seller/products/${pid}/model3d`, {}, seller);
+    const nx4 = await (await W("/api/worker/model3d/next", {})).json();
+    app.db.run("UPDATE m3d_jobs SET started_at=? WHERE id=?", Date.now() - 3 * 3600_000, nx4.job.id);
+    assert.equal((await (await W("/api/worker/model3d/next", {})).json()).job.id, nx4.job.id, "the stuck job is handed out again");
+    await photo();
+    assert.equal(app.db.get("SELECT status FROM m3d_jobs WHERE id=?", nx4.job.id).status, "cancelled");
+    assert.equal((await W(`/api/worker/model3d/${nx4.job.id}/result`, glb, undefined, true)).status, 409, "a cancelled job's model is not stored");
+    // 8) the daily cap per store
+    M.perDay = app.db.get("SELECT COUNT(*) n FROM m3d_jobs WHERE store_id=?", st.data.store.id).n;
+    assert.equal((await call("POST", `/api/seller/products/${pid}/model3d`, {}, seller)).status, 429);
+  } finally { Object.assign(M, keep); }
+});
+
+/* The Python worker's own loop (server/ai3d/worker.py: queue, photo download, temp folder, upload, error reports) against this
+   server. TripoSR + torch cannot run in CI, so ai3d/tests/worker_live.py swaps in a test-only engine (a coloured block, no AI);
+   everything else is the real worker code. Skipped when python3 with numpy/Pillow/scikit-image is not installed. */
+test("the Python AI 3D worker takes jobs from the queue, uploads a GLB, reports failures", async t => {
+  const { spawn, spawnSync } = await import("node:child_process");
+  if (spawnSync("python3", ["-c", "import numpy, PIL, skimage"]).status !== 0) return t.skip("python3 with numpy, Pillow and scikit-image is not installed");
+  const M = CFG.model3d, keep = { ...M };
+  const py = (...args) => new Promise((ok, no) => { const ch = spawn("python3", [join(import.meta.dirname, "..", "ai3d", "tests", "worker_live.py"), base, "w-live-77", ...args], { env: { ...process.env, NO_PROXY: "127.0.0.1,localhost", no_proxy: "127.0.0.1,localhost" } }); let out = ""; ch.stdout.on("data", d => (out += d)); ch.stderr.on("data", d => (out += d)); ch.on("error", no); ch.on("close", code => ok({ code, out })); });
+  try {
+    M.workerToken = "w-live-77"; M.perDay = 100;
+    const seller = (await login("997770041")).data.token;
+    const st = await call("POST", "/api/seller/store", { name: "3D Worker", descr: "Магазин для проверки AI-воркера 3D", cats: ["build"], phone: "71 200 30 79", addr: "ул. Объёмная, 7", district: "chil" }, seller);
+    assert.equal((await call("PATCH", `/api/admin/stores/${st.data.store.id}`, { status: "active" }, globalThis.ADMIN)).status, 200);
+    const mk = async ru => { const pid = (await call("POST", "/api/seller/products", { ru, cat: "build", sub: "dry", unit: "bag50", price: 30000, stock: 5, kg: 50 }, seller)).data.product.id; await fetch(`${base}/api/seller/products/${pid}/photo`, { method: "POST", headers: { authorization: "Bearer " + seller, "content-type": "image/png" }, body: pngRGBA(60, 90, (x, y) => (y < 45 ? [210, 60, 40, 255] : [40, 90, 200, 255])) }); return pid; };
+    const state = async pid => (await call("GET", `/api/seller/products/${pid}/model3d`, null, seller)).data.model3d;
+    const a = await mk("Шпаклёвка 3D-воркер, 25 кг");
+    assert.equal((await call("POST", `/api/seller/products/${a}/model3d`, {}, seller)).data.model3d.state, "pending");
+    const r1 = await py("ok"); assert.equal(r1.code, 0, r1.out);
+    const s1 = await state(a); assert.equal(s1.state, "completed", r1.out);
+    const glb = Buffer.from(await (await fetch(s1.url.replace(CFG.publicUrl, base))).arrayBuffer());
+    const gj = JSON.parse(glb.toString("utf8", 20, 20 + glb.readUInt32LE(12)));
+    assert.deepEqual(Object.keys(gj.meshes[0].primitives[0].attributes).sort(), ["COLOR_0", "NORMAL", "POSITION"]);
+    assert.equal(gj.accessors[gj.meshes[0].primitives[0].attributes.POSITION].min[1], 0, "the model stands on the floor");
+    assert.match(r1.out, /job \d+ done/);
+    // a photo without a recognisable object: failed for good (no retry), the seller sees why; the photo stays
+    const b = await mk("Шпаклёвка без объекта 3D-воркер, 25 кг");
+    await call("POST", `/api/seller/products/${b}/model3d`, {}, seller);
+    assert.equal((await py("noobject")).code, 0);
+    const s2 = await state(b); assert.equal(s2.state, "failed"); assert.equal(s2.err, "bad_image");
+    // an engine crash: reported, not retried forever
+    const c = await mk("Шпаклёвка с ошибкой 3D-воркер, 25 кг");
+    await call("POST", `/api/seller/products/${c}/model3d`, {}, seller);
+    assert.equal((await py("crash")).code, 0);
+    assert.equal((await state(c)).state, "failed");
+    assert.equal(app.db.get("SELECT COUNT(*) n FROM m3d_jobs WHERE status IN ('pending','processing')").n, 0, "nothing left hanging");
+  } finally { Object.assign(M, keep); }
 });

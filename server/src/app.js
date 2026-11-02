@@ -198,7 +198,7 @@ export function createApp(cfg, log = console) {
   r.get("/api/health", () => ({ ok: true, time: Date.now(), name: "imorat-api", version: PKG_VERSION, contract: API_CONTRACT, min_client: MIN_CLIENT }));
   r.get("/api/config", () => ({
     sms: sms.mode, google_client_id: cfg.google.clientId || null, apple_client_id: cfg.apple.clientId || null,
-    apple_redirect_uri: cfg.apple.redirectUri || null, ai: !!cfg.ai.key, yandex: !!cfg.yandex.token, pay_at_store: cfg.allowPayAtStore, discounts: cfg.discounts, model3d: !!cfg.model3d.key,
+    apple_redirect_uri: cfg.apple.redirectUri || null, ai: !!cfg.ai.key, yandex: !!cfg.yandex.token, pay_at_store: cfg.allowPayAtStore, discounts: cfg.discounts, model3d: !!cfg.model3d.workerToken, model3d_worker: model3d.workerOnline(),
     payments: cfg.paymentsOnline, telegram_bot: tg.enabled ? tg.username || null : null, telegram_channel: /^@/.test(cfg.channel?.chat || "") ? cfg.channel.chat : null, push_key: push.publicKey,
     timers: cfg.timers, commission: cfg.commission, acquiring: cfg.acquiring, acquiring_by: cfg.acquiringBy, promo_months: cfg.promoMonths, demo: cfg.demoStores,
     ymaps_key: cfg.maps.jsKey || null, geo: geo.provider, bonus: cfg.bonus.enabled, // the site draws a Yandex map with the key; address search goes through /api/geo
@@ -673,7 +673,7 @@ export function createApp(cfg, log = console) {
     const ships = db.all("SELECT sh.*, o.num, o.form, o.created_at oc, o.pay, o.pay_status FROM shipments sh JOIN orders o ON o.id=sh.order_id WHERE sh.store_id=? AND sh.status<>'unpaid' ORDER BY sh.id DESC LIMIT 100", s.id);
     const revenue = ships.filter(x => x.oc >= since && x.status !== "cancelled").reduce((a, x) => a + JSON.parse(x.lines).reduce((b, l) => b + l.price * l.q, 0), 0);
     const products = db.all(`SELECT p.id,p.ru,p.uz,p.cat,p.sub,p.unit,p.kg,p.img,p.active,p.store_id,p.review,p.review_note,p.m3d,p.m3d_state,p.m3d_err,p.m3d_at, o.price,o.stock FROM offers o JOIN products p ON p.id=o.product_id WHERE o.store_id=? ORDER BY p.id`, s.id)
-      .map(({ m3d, m3d_state, m3d_err, m3d_at, ...p }) => ({ ...p, img: mediaUrl(p.img), own: p.store_id === s.id, model3d: p.store_id === s.id ? model3d.out({ m3d, m3d_state, m3d_err, m3d_at }) : undefined }));
+      .map(({ m3d, m3d_state, m3d_err, m3d_at, ...p }) => ({ ...p, img: mediaUrl(p.img), own: p.store_id === s.id, model3d: p.store_id === s.id ? model3d.out({ id: p.id, m3d, m3d_state, m3d_err, m3d_at }) : undefined }));
     return {
       store: ownerStore(s),
       kpi: { revenue30: revenue, orders30: ships.filter(x => x.oc >= since).length, open: ships.filter(x => !["delivered", "picked", "cancelled"].includes(x.status)).length, products: products.length, out_of_stock: products.filter(p => p.stock <= 0).length },
@@ -810,9 +810,8 @@ export function createApp(cfg, log = console) {
     removeUpload(prod.img);
     db.run("UPDATE products SET img=? WHERE id=?", "/uploads/" + name, prod.id);
     bumpCatalog();
-    // a new photo → the AI makes a 3D model of exactly this product (when the service is connected); ?from=3d is the still made from that model
-    const from3d = new URL(req.url, "http://x").searchParams.get("from") === "3d";
-    model3d.photoChanged({ ...prod, img: "/uploads/" + name }, s.id, from3d);
+    // a new photo makes an existing 3D model wrong: it goes; the seller asks for a new one with «Создать 3D с помощью AI»
+    model3d.photoChanged(prod);
     const fresh = db.get("SELECT * FROM products WHERE id=?", prod.id);
     return { img: mediaUrl("/uploads/" + name), model3d: model3d.out(fresh) };
   });

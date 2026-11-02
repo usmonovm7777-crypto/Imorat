@@ -71,7 +71,8 @@
 * { box-sizing: border-box; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; scroll-behavior: auto !important; } }
 [hidden] { display: none !important; }
-body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased; padding-bottom: var(--nav-h); }
+html { background: var(--bg); overscroll-behavior-y: none; }
+body { overscroll-behavior-y: none; background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased; padding-bottom: var(--nav-h); }
 body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 31; background: var(--surface); }
 button, input, select, textarea { font: inherit; color: inherit; }
 button { cursor: pointer; background: none; border: 0; padding: 0; }
@@ -98,15 +99,32 @@ a { color: inherit; }
 .glb-box { position: relative; aspect-ratio: 1 / 1; border-radius: 16px; overflow: hidden; }
 .glb-cv { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
 .glb-cv:active { cursor: grabbing; }
-.glb-msg { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; padding: 20px; color: var(--muted); font-size: 14px; }
-.glb-hint { position: absolute; left: 50%; bottom: 10px; translate: -50% 0; font-size: 12px; padding: 4px 10px; border-radius: 999px; background: color-mix(in srgb, var(--surface) 85%, transparent); color: var(--muted); pointer-events: none; white-space: nowrap; }
-.m3d-btn { position: absolute; right: 14px; bottom: 14px; z-index: 2; display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: 999px; font-weight: 700; font-size: 13px; background: var(--surface); color: var(--ink); border: 1px solid var(--line-strong); box-shadow: var(--shadow-sm); }
-.m3d-btn[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
-.m-img .glb-box { position: absolute; inset: 0; aspect-ratio: auto; border-radius: inherit; }
+.glb-msg { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 8px; text-align: center; padding: 22px; color: var(--muted); font-size: 14px; }
+.glb-msg b { color: var(--ink); font-size: 15px; } .glb-msg small { max-width: 34ch; line-height: 1.45; }
+.glb-spin { width: 26px; height: 26px; border-radius: 50%; border: 3px solid color-mix(in srgb, var(--accent) 22%, transparent); border-top-color: var(--accent); animation: glbSpin .8s linear infinite; display: inline-block; flex: none; }
+@keyframes glbSpin { to { transform: rotate(1turn); } }
+.glb-spin.sm { width: 13px; height: 13px; border-width: 2px; vertical-align: -2px; }
+.glb-hint { position: absolute; left: 50%; bottom: 10px; translate: -50% 0; font-size: 12px; padding: 4px 10px; border-radius: 999px; background: color-mix(in srgb, var(--surface) 85%, transparent); color: var(--muted); pointer-events: none; white-space: nowrap; transition: opacity .4s; }
+.glb-hint.off { opacity: 0; }
+.glb-note { position: absolute; left: 10px; top: 10px; max-width: calc(100% - 20px); font-size: 11px; line-height: 1.3; padding: 3px 8px; border-radius: 8px; background: color-mix(in srgb, var(--surface) 80%, transparent); color: var(--muted); pointer-events: none; }
+.m-img .glb-box { position: absolute; inset: 0; aspect-ratio: auto; border-radius: inherit; z-index: 1; }
+.m-img.in3d .badges { display: none; }
+.m-img .glb-hint { left: 14px; translate: none; bottom: 22px; max-width: calc(100% - 190px); white-space: normal; text-align: left; }
+.m-img .glb-note { max-width: calc(100% - 76px); }
+.m3d-seg { position: absolute; right: 14px; bottom: 14px; z-index: 2; display: inline-flex; padding: 3px; gap: 2px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line-strong); box-shadow: var(--shadow-sm); }
+.m3d-seg button { display: inline-flex; align-items: center; gap: 5px; padding: 6px 12px; border-radius: 999px; font-weight: 700; font-size: 13px; color: var(--muted); background: none; border: 0; transition: background .2s, color .2s; }
+.m3d-seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
 .m3d-row { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
-.m3d-sheet { padding: 22px; display: grid; gap: 14px; }
-.m3d-sheet .glb-box { max-width: 460px; width: 100%; justify-self: center; }
+.ph-btn.hot { border-color: var(--accent); color: var(--accent); font-weight: 700; }
+.m3d-sheet { padding: 22px; display: grid; gap: 14px; grid-column: 1 / -1; width: 100%; max-width: 900px; justify-self: center; box-sizing: border-box; }
+.m3d-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.m3d-pair figure { margin: 0; display: grid; gap: 6px; min-width: 0; }
+.m3d-pair figcaption { font-size: 12px; color: var(--muted); text-align: center; }
+.m3d-ph { aspect-ratio: 1 / 1; border-radius: 16px; overflow: hidden; display: grid; place-items: center; }
+.m3d-ph img { width: 100%; height: 100%; object-fit: contain; }
+@media (max-width: 560px) { .m3d-pair { grid-template-columns: 1fr; } .m3d-ph, .m3d-pair .glb-box { aspect-ratio: 4 / 3; } }
 .m3d-sheet .row { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn.danger { color: var(--signal); }
 /* the look library under the new product's name */
 .lib-box { display: grid; gap: 8px; padding: 10px 12px; border-radius: 12px; background: var(--accent-soft); }
 .lib-h { font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
@@ -127,6 +145,12 @@ a { color: inherit; }
 .hdr-row { display: flex; align-items: center; gap: 12px; padding-block: 12px; }
 .logo { display: flex; align-items: center; gap: 9px; flex: none; }
 .logo-mark { width: 32px; height: 32px; display: block; flex: none; }
+html.sellerm .hdr .search, html.sellerm .cat-btn, html.sellerm .cart-btn, html.sellerm .rail-nav, html.sellerm .hb[data-act="favs"], html.sellerm .menu-btn, html.sellerm #fab, html.sellerm #foot, html.sellerm #cmpBar { display: none !important; }
+.seller-chip { display: inline-flex; align-items: center; gap: 6px; min-width: 0; max-width: 46vw; padding: 5px 10px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-size: 12.5px; font-weight: 700; }
+.seller-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 760px) { html.sellerm .seller-chip { order: 4; margin-right: auto; } }
+#app.pg-in { animation: pgIn .34s cubic-bezier(.2, .8, .2, 1) both; } /* a new page comes in softly */
+@keyframes pgIn { from { opacity: 0; transform: translateY(10px); } }
 /* activity widget (home): orders on their way */
 .actw { margin-top: 14px; display: grid; gap: 4px; padding: 12px 16px 8px; border-radius: var(--r-lg); background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow-sm); }
 .actw-h { display: flex; justify-content: space-between; align-items: center; }
@@ -285,20 +309,28 @@ a { color: inherit; }
 }
 
 /* ---------- Mega menu ---------- */
-.mega { position: fixed; inset: 0; z-index: 45; display: none; }
-.mega.on { display: block; }
-.mega .scrim { position: absolute; inset: 0; background: rgba(8, 14, 13, .45); }
-.mega-panel { position: relative; background: var(--surface); max-height: calc(100% - 24px); overflow-y: auto; border-radius: 0 0 var(--r-lg) var(--r-lg); box-shadow: var(--shadow); padding-top: env(safe-area-inset-top, 0px); }
+.mega { position: fixed; inset: 0; z-index: 45; visibility: hidden; pointer-events: none; transition: visibility 0s linear .34s; }
+.mega.on { visibility: visible; pointer-events: auto; transition: visibility 0s; }
+.mega .scrim { position: absolute; inset: 0; background: rgba(8, 14, 13, .45); opacity: 0; transition: opacity .3s ease; }
+.mega.on .scrim { opacity: 1; }
+.mega-panel { position: relative; max-height: calc(100% - 24px); overflow-y: auto; overscroll-behavior: contain; border-radius: 0 0 var(--r-lg) var(--r-lg); box-shadow: var(--shadow); padding-top: env(safe-area-inset-top, 0px);
+  background: radial-gradient(120% 70% at 100% -10%, color-mix(in srgb, var(--accent) 17%, transparent), transparent 58%), radial-gradient(90% 55% at -15% 105%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 60%), var(--surface);
+  opacity: 0; transform: translateY(-28px); transition: opacity .3s ease, transform .34s cubic-bezier(.2, .8, .2, 1); }
+.mega.on .mega-panel { opacity: 1; transform: none; }
+.mega-panel::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 4px; background: linear-gradient(90deg, #FFA126, #EE4A1C, #FFBE73, #D63D0E); }
+.mega-sub { color: var(--muted); font-size: 14px; margin: 2px 0 0; }
+.mega.on .mega-cat { animation: megaIn .42s cubic-bezier(.2, .8, .2, 1) both; animation-delay: calc(var(--i, 0) * 28ms + 60ms); }
+@keyframes megaIn { from { opacity: 0; transform: translateY(10px); } }
 .mega-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-block: 18px 6px; }
 .mega-cols { columns: 4 240px; column-gap: 28px; padding-block: 12px 32px; }
-.mega-cat { break-inside: avoid; margin-bottom: 22px; display: grid; gap: 4px; }
+.mega-cat { break-inside: avoid; margin-bottom: 14px; display: grid; gap: 10px; padding: 12px 14px 14px; border-radius: 16px; background: color-mix(in srgb, var(--raised) 82%, transparent); border: 1px solid color-mix(in srgb, var(--line) 80%, transparent); }
 .mega-cat > button { display: flex; align-items: center; gap: 10px; font-weight: 600; text-align: left; padding: 2px 0; }
 .mega-cat > button .ico { width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center; flex: none; }
 .mega-cat > button .ico svg { width: 20px; height: 20px; }
 .mega-cat > button:hover span:last-child { color: var(--accent); }
-.mega-cat ul { list-style: none; margin: 0; padding: 0 0 0 44px; display: grid; gap: 2px; }
-.mega-cat li button { color: var(--muted); font-size: 14px; text-align: left; padding: 2px 0; }
-.mega-cat li button:hover { color: var(--accent); }
+.mega-cat ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.mega-cat li button { color: var(--ink); font-size: 13px; text-align: left; padding: 6px 11px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); transition: border-color .15s, color .15s; }
+.mega-cat li button:hover, .mega-cat li button:active { color: var(--accent); border-color: var(--accent); }
 
 /* ---------- Common ---------- */
 h1, h2, h3 { text-wrap: balance; }
@@ -310,7 +342,7 @@ h1, h2, h3 { text-wrap: balance; }
 /* sections below the first screen are laid out only when scrolled to — faster start on cheap phones */
 /* Phones render the long home page section by section as it scrolls; a computer has the power to lay it all out once,
    and then scrolling never pauses to render the next section. */
-@media (max-width: 760px), (hover: none) { #app .sec ~ .sec { content-visibility: auto; contain-intrinsic-size: auto 640px; } }
+/* (content-visibility on phones removed: sections rendered late made the page jump and blink when a product or the cart changed) */
 html.cv-all #app .sec ~ .sec { content-visibility: visible; }
 .sec-head { display: flex; align-items: end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
 .sec-head p { margin: 6px 0 0; color: var(--muted); }
@@ -362,11 +394,11 @@ html.cv-all #app .sec ~ .sec { content-visibility: visible; }
 .hs .fl0 { animation-name: hsF0; } .hs .fl1 { animation-name: hsF1; } .hs .fl2 { animation-name: hsF2; } .hs .fl3 { animation-name: hsF3; } .hs .fl4 { animation-name: hsF4; }
 .hs .truck { animation: hsTruck 18s linear infinite; }
 .hs .truck.t2 { animation-delay: -9s; }
-.hs .bed { animation: hsBed 18s ease-in-out infinite; transform-origin: 100% 100%; }
+.hs .bed { animation: hsBed 18s ease-in-out infinite; transform-box: fill-box; transform-origin: 100% 100%; }
 .hs .truck.t2 .bed { animation-delay: -9s; }
 @keyframes hsTruck { 0%, 30% { transform: translateX(0); opacity: 1; } 47% { transform: translateX(-1150px); opacity: 1; } 47.1%, 82.9% { transform: translateX(-1150px); opacity: 0; } 83% { transform: translateX(380px); opacity: 1; } 100% { transform: translateX(0); opacity: 1; } }
 @keyframes hsBed { 0%, 4% { transform: none; } 9%, 14% { transform: rotate(14deg); } 19%, 100% { transform: none; } }
-.hs .wheel { animation: hsWheel .6s linear infinite; transform-origin: 50% 50%; }
+.hs .wheel { animation: hsWheel .6s linear infinite; transform-box: fill-box; transform-origin: center; } /* the spin sits on an inner group: a CSS transform would replace the translate() that puts the wheel under the truck */
 @keyframes hsWheel { to { transform: rotate(1turn); } }
 .hs .belt { stroke-dasharray: 5 7; animation: hsBelt .8s linear infinite; }
 @keyframes hsBelt { to { stroke-dashoffset: -12; } }
@@ -697,6 +729,9 @@ legend { font-family: var(--f-display); font-size: 15px; font-weight: 600; margi
 html:has(.modal.on) #scrim.on { opacity: 0; }
 .m-box { position: relative; z-index: 1; background: var(--surface); border-radius: var(--r-lg); width: min(1040px, 100%); max-height: calc(100vh - 48px); overflow-y: auto; display: grid; grid-template-columns: 1fr 1.1fr; box-shadow: var(--shadow); opacity: 0; transform: translateY(12px) scale(.99); transition: opacity .2s, transform .2s; }
 .modal.on .m-box { opacity: 1; transform: none; }
+.modal { transition: visibility 0s linear .3s; } .modal.on { transition: visibility 0s; }
+.modal .scrim-g { transition: opacity .25s ease; } .modal:not(.on) .scrim-g { opacity: 0; }
+.m-img .ph-old { position: absolute; inset: 0; z-index: 1; transition: opacity .2s; } .m-img .ph-old.go { opacity: 0; }
 .m-img { position: sticky; top: 0; align-self: start; aspect-ratio: 1 / 1; max-width: 100%; }
 .m-img .badges { left: 16px; top: 16px; }
 .m-info { padding: 26px 26px 24px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-content: start; min-width: 0; }
@@ -724,7 +759,7 @@ html:has(.modal.on) #scrim.on { opacity: 0; }
 .rel b { font-size: 12.5px; font-weight: 700; font-variant-numeric: tabular-nums; }
 @media (max-width: 760px) {
   .modal { padding: 0; place-items: end center; }
-  .m-box { grid-template-columns: 1fr; border-radius: var(--r-lg) var(--r-lg) 0 0; max-height: 94vh; padding-bottom: env(safe-area-inset-bottom, 0px); }
+  .m-box { grid-template-columns: 1fr; border-radius: var(--r-lg) var(--r-lg) 0 0; max-height: 94vh; padding-bottom: env(safe-area-inset-bottom, 0px); opacity: 1; transform: translateY(102%); transition: transform .34s cubic-bezier(.2, .8, .2, 1); will-change: transform; } /* a sheet: slides up and back down */
   .m-img { position: relative; aspect-ratio: 16 / 10; }
   .offer { grid-template-columns: 1fr auto; }
   .offer .btn { grid-column: 1 / -1; }
@@ -849,16 +884,16 @@ html.lock { overflow: hidden; }
    (SMIL animateMotion re-laid out the whole page 60 times a second). .truckspace is the map's 520×250 drawing space scaled to its width. */
 .route-box { position: relative; }
 .truckspace { position: absolute; left: 0; top: 0; width: 520px; height: 250px; transform-origin: 0 0; transform: scale(var(--k, 1)); pointer-events: none; }
-.truckel { position: absolute; left: 0; top: 0; width: 30px; height: 20px; offset-rotate: auto; offset-distance: 50%; animation: truck 6s cubic-bezier(.45,0,.55,1) infinite; }
+.truckel { position: absolute; left: 0; top: 0; width: 30px; height: 20px; offset-rotate: auto; offset-distance: 50%; animation: truck 7s cubic-bezier(.45,0,.55,1) infinite; will-change: offset-distance; }
 .truckel svg { display: block; }
 .truckel .truck { fill: var(--accent); }
 .truckel .truckw { fill: var(--accent-ink); }
-@keyframes truck { from { offset-distance: 0%; } to { offset-distance: 100%; } }
-html:not(.fx) .truckel { animation: none; }
+@keyframes truck { 0% { offset-distance: 0%; opacity: 0; } 6% { opacity: 1; } 78% { offset-distance: 100%; } 92% { offset-distance: 100%; opacity: 1; } 100% { offset-distance: 100%; opacity: 0; } } /* from the store (A) to the buyer (B), a short stop, again */
 .route-box.off .truckel, html .route-box.off .dash { animation-play-state: paused !important; }
-.cmp-bar { position: fixed; left: max(18px, env(safe-area-inset-left, 0px)); bottom: calc(18px + var(--nav-h) + env(safe-area-inset-bottom, 0px)); z-index: 34; display: flex; align-items: center; gap: 10px; background: var(--ink); color: var(--bg); border-radius: 999px; padding: 6px 8px 6px 6px; box-shadow: var(--shadow); }
+.cmp-bar { position: fixed; left: max(18px, env(safe-area-inset-left, 0px)); bottom: calc(var(--nav-h, 0px) + 21px); max-width: calc(100vw - 112px); box-shadow: 0 8px 24px rgba(0, 0, 0, .25); animation: cmpIn .3s cubic-bezier(.2, .8, .2, 1); z-index: 34; display: flex; align-items: center; gap: 10px; background: var(--ink); color: var(--bg); border-radius: 999px; padding: 6px 8px 6px 6px; box-shadow: var(--shadow); }
 .cmp-bar .mini { width: 34px; height: 34px; border-radius: 50%; border: 2px solid var(--ink); margin-left: -12px; }
 .cmp-bar .mini:first-child { margin-left: 0; }
+@keyframes cmpIn { from { opacity: 0; transform: translateY(14px); } } /* the bar sits just above the tab bar, level with the support button (--nav-h already holds the safe area) */
 .cmp-bar button.go { font-weight: 700; padding: 6px 10px; border-radius: 999px; background: var(--bg); color: var(--ink); font-size: 13px; }
 .cmp-bar button.x { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; color: var(--bg); }
 .cmp-tbl { overflow-x: auto; margin-inline: -4px; }
@@ -2321,7 +2356,7 @@ const HERO_SITE = (() => {
   const lattice = (x0, y0, x1, y1, n) => { let d = `M${x0} ${y0}H${x1}M${x0} ${y1}H${x1}`; const st = (x1 - x0) / n; for (let i = 0; i < n; i++) d += `M${x0 + i * st} ${i % 2 ? y0 : y1}L${x0 + (i + 1) * st} ${i % 2 ? y1 : y0}`; return d; };
   const mast = (() => { let d = "M800 226V48M812 226V48"; for (let y = 226; y > 52; y -= 12) d += `M800 ${y}L812 ${y - 12}M800 ${y - 12}H812`; return d; })();
   // a KAMAZ dump truck heading left (cab in front, on the left); it stops with its body under the hook and tips the body back
-  const truck = cls => `<g class="truck ${cls}"><g transform="translate(887 190)"><path d="M2 8h14l6-4h4v22H2z" fill-opacity=".36"/><path d="M6 10h8l-3 6H6z" fill-opacity=".18"/><g class="bed"><path d="M26 4h54v18H30z" fill-opacity=".3"/><path d="M30 1h48" stroke="${W}" stroke-opacity=".375" stroke-width="2"/></g><rect x="0" y="22" width="82" height="5" fill-opacity=".33"/>${[12, 54, 70].map(x => `<g class="wheel" transform="translate(${x} 30)"><circle r="6" fill-opacity=".39"/><path d="M-4 0h8M0 -4v8" stroke="#000" stroke-opacity=".3" stroke-width="1.4"/></g>`).join("")}</g></g>`;
+  const truck = cls => `<g class="truck ${cls}"><g transform="translate(887 190)"><path d="M2 8h14l6-4h4v22H2z" fill-opacity=".36"/><path d="M6 10h8l-3 6H6z" fill-opacity=".18"/><g class="bed"><path d="M26 4h54v18H30z" fill-opacity=".3"/><path d="M30 1h48" stroke="${W}" stroke-opacity=".375" stroke-width="2"/></g><rect x="0" y="22" width="82" height="5" fill-opacity=".33"/>${[12, 54, 70].map(x => `<g transform="translate(${x} 30)"><g class="wheel"><circle r="6" fill-opacity=".39"/><path d="M-4 0h8M0 -4v8" stroke="#000" stroke-opacity=".3" stroke-width="1.4"/></g></g>`).join("")}</g></g>`;
   return `<svg class="hs" viewBox="0 0 1200 230" preserveAspectRatio="xMaxYMax meet" aria-hidden="true" focusable="false"><g fill="${W}">
     <g fill-opacity=".09">${sky}</g>
     <path d="M0 226.5H1200" stroke="${W}" stroke-opacity=".21"/>
@@ -2605,7 +2640,7 @@ function renderHeader() {
   $("#hdr").innerHTML = `
   <div class="wrap hdr-row">
     <button class="menu-btn" type="button" data-act="widgets" aria-label="${L("Инструменты: калькуляторы, Usta AI, дизайнер, доставка", "Asboblar: kalkulyatorlar, Usta AI, dizayner, yetkazish", "Tools: calculators, Usta AI, designer, delivery")}" title="${L("Инструменты", "Asboblar", "Tools")}">${ui("menu", 22)}<span class="dot" aria-hidden="true"></span></button>
-    <button class="logo" type="button" data-go="home" aria-label="Quriliş Go">${markSVG()}<b>Quriliş<em>go</em></b></button>${API ? "" : `<span class="demo-badge" title="${L("Демо-режим: данные хранятся только в этом браузере, заказы и оплата не настоящие", "Demo rejim: ma’lumotlar faqat shu brauzerda, buyurtma va to‘lov haqiqiy emas", "Demo mode: data stays in this browser, orders and payments are not real")}">${L("демо", "demo", "demo")}</span>`}
+    <button class="logo" type="button" data-go="home" aria-label="Quriliş Go">${markSVG()}<b>Quriliş<em>go</em></b></button>${sellerMode() ? `<span class="seller-chip" title="${esc(myStore.name)}">${ui("store", 14)}<span>${esc(myStore.name)}</span></span>` : ""}${API ? "" : `<span class="demo-badge" title="${L("Демо-режим: данные хранятся только в этом браузере, заказы и оплата не настоящие", "Demo rejim: ma’lumotlar faqat shu brauzerda, buyurtma va to‘lov haqiqiy emas", "Demo mode: data stays in this browser, orders and payments are not real")}">${L("демо", "demo", "demo")}</span>`}
     <button class="cat-btn" type="button" data-act="mega">${ui("grid", 18)}${L("Каталог", "Katalog")}</button>
     <div class="search" role="search">${ui("search", 18)}<input id="q" type="search" enterkeyhint="search" role="combobox" aria-controls="sugg" aria-expanded="false" aria-autocomplete="list" value="${esc(f.q)}" placeholder="${L("Цемент, смеситель, ламинат…", "Sement, aralashtirgich, laminat…")}" aria-label="${L("Поиск по каталогу", "Katalog bo‘yicha qidiruv")}" autocomplete="off"><div class="sugg" id="sugg" role="listbox" aria-label="${L("Подсказки поиска", "Qidiruv takliflari")}" hidden></div><span class="s-tools"><button class="s-ic" type="button" data-act="voice" ${SRec ? "" : "hidden"} aria-label="${L("Поиск голосом", "Ovozli qidiruv")}" title="${L("Поиск голосом", "Ovozli qidiruv")}">${ui("mic", 18)}</button><button class="s-ic" type="button" data-act="photo-search" ${photoAIon() ? "" : "hidden"} aria-label="${L("Поиск по фото", "Rasm bo‘yicha qidiruv")}" title="${L("Поиск по фото", "Rasm bo‘yicha qidiruv")}">${ui("camera", 18)}</button><button class="ask" type="button" data-act="ask-search">${ui("spark", 14)}<span class="t">${L("Спросить AI", "AI dan so‘rash")}</span></button></span><input type="file" id="psFile" accept="image/*" hidden></div>
     <label class="where" title="${L("Район доставки", "Yetkazish tumani")}">${ui("pin", 16)}<span class="visually-hidden">${L("Район доставки", "Yetkazish tumani")}</span><select id="distSel">${DISTRICTS.map(d => `<option value="${d.id}" ${d.id === district ? "selected" : ""}>${L(d.ru, d.uz)}</option>`).join("")}</select></label>
@@ -2643,6 +2678,12 @@ function renderFooter() {
   </div>`;
 }
 function renderTabbar() {
+  if (sellerMode()) {
+    const cur = drawerView ? "profile" : route.view === "seller" ? (sellerTab || "orders") : "";
+    const items = [["orders", "clock", L("Заказы", "Buyurtmalar", "Orders")], ["goods", "grid", L("Товары", "Mahsulotlar", "Goods")], ["store", "store", L("Магазин", "Do‘kon", "Store")], ["money", "wallet", L("Деньги", "Pul", "Money")], ["profile", "user", L("Профиль", "Profil", "Profile")]];
+    $("#tabbar").innerHTML = items.map(([id, icn, lbl]) => `<button type="button" ${id === "profile" ? `data-act="${user ? "profile" : "login"}"` : `data-stab="${id}"`} aria-current="${cur === id}">${ui(icn, 22)}<span>${lbl}</span></button>`).join("");
+    return;
+  }
   const cur = (typeof widOpen !== "undefined" && widOpen) ? "tools" : drawerView === "profile" || drawerView === "orders" ? "profile" : drawerView ? "cart" : route.view === "catalog" ? "catalog" : "home";
   const items = [["home", "home", L("Главная", "Asosiy"), "go"], ["catalog", "grid", L("Каталог", "Katalog"), "mega"], ["tools", "calc", L("Инструменты", "Asboblar", "Tools"), "widgets"], ["cart", "cart", L("Корзина", "Savat"), "cart"], ["profile", "user", L("Профиль", "Profil"), "profile"]];
   $("#tabbar").innerHTML = items.map(([id, icn, lbl, act]) => `<button type="button" ${act === "go" ? 'data-go="home"' : `data-act="${act}"`} aria-current="${cur === id}">${ui(icn, 22)}<span>${lbl}</span>${id === "cart" ? `<span class="dot" id="tabCart" ${cartCount() ? "" : "hidden"}>${cartCount()}</span>` : ""}</button>`).join("");
@@ -2659,8 +2700,8 @@ function openMega() {
   if (typeof widOpen !== "undefined" && widOpen) closeWidgets();
   const cnt = id => PRODUCTS.filter(p => p.cat === id).length;
   $("#megaPanel").innerHTML = `<div class="wrap">
-    <div class="mega-head"><h2 class="h-l">${L("Все категории", "Barcha toifalar")}</h2><button class="ib" type="button" data-act="close-mega" aria-label="${L("Закрыть", "Yopish")}">${ui("close", 18)}</button></div>
-    <div class="mega-cols">${CATS.map(c => `<div class="mega-cat" style="--h:${c.h}">
+    <div class="mega-head"><div><h2 class="h-l">${L("Все категории", "Barcha toifalar")}</h2><p class="mega-sub">${CATS.length} ${L("разделов", "bo‘lim", "categories")} · ${PRODUCTS.length} ${L("товаров", "mahsulot", "products")}</p></div><button class="ib" type="button" data-act="close-mega" aria-label="${L("Закрыть", "Yopish")}">${ui("close", 18)}</button></div>
+    <div class="mega-cols">${CATS.map((c, i) => `<div class="mega-cat" style="--h:${c.h};--i:${Math.min(i, 12)}">
       <button type="button" data-go="cat-${c.id}"><span class="ico ic">${ic(c.icon)}</span><span>${L(c.ru, c.uz)} <small style="color:var(--faint);font-weight:400">${cnt(c.id)}</small></span></button>
       <ul>${c.subs.map(s => `<li><button type="button" data-go="cat-${c.id}" data-sub="${s[0]}">${L(s[1], s[2])}</button></li>`).join("")}</ul></div>`).join("")}</div></div>`;
   setPanel($("#mega"), true); syncLock();
@@ -2812,6 +2853,16 @@ setInterval(() => { // steps move on: refresh the widget in place while the home
   if (el && h) { const tmp = document.createElement("div"); tmp.innerHTML = h; el.replaceWith(tmp.firstElementChild); } else if (el) el.remove();
 }, 4000);
 document.addEventListener("click", e => { const b = e.target.closest("[data-actw]"); if (b) openDrawer("track", b.dataset.actw); });
+document.addEventListener("click", e => { // seller tab bar: open the cabinet (if needed) and its section
+  const b = e.target.closest("[data-stab]"); if (!b) return;
+  const id = b.dataset.stab; if (drawerView) closeDrawer();
+  if (route.view !== "seller") { sellerTab = id; LS.set("imorat.sellerTab", id); location.hash = "seller"; return; }
+  if (document.getElementById("stp-" + id)) { sellerShowTab(id); window.scrollTo({ top: 0, behavior: animOK() ? "smooth" : "auto" }); return; }
+  // the demo cabinet is one page: the tab scrolls to its part
+  const t = document.querySelector(`[data-sec="${id}"]`) || (id === "store" ? document.getElementById("sStore") : null);
+  sellerTab = id; LS.set("imorat.sellerTab", id); renderTabbar();
+  if (t) window.scrollTo({ top: t.getBoundingClientRect().top + scrollY - 12, behavior: animOK() ? "smooth" : "auto" });
+});
 function renderHome() {
   if (preLaunch()) return renderHomeLaunch();
   document.documentElement.classList.remove("cv-all");
@@ -2844,7 +2895,7 @@ function renderHome() {
       <button type="button" data-go="masters"><span class="tr-i">${ui("wrench", 24)}</span><span>${L("Мастера", "Ustalar", "Pros")}</span></button>
       <button type="button" data-go="list"><span class="tr-i">${ui("camera", 24)}</span><span>${L("Список по фото", "Rasmdagi ro‘yxat", "List from a photo")}</span></button>
       <button type="button" data-act="w-deliv"><span class="tr-i">${ui("truck", 24)}</span><span>${L("Доставка", "Yetkazish", "Delivery")}</span></button>
-      <button type="button" data-act="widgets"><span class="tr-i more">${ui("grid", 24)}</span><span>${L("Все", "Hammasi", "All")}</span></button>
+      <button type="button" data-act="widgets"><span class="tr-i tr-all">${ui("grid", 24)}</span><span>${L("Все", "Hammasi", "All")}</span></button>
     </nav>
     <div class="trust" data-w="trust">
       <div><span class="ti">${ui("truck", 20)}</span><span><b>${storeDelivers() ? L("Доставка магазином", "Do‘kon yetkazib beradi", "Delivery by the store") : L("Яндекс Доставка", "Yandex Yetkazish")}</b><small>${storeDelivers() ? L("Или самовывоз — заберите сами", "Yoki olib ketish — o‘zingiz oling", "Or pick it up yourself") : L("Курьер от 40 минут", "Kuryer 40 daqiqadan")}</small></span></div>
@@ -3190,6 +3241,7 @@ function relatedOf(p) {
 }
 function openProduct(id) {
   const p = PROD[id]; if (!p) return;
+  const reopen = $("#modal").classList.contains("on"), prevImg = reopen ? $("#mBox .m-img img.photo") : null, prevGroup = reopen ? $("#mBox")?.dataset.group : null, prevTop = $("#mBox")?.scrollTop || 0;
   if (revDraft.pid !== p.id) revDraft = { stars: 0, photo: "", pid: p.id };
   viewed = [p.id, ...viewed.filter(x => x !== p.id)].slice(0, 10); LS.set("imorat.viewed", viewed); trackEv({ t: "view", id: p.id });
   const c = CAT[p.cat], offers = [...p.offers].sort((a, b) => a.price - b.price), fav = favs.includes(p.id);
@@ -3199,7 +3251,7 @@ function openProduct(id) {
   const rel = relatedOf(p);
   $("#mBox").innerHTML = `
     <button class="ib m-close" type="button" data-act="close-modal" aria-label="${L("Закрыть", "Yopish")}">${ui("close", 18)}</button>
-    <div class="m-img studio" style="--h:${hueOf(p)}">${art(p)}${p.m3d ? `<button class="m3d-btn" type="button" data-m3dview="${p.id}" aria-pressed="false">${ui("cube", 16)} ${L("3D-вид", "3D ko‘rinish", "3D view")}</button>` : ""}<span class="badges">${p.hit ? `<span class="badge">${L("Хит", "Xit")}</span>` : ""}${p.isNew ? `<span class="badge new">${L("Новинка", "Yangi")}</span>` : ""}</span></div>
+    <div class="m-img studio" style="--h:${hueOf(p)}">${art(p)}${p.m3d ? `<div class="m3d-seg" role="group" aria-label="${L("Фото или 3D-модель", "Rasm yoki 3D model", "Photo or 3D model")}" data-pid="${p.id}"><button type="button" data-m3dmode="photo" aria-pressed="true">${L("Фото", "Rasm", "Photo")}</button><button type="button" data-m3dmode="3d" aria-pressed="false">${ui("cube", 14)} 3D</button></div>` : ""}<span class="badges">${p.hit ? `<span class="badge">${L("Хит", "Xit")}</span>` : ""}${p.isNew ? `<span class="badge new">${L("Новинка", "Yangi")}</span>` : ""}</span></div>
     <div class="m-info">
       <div class="crumbs" style="padding:0">${L(c.ru, c.uz)} ${ui("chev", 12)} ${subName(p.cat, p.sub)}</div>
       <h2>${esc(pName(p))}</h2>
@@ -3219,13 +3271,16 @@ function openProduct(id) {
       <div class="prv-box" id="pRev" data-pid="${p.id}">${prodReviewsHTML(p)}</div>
     </div><div class="m-more" aria-hidden="true"></div>`;
   setPanel($("#modal"), true); syncLock();
-  const mb = $("#mBox"); mb.scrollTop = 0; requestAnimationFrame(moreHint);
+  const mb = $("#mBox"); mb.dataset.group = p.group || ""; mb.scrollTop = reopen && p.group && prevGroup === p.group ? prevTop : 0; requestAnimationFrame(moreHint); // a variant switch stays where the buyer was
+  const ni = mb.querySelector(".m-img img.photo");
+  if (prevImg && ni && !ni.complete) { const old = prevImg.cloneNode(); old.className = "photo ph-old"; old.removeAttribute("data-pid"); ni.parentElement.insertBefore(old, ni.nextSibling); const drop = () => { old.classList.add("go"); setTimeout(() => old.remove(), 220); }; ni.addEventListener("load", drop, { once: true }); ni.addEventListener("error", drop, { once: true }); setTimeout(drop, 1500); }
+  if (p.group) GROUPS[p.group]?.forEach(v => { const src = photos[v.id] || v.img; if (src) { const im = new Image(); im.src = src; } }); // the other colours load ahead, so switching is instant
   setTimeout(() => $("#mBox .m-close")?.focus(), 50);
 }
 /* a soft fade at the bottom of the product sheet while there is more to scroll */
 function moreHint() { const mb = $("#mBox"); if (mb) mb.classList.toggle("at-end", mb.scrollTop + mb.clientHeight >= mb.scrollHeight - 6); }
 $("#mBox")?.addEventListener("scroll", moreHint, { passive: true });
-function closeModal() { setPanel($("#modal"), false); syncLock(); }
+function closeModal() { setPanel($("#modal"), false); syncLock(); m3dSheetEnd(); }
 
 /* ================= Cart actions ================= */
 function addToCart(id, store, q = 1, silent) {
@@ -3235,11 +3290,20 @@ function addToCart(id, store, q = 1, silent) {
   if (!silent) toast(`${pName(p)} — ${L("в корзине", "savatda")}`);
   refreshCards();
 }
+/* replace one card with fresh markup, but only if it changed, and move the old (already decoded) pictures into it: no blink, no jump */
+function swapKeepImg(el, html) {
+  const t = document.createElement("template"); t.innerHTML = html.trim(); const nw = t.content.firstElementChild; if (!nw) return;
+  if (nw.outerHTML === el.outerHTML) return;
+  const olds = [...el.querySelectorAll("img")]; nw.querySelectorAll("img").forEach(im => { const o = olds.find(x => x.getAttribute("src") === im.getAttribute("src")); if (o) { olds.splice(olds.indexOf(o), 1); im.replaceWith(o); } });
+  el.replaceWith(nw);
+}
 function refreshCards() {
   if (route.view === "catalog") renderList();
   else if (route.view === "home") {
-    document.querySelectorAll(".rail").forEach(r => { const ids = [...r.querySelectorAll(".card [data-add]")].map(b => +b.dataset.add); r.innerHTML = ids.map(i => card(PROD[i])).join(""); });
-    const bw = document.querySelector(".bundles"); if (bw) bw.innerHTML = BUNDLES.map(bundleCard).join("");
+    const sl = [...document.querySelectorAll(".rail")].map(r => [r, r.scrollLeft]); // snapping rails would jump back to the start when a card changes
+    document.querySelectorAll(".rail .card").forEach(c => { const id = +c.querySelector("[data-add]")?.dataset.add; if (PROD[id]) swapKeepImg(c, card(PROD[id])); });
+    sl.forEach(([r, x]) => { if (r.scrollLeft !== x) { r.style.scrollSnapType = "none"; r.scrollLeft = x; requestAnimationFrame(() => { r.style.scrollSnapType = ""; }); } });
+    document.querySelectorAll(".bundles > .bundle").forEach((c, i) => { if (BUNDLES[i]) swapKeepImg(c, bundleCard(BUNDLES[i])); });
   }
   if (aiOpen) document.querySelectorAll(".ai-pick [data-aiadd]").forEach(b => { const id = +b.dataset.aiadd.split("|")[0], q = qtyOf(id); b.classList.toggle("in", q > 0); });
 }
@@ -3443,7 +3507,7 @@ function dCheckout() {
       <div class="note" id="storePayNote" hidden>${ui("store", 14)} <span id="storePayTxt">${storePayText(d)}</span></div>
       ${payAtStore(d) ? `<p class="fine" id="atStoreNote">${L("При оплате магазину напрямую промокоды, бонусы, скидки за комплекты и установка не применяются — вы платите магазину ровно за товары.", "Do‘konga to‘g‘ridan-to‘g‘ri to‘laganda promokodlar, bonuslar, to‘plam chegirmalari va o‘rnatish qo‘llanilmaydi — do‘konga faqat mahsulotlar uchun to‘laysiz.", "When you pay the store directly, promo codes, points, kit discounts and installation do not apply — you pay the store for the goods only.")}</p>` : ""}
       ${!payAtStore(d) && bonusOn() && bonusBalance() > 0 ? `<label class="check"><input type="checkbox" id="fPts" name="usePts" ${d.usePts ? "checked" : ""}><span>${ui("gift", 15)} ${L(`Оплатить бонусами — у вас ${fmtN(bonusBalance())}`, `Bonus bilan to‘lash — sizda ${fmtN(bonusBalance())}`, `Pay with points — you have ${fmtN(bonusBalance())}`)} <small class="mu">${L(`(до ${Math.round(bonusCfg().maxShare * 100)}% стоимости товаров)`, `(mahsulotlar narxining ${Math.round(bonusCfg().maxShare * 100)}% gacha)`, `(up to ${Math.round(bonusCfg().maxShare * 100)}% of the product total)`)}</small></span></label>` : ""}
-      ${payAtStore(d) ? "" : `<div class="f"><label for="fPromo">${L("Промокод", "Promokod")}</label><div class="promo-row"><input id="fPromo" value="${esc(promo)}" placeholder="IMORAT5" autocomplete="off" autocapitalize="characters"><button class="btn btn-line" type="button" data-act="promo">${L("Применить", "Qo‘llash")}</button></div><span class="promo-msg" id="promoMsg"></span></div>`}
+      ${payAtStore(d) || noDisc() ? "" : `<div class="f"><label for="fPromo">${L("Промокод", "Promokod")}</label><div class="promo-row"><input id="fPromo" value="${esc(promo)}" placeholder="IMORAT5" autocomplete="off" autocapitalize="characters"><button class="btn btn-line" type="button" data-act="promo">${L("Применить", "Qo‘llash")}</button></div><span class="promo-msg" id="promoMsg"></span></div>`}
       <div class="f"><label for="fComment">${L("Комментарий к заказу", "Buyurtmaga izoh", "Order comment")} <small class="mu">${L("— увидят магазин и курьер", "— do‘kon va kuryer ko‘radi", "— the store and the courier see it")}</small></label><textarea id="fComment" name="comment" rows="2" maxlength="500" placeholder="${L("Позвоните за 10 минут; нужен один оттенок из одной партии", "10 daqiqa oldin qo‘ng‘iroq qiling; bir partiyadan bir tus kerak", "Call 10 minutes ahead; one shade from one batch")}">${esc(d.comment)}</textarea></div>
     </fieldset>
     <div id="shipBox" style="display:grid;gap:8px"></div>
@@ -3661,6 +3725,7 @@ function dProfile() {
   const last = orders[0];
   $("#dBody").innerHTML = (user ? `<div class="acct"><span class="av">${esc(initial(user.name))}</span><span><b>${esc(user.name)}</b><small class="num">${user.staff ? esc(user.staff.login) + " · " + (user.owner ? L("владелец", "egasi", "owner") : L("сотрудник", "xodim", "staff")) : esc(user.phone)}</small><small>${user.email ? esc(user.email) + " · " : ""}${L("вход через", "kirish:")} ${viaName(user.via)}${user.role === "pro" ? ` · <span class="ws">${L("цены для мастеров", "ustalar uchun narxlar")}</span>` : ""}</small></span><button class="ib" type="button" data-act="logout" aria-label="${L("Выйти", "Chiqish")}" title="${L("Выйти", "Chiqish")}">${ui("logout", 16)}</button></div>`
     : `<div class="acct" style="grid-template-columns:1fr"><span><b>${L("Войдите, чтобы сохранять заказы", "Buyurtmalarni saqlash uchun kiring")}</b><small>${L("Номер телефона или Telegram — займёт меньше минуты", "Telefon raqami yoki Telegram — bir daqiqadan kam", "Phone number or Telegram — takes under a minute")}</small></span><button class="btn btn-primary" type="button" data-act="login">${L("Войти или зарегистрироваться", "Kirish yoki ro‘yxatdan o‘tish")}</button></div>`) + `
+    ${user && myStore && !user.staff ? `<button class="btn ${sellerMode() ? "btn-line" : "btn-primary"}" type="button" data-act="shopper-toggle" style="justify-self:stretch">${ui(sellerMode() ? "cart" : "store", 18)} ${sellerMode() ? L("Открыть витрину покупателя", "Xaridor vitrinasini ochish", "Open the buyer shelf") : L("Вернуться в кабинет магазина", "Do‘kon kabinetiga qaytish", "Back to the store cabinet")}</button>` : ""}
     ${user && !user.staff ? `<div class="f" id="roleBox"><span>${L("Кто вы?", "Siz kimsiz?")} <small class="mu">${L("— от этого зависят цены и подсказки", "— narxlar va maslahatlar shunga bog‘liq", "— prices and tips depend on it")}</small></span>${rolesHTML(user.store_id || user.role === "seller" ? "store" : user.role === "pro" ? "pro" : "buyer", "prole")}</div>` : ""}
     ${bonusOn() ? bonusCardHTML() : ""}
     ${notifyRows()}
@@ -5064,9 +5129,14 @@ function adminHTML(topShown) {
     </tbody></table></div></div>${adminProblemsHTML()}${adminMastersHTML()}${user.owner ? adminChannelHTML() + adminFinanceHTML() : ""}`;
 }
 let sellerTab = LS.get("imorat.sellerTab", "");
+/* Seller mode: a store owner (once the store is registered or approved, and on every sign-in) works in the cabinet — on the site and in
+   the app the buyer shelf is out of the way: a seller tab bar, a slim header, home and catalogue open the cabinet. "Витрина покупателя"
+   in the profile switches to the shelf and back (remembered in this browser). Staff accounts are never in it. */
+function sellerMode() { return !!(user && myStore && !user.staff && !LS.get("imorat.shopperView", false)); }
 /* switches the visible section of the seller cabinet without re-rendering (forms keep what was typed) */
 function sellerShowTab(id) {
   if (!document.getElementById("stp-" + id)) return;
+  if (sellerMode()) setTimeout(renderTabbar, 0); // the seller tab bar follows the cabinet's tabs
   sellerTab = id; LS.set("imorat.sellerTab", id);
   document.querySelectorAll(".stabs [data-seltab]").forEach(b => b.setAttribute("aria-selected", String(b.dataset.seltab === id)));
   document.querySelectorAll(".stp").forEach(p => { p.hidden = p.id !== "stp-" + id; });
@@ -5182,7 +5252,7 @@ function renderSellerApi() {
       const dims = [d.len_cm, d.wid_cm, d.hgt_cm].map(x => Number(x) || 0), hasDims = dims[0] >= 1;
       const r = await api("POST", "/api/seller/products", { ru: d.ru.trim(), uz: d.uz.trim(), cat: d.cat, sub: d.sub, unit: d.unit, price, kg, stock: parseInt(d.stock, 10) || 0, desc: d.desc.trim(), ...(newFrom && !newPhoto ? { from: newFrom.id } : {}), ...(hasDims ? { len_cm: dims[0], ...(dims[1] >= 1 ? { wid_cm: dims[1] } : {}), ...(dims[2] >= 1 ? { hgt_cm: dims[2] } : {}) } : {}) });
       let up = null;
-      if (r.img && newFrom && !newPhoto) { up = { model3d: r.model3d }; setTimeout(() => toast(r.model3d?.state === "used" ? L("Фото и 3D-модель взяли из библиотеки — снимать заново не нужно", "Rasm va 3D model kutubxonadan olindi — qayta suratga olish shart emas", "Photo and 3D model taken from the library — no new shot needed") : L("Фото взяли из библиотеки", "Rasm kutubxonadan olindi", "Photo taken from the library"), 4000), 2600); }
+      if (r.img && newFrom && !newPhoto) { up = { model3d: r.model3d }; setTimeout(() => toast(r.model3d?.state === "published" ? L("Фото и 3D-модель взяли из библиотеки — снимать заново не нужно", "Rasm va 3D model kutubxonadan olindi — qayta suratga olish shart emas", "Photo and 3D model taken from the library — no new shot needed") : L("Фото взяли из библиотеки", "Rasm kutubxonadan olindi", "Photo taken from the library"), 4000), 2600); }
       newFrom = null;
       if (newPhoto) { const blob = await (await fetch(newPhoto)).blob(); up = await api("POST", `/api/seller/products/${r.product.id}/photo`, blob).catch(() => { toast(L("Товар добавлен, но фото не загрузилось", "Mahsulot qo‘shildi, lekin rasm yuklanmadi")); return null; }); newPhoto = ""; }
       if (up?.model3d?.state === "working") setTimeout(() => toast(L("AI строит 3D-модель по фото — она появится в списке товаров, обычно меньше чем за минуту", "AI rasm bo‘yicha 3D model yasamoqda — odatda bir daqiqadan kam", "AI is building a 3D model from the photo — it shows up in your product list, usually in under a minute"), 4500), 2600);
@@ -6508,183 +6578,113 @@ $("#photoIn").addEventListener("change", async e => {
   } catch (err) { toast(L("Не удалось открыть это изображение", "Bu rasmni ochib bo‘lmadi")); }
 });
 /* ================= AI 3D models of store products =================
-   A new photo of a store's own product goes to the server; when the owner has connected the service, the server asks Stability AI for a
-   3D model of exactly that product and keeps the .glb. The seller turns it here and decides; then the card shows a clean still of the
-   model and buyers can turn the model in the product card. The viewer is a small WebGL reader of binary glTF — the page uses no 3D library. */
-const GLB_CT = { 5120: [1, "getInt8", 127], 5121: [1, "getUint8", 255], 5122: [2, "getInt16", 32767], 5123: [2, "getUint16", 65535], 5125: [4, "getUint32", 1], 5126: [4, "getFloat32", 1] };
-const GLB_N = { SCALAR: 1, VEC2: 2, VEC3: 3, VEC4: 4 };
-const m4mul = (a, b) => { const o = new Array(16); for (let c = 0; c < 4; c++) for (let r = 0; r < 4; r++) { let s = 0; for (let k = 0; k < 4; k++) s += a[k * 4 + r] * b[c * 4 + k]; o[c * 4 + r] = s; } return o; };
-const m4v = (m, v) => [0, 1, 2, 3].map(r => m[r] * v[0] + m[4 + r] * v[1] + m[8 + r] * v[2] + m[12 + r] * v[3]);
-const glbCache = new Map();
-function glbLoad(url) {
-  if (!glbCache.has(url)) { const pr = fetch(url).then(r => { if (!r.ok) throw new Error("http " + r.status); return r.arrayBuffer(); }).then(glbParse); glbCache.set(url, pr); pr.catch(() => glbCache.delete(url)); }
-  return glbCache.get(url);
+   The seller presses «Создать 3D с помощью AI»: the server queues a job; our own AI worker (server/ai3d/worker.py — the open
+   TripoSR model, on the owner's Mac or a separate machine) takes it, builds a real mesh from the ONE photo and sends back a .glb.
+   The seller turns it here and decides: «Сохранить 3D» (buyers get «Фото / 3D» in the product), «Повторить» or «Удалить 3D».
+   The original photo always stays. When the worker is not running the status says so; nothing here pretends to make a model.
+   Viewer: Three.js r170 (vendor/three-r170, MIT), loaded only when a model is opened. */
+const THREE_DIR = "vendor/three-r170/";
+let threeP = null;
+const threeLib = () => threeP || (threeP = Promise.all(["three.module.min.js", "GLTFLoader.js", "OrbitControls.js"].map(f => import(new URL(THREE_DIR + f, location.href).href)))
+  .then(([T, G, O]) => ({ T, GLTFLoader: G.GLTFLoader, OrbitControls: O.OrbitControls })).catch(e => { threeP = null; throw e; }));
+const glbFetch = new Map(); // one download per model per visit
+function glbData(url, onPct) {
+  if (!glbFetch.has(url)) {
+    const pr = (async () => {
+      const r = await fetch(url); if (!r.ok) throw new Error("http " + r.status);
+      const total = +r.headers.get("content-length") || 0; if (!r.body || !total) return r.arrayBuffer();
+      const rd = r.body.getReader(), parts = []; let got = 0;
+      for (;;) { const { done, value } = await rd.read(); if (done) break; parts.push(value); got += value.length; onPct?.(Math.min(99, Math.round(got / total * 100))); }
+      const out = new Uint8Array(got); let o = 0; for (const x of parts) { out.set(x, o); o += x.length; } return out.buffer;
+    })();
+    glbFetch.set(url, pr); pr.catch(() => glbFetch.delete(url));
+  }
+  return glbFetch.get(url);
 }
-async function glbParse(buf) {
-  const dv = new DataView(buf); if (buf.byteLength < 20 || dv.getUint32(0, true) !== 0x46546c67) throw new Error("not a glb");
-  let off = 12, json = null, bin = null;
-  while (off + 8 <= buf.byteLength) { const len = dv.getUint32(off, true), type = dv.getUint32(off + 4, true); if (type === 0x4e4f534a) json = JSON.parse(new TextDecoder().decode(new Uint8Array(buf, off + 8, len))); else if (type === 0x004e4942) bin = new DataView(buf, off + 8, len); off += 8 + len; }
-  if (!json) throw new Error("no json");
-  if ((json.extensionsRequired || []).length) throw new Error("needs " + json.extensionsRequired.join(", "));
-  const acc = i => { // any accessor → floats (interleaved views, normalized integers)
-    const a = json.accessors[i], n = GLB_N[a.type], [es, get, nm] = GLB_CT[a.componentType] || [];
-    if (!n || !es) throw new Error("accessor type");
-    const out = new Float32Array(a.count * n); if (a.bufferView == null || !bin) return out;
-    const v = json.bufferViews[a.bufferView], base = (v.byteOffset || 0) + (a.byteOffset || 0), st = v.byteStride || es * n, k = a.normalized ? nm : 1;
-    for (let j = 0; j < a.count; j++) for (let c = 0; c < n; c++) out[j * n + c] = bin[get](base + j * st + c * es, true) / k;
-    return out;
-  };
-  const local = nd => { if (nd.matrix) return nd.matrix; const [x, y, z, w] = nd.rotation || [0, 0, 0, 1], [sx, sy, sz] = nd.scale || [1, 1, 1], [tx, ty, tz] = nd.translation || [0, 0, 0];
-    return [(1 - 2 * (y * y + z * z)) * sx, 2 * (x * y + z * w) * sx, 2 * (x * z - y * w) * sx, 0, 2 * (x * y - z * w) * sy, (1 - 2 * (x * x + z * z)) * sy, 2 * (y * z + x * w) * sy, 0, 2 * (x * z + y * w) * sz, 2 * (y * z - x * w) * sz, (1 - 2 * (x * x + y * y)) * sz, 0, tx, ty, tz, 1]; };
-  const imgs = new Map();
-  const image = i => {
-    if (!imgs.has(i)) imgs.set(i, new Promise(res => {
-      const im = json.images?.[i]; let src = null;
-      if (im?.bufferView != null && bin) { const v = json.bufferViews[im.bufferView]; src = URL.createObjectURL(new Blob([new Uint8Array(bin.buffer, bin.byteOffset + (v.byteOffset || 0), v.byteLength)], { type: im.mimeType || "image/png" })); }
-      else if (/^data:image\//.test(im?.uri || "")) src = im.uri;
-      if (!src) return res(null);
-      const el = new Image(); el.onload = () => { if (src.startsWith("blob:")) URL.revokeObjectURL(src); res(el); }; el.onerror = () => res(null); el.src = src;
-    }));
-    return imgs.get(i);
-  };
-  const prims = [], lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
-  const walk = async (ni, parent, depth = 0) => {
-    const nd = json.nodes[ni]; if (!nd || depth > 32) return; const m = m4mul(parent, local(nd));
-    for (const pr of nd.mesh != null ? json.meshes[nd.mesh].primitives : []) {
-      if ((pr.mode ?? 4) !== 4 || pr.attributes.POSITION == null) continue; // triangles only
-      const P = acc(pr.attributes.POSITION), cnt = P.length / 3;
-      const N0 = pr.attributes.NORMAL != null ? acc(pr.attributes.NORMAL) : null, UV = pr.attributes.TEXCOORD_0 != null ? acc(pr.attributes.TEXCOORD_0) : null;
-      let C = pr.attributes.COLOR_0 != null ? acc(pr.attributes.COLOR_0) : null;
-      if (C && json.accessors[pr.attributes.COLOR_0].type === "VEC3") { const c4 = new Float32Array(cnt * 4); for (let j = 0; j < cnt; j++) c4.set([C[j * 3], C[j * 3 + 1], C[j * 3 + 2], 1], j * 4); C = c4; }
-      const I = pr.indices != null ? Uint32Array.from(acc(pr.indices)) : Uint32Array.from({ length: cnt }, (_, j) => j);
-      const pos = new Float32Array(cnt * 3), nrm = new Float32Array(cnt * 3);
-      for (let j = 0; j < cnt; j++) for (let r = 0; r < 3; r++) { const v = m[r] * P[j * 3] + m[4 + r] * P[j * 3 + 1] + m[8 + r] * P[j * 3 + 2] + m[12 + r]; pos[j * 3 + r] = v; if (v < lo[r]) lo[r] = v; if (v > hi[r]) hi[r] = v; }
-      if (N0) for (let j = 0; j < cnt; j++) { const x = N0[j * 3], y = N0[j * 3 + 1], z = N0[j * 3 + 2], a = m[0] * x + m[4] * y + m[8] * z, b = m[1] * x + m[5] * y + m[9] * z, c = m[2] * x + m[6] * y + m[10] * z, l = Math.hypot(a, b, c) || 1; nrm[j * 3] = a / l; nrm[j * 3 + 1] = b / l; nrm[j * 3 + 2] = c / l; }
-      else { // no normals in the file: smooth ones from the faces
-        for (let t = 0; t + 2 < I.length; t += 3) { const [a, b, c] = [I[t] * 3, I[t + 1] * 3, I[t + 2] * 3], ux = pos[b] - pos[a], uy = pos[b + 1] - pos[a + 1], uz = pos[b + 2] - pos[a + 2], vx = pos[c] - pos[a], vy = pos[c + 1] - pos[a + 1], vz = pos[c + 2] - pos[a + 2], fx = uy * vz - uz * vy, fy = uz * vx - ux * vz, fz = ux * vy - uy * vx; for (const q of [a, b, c]) { nrm[q] += fx; nrm[q + 1] += fy; nrm[q + 2] += fz; } }
-        for (let j = 0; j < nrm.length; j += 3) { const l = Math.hypot(nrm[j], nrm[j + 1], nrm[j + 2]) || 1; nrm[j] /= l; nrm[j + 1] /= l; nrm[j + 2] /= l; }
-      }
-      const pbr = json.materials?.[pr.material]?.pbrMetallicRoughness || {}, ti = pbr.baseColorTexture?.index, src = ti != null ? json.textures?.[ti]?.source : null;
-      prims.push({ pos, nrm, uv: UV, col: C, idx: I, tex: src != null ? await image(src) : null, color: pbr.baseColorFactor || [1, 1, 1, 1] });
-    }
-    for (const c of nd.children || []) await walk(c, m, depth + 1);
-  };
-  const kids = new Set((json.nodes || []).flatMap(n => n.children || []));
-  const roots = json.scenes?.[json.scene || 0]?.nodes || (json.nodes || []).map((_, i) => i).filter(i => !kids.has(i));
-  for (const ni of roots) await walk(ni, [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
-  if (!prims.length) throw new Error("empty model");
-  const ctr = [0, 1, 2].map(r => (lo[r] + hi[r]) / 2); let rad = 0;
-  for (const p of prims) for (let j = 0; j < p.pos.length; j += 3) rad = Math.max(rad, Math.hypot(p.pos[j] - ctr[0], p.pos[j + 1] - ctr[1], p.pos[j + 2] - ctr[2]));
-  return { prims, lo, hi, ctr, rad: rad || 1 };
-}
-const GLB_VS = "attribute vec3 aP; attribute vec3 aN; attribute vec2 aU; attribute vec4 aC; uniform mat4 uM; uniform mat4 uVP; uniform mat3 uNM; varying vec3 vN; varying vec2 vU; varying vec4 vC; void main() { vN = uNM * aN; vU = aU; vC = aC; gl_Position = uVP * uM * vec4(aP, 1.0); }";
-// a soft studio light: sky/ground fill, a key light from the upper left, a weak fill from the right, a faint rim
-const GLB_FS = "precision mediump float; varying vec3 vN; varying vec2 vU; varying vec4 vC; uniform sampler2D uT; uniform float uHasT; uniform vec4 uF; void main() { vec4 b = uF * vC; if (uHasT > 0.5) b *= texture2D(uT, vU); vec3 n = normalize(vN); if (!gl_FrontFacing) n = -n; float d = mix(0.44, 0.64, n.y * 0.5 + 0.5) + max(dot(n, normalize(vec3(-0.45, 0.8, 0.6))), 0.0) * 0.46 + max(dot(n, normalize(vec3(0.75, 0.2, 0.45))), 0.0) * 0.14; float rim = pow(1.0 - max(n.z, 0.0), 3.0) * 0.08; gl_FragColor = vec4(min(b.rgb * d + rim, vec3(1.0)), b.a); }";
-function glbMount(host, model, opt = {}) {
-  const cv = document.createElement("canvas"); cv.className = "glb-cv"; cv.setAttribute("role", "img"); cv.setAttribute("aria-label", opt.label || L("3D-модель товара", "Mahsulotning 3D modeli", "3D model of the product")); host.appendChild(cv);
-  const co = { antialias: true, alpha: true, premultipliedAlpha: false };
-  const gl = cv.getContext("webgl2", co) || cv.getContext("webgl", co);
-  if (!gl) { cv.remove(); throw new Error("webgl"); }
-  const g2 = typeof WebGL2RenderingContext !== "undefined" && gl instanceof WebGL2RenderingContext, u32 = g2 || !!gl.getExtension("OES_element_index_uint");
-  const shd = (t, src) => { const s = gl.createShader(t); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s) || "shader"); return s; };
-  const pg = gl.createProgram(); gl.attachShader(pg, shd(gl.VERTEX_SHADER, GLB_VS)); gl.attachShader(pg, shd(gl.FRAGMENT_SHADER, GLB_FS));
-  ["aP", "aN", "aU", "aC"].forEach((a, i) => gl.bindAttribLocation(pg, i, a)); gl.linkProgram(pg);
-  if (!gl.getProgramParameter(pg, gl.LINK_STATUS)) throw new Error("link");
-  gl.useProgram(pg);
-  const uni = n => gl.getUniformLocation(pg, n), uM = uni("uM"), uVP = uni("uVP"), uNM = uni("uNM"), uT = uni("uT"), uHasT = uni("uHasT"), uF = uni("uF");
-  const made = [], buf = (data, tgt = gl.ARRAY_BUFFER) => { const b = gl.createBuffer(); gl.bindBuffer(tgt, b); gl.bufferData(tgt, data, gl.STATIC_DRAW); made.push(b); return b; };
-  const pot = n => (n & (n - 1)) === 0;
-  const draws = model.prims.map(p => {
-    const nv = p.pos.length / 3; let idx, type;
-    if (nv <= 65535) { idx = Uint16Array.from(p.idx); type = gl.UNSIGNED_SHORT; } else if (u32) { idx = p.idx; type = gl.UNSIGNED_INT; } else return null;
-    let tex = null;
-    if (p.tex) {
-      tex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, tex); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false); // glTF UVs start at the image's top row
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, p.tex);
-      if (g2 || (pot(p.tex.width) && pot(p.tex.height))) { gl.generateMipmap(gl.TEXTURE_2D); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR); }
-      else { gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE); }
-    }
-    return { p: buf(p.pos), n: buf(p.nrm), u: p.uv ? buf(p.uv) : null, c: p.col ? buf(p.col) : null, i: buf(idx, gl.ELEMENT_ARRAY_BUFFER), count: idx.length, type, tex, color: p.color };
-  }).filter(Boolean);
-  const YAW = opt.yaw ?? -0.6, PITCH = opt.pitch ?? 0.32, FOV = 0.5, DIST0 = 1.04 / Math.sin(FOV / 2); let DIST = DIST0;
-  const st = { yaw: YAW, pitch: PITCH, auto: opt.auto !== false && animOK(), drag: null, raf: 0, gone: false, dirty: true, last: 0 };
-  const mats = asp => {
-    const cy = Math.cos(st.yaw), sy = Math.sin(st.yaw), cp = Math.cos(st.pitch), sp = Math.sin(st.pitch), k = 1 / model.rad, [x0, y0, z0] = model.ctr;
-    const R = [cy, sp * sy, -cp * sy, 0, cp, sp, sy, -sp * cy, cp * cy]; // Rx(pitch)·Ry(yaw), column-major
-    const M = [k * R[0], k * R[1], k * R[2], 0, k * R[3], k * R[4], k * R[5], 0, k * R[6], k * R[7], k * R[8], 0, 0, 0, 0, 1];
-    for (let r = 0; r < 3; r++) M[12 + r] = -(M[r] * x0 + M[4 + r] * y0 + M[8 + r] * z0);
-    const t = 1 / Math.tan(FOV / 2), n = 0.1, f = 10, Pm = [t / asp, 0, 0, 0, 0, t, 0, 0, 0, 0, (f + n) / (n - f), -1, 0, 0, 2 * f * n / (n - f), 0];
-    return { M, R, VP: m4mul(Pm, [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, -DIST, 1]) };
-  };
-  const frame = (w, h) => {
-    gl.viewport(0, 0, w, h); gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); gl.enable(gl.DEPTH_TEST);
-    const { M, R, VP } = mats(w / h);
-    gl.uniformMatrix4fv(uM, false, M); gl.uniformMatrix4fv(uVP, false, VP); gl.uniformMatrix3fv(uNM, false, R);
-    for (const d of draws) {
-      gl.bindBuffer(gl.ARRAY_BUFFER, d.p); gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0);
-      gl.bindBuffer(gl.ARRAY_BUFFER, d.n); gl.enableVertexAttribArray(1); gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 0, 0);
-      if (d.u) { gl.bindBuffer(gl.ARRAY_BUFFER, d.u); gl.enableVertexAttribArray(2); gl.vertexAttribPointer(2, 2, gl.FLOAT, false, 0, 0); } else { gl.disableVertexAttribArray(2); gl.vertexAttrib2f(2, 0, 0); }
-      if (d.c) { gl.bindBuffer(gl.ARRAY_BUFFER, d.c); gl.enableVertexAttribArray(3); gl.vertexAttribPointer(3, 4, gl.FLOAT, false, 0, 0); } else { gl.disableVertexAttribArray(3); gl.vertexAttrib4f(3, 1, 1, 1, 1); }
-      gl.uniform4fv(uF, d.color); gl.uniform1f(uHasT, d.tex ? 1 : 0); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, d.tex); gl.uniform1i(uT, 0);
-      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, d.i); gl.drawElements(gl.TRIANGLES, d.count, d.type, 0);
-    }
-  };
-  const fit = () => { const r = cv.getBoundingClientRect(), dpr = Math.min(2, devicePixelRatio || 1), w = Math.max(1, Math.round(r.width * dpr)), h = Math.max(1, Math.round(r.height * dpr)); if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; st.dirty = true; } };
-  const tick = t => {
-    if (st.gone) return; if (!cv.isConnected) return dispose();
-    const dt = st.last ? Math.min(0.05, (t - st.last) / 1000) : 0; st.last = t;
-    if (st.auto && !st.drag) { st.yaw += dt * 0.45; st.dirty = true; }
-    fit(); if (st.dirty) { frame(cv.width, cv.height); st.dirty = false; }
-    st.raf = requestAnimationFrame(tick);
-  };
-  cv.addEventListener("pointerdown", e => { st.drag = { x: e.clientX, y: e.clientY }; st.auto = false; try { cv.setPointerCapture(e.pointerId); } catch (er) {} });
-  cv.addEventListener("pointermove", e => { if (!st.drag) return; st.yaw += (e.clientX - st.drag.x) * 0.012; st.pitch = Math.max(-0.25, Math.min(1.1, st.pitch + (e.clientY - st.drag.y) * 0.008)); st.drag = { x: e.clientX, y: e.clientY }; st.dirty = true; });
-  const up = () => { st.drag = null; }; cv.addEventListener("pointerup", up); cv.addEventListener("pointercancel", up);
-  function dispose() { if (st.gone) return; st.gone = true; cancelAnimationFrame(st.raf); made.forEach(b => gl.deleteBuffer(b)); draws.forEach(d => d.tex && gl.deleteTexture(d.tex)); gl.getExtension("WEBGL_lose_context")?.loseContext(); cv.remove(); }
-  /* a square still for the product card: the three-quarter view, a soft contact shadow, transparent around it (the card's studio shows through) */
-  const still = (S = 900) => new Promise((res, rej) => {
-    const keep = [st.yaw, st.pitch]; st.yaw = YAW; st.pitch = PITCH; DIST = DIST0 * 1.55; // the still leaves room around the product, like the catalogue pictures (cards crop to 16:10 on phones)
-    cv.width = S; cv.height = S; frame(S, S);
-    const out = document.createElement("canvas"); out.width = out.height = S; const c2 = out.getContext("2d");
-    const { M, VP } = mats(1), MVP = m4mul(VP, M), [x0, , z0] = model.lo, [x1, , z1] = model.hi, yb = model.lo[1];
-    const pts = [[x0, yb, z0], [x1, yb, z0], [x0, yb, z1], [x1, yb, z1]].map(q => { const v = m4v(MVP, [...q, 1]); return [(v[0] / v[3] * 0.5 + 0.5) * S, (0.5 - v[1] / v[3] * 0.5) * S]; });
-    const cx = pts.reduce((a, q) => a + q[0], 0) / 4, cy = Math.max(...pts.map(q => q[1])) - S * 0.015, rx = Math.max(S * 0.12, (Math.max(...pts.map(q => q[0])) - Math.min(...pts.map(q => q[0]))) * 0.5), ry = rx * 0.16;
-    const g = c2.createRadialGradient(cx, cy, 0, cx, cy, rx); g.addColorStop(0, "rgba(26,22,18,.34)"); g.addColorStop(0.6, "rgba(26,22,18,.12)"); g.addColorStop(1, "rgba(26,22,18,0)");
-    c2.save(); c2.translate(cx, cy); c2.scale(1, ry / rx); c2.translate(-cx, -cy); c2.fillStyle = g; c2.beginPath(); c2.arc(cx, cy, rx, 0, Math.PI * 2); c2.fill(); c2.restore();
-    c2.drawImage(cv, 0, 0); // same task as the draw: the WebGL buffer is still there
-    [st.yaw, st.pitch] = keep; DIST = DIST0; st.dirty = true; fit();
-    out.toBlob(b => (b ? res(b) : rej(new Error("still"))), "image/png");
-  });
-  st.raf = requestAnimationFrame(tick);
-  return { still, dispose, canvas: cv };
-}
+/* a turning, zoomable model in host: drag / one finger turns it, wheel / pinch zooms, double tap fits it again */
 async function m3dShow(host, url, opt = {}) {
-  host.innerHTML = `<div class="glb-msg">${L("Загружаем 3D-модель…", "3D model yuklanmoqda…", "Loading the 3D model…")}</div>`;
+  host.innerHTML = `<div class="glb-msg" role="status"><span class="glb-spin" aria-hidden="true"></span><span class="glb-pct">${L("Загружаем 3D-модель…", "3D model yuklanmoqda…", "Loading the 3D model…")}</span></div>`;
+  const pct = host.querySelector(".glb-pct");
   try {
-    const model = await glbLoad(url); if (!host.isConnected) return null;
-    host.innerHTML = ""; const v = glbMount(host, model, opt);
-    host.insertAdjacentHTML("beforeend", `<span class="glb-hint">${L("Потяните, чтобы повернуть", "Aylantirish uchun torting", "Drag to turn")}</span>`);
-    return v;
-  } catch (e) { host.innerHTML = `<div class="glb-msg">${L("Не удалось показать 3D-модель на этом устройстве", "Bu qurilmada 3D modelni ko‘rsatib bo‘lmadi", "Couldn't show the 3D model on this device")}</div>`; return null; }
+    const [{ T, GLTFLoader, OrbitControls }, buf] = await Promise.all([threeLib(), glbData(url, n => { if (pct) pct.textContent = L("Загружаем 3D-модель…", "3D model yuklanmoqda…", "Loading the 3D model…") + " " + n + "%"; })]);
+    const gltf = await new GLTFLoader().parseAsync(buf.slice(0), "");
+    if (!host.isConnected) return null;
+    host.innerHTML = "";
+    const renderer = new T.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2)); renderer.outputColorSpace = T.SRGBColorSpace;
+    if (T.NeutralToneMapping !== undefined) renderer.toneMapping = T.NeutralToneMapping;
+    const cv = renderer.domElement; cv.className = "glb-cv"; cv.setAttribute("role", "img"); cv.setAttribute("aria-label", L("3D-модель", "3D model", "3D model") + (opt.label ? ": " + opt.label : ""));
+    host.appendChild(cv);
+    const scene = new T.Scene(), model = gltf.scene;
+    scene.add(new T.HemisphereLight(0xffffff, 0x8c8173, 2.4));
+    const key = new T.DirectionalLight(0xffffff, 1.7); key.position.set(2.5, 4, 3); scene.add(key);
+    const rim = new T.DirectionalLight(0xffffff, 0.7); rim.position.set(-3, 2, -2.5); scene.add(rim);
+    scene.add(model);
+    const box = new T.Box3().setFromObject(model), size = box.getSize(new T.Vector3()), mid = box.getCenter(new T.Vector3());
+    const rad = Math.max(size.length() / 2, 1e-3);
+    // a soft contact shadow under the model, so it stands on something
+    const sc = document.createElement("canvas"); sc.width = sc.height = 128; const g2 = sc.getContext("2d"), gr = g2.createRadialGradient(64, 64, 4, 64, 64, 64);
+    gr.addColorStop(0, "rgba(0,0,0,.32)"); gr.addColorStop(1, "rgba(0,0,0,0)"); g2.fillStyle = gr; g2.fillRect(0, 0, 128, 128);
+    const shTex = new T.CanvasTexture(sc), shadow = new T.Mesh(new T.PlaneGeometry(1, 1), new T.MeshBasicMaterial({ map: shTex, transparent: true, depthWrite: false }));
+    shadow.rotation.x = -Math.PI / 2; shadow.scale.set(Math.max(size.x, size.z) * 1.5, Math.max(size.x, size.z) * 1.5, 1); shadow.position.set(mid.x, box.min.y + rad * 0.002, mid.z); scene.add(shadow);
+    const cam = new T.PerspectiveCamera(35, 1, rad / 100, rad * 100);
+    const ctl = new OrbitControls(cam, cv);
+    ctl.enableDamping = true; ctl.dampingFactor = 0.08; ctl.enablePan = false; ctl.rotateSpeed = 0.9; ctl.autoRotate = !mqReduce.matches; ctl.autoRotateSpeed = 1.6;
+    ctl.minPolarAngle = 0.05; ctl.maxPolarAngle = Math.PI * 0.62; ctl.target.copy(mid);
+    ctl.addEventListener("start", () => { ctl.autoRotate = false; hint?.classList.add("off"); });
+    let fitDist = 1;
+    const fit = () => { // the whole model in view whatever the box's shape
+      const w = host.clientWidth || 300, h = host.clientHeight || 300; renderer.setSize(w, h, false); cam.aspect = w / h;
+      const vf = T.MathUtils.degToRad(cam.fov) / 2, hf = Math.atan(Math.tan(vf) * cam.aspect);
+      fitDist = rad / Math.sin(Math.min(vf, hf)) * 1.04;
+      cam.near = fitDist / 100; cam.far = fitDist * 10; cam.updateProjectionMatrix();
+      ctl.minDistance = rad * 0.9; ctl.maxDistance = fitDist * 2.5;
+    };
+    const home = () => { fit(); cam.position.copy(mid).add(new T.Vector3(0.75, 0.42, 1).normalize().multiplyScalar(fitDist)); ctl.target.copy(mid); ctl.update(); };
+    home();
+    cv.addEventListener("dblclick", () => { home(); });
+    const hint = document.createElement("span"); hint.className = "glb-hint";
+    hint.textContent = (host.clientWidth || 300) < 330 ? L("Потяните — повернуть", "Torting — aylantirish", "Drag to turn") : matchMedia("(pointer: coarse)").matches ? L("Вращайте пальцем · два пальца — приблизить", "Barmoq bilan aylantiring · ikki barmoq — yaqinlashtirish", "Turn with a finger · pinch to zoom") : L("Потяните, чтобы повернуть · колесо — приблизить", "Aylantirish uchun torting · g‘ildirak — yaqinlashtirish", "Drag to turn · wheel to zoom");
+    host.appendChild(hint);
+    if (opt.note !== false) host.insertAdjacentHTML("beforeend", `<span class="glb-note">${L("Модель создана AI по одному фото — скрытые стороны примерные", "Model bitta rasmdan AI tomonidan yaratilgan — ko‘rinmas tomonlari taxminiy", "Made by AI from one photo — hidden sides are approximate")}</span>`);
+    const ro = new ResizeObserver(() => { fit(); }); ro.observe(host);
+    let seen = true; const io = new IntersectionObserver(es => { seen = es.some(e => e.isIntersecting); }); io.observe(host);
+    let raf = 0, gone = false;
+    const dispose = () => {
+      if (gone) return; gone = true; cancelAnimationFrame(raf); ro.disconnect(); io.disconnect(); ctl.dispose();
+      model.traverse(o => { o.geometry?.dispose(); [].concat(o.material || []).forEach(m => { for (const k in m) if (m[k]?.isTexture) m[k].dispose(); m.dispose(); }); });
+      shTex.dispose(); shadow.geometry.dispose(); shadow.material.dispose(); renderer.dispose(); renderer.forceContextLoss?.();
+    };
+    const tick = () => { if (!host.isConnected) return dispose(); raf = requestAnimationFrame(tick); if (!seen || document.hidden) return; ctl.update(); renderer.render(scene, cam); };
+    tick();
+    return { dispose, home, faces: (() => { let n = 0; model.traverse(o => { if (o.isMesh) n += (o.geometry.index ? o.geometry.index.count : o.geometry.attributes.position.count) / 3; }); return n; })() };
+  } catch (e) {
+    console.warn("[3d]", e);
+    if (host.isConnected) host.innerHTML = `<div class="glb-msg">${L("Не удалось показать 3D-модель на этом устройстве", "Bu qurilmada 3D modelni ko‘rsatib bo‘lmadi", "Couldn't show the 3D model on this device")}</div>`;
+    return null;
+  }
 }
 const M3D_ERR = () => ({
-  bad_image: L("фото не подошло — снимите товар целиком, на однотонном фоне", "rasm mos kelmadi — mahsulotni to‘liq, bir xil fonda suratga oling", "the photo didn't work — shoot the whole product on a plain background"),
-  no_credits: L("у сервиса закончился баланс — владелец Quriliş Go пополнит его", "xizmat balansi tugadi — Quriliş Go egasi to‘ldiradi", "the service is out of credit — the Quriliş Go owner will top it up"),
-  moderated: L("сервис отклонил это фото", "xizmat bu rasmni rad etdi", "the service declined this photo"),
-  too_big: L("фото слишком большое", "rasm juda katta", "the photo is too large"),
-  busy: L("сервис занят — попробуйте через минуту", "xizmat band — bir daqiqadan so‘ng urinib ko‘ring", "the service is busy — try again in a minute"),
-  timeout: L("сервис не ответил вовремя", "xizmat o‘z vaqtida javob bermadi", "the service didn't answer in time"),
-  limit: L("на сегодня лимит 3D-моделей магазина исчерпан", "bugungi 3D model limiti tugadi", "today's 3D model limit for the store is used up"),
-  error: L("ошибка сервиса", "xizmat xatosi", "service error") });
+  bad_image: L("на фото не нашёлся товар — снимите его целиком, на однотонном фоне, без рук и других предметов", "rasmda mahsulot topilmadi — uni to‘liq, bir xil fonda, qo‘l va boshqa narsalarsiz suratga oling", "no product was found in the photo — shoot the whole product on a plain background, no hands or other things"),
+  bad_glb: L("получился повреждённый файл — он не сохранён, попробуйте ещё раз", "buzilgan fayl chiqdi — saqlanmadi, yana urinib ko‘ring", "the result file was broken — it was not kept, try again"),
+  timeout: L("AI-обработчик не закончил вовремя", "AI ishlovchi o‘z vaqtida tugatmadi", "the AI worker didn't finish in time"),
+  error: L("AI-обработчик не смог построить модель — попробуйте ещё раз или другое фото", "AI ishlovchi model yasay olmadi — yana urinib ko‘ring yoki boshqa rasm", "the AI worker couldn't build the model — try again or another photo") });
+const m3dApiErr = e => ({
+  model3d_off: L("AI-генерация 3D не подключена на сервере", "Serverda AI 3D ulanmagan", "AI 3D is not connected on the server"),
+  queue_full: L("Очередь 3D переполнена — попробуйте позже", "3D navbati to‘la — keyinroq urinib ko‘ring", "The 3D queue is full — try later"),
+  no_photo: L("Сначала загрузите фото товара", "Avval mahsulot rasmini yuklang", "Upload a photo of the product first"),
+  rate_limited: L("На сегодня лимит 3D-моделей магазина исчерпан", "Bugungi 3D model limiti tugadi", "Today's 3D limit for the store is used up") })[e.code] || apiErr(e);
 /* the 3D line under an own product in the cabinet; it always exists (with its id) so the poller can swap it in place */
 function m3dRowHTML(p) {
   if (!API || !p.own) return "";
   const m = p.model3d || {}, on = !!apiCfg?.model3d, why = m.err ? esc(M3D_ERR()[m.err] || M3D_ERR().error) : "";
   let h = "";
-  if (m.state === "working") h = `<span class="pill warn">${ui("cube", 12)} ${L("AI строит 3D-модель по фото…", "AI rasm bo‘yicha 3D model yasamoqda…", "AI is building a 3D model from the photo…")}</span>`;
-  else if (m.state === "ready" || m.state === "used") h = `<button class="ph-btn" type="button" data-m3d="${p.id}">${ui("cube", 14)} ${m.state === "used" ? L("3D на витрине", "3D vitrinada", "3D on the shelf") : L("3D готово — посмотреть", "3D tayyor — ko‘rish", "3D ready — look")}</button>${why ? `<small class="mu">${L("Новая попытка не удалась:", "Yangi urinish bo‘lmadi:", "The new try failed:")} ${why}</small>` : ""}`;
-  else if (m.state === "failed") h = `<span class="pill sig">${L("3D не получилось", "3D chiqmadi", "3D failed")}</span><small class="mu">${why}</small>${on && p.img ? `<button class="ph-btn" type="button" data-m3dgo="${p.id}">${L("Ещё раз", "Yana", "Try again")}</button>` : ""}`;
-  else if (on && p.img) h = `<button class="ph-btn" type="button" data-m3dgo="${p.id}">${ui("cube", 14)} ${L("Сделать 3D по фото", "Rasmdan 3D yasash", "Make 3D from the photo")}</button>`;
+  if (m.state === "pending") h = `<button class="ph-btn" type="button" data-m3d="${p.id}"><span class="glb-spin sm" aria-hidden="true"></span> ${m.queue > 1 ? L(`3D: в очереди, ${m.queue}-я`, `3D: navbatda, ${m.queue}-chi`, `3D: queued, #${m.queue}`) : L("3D: в очереди", "3D: navbatda", "3D: queued")}</button>`;
+  else if (m.state === "processing") h = `<button class="ph-btn" type="button" data-m3d="${p.id}"><span class="glb-spin sm" aria-hidden="true"></span> ${L("AI строит 3D-модель…", "AI 3D model yasamoqda…", "AI is building the 3D model…")}</button>`;
+  else if (m.state === "completed") h = `<button class="ph-btn hot" type="button" data-m3d="${p.id}">${ui("cube", 14)} ${L("3D готово — проверить", "3D tayyor — tekshirish", "3D ready — check it")}</button>`;
+  else if (m.state === "published") h = `<button class="ph-btn" type="button" data-m3d="${p.id}">${ui("cube", 14)} ${L("3D у покупателей", "3D xaridorlarda", "3D on the shelf")}</button>`;
+  else if (m.state === "failed") h = `<span class="pill sig">${L("3D не получилось", "3D chiqmadi", "3D failed")}</span>${on && p.img ? `<button class="ph-btn" type="button" data-m3d="${p.id}">${L("Подробнее", "Batafsil", "Details")}</button>` : `<small class="mu">${why}</small>`}`;
+  else if (on && p.img) h = `<button class="ph-btn" type="button" data-m3dgo="${p.id}">${ui("cube", 14)} ${L("Создать 3D с помощью AI", "AI yordamida 3D yaratish", "Create 3D with AI")}</button>`;
   return `<span class="m3d-row" id="m3d${p.id}"${h ? "" : " hidden"}>${h}</span>`;
 }
 let lookLib = [];
@@ -6709,60 +6709,108 @@ document.addEventListener("click", e => {
   pv.innerHTML = `<img src="${esc(m3dAbs(x.img))}" alt="">${x.m3d ? L("Фото и 3D-модель из библиотеки", "Kutubxonadan rasm va 3D model", "Photo and 3D model from the library") : L("Фото из библиотеки", "Kutubxonadan rasm", "Photo from the library")}`;
   box.innerHTML = `<span class="lib-h">${ui("check", 14)} ${L("Возьмём", "Olamiz", "Using")} ${x.m3d ? L("фото и 3D-модель", "rasm va 3D modelni", "the photo and 3D model") : L("фото", "rasmni", "the photo")} «${esc(L(x.ru, x.uz || x.ru))}» — ${L("снимать и ждать модель не нужно", "suratga olish va kutish shart emas", "no shooting, no waiting")}. <button type="button" class="link" data-libclear>${L("Отменить", "Bekor qilish", "Undo")}</button></span>`;
 });
-let m3dPoll = 0, m3dViewer = null;
+let m3dPoll = 0, m3dSheet = null; // m3dSheet: { pid, state, url, viewer, timer }
 const m3dAbs = u => (u && u.startsWith("/uploads/") ? API + u : u); // a server without PUBLIC_URL answers with a path on its own origin
+const m3dProd = pid => (sellerData?.products || []).find(x => x.id === pid);
+function m3dSetRow(p) { const el = document.getElementById("m3d" + p.id); if (el) el.outerHTML = m3dRowHTML(p); }
+/* the cabinet list: rows with a job in progress are refreshed until it ends */
 function m3dWatch() {
   clearTimeout(m3dPoll);
-  const list = (sellerData?.products || []).filter(p => p.own && p.model3d?.state === "working");
+  const list = (sellerData?.products || []).filter(p => p.own && ["pending", "processing"].includes(p.model3d?.state));
   if (!list.length || route.view !== "seller") return;
   m3dPoll = setTimeout(async () => {
     for (const p of list) {
       try {
-        const r = await api("GET", `/api/seller/products/${p.id}/model3d`); p.model3d = r.model3d;
-        const el = document.getElementById("m3d" + p.id); if (el) el.outerHTML = m3dRowHTML(p);
-        if (r.model3d.state === "ready") toast(L(`3D-модель «${p.ru}» готова — посмотрите и решите, показывать ли покупателям`, `«${p.uz || p.ru}» 3D modeli tayyor — ko‘ring`, `The 3D model of “${p.ru}” is ready — have a look`), 4000);
-        else if (r.model3d.state === "failed") toast(L(`3D для «${p.ru}» не получилось: `, `«${p.uz || p.ru}» uchun 3D chiqmadi: `, `3D for “${p.ru}” failed: `) + (M3D_ERR()[r.model3d.err] || M3D_ERR().error), 4500);
+        const r = await api("GET", `/api/seller/products/${p.id}/model3d`); p.model3d = r.model3d; m3dSetRow(p);
+        if (m3dSheet?.pid !== p.id) {
+          if (r.model3d.state === "completed") toast(L(`3D-модель «${p.ru}» готова — проверьте и сохраните`, `«${p.uz || p.ru}» 3D modeli tayyor — tekshiring va saqlang`, `The 3D model of “${p.ru}” is ready — check and save it`), 4500);
+          else if (r.model3d.state === "failed") toast(L(`3D для «${p.ru}» не получилось: `, `«${p.uz || p.ru}» uchun 3D chiqmadi: `, `3D for “${p.ru}” failed: `) + (M3D_ERR()[r.model3d.err] || M3D_ERR().error), 5000);
+        }
       } catch (e) {}
     }
     m3dWatch();
-  }, 4000);
+  }, 5000);
 }
-async function m3dStart(pid) {
-  const p = (sellerData?.products || []).find(x => x.id === pid); if (!p) return;
-  try { const r = await api("POST", `/api/seller/products/${pid}/model3d`, {}); p.model3d = r.model3d; closeModal(); const el = document.getElementById("m3d" + pid); if (el) el.outerHTML = m3dRowHTML(p); toast(L("AI строит 3D-модель по фото — обычно это меньше минуты", "AI 3D model yasamoqda — odatda bir daqiqadan kam", "AI is building the 3D model — usually under a minute")); m3dWatch(); }
-  catch (e) { toast(apiErr(e)); }
+/* the sheet: the original photo next to the real status of the job, then the model to turn and the seller's decision */
+function m3dStatusHTML(m) {
+  const spin = `<span class="glb-spin" aria-hidden="true"></span>`;
+  if (m.state === "pending") return `<div class="glb-msg" role="status">${spin}<b>${m.queue > 1 ? L(`В очереди: ${m.queue}-я`, `Navbatda: ${m.queue}-chi`, `In the queue: #${m.queue}`) : L("В очереди, следующая", "Navbatda, keyingisi", "In the queue, next")}</b>${m.worker_online ? `<small>${L("AI-обработчик на связи, скоро начнёт", "AI ishlovchi ulangan, tez orada boshlaydi", "The AI worker is online and will start soon")}</small>` : `<small>${L("AI-обработчик сейчас не в сети — задача сохранена и начнётся, как только он запустится", "AI ishlovchi hozir tarmoqda emas — vazifa saqlangan, u ishga tushishi bilan boshlanadi", "The AI worker is offline right now — the job is saved and starts as soon as it runs")}</small>`}</div>`;
+  if (m.state === "processing") return `<div class="glb-msg" role="status">${spin}<b>${L("AI строит 3D-модель по фото…", "AI rasm bo‘yicha 3D model yasamoqda…", "AI is building the 3D model from the photo…")}</b><small>${L("Убираем фон, восстанавливаем форму и цвет. Это может занять несколько минут — окно можно закрыть.", "Fonni olib tashlaymiz, shakl va rangni tiklaymiz. Bir necha daqiqa ketishi mumkin — oynani yopsa bo‘ladi.", "Removing the background, rebuilding shape and colour. It can take a few minutes — you may close this window.")}</small></div>`;
+  if (m.state === "failed") return `<div class="glb-msg" role="status"><b>${L("3D-модель не получилась", "3D model chiqmadi", "The 3D model didn't work out")}</b><small>${esc(M3D_ERR()[m.err] || M3D_ERR().error)}</small></div>`;
+  return `<div class="glb-msg"><small>${L("3D-модели пока нет", "Hozircha 3D model yo‘q", "No 3D model yet")}</small></div>`;
 }
-async function m3dOpen(pid) {
-  const p = (sellerData?.products || []).find(x => x.id === pid); if (!p?.model3d?.url) return;
-  const used = p.model3d.state === "used", lp = PROD[pid];
+function m3dActsHTML(pid, m) {
+  const b = (cls, act, txt, icon) => `<button class="btn ${cls}" type="button" data-m3dact="${act}" data-pid="${pid}">${icon ? ui(icon, 16) + " " : ""}${txt}</button>`;
+  const del = b("btn-line danger", "del", L("Удалить 3D", "3D ni o‘chirish", "Delete 3D"), "trash");
+  if (m.state === "completed") return b("btn-primary", "save", L("Сохранить 3D", "3D ni saqlash", "Save 3D"), "check") + b("btn-line", "again", L("Повторить", "Qayta yaratish", "Try again")) + del;
+  if (m.state === "published") return b("btn-line", "hide", L("Скрыть от покупателей", "Xaridorlardan yashirish", "Hide from buyers")) + b("btn-line", "again", L("Повторить", "Qayta yaratish", "Try again")) + del;
+  if (m.state === "pending" || m.state === "processing") return b("btn-line", "del", L("Отменить", "Bekor qilish", "Cancel")) + `<button class="btn btn-line" type="button" data-act="close-modal">${L("Закрыть", "Yopish", "Close")}</button>`;
+  if (m.state === "failed") return b("btn-primary", "again", L("Повторить", "Qayta yaratish", "Try again")) + `<button class="btn btn-line" type="button" data-act="close-modal">${L("Закрыть", "Yopish", "Close")}</button>`;
+  return b("btn-primary", "again", L("Создать 3D с помощью AI", "AI yordamida 3D yaratish", "Create 3D with AI"), "cube");
+}
+async function m3dPaint() {
+  const sh = m3dSheet; if (!sh) return;
+  const p = m3dProd(sh.pid), m = p?.model3d || {}, box = $("#m3dBox"), acts = $("#m3dActs"), cap = $("#m3dCap");
+  if (!p || !box || !box.isConnected) { m3dSheetEnd(); return; }
+  acts.innerHTML = m3dActsHTML(p.id, m);
+  cap.textContent = m.state === "published" ? L("Покупатели видят эту модель в карточке («Фото / 3D»)", "Xaridorlar bu modelni kartochkada ko‘radi («Rasm / 3D»)", "Buyers see this model in the product (“Photo / 3D”)") : m.state === "completed" ? L("Покрутите модель. Покупатели увидят её только после «Сохранить 3D»", "Modelni aylantiring. Xaridorlar uni faqat «3D ni saqlash»dan keyin ko‘radi", "Turn the model. Buyers see it only after “Save 3D”") : L("3D-модель", "3D model", "3D model");
+  const has = (m.state === "completed" || m.state === "published") && m.url;
+  if (has && sh.url !== m.url) { sh.viewer?.dispose(); sh.url = m.url; sh.viewer = await m3dShow(box, m3dAbs(m.url), { label: p.ru, note: false }); }
+  else if (!has) { sh.viewer?.dispose(); sh.viewer = null; sh.url = null; box.innerHTML = m3dStatusHTML(m); }
+  clearTimeout(sh.timer);
+  if (m3dSheet === sh && (m.state === "pending" || m.state === "processing")) sh.timer = setTimeout(async () => {
+    if (m3dSheet !== sh || !$("#m3dBox")) return m3dSheetEnd();
+    try { const r = await api("GET", `/api/seller/products/${sh.pid}/model3d`); p.model3d = r.model3d; m3dSetRow(p); } catch (e) {}
+    m3dPaint();
+  }, 3000);
+}
+function m3dSheetEnd() { if (!m3dSheet) return; clearTimeout(m3dSheet.timer); m3dSheet.viewer?.dispose(); m3dSheet = null; }
+function m3dOpen(pid) {
+  const p = m3dProd(pid); if (!p) return;
+  m3dSheetEnd();
+  const lp = PROD[pid];
   $("#mBox").innerHTML = `<button class="ib m-close" type="button" data-act="close-modal" aria-label="${L("Закрыть", "Yopish", "Close")}">${ui("close", 18)}</button>
-    <div class="m3d-sheet"><div><h2 class="h-m" style="margin:0">${L("3D-модель по вашему фото", "Rasmingiz bo‘yicha 3D model", "3D model from your photo")}</h2><p class="mu" style="margin:6px 0 0">${esc(p.ru)} — ${L("покрутите модель. Если она похожа на товар, покажите её покупателям: карточка получит аккуратный снимок модели, а в товаре появится кнопка «3D-вид».", "modelni aylantiring. Mahsulotga o‘xshasa, xaridorlarga ko‘rsating: kartochkada model surati, mahsulotda «3D ko‘rinish» tugmasi chiqadi.", "turn the model. If it looks like the product, show it to buyers: the card gets a clean still of the model and the product gets a “3D view” button.")}</p></div>
-    <div class="glb-box studio" style="--h:${lp ? hueOf(lp) : 30}" id="m3dBox"></div>
-    <div class="row">${used ? `<button class="btn btn-line" type="button" data-m3duse="${pid}|0">${L("Убрать 3D с витрины", "3D ni vitrinadan olish", "Take 3D off the shelf")}</button>` : `<button class="btn btn-primary" type="button" data-m3duse="${pid}|1">${ui("check", 16)} ${L("Показать покупателям", "Xaridorlarga ko‘rsatish", "Show to buyers")}</button>`}
-      <button class="btn btn-line" type="button" data-m3dgo="${pid}">${L("Сделать заново", "Qayta yasash", "Make again")}</button><button class="btn btn-line" type="button" data-act="close-modal">${used ? L("Закрыть", "Yopish", "Close") : L("Оставить фото", "Rasmni qoldirish", "Keep the photo")}</button></div>
-    <p class="fine" style="margin:0">${L("Модель делает сервис Stability AI по вашему фото. Лучше всего выходит, когда товар снят целиком, на однотонном фоне, без рук и других предметов. Если показать 3D, снимок модели заменит фото в карточке; вернуть фото — загрузите его заново.", "Modelni Stability AI xizmati rasmingiz bo‘yicha yasaydi. Mahsulot to‘liq, bir xil fonda, qo‘l va boshqa narsalarsiz suratga olinsa yaxshi chiqadi. 3D ko‘rsatilsa, model surati kartochkadagi rasm o‘rniga qo‘yiladi.", "Stability AI makes the model from your photo. It works best with the whole product on a plain background, no hands or other things. Showing 3D replaces the card photo with a still of the model; to go back, upload the photo again.")}</p></div>`;
+    <div class="m3d-sheet"><div><h2 class="h-m" style="margin:0">${L("3D-модель с помощью AI", "AI yordamida 3D model", "3D model with AI")}</h2><p class="mu" style="margin:6px 0 0">${esc(p.ru)}</p></div>
+    <div class="m3d-pair"><figure><div class="m3d-ph studio" style="--h:${lp ? hueOf(lp) : 30}">${p.img ? `<img src="${esc(m3dAbs(p.img))}" alt="">` : ""}</div><figcaption>${L("Оригинальное фото — остаётся в карточке", "Asl rasm — kartochkada qoladi", "The original photo — stays on the card")}</figcaption></figure>
+      <figure><div class="glb-box studio" style="--h:${lp ? hueOf(lp) : 30}" id="m3dBox"></div><figcaption id="m3dCap"></figcaption></figure></div>
+    <div class="row" id="m3dActs"></div>
+    <p class="fine" style="margin:0">${L("Модель строит открытая нейросеть TripoSR на AI-обработчике Quriliş Go по одному вашему фото. Скрытые стороны она достраивает примерно — проверьте модель перед сохранением. Размеры по модели не считаются: в карточке остаются ваши. Лучше всего выходит товар целиком, на однотонном фоне, без рук и других предметов.", "Modelni Quriliş Go AI ishlovchisidagi ochiq TripoSR neyrotarmog‘i bitta rasmingiz bo‘yicha yasaydi. Ko‘rinmas tomonlarini taxminan to‘ldiradi — saqlashdan oldin tekshiring. O‘lchamlar modeldan olinmaydi: kartochkada sizniki qoladi. Mahsulot to‘liq, bir xil fonda, qo‘l va boshqa narsalarsiz bo‘lsa yaxshi chiqadi.", "The open TripoSR neural network on the Quriliş Go AI worker builds the model from your one photo. It guesses the hidden sides, so check the model before saving. Sizes are never taken from the model: your own stay on the card. Works best with the whole product on a plain background, no hands or other things.")}</p></div>`;
   setPanel($("#modal"), true); syncLock();
-  m3dViewer = await m3dShow($("#m3dBox"), m3dAbs(p.model3d.url), { label: p.ru });
+  m3dSheet = { pid, state: null, url: null, viewer: null, timer: 0 };
+  m3dPaint();
 }
-async function m3dUse(pid, use, btn) {
+async function m3dAct(act, pid, btn) {
+  const p = m3dProd(pid); if (!p) return;
+  if (act === "del" && btn && !btn.dataset.sure && (p.model3d?.state === "completed" || p.model3d?.state === "published")) { // a second tap confirms
+    btn.dataset.sure = "1"; const was = btn.innerHTML; btn.innerHTML = L("Точно удалить 3D?", "3D ni o‘chiraymi?", "Delete the 3D for sure?"); setTimeout(() => { if (btn.isConnected) { delete btn.dataset.sure; btn.innerHTML = was; } }, 3500); return;
+  }
   if (btn) btn.disabled = true;
   try {
-    if (use) { if (!m3dViewer) throw new Error(L("3D-модель не показалась на этом устройстве", "3D model bu qurilmada ko‘rinmadi", "The 3D model didn't show on this device")); const blob = await m3dViewer.still(900); await api("POST", `/api/seller/products/${pid}/photo?from=3d`, blob); }
-    await api("POST", `/api/seller/products/${pid}/model3d/use`, { use });
-    toast(use ? L("3D на витрине: карточка получила снимок модели, покупатели могут её покрутить", "3D vitrinada: kartochkada model surati, xaridorlar aylantira oladi", "3D is on the shelf: the card shows a still of the model and buyers can turn it") : L("3D убрано с витрины", "3D vitrinadan olindi", "3D taken off the shelf"), 3500);
-    closeModal(); sellerData = null; renderSeller(); syncCatalog();
-  } catch (e) { if (btn) btn.disabled = false; toast(e.code ? apiErr(e) : e.message); }
+    let r;
+    if (act === "again") r = await api("POST", `/api/seller/products/${pid}/model3d`, {});
+    else if (act === "save" || act === "hide") r = await api("POST", `/api/seller/products/${pid}/model3d/publish`, { publish: act === "save" });
+    else if (act === "del") r = await api("DELETE", `/api/seller/products/${pid}/model3d`);
+    p.model3d = r.model3d; m3dSetRow(p);
+    if (act === "save") toast(L("3D сохранено: покупатели могут покрутить товар в карточке", "3D saqlandi: xaridorlar mahsulotni kartochkada aylantira oladi", "3D saved: buyers can turn the product in its card"), 3500);
+    if (act === "hide") toast(L("3D скрыто от покупателей", "3D xaridorlardan yashirildi", "3D hidden from buyers"));
+    if (act === "del") toast(L("3D-модель удалена, фото осталось", "3D model o‘chirildi, rasm qoldi", "3D model deleted, the photo stays"));
+    if (act === "again" && p.model3d.state === "pending" && !p.model3d.worker_online) toast(L("Задача в очереди. AI-обработчик сейчас не в сети — начнёт, как только запустится", "Vazifa navbatda. AI ishlovchi hozir tarmoqda emas — ishga tushishi bilan boshlaydi", "Queued. The AI worker is offline now — it starts as soon as it runs"), 4500);
+    if (act === "save" || act === "hide" || act === "del") syncCatalog();
+    if (m3dSheet?.pid === pid) m3dPaint();
+    m3dWatch();
+  } catch (e) { if (btn) btn.disabled = false; toast(m3dApiErr(e), 4000); }
 }
 document.addEventListener("click", e => {
-  const t = e.target.closest("[data-m3d],[data-m3dgo],[data-m3duse],[data-m3dview]"); if (!t) return;
+  const t = e.target.closest("[data-m3d],[data-m3dgo],[data-m3dact],[data-m3dmode]"); if (!t) return;
   const d = t.dataset;
   if (d.m3d) return m3dOpen(+d.m3d);
-  if (d.m3dgo) return m3dStart(+d.m3dgo);
-  if (d.m3duse) { const [pid, u] = d.m3duse.split("|"); return m3dUse(+pid, u === "1", t); }
-  if (d.m3dview) { // buyer: swap the product photo for the turning model, and back
-    const box = t.closest(".m-img"), p = PROD[+d.m3dview], on = t.getAttribute("aria-pressed") !== "true"; if (!box || !p?.m3d) return;
-    t.setAttribute("aria-pressed", String(on)); box.querySelector(".glb-box")?.remove();
-    if (on) { const host = document.createElement("div"); host.className = "glb-box studio"; host.style.setProperty("--h", hueOf(p)); box.insertBefore(host, t); m3dShow(host, p.m3d, { label: pName(p) }); }
+  if (d.m3dgo) { const pid = +d.m3dgo; m3dOpen(pid); return m3dAct("again", pid); } // «Создать 3D с помощью AI»: the sheet shows the photo and the real status
+  if (d.m3dact) return m3dAct(d.m3dact, +d.pid, t);
+  if (d.m3dmode) { // buyer: «Фото / 3D»
+    const box = t.closest(".m-img"), p = PROD[+t.parentElement.dataset.pid], to3d = d.m3dmode === "3d"; if (!box || !p?.m3d) return;
+    t.parentElement.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b === t)));
+    box.querySelector(".glb-box")?.remove(); box.classList.toggle("in3d", to3d);
+    if (to3d) { const host = document.createElement("div"); host.className = "glb-box studio"; host.style.setProperty("--h", hueOf(p)); box.insertBefore(host, t.parentElement); m3dShow(host, p.m3d, { label: pName(p) }); }
   }
 });
 /* ================= Price list import (Excel / CSV / text from Telegram) =================
@@ -6990,15 +7038,15 @@ function renderSeller() {
       <div class="kpi"><span>${L("Товаров в каталоге", "Katalogdagi mahsulotlar")}</span><b>${mine.length}</b><small style="color:var(--muted)">${mine.filter(p => !photos[p.id]).length} ${L("без своих фото", "o‘z rasmisiz")}</small></div>
     </div>
     <div class="s-grid">
-      <div class="panel"><div class="panel-h"><h2 class="h-m">${L("Выручка по дням", "Kunlik tushum")}</h2><span class="pill mute">${L("млн сум", "mln so‘m")}</span></div>${chart}</div>
-      <div class="panel"><div class="panel-h"><h2 class="h-m">${L("Заказы", "Buyurtmalar")}</h2><span class="pill acc">${L("доставка Яндекс", "Yandex yetkazish")}</span></div>
+      <div class="panel" data-sec="money"><div class="panel-h"><h2 class="h-m">${L("Выручка по дням", "Kunlik tushum")}</h2><span class="pill mute">${L("млн сум", "mln so‘m")}</span></div>${chart}</div>
+      <div class="panel" data-sec="orders"><div class="panel-h"><h2 class="h-m">${L("Заказы", "Buyurtmalar")}</h2><span class="pill acc">${L("доставка Яндекс", "Yandex yetkazish")}</span></div>
         <div class="tbl-wrap"><table><thead><tr><th>${L("Заказ", "Buyurtma")}</th><th>${L("Состав", "Tarkibi")}</th><th class="r">${L("Сумма", "Summa")}</th><th>${L("Статус", "Holat")}</th><th></th></tr></thead><tbody>
         ${ords.map(o => `<tr><td><b class="mono">${o.num}</b><br><small style="color:var(--muted)">${esc(o.buyer)} · ${L(DIST[o.d].ru, DIST[o.d].uz)}</small></td><td style="min-width:180px;font-size:13px">${esc(o.items)}<br><small style="color:var(--muted)">${o.tariff ? tName(o.tariff) : L("Самовывоз", "Olib ketish")}</small></td><td class="r">${fmt(o.sum)}</td><td><span class="pill ${stLabel[o.st][1]}">${stLabel[o.st][0]}</span></td><td><span class="sord-a">${nextBtn[o.st] ? `<button class="btn ${o.st === "new" ? "btn-primary" : "btn-line"}" type="button" data-sst="${o.num}|${s.id}|${o.st}">${nextBtn[o.st]}</button>` : ""}${o.st === "new" ? `<button class="btn btn-line" type="button" data-sst="${o.num}|${s.id}|oos">${L("Нет в наличии", "Mavjud emas", "Out of stock")}</button>` : ""}</span>${o.st === "handed" ? `<small class="mu" style="display:block">${L("доставку отметит курьер", "yetkazishni kuryer belgilaydi", "the courier marks the delivery")}</small>` : ""}</td></tr>`).join("")}
         </tbody></table></div></div>
     </div>
     ${sellerStatsHTML(s.id)}
     ${importHTML(s.id)}
-    <div class="panel" style="margin-top:12px"><div class="panel-h"><h2 class="h-m">${L("Товары, фото и остатки", "Mahsulotlar, rasmlar va qoldiqlar")}</h2><span style="font-size:13px;color:var(--muted)">${L("Загрузите реальное фото — оно сразу заменит изображение на витрине", "Haqiqiy rasm yuklang — vitrinadagi tasvir darhol almashadi")}</span></div>
+    <div class="panel" data-sec="goods" style="margin-top:12px"><div class="panel-h"><h2 class="h-m">${L("Товары, фото и остатки", "Mahsulotlar, rasmlar va qoldiqlar")}</h2><span style="font-size:13px;color:var(--muted)">${L("Загрузите реальное фото — оно сразу заменит изображение на витрине", "Haqiqiy rasm yuklang — vitrinadagi tasvir darhol almashadi")}</span></div>
       <div class="tbl-wrap"><table><thead><tr><th>${L("Товар", "Mahsulot")}</th><th>${L("Категория", "Toifa")}</th><th class="r">${L("Ваша цена", "Narxingiz")}</th><th class="r">${L("Мин. на рынке", "Bozordagi min.")}</th><th class="r">${L("Остаток", "Qoldiq")}</th></tr></thead><tbody>
       ${mine.slice(0, sellerAll ? 9999 : 30).map(p => { const my = p.offers.find(o => o.store === s.id).price, mn = minPrice(p); return `<tr><td><div class="pcell">${mini(p)}<span>${esc(pName(p))}${p.mine ? ` <span class="pill acc">${L("ваш", "sizniki")}</span>` : ""}<br><button class="ph-btn" type="button" data-photo="${p.id}">${ui("photo", 14)} ${photos[p.id] ? L("Заменить фото", "Rasmni almashtirish") : L("Загрузить фото", "Rasm yuklash")}</button>${photos[p.id] ? ` <button class="ph-btn" type="button" data-photodel="${p.id}" style="color:var(--muted)">${L("Убрать", "Olib tashlash")}</button>` : ""}</span></div></td><td style="font-size:13px">${catName(p.cat)}</td><td class="r">${fmt(my)}</td><td class="r" style="color:${my > mn ? "var(--signal)" : "var(--ok)"}">${my > mn ? fmt(mn) : L("вы дешевле всех", "eng arzon siz")}</td><td class="r"><label class="visually-hidden" for="stk${p.id}">${L("Остаток", "Qoldiq")}</label><input class="stk num" id="stk${p.id}" type="number" min="0" value="${stockOf(p, s.id)}" data-stk="${p.id}|${s.id}"></td></tr>`; }).join("")}
       </tbody></table></div>${mine.length > 30 && !sellerAll ? `<button class="btn btn-line" type="button" data-act="seller-all" style="justify-self:start">${L("Показать все товары", "Barcha mahsulotlar")} · ${mine.length}</button>` : ""}</div>
@@ -8646,6 +8694,8 @@ function parseHash() {
   return { view: "home", cat: null };
 }
 function renderMain() {
+  if (sellerMode() && !["seller", "admin", "owner"].includes(route.view)) { history.replaceState(null, "", "#seller"); route = parseHash(); }
+  document.documentElement.classList.toggle("sellerm", sellerMode());
   if (route.view === "catalog") renderCatalog();
   else if (route.view === "seller") renderSeller();
   else if (route.view === "design") renderDesign();
@@ -8672,7 +8722,7 @@ function go(h, sub) {
   else location.hash = h;
   window.scrollTo(0, 0);
 }
-function routeTo() { const prevCat = route.cat, prevView = route.view; route = parseHash(); if (route.cat !== prevCat) { f.sub = null; f.max = 0; } renderMain(); const qi = $("#q"); if (qi) qi.value = f.q; window.scrollTo(0, 0);
+function routeTo() { const prevCat = route.cat, prevView = route.view; route = parseHash(); if (route.cat !== prevCat) { f.sub = null; f.max = 0; } const moved = route.view !== prevView || route.cat !== prevCat; if (moved) window.scrollTo(0, 0); renderMain(); if (moved && animOK() && !(document.startViewTransition && motionOK() && !SAFARI)) { const a = $("#app"); a.classList.remove("pg-in"); void a.offsetWidth; a.classList.add("pg-in"); } const qi = $("#q"); if (qi) qi.value = f.q; window.scrollTo(0, 0);
   if ((route.view !== prevView || route.cat !== prevCat) && animOK() && !(document.startViewTransition && motionOK() && !SAFARI)) { const app = $("#app"); app.classList.remove("in"); void app.offsetWidth; app.classList.add("in"); } }
 /* View transitions snapshot the whole page; WebKit does that slowly on a page this size, so Safari gets a plain route change. */
 const SAFARI = /AppleWebKit/.test(navigator.userAgent) && !/Chrome|Chromium|CriOS|Edg|OPR|Android/.test(navigator.userAgent);
@@ -8798,6 +8848,7 @@ document.addEventListener("click", e => {
     case "staff-hide": staffNew = null; return renderAdmin();
     case "home-reset": resetHome(); if (drawerView === "homeSetup") dHomeSetup(); return toast(L("Главная как по умолчанию", "Bosh sahifa standart holatda", "Home reset to default"));
     case "stores-all": { const st = $(".stores"); if (st) st.classList.add("all"); t.closest(".stores-more")?.remove(); return; }
+    case "shopper-toggle": { const toShelf = sellerMode(); LS.set("imorat.shopperView", toShelf); closeDrawer(); renderHeader(); location.hash = toShelf ? "home" : "seller"; renderMain(); toast(toShelf ? L("Витрина покупателя. Вернуться в кабинет — в профиле", "Xaridor vitrinasi. Kabinetga qaytish — profilda", "Buyer shelf. Back to the cabinet — in the profile") : L("Кабинет магазина", "Do‘kon kabineti", "Store cabinet")); return; }
     case "theme-toggle": return setLook(null, effTheme() === "dark" ? "light" : "dark");
     case "ai-calc": { const c = CALCS.find(x => x.id === wCalc), items = calcOut["w:" + wCalc] || []; const rows = [...document.querySelectorAll("#w-" + wCalc + "-res > div")].map(d => d.innerText.replace(/\s+/g, " ")).join("; "); return openAI(L(`Проверь мой расчёт «${c.ru}»: ${rows}. Материалы: ${items.map(([p, q]) => `[[${p.id}:${q}]]`).join(", ")}. Всё ли учтено и что ещё понадобится?`, `«${c.uz}» hisobimni tekshir: ${rows}. Materiallar: ${items.map(([p, q]) => `[[${p.id}:${q}]]`).join(", ")}. Hammasi hisobga olinganmi, yana nima kerak?`, `Check my “${L(c.ru, c.uz)}” estimate: ${rows}. Materials: ${items.map(([p, q]) => `[[${p.id}:${q}]]`).join(", ")}. Is everything accounted for, and what else will I need?`)); }
     case "close-modal": return closeModal();

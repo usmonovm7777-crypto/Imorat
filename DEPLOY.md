@@ -109,6 +109,7 @@ imorat doctor
 | Настоящая Яндекс Карта и подсказки адресов при оформлении | `YANDEX_MAPS_KEY` | developer.tech.yandex.ru → ключ «JavaScript API и HTTP Геокодер» (стартовый тариф бесплатный) | 1 день |
 | Usta AI, фото-поиск, AI-дизайнер | `ANTHROPIC_API_KEY` | console.anthropic.com → API keys, пополнить баланс от $5 | 10 минут |
 | Канал с товаром дня | `TELEGRAM_CHANNEL=@imoratgo` и бот — администратор канала | Telegram | 5 минут |
+| AI 3D-модель товара по одному фото (своя нейросеть TripoSR, без платных API) | `MODEL3D_WORKER_TOKEN` (`openssl rand -hex 32`) + запущенный обработчик `server/ai3d` на Mac или отдельном компьютере | `server/ai3d/README.md`: `bash setup_mac.sh`, затем `bash run_mac.sh` | 20 минут |
 
 До ключей Яндекса цены доставки считаются по тарифной формуле, а статусы ставит магазин; до ключа карт — карта OpenStreetMap.
 Комиссия и бесплатные месяцы: `COMMISSION=*:1`, `ACQUIRING_PERCENT=2`, `PROMO_MONTHS=3`. Это единственное место, где задаются ставки: сайт и приложение берут их из `/api/config`. `ACQUIRING_PERCENT` — не наша ставка, а тариф банка: после подписания договора эквайринга впишите его сюда (`payme:2,click:1.8`, если тарифы разные).

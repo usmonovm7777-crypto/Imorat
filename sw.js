@@ -1,5 +1,5 @@
 /* Quriliş Go service worker: works offline with the last opened catalog, caches photos, shows push notifications. */
-const VERSION = "20261101181736";
+const VERSION = "20261101191818";
 const SHELL = `imorat-shell-${VERSION}`, IMG = "imorat-img-v1";
 const SHELL_FILES = ["./", "index.html", "config.js", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png"];
 
@@ -11,7 +11,7 @@ self.addEventListener("fetch", e => {
   const req = e.request, url = new URL(req.url);
   if (req.method !== "GET") return;
   if (url.origin !== location.origin) return; // API, fonts and maps go straight to the network
-  if (url.pathname.includes("/img/") || url.pathname.includes("/icons/")) {
+  if (url.pathname.includes("/img/") || url.pathname.includes("/icons/") || url.pathname.includes("/vendor/")) { // vendor/: versioned libraries (the 3D viewer), never change under the same path
     e.respondWith(caches.open(IMG).then(async c => (await c.match(req)) || fetch(req).then(r => { if (r.ok) c.put(req, r.clone()); return r; })));
     return;
   }
