@@ -303,7 +303,7 @@ html.sellerm .hdr .search, html.sellerm .cat-btn, html.sellerm .cart-btn, html.s
 .search { min-width: 180px; }
 }
 @media (max-width: 760px) {
-:root { --nav-h: calc(64px + env(safe-area-inset-bottom, 0px)); }
+:root { --tb-h: 58px; --tb-gap: max(10px, calc(env(safe-area-inset-bottom, 0px) - 12px)); --nav-h: calc(var(--tb-h) + var(--tb-gap) + 10px); }
 .hdr { position: relative; top: auto; }
 .hdr-row { flex-wrap: wrap; gap: 10px; padding-block: 10px; }
 .logo { margin-right: auto; }
@@ -314,11 +314,20 @@ html.sellerm .hdr .search, html.sellerm .cat-btn, html.sellerm .cart-btn, html.s
 .search input { padding-right: 124px; }
 }
 .tabbar { display: none; }
+:root { --tb-bg: color-mix(in srgb, var(--surface) 70%, transparent); --tb-line: color-mix(in srgb, var(--ink) 9%, transparent); --tb-pill: color-mix(in srgb, var(--ink) 10%, transparent); --tb-lens: rgb(255 255 255 / .6); }
+html[data-theme="dark"] { --tb-bg: rgb(52 46 41 / .62); --tb-line: rgb(255 255 255 / .1); --tb-pill: rgb(0 0 0 / .46); --tb-lens: rgb(255 255 255 / .16); }
+@media (prefers-color-scheme: dark) { html:not([data-theme="light"]) { --tb-bg: rgb(52 46 41 / .62); --tb-line: rgb(255 255 255 / .1); --tb-pill: rgb(0 0 0 / .46); --tb-lens: rgb(255 255 255 / .16); } }
 @media (max-width: 760px) {
-.tabbar { display: grid; grid-template-columns: repeat(5, 1fr); position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; background: color-mix(in srgb, var(--surface) 94%, transparent); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-top: 1px solid var(--line); padding: 6px max(8px, env(safe-area-inset-right, 0px)) calc(6px + env(safe-area-inset-bottom, 0px)) max(8px, env(safe-area-inset-left, 0px)); }
-.tabbar button { display: grid; justify-items: center; gap: 2px; font-size: 11px; color: var(--muted); padding: 4px 0; position: relative; }
-.tabbar button[aria-current="true"] { color: var(--accent); font-weight: 600; }
-.tabbar .dot { position: absolute; top: 0; left: calc(50% + 6px); min-width: 17px; height: 17px; border-radius: 9px; background: var(--signal); color: var(--signal-ink); font-size: 10px; font-weight: 700; display: grid; place-items: center; padding: 0 4px; }
+.tabbar { display: block; position: fixed; left: max(12px, env(safe-area-inset-left, 0px)); right: max(12px, env(safe-area-inset-right, 0px)); bottom: var(--tb-gap); height: var(--tb-h); padding: 0 5px; z-index: 30; border-radius: 999px; background: var(--tb-bg); -webkit-backdrop-filter: blur(18px) saturate(1.8); backdrop-filter: blur(18px) saturate(1.8); border: 1px solid var(--tb-line); box-shadow: 0 10px 32px rgb(0 0 0 / .2), inset 0 1px 0 rgb(255 255 255 / .1); }
+.tb-row { display: grid; grid-template-columns: repeat(5, 1fr); height: 100%; }
+.tabbar button { position: relative; z-index: 1; display: grid; place-items: center; color: var(--ink); padding: 0; -webkit-tap-highlight-color: transparent; }
+.tabbar button svg { width: 24px; height: 24px; }
+.tabbar button > span:not(.dot) { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.tabbar .dot { position: absolute; top: 8px; left: calc(50% + 4px); min-width: 17px; height: 17px; border-radius: 9px; background: var(--signal); color: var(--signal-ink); font-size: 10px; font-weight: 700; display: grid; place-items: center; padding: 0 4px; }
+.tb-pill { position: absolute; z-index: 0; left: 0; top: calc(50% - 23px); height: 46px; border-radius: 999px; background: var(--tb-pill); pointer-events: none; will-change: transform; }
+.tabbar { z-index: 53; }
+html .drawer, html .ai, html .wpanel { padding-bottom: var(--nav-h); }
+html .mega-panel { padding-bottom: var(--nav-h); }
 }
 .mega { position: fixed; inset: 0; z-index: 45; visibility: hidden; pointer-events: none; transition: visibility 0s linear .34s; }
 .mega.on { visibility: visible; pointer-events: auto; transition: visibility 0s; }
@@ -413,6 +422,9 @@ radial-gradient(500px 260px at 10% 110%, rgba(60, 10, 0, .35), transparent 70%);
 @keyframes hsF4 { 0%, 76.7% { opacity: 0; transform: translateY(-83.33%); } 78.9%, 91% { opacity: 1; transform: none; } 96%, 100% { opacity: 0; transform: none; } }
 html { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
 html.app, html.app * { scrollbar-width: none; }
+html.app #foot, html.app .home-setup { display: none !important; }
+.p-docs { display: grid; gap: 8px; margin-top: 14px; padding: 14px 16px; border-radius: 14px; background: var(--raised); font-size: 14px; }
+.p-docs b { font-size: 13px; color: var(--muted); font-weight: 600; } .p-docs a { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
 html.app ::-webkit-scrollbar { display: none; width: 0; height: 0; }
 @media (pointer: coarse) {
 html, body { scrollbar-width: none; }
@@ -426,8 +438,7 @@ html, body { scrollbar-width: none; }
 .card:active:not(:has(:is(button, a):active)), .cat-tile:active, .wtile:active { transform: scale(.98); }
 .tools-row button:active .tr-i { transform: scale(.92); }
 .tr-i { transition: transform .14s ease; }
-.tabbar, .hdr, .stabs { backdrop-filter: none; -webkit-backdrop-filter: none; }
-.tabbar { background: var(--surface); }
+.hdr, .stabs { backdrop-filter: none; -webkit-backdrop-filter: none; }
 .hdr { background: var(--surface); }
 .stabs { background: var(--bg); }
 }
@@ -719,8 +730,6 @@ legend { font-family: var(--f-display); font-size: 15px; font-weight: 600; margi
 .modal { position: fixed; inset: 0; z-index: 55; display: grid; place-items: center; padding: 24px max(16px, env(safe-area-inset-right, 0px)) 24px max(16px, env(safe-area-inset-left, 0px)); visibility: hidden; pointer-events: none; }
 .modal.on { visibility: visible; pointer-events: auto; }
 .modal .scrim-g { z-index: 0; }
-.m-more { grid-column: 1 / -1; position: sticky; bottom: 0; height: 40px; margin-top: -40px; background: linear-gradient(transparent, var(--surface)); pointer-events: none; transition: opacity .2s; }
-.m-box.at-end .m-more { opacity: 0; }
 html:has(.modal.on) #scrim.on { opacity: 0; }
 .m-box { position: relative; z-index: 1; background: var(--surface); border-radius: var(--r-lg); width: min(1040px, 100%); max-height: calc(100vh - 48px); overflow-y: auto; display: grid; grid-template-columns: 1fr 1.1fr; box-shadow: var(--shadow); opacity: 0; transform: translateY(12px) scale(.99); transition: opacity .2s, transform .2s; }
 .modal.on .m-box { opacity: 1; transform: none; }
@@ -2587,7 +2596,7 @@ function setPanel(el, on) {
 function syncLock() {
   const on = !!drawerView || aiOpen || !!document.getElementById("addrSheet") || $("#modal").classList.contains("on") || $("#mega").classList.contains("on") || $("#authM").classList.contains("on") || $("#wid").classList.contains("on");
   document.documentElement.classList.toggle("lock", on);
-  for (const id of ["hdr", "app", "foot", "tabbar", "fab", "apiBar"]) { const el = document.getElementById(id); if (el) { if (on) el.setAttribute("inert", ""); else el.removeAttribute("inert"); } }
+  for (const id of ["hdr", "app", "foot", "fab", "apiBar"]) { const el = document.getElementById(id); if (el) { if (on) el.setAttribute("inert", ""); else el.removeAttribute("inert"); } }
 }
 function fly(fromEl) {
   if (!motionOK() || !fromEl) return;
@@ -2721,16 +2730,48 @@ function labelTables(root = document) {
   });
 }
 { let q = 0; new MutationObserver(() => { if (!q) q = requestAnimationFrame(() => { q = 0; labelTables($("#app")); }); }).observe($("#app"), { childList: true, subtree: true }); }
-function renderTabbar() {
+/* the current-tab pill: placed under the active icon after each render; on a change it travels from the last icon to the
+   new one, stretching and turning into a clear lens halfway, then settling dark again */
+let tbLastX = null, tbLastI = -1;
+function tbPill(anim = true) {
+  const bar = $("#tabbar"); if (!bar || !bar.offsetWidth) return;
+  const btns = [...bar.querySelectorAll("button")], i = btns.findIndex(b => b.getAttribute("aria-current") === "true");
+  let pill = bar.querySelector(".tb-pill"); if (!pill) { pill = document.createElement("span"); pill.className = "tb-pill"; pill.setAttribute("aria-hidden", "true"); bar.append(pill); } // a sibling of the button row: the buttons keep their order (nth-child, last-child)
+  if (i < 0) { pill.style.opacity = "0"; tbLastI = -1; return; }
+  const b = btns[i], w = Math.max(40, b.offsetWidth - 6), x = b.getBoundingClientRect().left - bar.getBoundingClientRect().left - bar.clientLeft + (b.offsetWidth - w) / 2;
+  pill.style.width = w + "px"; pill.style.opacity = "1"; pill.style.transform = `translateX(${x}px)`;
+  if (anim && tbLastX != null && tbLastI >= 0 && tbLastI !== i && animOK() && pill.animate) {
+    const dark = getComputedStyle(pill).backgroundColor, lens = getComputedStyle(document.documentElement).getPropertyValue("--tb-lens").trim() || "rgb(255 255 255 / .3)";
+    const glass = "inset 0 0 0 1px rgb(255 255 255 / .5), inset 0 10px 16px rgb(255 255 255 / .14), 0 8px 22px rgb(0 0 0 / .22)";
+    pill.animate([
+      { transform: `translateX(${tbLastX}px) scale(1, 1)`, backgroundColor: dark, boxShadow: "none" },
+      { transform: `translateX(${tbLastX + (x - tbLastX) * .5}px) scale(${1.18 + Math.min(.3, Math.abs(x - tbLastX) / 900)}, 1.16)`, backgroundColor: lens, boxShadow: glass, offset: .45 },
+      { transform: `translateX(${x}px) scale(1.04, 1.02)`, backgroundColor: lens, boxShadow: glass, offset: .8 },
+      { transform: `translateX(${x}px) scale(1, 1)`, backgroundColor: dark, boxShadow: "none" }
+    ], { duration: 560, easing: "cubic-bezier(.3, .7, .2, 1)" });
+  }
+  tbLastX = x; tbLastI = i;
+}
+window.addEventListener("resize", () => tbPill(false));
+$("#tabbar").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  const act = b.dataset.act, toDrawer = act === "cart" || act === "profile" || act === "login" || !!b.dataset.stab;
+  if (drawerView && !toDrawer) closeDrawer();
+  if (aiOpen) closeAI();
+  if (typeof widOpen !== "undefined" && widOpen && act !== "widgets") closeWidgets();
+  if (act !== "mega") closeMega();
+}, true);
+function renderTabbar() { renderTabbar0(); tbPill(); }
+function renderTabbar0() {
   if (sellerMode()) {
     const cur = drawerView ? "profile" : route.view === "seller" ? (sellerTab || "orders") : "";
     const items = [["orders", "clock", L("Заказы", "Buyurtmalar", "Orders")], ["goods", "grid", L("Товары", "Mahsulotlar", "Goods")], ["store", "store", L("Магазин", "Do‘kon", "Store")], ["money", "wallet", L("Финансы", "Moliya", "Finance")], ["profile", "user", L("Профиль", "Profil", "Profile")]];
-    $("#tabbar").innerHTML = items.map(([id, icn, lbl]) => `<button type="button" ${id === "profile" ? `data-act="${user ? "profile" : "login"}"` : `data-stab="${id}"`} aria-current="${cur === id}">${ui(icn, 22)}<span>${lbl}</span></button>`).join("");
+    $("#tabbar").innerHTML = `<div class="tb-row">${items.map(([id, icn, lbl]) => `<button type="button" ${id === "profile" ? `data-act="${user ? "profile" : "login"}"` : `data-stab="${id}"`} aria-current="${cur === id}">${ui(icn, 22)}<span>${lbl}</span></button>`).join("")}</div>`;
     return;
   }
-  const cur = (typeof widOpen !== "undefined" && widOpen) ? "tools" : drawerView === "profile" || drawerView === "orders" ? "profile" : drawerView ? "cart" : route.view === "catalog" ? "catalog" : "home";
+  const cur = (typeof widOpen !== "undefined" && widOpen) ? "tools" : drawerView === "profile" || drawerView === "orders" ? "profile" : drawerView ? "cart" : $("#mega")?.classList.contains("on") || route.view === "catalog" ? "catalog" : "home";
   const items = [["home", "home", L("Главная", "Asosiy"), "go"], ["catalog", "grid", L("Каталог", "Katalog"), "mega"], ["tools", "calc", L("Инструменты", "Asboblar", "Tools"), "widgets"], ["cart", "cart", L("Корзина", "Savat"), "cart"], ["profile", "user", L("Профиль", "Profil"), "profile"]];
-  $("#tabbar").innerHTML = items.map(([id, icn, lbl, act]) => `<button type="button" ${act === "go" ? 'data-go="home"' : `data-act="${act}"`} aria-current="${cur === id}">${ui(icn, 22)}<span>${lbl}</span>${id === "cart" ? `<span class="dot" id="tabCart" ${cartCount() ? "" : "hidden"}>${cartCount()}</span>` : ""}</button>`).join("");
+  $("#tabbar").innerHTML = `<div class="tb-row">${items.map(([id, icn, lbl, act]) => `<button type="button" ${act === "go" ? 'data-go="home"' : `data-act="${act}"`} aria-current="${cur === id}">${ui(icn, 22)}<span>${lbl}</span>${id === "cart" ? `<span class="dot" id="tabCart" ${cartCount() ? "" : "hidden"}>${cartCount()}</span>` : ""}</button>`).join("")}</div>`;
 }
 function counts() {
   const n = cartCount();
@@ -2748,9 +2789,9 @@ function openMega() {
     <div class="mega-cols">${CATS.map((c, i) => `<div class="mega-cat" style="--h:${c.h};--i:${Math.min(i, 12)}">
       <button type="button" data-go="cat-${c.id}"><span class="ico ic">${ic(c.icon)}</span><span>${L(c.ru, c.uz)} <small style="color:var(--faint);font-weight:400">${cnt(c.id)}</small></span></button>
       <ul>${c.subs.map(s => `<li><button type="button" data-go="cat-${c.id}" data-sub="${s[0]}">${L(s[1], s[2])}</button></li>`).join("")}</ul></div>`).join("")}</div></div>`;
-  setPanel($("#mega"), true); syncLock();
+  setPanel($("#mega"), true); syncLock(); renderTabbar();
 }
-function closeMega() { setPanel($("#mega"), false); syncLock(); }
+function closeMega() { const was = $("#mega").classList.contains("on"); setPanel($("#mega"), false); syncLock(); if (was) renderTabbar(); }
 
 /* ================= Product card ================= */
 /* What this person ordered before: one entry per product, latest first, with the quantity and the store of the last order.
@@ -3309,14 +3350,12 @@ function openProduct(id) {
       <div><h3 class="h-m" style="margin-bottom:10px">${L("Цены в магазинах", "Do‘konlardagi narxlar")}</h3>
       <div class="offers">${offers.map((o, i) => { const s = STORE[o.store], st = stockOf(p, o.store); return `<div class="offer ${i === 0 && offers.length > 1 ? "best" : ""}"><div><button type="button" class="slink" data-go="store-${s.id}"><b>${esc(s.name)}</b>${isVerified(s) ? ` <span class="vmini" title="${L("Проверенный магазин", "Tekshirilgan do‘kon")}">${ui("shield", 12)}</span>` : ""}</button><small>${dName(s.d)} · ${openState(s).text}</small><small>${ratingHTML(s)}</small>${i === 0 && offers.length > 1 ? `<small style="color:var(--accent);font-weight:600">${L("Лучшая цена", "Eng yaxshi narx")}</small>` : ""}</div><div style="display:grid;justify-items:end;gap:4px"><span class="pr">${fmt(o.price)}</span>${stockTxt(st)}</div><button class="btn btn-primary" type="button" data-addo="${p.id}|${o.store}">${L("В корзину", "Savatga")}</button>${freshHTML(o.upd, "offer-fresh")}</div>`; }).join("")}</div></div>
       ${stockWatchHTML(p)}
-      ${svc && !stage0() ? `<label class="infobox" for="svcChk">${ui("wrench", 20)}<span><b>${L("Установка мастером", "Usta o‘rnatishi")}</b><small>${fmt(svc)} ${L("за", "har")} ${unitAcc(p.unit)} · ${L("мастер приедет после доставки", "usta yetkazilgandan keyin keladi")}</small></span><span class="check"><input type="checkbox" id="svcChk" data-svc="${p.id}" ${svcOn ? "checked" : ""}></span></label>` : ""}
-      ${SUB_SPEC[p.sub] ? `<button class="infobox lnkbox" type="button" data-mfind="${SUB_SPEC[p.sub]}">${ui("wrench", 20)}<span><b>${L("Найти мастера", "Usta topish")}: ${esc(mSpecName(SUB_SPEC[p.sub]).toLowerCase())}</b><small>${L("С отзывами покупателей, в вашем районе", "Xaridorlar sharhlari bilan, tumaningizda")}</small></span>${ui("chev", 16)}</button>` : ""}
       <div class="infobox">${ui(t.icon, 20)}<span><b>${storeDelivers() ? L("Доставка магазином в", "Do‘kon yetkazadi:", "Store delivery to") : L("Доставка Яндекс в", "Yandex yetkazish:")} ${dName(district)}</b><small>${storeDelivers() ? `${tName(t)} · ${L("цену доставки назовёт магазин", "yetkazish narxini do‘kon aytadi", "the store names the delivery price")}` : `${tName(t)} · ${fromP(round(t.base + t.perKm * dist))} · ${etaStr(t)}`}</small></span></div>
       ${discOn() && TIER_CATS.includes(p.cat) ? `<div class="infobox">${ui("store", 20)}<span style="flex:1"><b>${L("Оптом дешевле — для мастеров и прорабов", "Ulgurji arzonroq — ustalar va prorablar uchun")}</b><span class="tier"><span class="on">${L("1–9", "1–9")}<b>${fmt(mp)}</b></span><span>${L("от 10", "10 dan")}<b>${fmt(round(mp * .97))}</b></span><span>${L("от 50", "50 dan")}<b>${fmt(round(mp * .94))}</b></span></span></span></div>` : ""}
       <div class="m-actions"><button class="btn btn-ai" type="button" data-askp="${p.id}">${ui("spark", 18)} ${L("Спросить AI", "AI dan so‘rash")}</button><button class="btn btn-line" type="button" data-fav="${p.id}" aria-pressed="${fav}">${ui("heart", 18)} ${fav ? L("В избранном", "Saralanganlarda") : L("В избранное", "Saralanganlarga")}</button><button class="btn btn-line" type="button" data-cmp="${p.id}">${ui("filter", 18)} ${compare.includes(p.id) ? L("В сравнении", "Solishtirishda") : L("Сравнить", "Solishtirish")}</button><button class="btn btn-line" type="button" data-watch="${p.id}" aria-pressed="${watch.includes(p.id)}">${ui("bell", 18)} ${watch.includes(p.id) ? L("Слежу за ценой", "Narx kuzatilmoqda") : L("Следить за ценой", "Narxni kuzatish")}</button></div>
       ${rel.length ? `<div><h3 class="h-m" style="margin-bottom:10px">${L("С этим покупают", "Bu bilan birga olishadi")}</h3><div class="related">${rel.map(r => `<button class="rel" type="button" data-open="${r.id}">${mini(r)}<span>${esc(pName(r))}</span><b>${fmt(minPrice(r))}</b></button>`).join("")}</div></div>` : ""}
       <div class="prv-box" id="pRev" data-pid="${p.id}">${prodReviewsHTML(p)}</div>
-    </div><div class="m-more" aria-hidden="true"></div>`;
+    </div>`;
   setPanel($("#modal"), true); syncLock();
   const mb = $("#mBox"); mb.dataset.group = p.group || ""; mb.scrollTop = reopen && p.group && prevGroup === p.group ? prevTop : 0; requestAnimationFrame(moreHint); // a variant switch stays where the buyer was
   const ni = mb.querySelector(".m-img img.photo");
@@ -3785,6 +3824,7 @@ function dProfile() {
       <button class="order-row" type="button" data-act="ai"><b>Usta AI</b>${ui("spark", 18)}<small>${L("Подбор материалов и советы", "Material tanlash va maslahatlar")}</small></button>
       <button class="order-row" type="button" data-act="home-setup"><b>${L("Настроить главную", "Bosh sahifani sozlash", "Customize home")}</b>${ui("grid", 18)}<small>${L("Какие блоки показывать и в каком порядке", "Qaysi bloklar va qanday tartibda", "Which blocks to show and in what order")}</small></button>
       ${user && user.store_id && myStore ? `<button class="order-row" type="button" data-go="seller"><b>${esc(myStore.name)}</b>${ui("store", 18)}<small>${L("Кабинет продавца", "Sotuvchi kabineti")} · ${(ST_STATUS()[myStore.status] || ST_STATUS().pending)[0]}</small></button>` : user?.staff ? `<button class="order-row" type="button" data-go="admin"><b>${L("Панель Quriliş Go", "Quriliş Go paneli", "Quriliş Go panel")}</b>${ui("store", 18)}<small>${user.owner ? L("Магазины, заказы, финансы, сотрудники", "Do‘konlar, buyurtmalar, moliya, xodimlar", "Stores, orders, finance, staff") : L("Магазины, заказы, жалобы", "Do‘konlar, buyurtmalar, shikoyatlar", "Stores, orders, complaints")}</small></button>` : `<button class="order-row" type="button" data-act="store-reg"><b>${L("Добавить свой магазин", "Do‘konimni qo‘shish")}</b>${ui("store", 18)}<small>${stage0() ? L("Продавайте на Quriliş Go: витрина, заказы онлайн, 0% комиссии", "Quriliş Go’da soting: vitrina, onlayn buyurtmalar, 0% komissiya", "Sell on Quriliş Go: a storefront, online orders, 0% commission") : L("Продавайте на Quriliş Go: витрина, заказы, доставка Яндекс", "Quriliş Go’da soting: vitrina, buyurtmalar, Yandex yetkazish")}</small></button>`}${API ? "" : `<button class="order-row" type="button" data-go="seller"><b>${L("Кабинет продавца", "Sotuvchi kabineti")}</b>${ui("chev", 18)}<small>${L("Для магазинов-партнёров", "Hamkor do‘konlar uchun")}</small></button>`}
+      ${APP_MODE ? `<div class="p-docs"><b>${L("Документы", "Hujjatlar", "Documents")}</b><a href="${legalUrl("privacy")}" target="_blank" rel="noopener">${L("Политика конфиденциальности", "Maxfiylik siyosati", "Privacy policy")}</a><a href="${legalUrl("terms")}" target="_blank" rel="noopener">${L("Пользовательское соглашение", "Foydalanuvchi kelishuvi", "Terms of use")}</a><a href="${legalUrl("delete-account")}" target="_blank" rel="noopener">${L("Удаление аккаунта", "Akkauntni o‘chirish", "Delete your account")}</a></div>` : ""}
     </div>`;
   $("#dFoot").innerHTML = `${API && user ? `<div style="display:flex;gap:14px;flex-wrap:wrap"><button class="lnk" type="button" data-act="logout-all" style="font-size:12px;color:var(--muted)">${L("Выйти на всех устройствах", "Barcha qurilmalardan chiqish")}</button><button class="lnk" type="button" data-act="del-account" style="font-size:12px;color:var(--muted)">${L("Удалить аккаунт", "Akkauntni o‘chirish", "Delete account")}</button></div>` : ""}<span style="font-size:12px;color:var(--muted)">${(API ? L("Аккаунт, заказы и магазин хранятся на сервере Quriliş Go.", "Akkaunt, buyurtmalar va do‘kon Quriliş Go serverida saqlanadi.") : L("Данные этого прототипа хранятся только в вашем браузере.", "Prototip ma’lumotlari faqat brauzeringizda saqlanadi."))}</span>`;
   $("#pDist").addEventListener("change", e => { setDistrict(e.target.value); renderHeader(); });
