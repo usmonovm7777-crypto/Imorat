@@ -5703,7 +5703,7 @@ function statementCSV() {
   S.other.forEach(x => rows.push([d(x.created_at), "other", "", "", "", "", -x.amount, x.note || ""]));
   rows.push(["", "total", "", S.totals.sales, -S.totals.commission, -S.totals.acquiring, S.totals.due, "amount due for " + S.month + " (not profit)"]);
   const blob = new Blob(["\ufeff" + rows.map(r => r.map(q).join(";")).join("\r\n")], { type: "text/csv;charset=utf-8" }), a = document.createElement("a");
-  a.href = URL.createObjectURL(blob); a.download = `imorat-go-${S.store.id}-${S.month}.csv`; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+  a.href = URL.createObjectURL(blob); a.download = `qurilish-go-${S.store.id}-${S.month}.csv`; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
 }
 document.addEventListener("change", e => { if (e.target.id === "stmtMonth") loadStatement(e.target.value); });
 document.addEventListener("click", e => {
@@ -6393,11 +6393,11 @@ async function dsShare() {
     const e = dsEstimate(DS); x.fillStyle = "#131b1a"; x.font = "600 30px system-ui, sans-serif";
     x.fillText(`Quriliş go · ${ROOMS().find(r => r[0] === DS.type)?.[1] || ""} ${String(DS.W).replace(".", DEC)}×${String(DS.L).replace(".", DEC)} ${L("м", "m")}`, 30, h + 40);
     x.font = "26px system-ui, sans-serif"; x.fillText(`${L("Смета", "Smeta")}: ${fmt(e.total)}`, 30, h + 76);
-    const blob = await new Promise(r => c.toBlob(r, "image/png")), file = new File([blob], "imorat-room.png", { type: "image/png" });
+    const blob = await new Promise(r => c.toBlob(r, "image/png")), file = new File([blob], "qurilish-go-room.png", { type: "image/png" });
     const dl = window.claude && typeof window.claude.use === "function" ? await window.claude.use("downloads").catch(() => null) : null;
-    if (dl) { try { await dl.save({ filename: "imorat-room.png", data: blob }); toast(L("Картинка комнаты сохранена", "Xona rasmi saqlandi")); } catch (er) { if (er?.code !== "declined") toast(L("Не удалось сохранить картинку", "Rasmni saqlab bo‘lmadi")); } return; }
+    if (dl) { try { await dl.save({ filename: "qurilish-go-room.png", data: blob }); toast(L("Картинка комнаты сохранена", "Xona rasmi saqlandi")); } catch (er) { if (er?.code !== "declined") toast(L("Не удалось сохранить картинку", "Rasmni saqlab bo‘lmadi")); } return; }
     if (navigator.canShare?.({ files: [file] })) await navigator.share({ files: [file], title: "Quriliş Go", text: L("Моя комната в AI-дизайнере Quriliş Go", "Quriliş Go AI dizaynerida xonam") });
-    else { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "imorat-room.png"; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); toast(L("Картинка комнаты сохранена", "Xona rasmi saqlandi")); }
+    else { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "qurilish-go-room.png"; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); toast(L("Картинка комнаты сохранена", "Xona rasmi saqlandi")); }
   } catch (er) { if (er?.name !== "AbortError") toast(L("Не удалось сохранить картинку", "Rasmni saqlab bo‘lmadi")); }
 }
 /* Saved rooms */
@@ -7578,7 +7578,7 @@ function flatPrint() {
   const rooms = flatRooms(), e = flatEstimate(rooms);
   let el = $("#printArea"); if (!el) { el = document.createElement("div"); el.id = "printArea"; document.body.appendChild(el); }
   const tbl = (title, ls, sum) => `<h2>${title}</h2><table><thead><tr><th>${L("Наименование", "Nomi")}</th><th>${L("Кол-во", "Soni")}</th><th>${L("Цена", "Narx")}</th><th>${L("Сумма", "Summa")}</th><th>${L("Комнаты", "Xonalar")}</th></tr></thead><tbody>${ls.map(l => `<tr><td>${esc(pName(l.p))}</td><td>${l.q} ${esc(unitName(l.p.unit))}</td><td>${fmt(minPrice(l.p))}</td><td>${fmt(minPrice(l.p) * l.q)}</td><td>${esc(l.rooms.join(", "))}</td></tr>`).join("")}</tbody><tfoot><tr><td colspan="3">${L("Итого", "Jami")}</td><td colspan="2">${fmt(sum)}</td></tr></tfoot></table>`;
-  el.innerHTML = `<h1>${L("Смета квартиры", "Kvartira smetasi")} · imorat</h1><p>${new Date().toLocaleDateString(LOCALE)} · ${rooms.map(r => esc(r.name)).join(", ")} · ${fmtN(e.area)} ${L("м²", "m²")}</p>
+  el.innerHTML = `<h1>${L("Смета квартиры", "Kvartira smetasi")} · Quriliş Go</h1><p>${new Date().toLocaleDateString(LOCALE)} · ${rooms.map(r => esc(r.name)).join(", ")} · ${fmtN(e.area)} ${L("м²", "m²")}</p>
     ${tbl(L("Материалы", "Materiallar"), e.mats, e.matSum)}${tbl(L("Мебель и техника", "Mebel va texnika"), e.furn, e.furnSum)}<h2>${L("Итого по квартире", "Kvartira bo‘yicha jami")}: ${fmt(e.total)}</h2>
     <p class="pa-note">${L("Цены — минимальные в магазинах Quriliş Go на дату сметы. Доставка и работа мастеров не включены.", "Narxlar — smeta sanasidagi Quriliş Go do‘konlaridagi eng past narxlar. Yetkazish va usta ishi kiritilmagan.")}</p>`;
   try { window.print(); } catch (er) { toast(L("Печать здесь недоступна — сохраните смету картинкой", "Bu yerda chop etib bo‘lmaydi — smetani rasm qilib saqlang")); }
