@@ -594,6 +594,12 @@ footer { padding-block: 36px 40px; color: var(--muted); font-size: 13px; border-
 .scrim-g.on { opacity: 1; pointer-events: auto; }
 .drawer, .ai { position: fixed; top: 0; right: 0; bottom: 0; width: min(500px, 100%); background: var(--surface); z-index: 50; box-shadow: var(--shadow); transform: translateX(105%); transition: transform .28s cubic-bezier(.2,.8,.2,1); display: flex; flex-direction: column; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); padding-right: env(safe-area-inset-right, 0px); visibility: hidden; }
 .drawer.on, .ai.on { transform: none; visibility: visible; }
+/* closing slides the panel out (it hides only after the slide); a swipe drags it along with the finger and lets it go in that direction */
+html .drawer, html .ai, html .wpanel { transition: transform .3s cubic-bezier(.2, .8, .2, 1), visibility 0s linear .3s; }
+html .drawer.on, html .ai.on, html .wpanel.on { transition: transform .3s cubic-bezier(.2, .8, .2, 1), visibility 0s; }
+html .drawer.dragging, html .ai.dragging, html .wpanel.dragging { transition: none !important; }
+html .drawer.swiped:not(.on), html .ai.swiped:not(.on), html .wpanel.swiped:not(.on) { transform: translateX(var(--out)); }
+.scrim-g.dragging { transition: none; }
 .ai { z-index: 52; width: min(460px, 100%); }
 .d-head { display: flex; align-items: center; gap: 10px; padding: 14px 20px; border-bottom: 1px solid var(--line); }
 .d-head h2 { flex: 1; margin: 0; font-family: var(--f-display); font-weight: 600; font-size: 19px; letter-spacing: -.02em; }
@@ -8823,6 +8829,29 @@ setInterval(() => {
 
 document.addEventListener("error", e => { const im = e.target; if (im && im.tagName === "IMG" && im.classList.contains("photo") && im.dataset.pid && PROD[im.dataset.pid]) im.outerHTML = artSvg(PROD[im.dataset.pid]); }, true);
 route = parseHash();
+/* swipe a side panel away (profile, cart, orders, tools, Usta AI): it follows the finger sideways; past a quarter of its width or with a
+   quick flick it closes in that direction, otherwise it springs back. Rows that scroll sideways, sliders, maps and 3D views keep their own swipes. */
+function swipeClose(el, close) {
+  let x0 = 0, y0 = 0, dx = 0, t0 = 0, axis = null, live = false;
+  const scrim = () => $("#scrim");
+  const ownSwipe = t => { for (let n = t; n && n !== el; n = n.parentElement) { if (n.matches?.("input[type=range], canvas, .livemap, .smap, .glb-box")) return true; const cs = getComputedStyle(n); if (/(auto|scroll)/.test(cs.overflowX) && n.scrollWidth > n.clientWidth + 2) return true; } return false; };
+  el.addEventListener("touchstart", e => { if (e.touches.length !== 1 || !el.classList.contains("on") || mqReduce.matches) return; const t = e.touches[0]; x0 = t.clientX; y0 = t.clientY; dx = 0; t0 = Date.now(); axis = ownSwipe(e.target) ? "y" : null; live = true; }, { passive: true });
+  el.addEventListener("touchmove", e => {
+    if (!live) return; const t = e.touches[0], mx = t.clientX - x0, my = t.clientY - y0;
+    if (!axis) { if (Math.abs(mx) < 10 && Math.abs(my) < 10) return; axis = Math.abs(mx) > Math.abs(my) * 1.3 ? "x" : "y"; if (axis === "x") { el.classList.add("dragging"); scrim()?.classList.add("dragging"); } }
+    if (axis !== "x") return;
+    dx = mx; el.style.transform = `translateX(${dx}px)`; const sc = scrim(); if (sc) sc.style.opacity = String(Math.max(0, 1 - Math.abs(dx) / el.offsetWidth));
+  }, { passive: true });
+  const end = () => {
+    if (!live) return; live = false; if (axis !== "x") return;
+    el.classList.remove("dragging"); const sc = scrim(); sc?.classList.remove("dragging"); if (sc) sc.style.opacity = "";
+    const go = Math.abs(dx) > el.offsetWidth * 0.25 || (Math.abs(dx) > 40 && Date.now() - t0 < 260);
+    if (go) { el.style.setProperty("--out", (dx > 0 ? 105 : -105) + "%"); el.classList.add("swiped"); el.style.transform = ""; close(); setTimeout(() => { el.classList.remove("swiped"); el.style.removeProperty("--out"); }, 360); }
+    else el.style.transform = "";
+  };
+  el.addEventListener("touchend", end); el.addEventListener("touchcancel", end);
+}
+swipeClose($("#drawer"), () => closeDrawer()); swipeClose($("#wid"), () => closeWidgets()); swipeClose($("#ai"), () => closeAI());
 showIntro();
 renderAll();
 renderCmpBar();
