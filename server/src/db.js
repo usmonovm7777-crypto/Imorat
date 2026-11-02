@@ -138,6 +138,8 @@ function addNewProducts(db, ref, demo = true) {
   // package sizes added to catalog.json later reach catalog products that have none yet (a seller's own figures are kept)
   const noDims = db.all("SELECT id FROM products WHERE dims IS NULL AND store_id IS NULL").map(r => r.id), withDims = ref.products.filter(p => p.dims && noDims.includes(p.id));
   if (withDims.length) db.tx(() => { for (const p of withDims) db.run("UPDATE products SET dims=? WHERE id=?", JSON.stringify(p.dims), p.id); db.setMeta("catalog_rev", now); });
+  // sample stores nobody has claimed follow spelling fixes of their names in catalog.json; a claimed store keeps its seller's name
+  if (demo) for (const s of ref.stores) db.run("UPDATE stores SET name=? WHERE id=? AND owner_id IS NULL AND name<>?", s.name, s.id, s.name);
   if (!fresh.length) return;
   db.tx(() => {
     for (const p of fresh) {
