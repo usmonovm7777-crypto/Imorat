@@ -547,7 +547,18 @@ padding: clamp(18px, 2.2vw, 28px) clamp(24px, 3.6vw, 52px); gap: 24px; border-ra
 .card h3 button { text-align: left; }
 .card h3 button:hover { color: var(--accent); }
 .unitline { font-size: 12px; color: var(--faint); }
-.buy { display: flex; align-items: end; justify-content: space-between; gap: 8px; margin-top: auto; padding-top: 10px; }
+.buy { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 8px; margin-top: auto; padding-top: 10px; }
+.buy > div:first-child { min-width: 0; }
+.buy .price { overflow: hidden; text-overflow: ellipsis; }
+.buy .price .from, .buy .price .cur { font-size: .74em; font-weight: 600; letter-spacing: 0; }
+.buy .price .from { color: var(--muted); }
+@container (max-width: 200px) {
+.buy { grid-template-areas: "price price" "sub add"; row-gap: 2px; align-items: center; }
+.buy > div:first-child { display: contents; }
+.buy .price { grid-area: price; }
+.buy .sub { grid-area: sub; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.buy .add { grid-area: add; }
+}
 .buy .price { font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -.01em; white-space: nowrap; }
 .buy > div:first-child { min-width: 0; }
 .card { container-type: inline-size; }
@@ -727,6 +738,7 @@ legend { font-family: var(--f-display); font-size: 15px; font-weight: 600; margi
 .order-row { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; text-align: left; padding: 12px; border: 1px solid var(--line); border-radius: 12px; width: 100%; align-items: center; }
 .order-row:hover { border-color: var(--line-strong); }
 .order-row small { color: var(--muted); }
+.order-row > .pill, .order-row > b.num { justify-self: end; }
 .modal { position: fixed; inset: 0; z-index: 55; display: grid; place-items: center; padding: 24px max(16px, env(safe-area-inset-right, 0px)) 24px max(16px, env(safe-area-inset-left, 0px)); visibility: hidden; pointer-events: none; }
 .modal.on { visibility: visible; pointer-events: auto; }
 .modal .scrim-g { z-index: 0; }
@@ -972,7 +984,6 @@ input, select, textarea { font-size: 16px !important; }
 .card .cb { padding: 10px 10px 12px; }
 .card h3 { font-size: 13.5px; }
 .buy .price { font-size: 15px; }
-.buy { flex-wrap: wrap; }
 .add { min-width: 38px; height: 38px; border-radius: 11px; }
 .badge.svc { display: none; }
 .fav { width: 32px; height: 32px; }
@@ -1578,7 +1589,8 @@ select { max-width: 100%; }
 .wtile.dk { background: var(--hero-bg); color: var(--hero-fg); border-color: transparent; }
 .wtile.dk .wi { background: color-mix(in srgb, var(--hero-fg) 12%, transparent); color: var(--hero-acc); }
 .wtile.dk small { color: color-mix(in srgb, var(--hero-fg) 72%, transparent); }
-.wtile .cnt { position: absolute; right: 12px; top: 12px; min-width: 22px; height: 22px; border-radius: 11px; background: var(--signal); color: var(--signal-ink); font-size: 12px; font-weight: 700; display: grid; place-items: center; padding: 0 6px; }
+.wtile .cnt { position: absolute; right: 12px; top: 12px; min-width: 22px; height: 22px; border-radius: 11px; background: var(--raised); color: var(--muted); border: 1px solid var(--line); font-size: 12px; font-weight: 700; display: grid; place-items: center; padding: 0 6px; }
+.wtile .cnt.alert { background: var(--signal); color: var(--signal-ink); border-color: transparent; }
 .wsec { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 600; margin-top: 4px; }
 .ctabs { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
 .ctabs::-webkit-scrollbar { display: none; }
@@ -2685,7 +2697,7 @@ function renderHeader() {
   const quick = ["build", "tools", "plumb", "heat", "elec", "light", "paint", "tile", "floor", "doors", "kitchen", "furn", "garden"];
   $("#hdr").innerHTML = `
   <div class="wrap hdr-row">
-    <button class="menu-btn" type="button" data-act="widgets" aria-label="${L("Инструменты: калькуляторы, Usta AI, дизайнер, доставка", "Asboblar: kalkulyatorlar, Usta AI, dizayner, yetkazish", "Tools: calculators, Usta AI, designer, delivery")}" title="${L("Инструменты", "Asboblar", "Tools")}">${ui("menu", 22)}<span class="dot" aria-hidden="true"></span></button>
+    <button class="menu-btn" type="button" data-act="widgets" aria-label="${L("Инструменты: калькуляторы, Usta AI, дизайнер, доставка", "Asboblar: kalkulyatorlar, Usta AI, dizayner, yetkazish", "Tools: calculators, Usta AI, designer, delivery")}" title="${L("Инструменты", "Asboblar", "Tools")}">${ui("menu", 22)}<span class="dot" aria-hidden="true" hidden></span></button>
     <button class="logo" type="button" data-go="home" aria-label="Quriliş Go">${markSVG()}<b>Quriliş<em>go</em></b></button>${sellerMode() ? `<span class="seller-chip" title="${esc(myStore.name)}">${ui("store", 14)}<span>${esc(myStore.name)}</span></span>` : ""}${API ? "" : `<span class="demo-badge" title="${L("Демо-режим: данные хранятся только в этом браузере, заказы и оплата не настоящие", "Demo rejim: ma’lumotlar faqat shu brauzerda, buyurtma va to‘lov haqiqiy emas", "Demo mode: data stays in this browser, orders and payments are not real")}">${L("демо", "demo", "demo")}</span>`}
     <button class="cat-btn" type="button" data-act="mega">${ui("grid", 18)}${L("Каталог", "Katalog")}</button>
     <div class="search" role="search">${ui("search", 18)}<input id="q" type="search" enterkeyhint="search" role="combobox" aria-controls="sugg" aria-expanded="false" aria-autocomplete="list" value="${esc(f.q)}" placeholder="${L("Цемент, смеситель, ламинат…", "Sement, aralashtirgich, laminat…")}" aria-label="${L("Поиск по каталогу", "Katalog bo‘yicha qidiruv")}" autocomplete="off"><div class="sugg" id="sugg" role="listbox" aria-label="${L("Подсказки поиска", "Qidiruv takliflari")}" hidden></div><span class="s-tools"><button class="s-ic" type="button" data-act="voice" ${SRec ? "" : "hidden"} aria-label="${L("Поиск голосом", "Ovozli qidiruv")}" title="${L("Поиск голосом", "Ovozli qidiruv")}">${ui("mic", 18)}</button><button class="s-ic" type="button" data-act="photo-search" ${photoAIon() ? "" : "hidden"} aria-label="${L("Поиск по фото", "Rasm bo‘yicha qidiruv")}" title="${L("Поиск по фото", "Rasm bo‘yicha qidiruv")}">${ui("camera", 18)}</button><button class="ask" type="button" data-act="ask-search">${ui("spark", 14)}<span class="t">${L("Спросить AI", "AI dan so‘rash")}</span></button></span><input type="file" id="psFile" accept="image/*" hidden></div>
@@ -2709,6 +2721,7 @@ function renderHeader() {
   $("#distSel").addEventListener("change", e => setDistrict(e.target.value));
   $("#fab").innerHTML = `${ui("spark", 22)}<span class="lbl">Usta AI</span><span class="pulse"></span>`;
   $("#fab").setAttribute("aria-label", L("Открыть AI-помощника", "AI yordamchini ochish"));
+  syncOrdDot();
 }
 function setDistrict(d) { district = d; LS.set("imorat.district", d); form.district = d; LS.set("imorat.form2", form); if (route.view === "home") updateEstimator(); toast(L("Доставка в: ", "Yetkazish: ") + dName(d)); }
 function renderFooter() {
@@ -2817,7 +2830,8 @@ function boughtRailHTML() {
 }
 function card(p) {
   const n = p.offers.length, fav = favs.includes(p.id), q = qtyOf(p.id), mp = minPrice(p);
-  const from = n > 1 ? L("от " + fmt(mp), fmt(mp) + "dan", "from " + fmt(mp)) : fmt(mp);
+  // «от» and the currency in small type: the number stays big and the price fits next to «+» even on a narrow phone card
+  const num = fmtN(mp), from = n > 1 ? L(`<span class="from">от</span> ${num} <span class="cur">сум</span>`, `${num} <span class="cur">so‘mdan</span>`, `<span class="from">from</span> ${num} <span class="cur">UZS</span>`) : `${num} <span class="cur">${L("сум", "so‘m", "UZS")}</span>`;
   return `<article class="card">
     <button class="thumb studio" type="button" data-open="${p.id}" style="--h:${hueOf(p)}" aria-label="${esc(pName(p))}">${art(p)}
       <span class="badges">${p.hit ? `<span class="badge">${L("Хит", "Xit")}</span>` : ""}${p.isNew ? `<span class="badge new">${L("Новинка", "Yangi")}</span>` : ""}</span></button>
@@ -3696,6 +3710,7 @@ const STEP_MS = 3500;
 function stepOf(o, i, len) { if (o.api) { const sh = o.ships[i]; return sh ? Math.min(len - 1, Math.max(0, sh.step)) : 0; } if (o.d.when !== "asap" && o.d.mode !== "pickup") return 1; return Math.max(0, Math.min(len - 1, Math.floor((Date.now() - o.t - i * 1200) / STEP_MS))); }
 function dTrack() {
   const o = orders.find(x => x.num === drawerOrder); if (!o) return dOrders();
+  markOrdersSeen([o.num]);
   $("#dTitle").textContent = L("Заказ ", "Buyurtma ") + o.num;
   const hm = ms => new Date(ms).toLocaleTimeString(LOCALE, { hour: "2-digit", minute: "2-digit", second: "2-digit" });
   const sched = o.d.when === "slot" ? L("Доставка завтра, 10:00–14:00", "Yetkazish ertaga, 10:00–14:00") : o.d.when === "vip" ? `${L("Точный час", "Aniq soat", "Exact hour")} · ${L("завтра", "ertaga")} ${o.d.hour}:00–${String(+o.d.hour + 1).padStart(2, "0")}:00` : "";
@@ -3732,13 +3747,28 @@ function cancelAsk(num) {
     <div class="cancel-a"><button class="btn btn-line" type="button" data-act="order-cancel-no">${L("Не отменять", "Bekor qilmaslik", "Keep the order")}</button><button class="btn btn-danger" type="button" data-act="order-cancel-go">${L("Отменить заказ", "Buyurtmani bekor qilish", "Cancel the order")}</button></div></form>`);
   $("#cancelForm").scrollIntoView({ block: "nearest", behavior: animOK() ? "smooth" : "auto" });
 }
+/* Order updates the person has not looked at: an order is "new" when its status changed since it was last seen. Opening
+   «Мои заказы» or the order itself marks it seen. The red dot on the tools button and the badge on «Мои заказы» show only these;
+   counts of favourites, comparisons and the like are plain grey numbers, not notifications. */
+let ordSeen = LS.get("imorat.ordSeen", null);
+const ordKey = o => { try { return orderStatus(o)[0]; } catch { return ""; } };
+function ordUnseen() {
+  if (!ordSeen) { ordSeen = Object.fromEntries(orders.map(o => [o.num, ordKey(o)])); LS.set("imorat.ordSeen", ordSeen); return 0; } // the first run: what is there now counts as seen
+  return orders.filter(o => o.num in ordSeen ? ordSeen[o.num] !== ordKey(o) : false).length;
+}
+function markOrdersSeen(nums) {
+  ordSeen ||= {}; for (const o of orders) if (!nums || nums.includes(o.num)) ordSeen[o.num] = ordKey(o);
+  LS.set("imorat.ordSeen", ordSeen); syncOrdDot();
+}
+function syncOrdDot() { try { const n = ordUnseen(), d = document.querySelector(".menu-btn .dot"); if (d) d.hidden = !n; } catch (e) {} }
+setInterval(syncOrdDot, 15000);
 function orderStatus(o) {
   if (o.api && o.status === "cancelled") return [L("Отменён", "Bekor qilindi"), true];
   const s = o.ships[0], t = TARIFFS.find(x => x.id === s.tariff), steps = STEPS_FOR(o, t), cur = stepOf(o, 0, steps.length);
   return [steps[cur], cur === steps.length - 1];
 }
 function dOrders() {
-  fetchOrders();
+  fetchOrders(); markOrdersSeen();
   $("#dTitle").textContent = L("Мои заказы", "Buyurtmalarim");
   $("#dBody").innerHTML = (orders.some(o => o.api && o.status === "active") ? notifyNudgeHTML("buyer") : "") + (orders.length ? orders.map(o => { const [st, done] = orderStatus(o); return `<button class="order-row" type="button" data-order="${o.num}"><b>${o.num}</b><b class="num">${fmt(o.total + (o.d?.delivery_by === "store" && o.del_store ? o.del_store : 0))}</b><small>${new Date(o.t).toLocaleString(LOCALE, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })} · ${o.ships.length} ${L(plural(o.ships.length, ["доставка", "доставки", "доставок"]), "yetkazish", o.ships.length === 1 ? "delivery" : "deliveries")}</small><span class="pill ${done ? "ok" : "acc"}">${st}</span></button>`; }).join("") : `<div class="empty"><b>${L("Заказов пока нет", "Hali buyurtma yo‘q")}</b><span>${L("Оформите первый заказ, и он появится здесь со статусом доставки.", "Birinchi buyurtmani bering, u bu yerda holati bilan chiqadi.")}</span></div>`);
   $("#dFoot").innerHTML = `<button class="btn btn-line" type="button" data-go="catalog" style="width:100%">${L("В каталог", "Katalogga")}</button>`;
@@ -3849,7 +3879,7 @@ function renderWidgets() {
   $("#wHead").innerHTML = `${back}<h2>${title}</h2><button class="ib" type="button" data-act="close-wid" aria-label="${L("Закрыть", "Yopish")}">${ui("close", 16)}</button>`;
   const body = $("#wBody");
   if (wView === "menu") {
-    const tile = (act, icon, ru, uz, sru, suz, cnt, extra = "") => { const feat = extra.includes("feat"); return `<button class="wtile ${extra}" type="button" ${act}><span class="wi">${ui(icon, feat ? 26 : 22)}</span><span style="display:grid;gap:3px"><b>${L(ru, uz)}</b><small>${L(sru, suz)}</small></span>${cnt ? `<span class="cnt">${cnt}</span>` : ""}${feat ? ui("chev", 18) : ""}</button>`; };
+    const tile = (act, icon, ru, uz, sru, suz, cnt, extra = "") => { const feat = extra.includes("feat"); return `<button class="wtile ${extra}" type="button" ${act}><span class="wi">${ui(icon, feat ? 26 : 22)}</span><span style="display:grid;gap:3px"><b>${L(ru, uz)}</b><small>${L(sru, suz)}</small></span>${cnt ? `<span class="cnt${extra.includes("alert") ? " alert" : ""}">${cnt}</span>` : ""}${feat ? ui("chev", 18) : ""}</button>`; };
     body.innerHTML = `<div class="wgrid">
       ${tile('data-act="ai"', "spark", "Usta AI", "Usta AI", "Подберёт материалы, сравнит и посчитает", "Materiallarni tanlaydi va hisoblaydi", 0, "feat alt")}
       ${tile('data-go="design"', "home", "AI-дизайнер комнаты", "AI xona dizayneri", "Фото и размеры → комната в 3D с мебелью и сметой", "Rasm va o‘lcham → mebelli 3D xona va smeta", 0, "dk")}
@@ -3860,7 +3890,7 @@ function renderWidgets() {
       ${tile('data-act="favs"', "heart", "Избранное", "Saralanganlar", "Сохранённые товары", "Saqlangan mahsulotlar", favs.length)}
       ${tile('data-act="projects"', "folder", "Проекты ремонта", "Ta’mir loyihalari", "Списки материалов по комнатам", "Xonalar bo‘yicha ro‘yxatlar", projects.length)}
       ${tile('data-act="watch"', "bell", "Слежу за ценой", "Narx kuzatuvi", "Сообщим о снижении", "Tushsa xabar beramiz", watch.length)}
-      ${tile('data-act="orders"', "clock", "Мои заказы", "Buyurtmalarim", "Статус и машина на карте", "Holat va xaritadagi mashina", orders.length)}
+      ${tile('data-act="orders"', "clock", "Мои заказы", "Buyurtmalarim", "Статус и машина на карте", "Holat va xaritadagi mashina", ordUnseen(), "alert")}
       ${tile('data-scroll="bundles"', "gift", "Комплекты", "To‘plamlar", noDisc() ? "Всё для задачи одной кнопкой" : "Под ключ на 5% дешевле", noDisc() ? "Vazifa uchun hammasi bir tugmada" : "Tayyor, 5% arzonroq")}
       ${tile('data-act="mega"', "grid", "Все категории", "Barcha toifalar", L(`${CATS.length} разделов, ${PRODUCTS.length} товаров`, `${CATS.length} bo‘lim, ${PRODUCTS.length} mahsulot`, `${CATS.length} categories, ${PRODUCTS.length} products`), `${CATS.length} bo‘lim, ${PRODUCTS.length} mahsulot`)}
       ${tile('data-go="seller"', "store", "Продавцам", "Sotuvchilarga", "Кабинет магазина", "Do‘kon kabineti")}
