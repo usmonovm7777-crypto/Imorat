@@ -2665,6 +2665,7 @@ function watchFall() {
 new MutationObserver(() => { if (document.querySelector(".route-box:not([data-io]), .hero:not([data-io])")) watchRoutes(); if (document.querySelector(".ds-teaser-v:not([data-fall])")) watchFall(); }).observe(document.body, { childList: true, subtree: true });
 document.addEventListener("pointermove", e => { if (!motionOK()) return; pmEv = e; if (!pmRaf) pmRaf = requestAnimationFrame(pointerFrame); }, { passive: true });
 window.addEventListener("scroll", () => { heroRect = null; tiltRect = null; }, { passive: true });
+document.addEventListener("touchstart", () => {}, { passive: true }); // iPhone shows the :active press state only when the page listens for touches
 window.addEventListener("resize", () => { heroRect = null; tiltRect = null; }, { passive: true });
 document.addEventListener("pointerleave", () => { if (tiltEl) { tiltEl.classList.remove("tilt"); tiltEl = null; } });
 /* Compare up to 3 products */
@@ -3349,14 +3350,14 @@ function swapKeepImg(el, html) {
   const olds = [...el.querySelectorAll("img")]; nw.querySelectorAll("img").forEach(im => { const o = olds.find(x => x.getAttribute("src") === im.getAttribute("src")); if (o) { olds.splice(olds.indexOf(o), 1); im.replaceWith(o); } });
   el.replaceWith(nw);
 }
+/* after «В корзину» / ♥ only the changed cards are swapped in place, in every list on the page (catalog grid, rails, store pages):
+   the list keeps its length («Показать ещё» pages stay open), the page never jumps and the pictures do not blink */
 function refreshCards() {
-  if (route.view === "catalog") renderList();
-  else if (route.view === "home") {
-    const sl = [...document.querySelectorAll(".rail")].map(r => [r, r.scrollLeft]); // snapping rails would jump back to the start when a card changes
-    document.querySelectorAll(".rail .card").forEach(c => { const id = +c.querySelector("[data-add]")?.dataset.add; if (PROD[id]) swapKeepImg(c, card(PROD[id])); });
-    sl.forEach(([r, x]) => { if (r.scrollLeft !== x) { r.style.scrollSnapType = "none"; r.scrollLeft = x; requestAnimationFrame(() => { r.style.scrollSnapType = ""; }); } });
-    document.querySelectorAll(".bundles > .bundle").forEach((c, i) => { if (BUNDLES[i]) swapKeepImg(c, bundleCard(BUNDLES[i])); });
-  }
+  const y = scrollY, sl = [...document.querySelectorAll(".rail")].map(r => [r, r.scrollLeft]); // snapping rails would jump back to the start when a card changes
+  document.querySelectorAll("#app .card").forEach(c => { const id = +c.querySelector("[data-add]")?.dataset.add; if (PROD[id]) swapKeepImg(c, card(PROD[id])); });
+  sl.forEach(([r, x]) => { if (r.scrollLeft !== x) { r.style.scrollSnapType = "none"; r.scrollLeft = x; requestAnimationFrame(() => { r.style.scrollSnapType = ""; }); } });
+  if (route.view === "home") document.querySelectorAll(".bundles > .bundle").forEach((c, i) => { if (BUNDLES[i]) swapKeepImg(c, bundleCard(BUNDLES[i])); });
+  if (Math.abs(scrollY - y) > 1) scrollTo(0, y); // Safari has no scroll anchoring: hold the page where it was
   if (aiOpen) document.querySelectorAll(".ai-pick [data-aiadd]").forEach(b => { const id = +b.dataset.aiadd.split("|")[0], q = qtyOf(id); b.classList.toggle("in", q > 0); });
 }
 function toggleFav(id) {
@@ -8987,7 +8988,15 @@ document.addEventListener("click", e => {
     case "stmt-csv": return statementCSV();
     case "api-retry": { const b = e.target.closest("button"); if (b) { b.disabled = true; b.textContent = L("Проверяем…", "Tekshirilmoqda…", "Checking…"); } return apiBoot().then(() => { if (apiState !== "ok") renderApiBar(); }); }
     case "auth-resend": return sendCode();
-    case "more": shownN += 36; return renderList(true);
+    case "more": { // append the next 36 cards; the ones already shown stay as they are (no re-render, no blink, no jump)
+      const grid = $("#grid"), list = filtered(), from = grid ? grid.querySelectorAll(".card").length : 0;
+      shownN += 36;
+      const more = grid?.querySelector(".more");
+      if (!more || from === 0 || from > list.length) return renderList(true);
+      more.insertAdjacentHTML("beforebegin", list.slice(from, shownN).map(card).join(""));
+      if (list.length > shownN) more.querySelector("button").textContent = `${L("Показать ещё", "Yana ko‘rsatish")} · ${list.length - shownN}`; else more.remove();
+      return;
+    }
     case "seller-all": sellerAll = true; return renderSeller();
     case "close-drawer": return closeDrawer();
     case "close-all": if (drawerView) closeDrawer(); if (aiOpen) closeAI(); if (widOpen) closeWidgets(); return;
