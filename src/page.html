@@ -1307,14 +1307,15 @@ html.fx .fx-btn.th-btn, .fx-btn.th-btn { background: var(--surface); color: var(
   .sec { padding-block: 18px; }
   .sec-head { margin-bottom: 10px; }
   .sec-head p { display: none; }
-  /* categories: an app-like 4×2 grid, the rest behind «Все подкатегории» */
-  .cat-grid { grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  /* categories: every one of them in a two-row strip that scrolls sideways (the next column peeks out) */
+  .cat-grid { grid-template-columns: none; grid-template-rows: repeat(2, auto); grid-auto-flow: column; grid-auto-columns: calc((100% - 48px) / 4.4); gap: 8px; overflow-x: auto; scrollbar-width: none; margin-inline: -16px; padding: 2px 16px 4px; scroll-snap-type: x proximity; scroll-padding-inline: 16px; }
+  .cat-grid::-webkit-scrollbar { display: none; }
+  .cat-grid > .cat-tile { scroll-snap-align: start; }
   .cat-tile { padding: 8px 6px 9px; gap: 6px; grid-template-rows: auto auto; justify-items: center; text-align: center; border-radius: 14px; }
   .cat-tile > span:first-child { order: 2; }
   .cat-tile .cat-img { order: 1; width: 100%; aspect-ratio: 1; border-radius: 10px; }
   .cat-tile b { font-size: 10.5px; line-height: 1.15; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; hyphens: auto; }
   .cat-tile small, .cat-tile br { display: none; }
-  .cat-tile:not(.all):nth-child(n+8) { display: none; }
   .cat-tile.all { align-content: start; gap: 6px; }
   .cat-tile.all .ico { margin: 0; width: 100%; aspect-ratio: 1; height: auto; border-radius: 10px; order: -1; } /* icon on top, the name under it — like the photo tiles */
   .cat-tile.all .ico svg { width: 30px; height: 30px; }
@@ -2632,10 +2633,10 @@ function setLook(fx, theme) {
    Phones start with a short home (the heavy blocks are off), computers show everything; each keeps its own setting. ---- */
 const HOME_W = [
   ["hero", "Главный экран и Usta AI", "Bosh ekran va Usta AI", "Hero and Usta AI", true],
+  ["cats", "Категории", "Toifalar", "Categories"],
   ["tools", "Инструменты: калькуляторы, AI, дизайнер", "Asboblar: kalkulyatorlar, AI, dizayner", "Tools: calculators, AI, designer"],
   ["bundles", "Акции и комплекты", "Aksiyalar va to‘plamlar", "Deals and kits"],
   ["bought", "Вы заказывали", "Siz buyurtma qilgansiz", "Ordered before"],
-  ["cats", "Категории", "Toifalar", "Categories"],
   ["hits", "Хиты недели", "Hafta xitlari", "Hits of the week"],
   ["recent", "Вы смотрели", "Siz ko‘rganlar", "Recently viewed"],
   ["designer", "AI-дизайнер комнаты", "AI xona dizayneri", "AI room designer"],
@@ -2649,7 +2650,7 @@ const HOME_W = [
   ["winter", "Готовимся к зиме", "Qishga tayyorgarlik", "Winter prep"],
   ["seller", "Для магазинов", "Do‘konlar uchun", "For stores"]
 ];
-const DESK_ORDER = ["hero", "tools", "bundles", "trust", "marquee", "bought", "cats", "designer", "masters", "recent", "hits", "delivery", "fresh", "winter", "calc", "stores", "seller"];
+const DESK_ORDER = ["hero", "cats", "tools", "bundles", "trust", "marquee", "bought", "designer", "masters", "recent", "hits", "delivery", "fresh", "winter", "calc", "stores", "seller"];
 const PHONE_OFF = ["trust", "marquee", "delivery", "fresh", "winter"];
 const DESK_OFF = ["tools"]; // computers have the header rail and the ☰ panel; phones get the row of tools under the hero
 const mqPhone = matchMedia("(max-width: 760px)");
@@ -2660,10 +2661,11 @@ function homeLayout() {
   const ids = HOME_W.map(w => w[0]), pref = LS.get(homeKey(), null);
   const order = (pref?.order || (isPhone() ? ids : DESK_ORDER)).filter(id => ids.includes(id));
   for (const id of ids) if (!order.includes(id)) order.push(id);
-  const off = (pref ? pref.off || [] : isPhone() ? PHONE_OFF : DESK_OFF).filter(id => ids.includes(id) && !HOME_W.find(w => w[0] === id)[4]);
+  let off = (pref ? pref.off || [] : isPhone() ? PHONE_OFF : DESK_OFF).filter(id => ids.includes(id) && !HOME_W.find(w => w[0] === id)[4]);
+  if (pref && !pref.c2) { order.splice(order.indexOf("cats"), 1); order.splice(order.indexOf("hero") + 1, 0, "cats"); off = off.filter(id => id !== "cats"); }
   return { order, off, custom: !!pref };
 }
-function saveHome(order, off) { LS.set(homeKey(), { order, off }); applyHome(); }
+function saveHome(order, off) { LS.set(homeKey(), { order, off, c2: 1 }); applyHome(); }
 function resetHome() { try { localStorage.removeItem(homeKey()); } catch {} applyHome(); }
 /* puts the rendered home blocks in the saved order and hides the ones switched off */
 function applyHome() {
