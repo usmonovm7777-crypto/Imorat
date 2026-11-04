@@ -764,6 +764,112 @@ html .drawer.swiped:not(.on), html .ai.swiped:not(.on), html .wpanel.swiped:not(
 .ib:hover { background: var(--raised); }
 .d-body { flex: 1; overflow-y: auto; padding: 16px 20px 24px; display: grid; gap: 18px; align-content: start; }
 .d-foot { border-top: 1px solid var(--line); padding: 14px 20px; display: grid; gap: 10px; background: var(--surface); }
+/* ---- Checkout, in the style of delivery apps: delivery / pickup as a segmented switch, the address over a map, each store as a card
+   with its goods, a summary card, and a footer with the total next to a big button; a confirmation sheet before the order goes out ---- */
+.opts.seg { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: 14px; background: color-mix(in srgb, var(--ink) 6%, var(--surface)); }
+.opts.seg .opt { position: relative; display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 8px 10px; border: 0; border-radius: 11px; background: transparent; font-size: 14px; text-align: center; transition: background-color .2s, box-shadow .2s; }
+.opts.seg .opt input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.opts.seg .opt small, .opts.seg .opt .tag { display: none; }
+.opts.seg .opt b { font-weight: 600; }
+.opts.seg .opt svg { width: 18px; height: 18px; flex: none; }
+.opts.seg .opt:has(input:checked) { background: var(--surface); box-shadow: 0 1px 4px rgb(0 0 0 / .12); }
+.opts.seg .opt:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+.ck-map { position: relative; height: 128px; border-radius: 14px 14px 0 0; overflow: hidden; background: var(--raised); border: 1.5px solid var(--line-strong); border-bottom: 0; cursor: pointer; }
+.ck-map .ckm-t { position: absolute; display: grid; grid-template-columns: repeat(3, 256px); width: 768px; }
+.ck-map .ckm-t img { width: 256px; height: 256px; display: block; }
+.ck-map .pin { position: absolute; left: 50%; top: 50%; width: 34px; height: 34px; transform: translate(-50%, -100%); color: var(--signal); filter: drop-shadow(0 2px 3px rgb(0 0 0 / .3)); }
+.ck-map .attr { position: absolute; right: 6px; bottom: 4px; font-size: 10px; color: var(--muted); background: color-mix(in srgb, var(--surface) 85%, transparent); padding: 1px 5px; border-radius: 5px; }
+.ck-map + .addr-card { border-radius: 0 0 14px 14px; }
+.ship-th { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding: 6px 0 2px; }
+.ship-th::-webkit-scrollbar { display: none; }
+.ship-th > span { position: relative; flex: none; }
+.ship-th .mini { width: 52px; height: 52px; border-radius: 10px; }
+.ship-th i { position: absolute; left: 4px; bottom: 4px; min-width: 20px; padding: 1px 5px; border-radius: 8px; background: var(--ink); color: var(--bg); font-size: 10.5px; font-style: normal; font-weight: 700; line-height: 1.4; text-align: center; }
+.ck-sumcard { border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; display: grid; gap: 6px; background: var(--surface); }
+.ck-foot { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 14px; }
+.ck-tot { display: grid; line-height: 1.15; }
+.ck-tot small { color: var(--muted); font-size: 12px; }
+.ck-tot b { font-family: var(--f-display); font-size: 19px; font-weight: 700; letter-spacing: -.02em; white-space: nowrap; }
+.ck-foot #payBtn { min-height: 54px; border-radius: 999px; font-size: 16px; }
+.btn.busy { position: relative; color: transparent !important; }
+.btn.busy::after { content: ""; position: absolute; left: 50%; top: 50%; width: 22px; height: 22px; margin: -11px 0 0 -11px; border-radius: 50%; border: 2.5px solid rgb(255 255 255 / .45); border-top-color: #fff; animation: spin .7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.ck-ask { position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; padding: 20px; background: rgb(20 14 10 / .45); opacity: 0; transition: opacity .2s ease; }
+.ck-ask.on { opacity: 1; }
+.ck-ask-box { width: min(380px, 100%); background: var(--surface); color: var(--ink); border-radius: 22px; padding: 20px 18px 16px; display: grid; gap: 14px; box-shadow: var(--shadow); transform: scale(.94); transition: transform .26s cubic-bezier(.34, 1.4, .64, 1); }
+.ck-ask.on .ck-ask-box { transform: none; }
+.ck-ask-box h3 { margin: 0; text-align: center; font-family: var(--f-display); font-size: 19px; font-weight: 700; }
+.ck-ask-box > p { margin: -8px 0 0; text-align: center; color: var(--muted); font-size: 13px; }
+.ck-ask-rows { display: grid; gap: 8px; padding: 12px 14px; border-radius: 14px; background: var(--raised); font-size: 14px; }
+.ck-ask-rows div { display: flex; justify-content: space-between; gap: 12px; } .ck-ask-rows span { color: var(--muted); } .ck-ask-rows b { text-align: right; overflow-wrap: anywhere; }
+.ck-ask-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.ck-ask-btns .btn { min-height: 48px; border-radius: 999px; }
+/* ---- The order screen: a live map at the top, the order as a sheet that slides over it ---- */
+#drawer.trk { padding-top: 0; }
+#drawer.trk .d-head, #drawer.trk .d-foot { display: none; }
+#drawer.trk #dBody { padding: 0; gap: 0; display: block; overscroll-behavior: contain; }
+.trk-top { position: sticky; top: 0; z-index: 6; height: 0; }
+.trk-top > div { position: absolute; left: 0; right: 0; top: calc(10px + env(safe-area-inset-top, 0px)); display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; gap: 10px; padding: 0 14px; pointer-events: none; }
+.trk-top button, .trk-top .trk-num { pointer-events: auto; }
+.trk-top::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: calc(64px + env(safe-area-inset-top, 0px)); background: var(--bg); box-shadow: 0 1px 0 var(--line); opacity: 0; transition: opacity .2s ease; pointer-events: none; }
+#trk.up .trk-top::before { opacity: 1; } /* the sheet has slid up under the buttons: they get a bar of their own */
+.trk-top button { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: var(--surface); color: var(--ink); box-shadow: 0 2px 10px rgb(0 0 0 / .18); transition: transform .14s ease; }
+.trk-top button:active { transform: scale(.92); }
+.trk-top button svg { width: 20px; height: 20px; }
+.trk-num { justify-self: center; padding: 9px 16px; border-radius: 999px; background: var(--surface); color: var(--ink); font-weight: 700; font-size: 14px; box-shadow: 0 2px 10px rgb(0 0 0 / .18); white-space: nowrap; }
+.trk-map { position: sticky; top: 0; z-index: 0; height: min(56vh, 520px); background: var(--raised); overflow: hidden; }
+.trk-map .livemap.big { position: absolute; inset: 0; aspect-ratio: auto; max-height: none; border: 0; border-radius: 0; }
+.trk-map .livemap.big .lm-line line { stroke-width: 5; stroke-dasharray: none; opacity: .9; }
+.trk-map .livemap.big .lm-m.store::after { width: 26px; height: 26px; left: -13px; top: -13px; border-radius: 8px; }
+.trk-map .livemap.big.pick .lm-line, .trk-map .livemap.big.pick .lm-m.home { display: none; }
+.trk-map + .lm-bar { display: none; }
+.trk-sheet { position: relative; z-index: 2; margin-top: -24px; min-height: 60vh; padding: 18px 16px calc(28px + var(--nav-h, 0px)); border-radius: 24px 24px 0 0; background: var(--bg); box-shadow: 0 -10px 30px rgb(0 0 0 / .14); display: grid; gap: 12px; align-content: start; }
+.trk-sheet::before { content: ""; position: absolute; left: 50%; top: 8px; width: 40px; height: 4px; margin-left: -20px; border-radius: 2px; background: var(--line-strong); }
+.trk-card { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 14px; display: grid; gap: 12px; }
+.trk-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: start; }
+.trk-live { display: inline-flex; align-items: center; gap: 6px; width: max-content; padding: 3px 9px; border-radius: 999px; background: color-mix(in srgb, var(--ok) 14%, transparent); color: var(--ok); font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.trk-live::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; animation: pulse 1.4s infinite; }
+.trk-live.demo { background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); }
+.trk-live.off { background: color-mix(in srgb, var(--ink) 8%, transparent); color: var(--muted); } .trk-live.off::before { animation: none; }
+.trk-head h2 { margin: 6px 0 2px; font-family: var(--f-display); font-size: 21px; font-weight: 700; letter-spacing: -.02em; line-height: 1.15; }
+.trk-head p { margin: 0; color: var(--muted); font-size: 13.5px; }
+.trk-eta { display: grid; justify-items: center; min-width: 76px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 14px; line-height: 1.1; }
+.trk-eta b { font-family: var(--f-display); font-size: 24px; font-weight: 700; } .trk-eta b small { font-size: 12px; font-weight: 600; margin-left: 2px; }
+.trk-eta span { color: var(--muted); font-size: 11px; margin-top: 3px; white-space: nowrap; }
+.trk-prog { display: grid; grid-template-columns: repeat(var(--n), 1fr); gap: 4px; }
+.trk-prog i { height: 5px; border-radius: 3px; background: var(--line); overflow: hidden; position: relative; }
+.trk-prog i.done { background: var(--accent); }
+.trk-prog i.now::after { content: ""; position: absolute; inset: 0; width: 45%; border-radius: 3px; background: var(--accent); animation: trkRun 1.6s ease-in-out infinite; }
+@keyframes trkRun { 0% { transform: translateX(-100%); } 100% { transform: translateX(230%); } }
+.trk-prog span { font-size: 10px; color: var(--faint); text-align: center; line-height: 1.2; overflow-wrap: normal; word-break: keep-all; hyphens: none; }
+.trk-prog span.on { color: var(--ink); font-weight: 700; }
+.trk-find { display: flex; align-items: center; gap: 10px; font-size: 14px; }
+.trk-find::before { content: ""; width: 18px; height: 18px; border-radius: 50%; border: 2.5px solid var(--line); border-top-color: var(--accent); animation: spin .8s linear infinite; flex: none; }
+.trk-who { display: grid; grid-template-columns: 46px minmax(0, 1fr) auto; gap: 12px; align-items: center; }
+.trk-ava { width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; background: color-mix(in srgb, var(--accent) 16%, var(--surface)); color: var(--accent); font-weight: 700; font-size: 17px; }
+.trk-who b { display: block; font-size: 15px; } .trk-who small { color: var(--muted); font-size: 12.5px; }
+.trk-acts { display: flex; gap: 8px; }
+.trk-acts a, .trk-acts button { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: var(--raised); color: var(--ink); border: 1px solid var(--line); }
+.trk-acts .go { background: var(--ok); color: #fff; border-color: transparent; }
+.trk-acts svg { width: 18px; height: 18px; }
+.trk-veh { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border-radius: 12px; background: var(--raised); font-size: 13px; }
+.trk-veh span { display: inline-flex; align-items: center; gap: 8px; } .trk-veh svg { width: 18px; height: 18px; color: var(--muted); }
+.trk-veh b { padding: 3px 8px; border-radius: 6px; background: var(--ink); color: var(--bg); font-size: 12px; letter-spacing: .04em; }
+.trk-card h3 { margin: 0; font-size: 15px; }
+.trk-card .steps li { font-size: 13.5px; }
+.trk-route { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 4px 10px; font-size: 13.5px; }
+.trk-route .ic { display: grid; place-items: center; color: var(--accent); } .trk-route .ic.home { color: var(--signal); } .trk-route svg { width: 18px; height: 18px; }
+.trk-route small { color: var(--muted); display: block; font-size: 11.5px; } .trk-route .ln { width: 2px; height: 14px; margin: 0 auto; background: var(--line-strong); }
+.trk-km { color: var(--muted); font-size: 12.5px; }
+.trk-ships { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+.trk-ships .chip[aria-selected="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.trk-done { justify-items: center; text-align: center; }
+.trk-done .ok-c { width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; background: color-mix(in srgb, var(--ok) 16%, transparent); color: var(--ok); }
+.trk-done .ok-c svg { width: 30px; height: 30px; }
+.trk-done .rv-form { width: 100%; text-align: left; }
+.trk-btns { display: grid; grid-template-columns: auto 1fr; gap: 8px; }
+.trk-links { display: grid; justify-items: start; gap: 4px; }
+@media (prefers-reduced-motion: reduce) { .trk-prog i.now::after, .trk-find::before, .trk-live::before, .btn.busy::after { animation: none; } }
 .gh { display: flex; justify-content: space-between; gap: 10px; align-items: center; font-size: 13px; color: var(--muted); padding-bottom: 6px; border-bottom: 1px solid var(--line); }
 .gh b { color: var(--ink); font-weight: 600; font-size: 14px; }
 .line { display: grid; grid-template-columns: 56px 1fr auto; gap: 12px; align-items: center; padding: 10px 0; border-bottom: 1px dashed var(--line); }
@@ -3630,6 +3736,7 @@ function openDrawer(vw, extra) { if (aiOpen) closeAI(); if (widOpen) closeWidget
 function closeDrawer() { dvBack = dvSlide = false; drawerView = null; setPanel($("#drawer"), false); showScrim(); renderTabbar(); syncLock(); setTimeout(refreshBoughtRail, 0); supBadge(); }
 function renderDrawer() {
   if (drawerView === "profile" && !user) { closeDrawer(); openAuth("profile"); return; } // the profile exists only after signing in
+  $("#drawer").classList.toggle("trk", drawerView === "track" && orders.some(x => x.num === drawerOrder)); // the order screen: map + sheet, no panel header
   $("#dBack").innerHTML = ui("back", 16); $("#dClose").innerHTML = ui("close", 16);
   $("#dBack").hidden = !["checkout", "track", "orders", "watch", "projects"].includes(drawerView);
   ({ cart: dCart, checkout: dCheckout, track: dTrack, profile: dProfile, favs: dFavs, orders: dOrders, compare: dCompare, watch: dWatch, projects: dProjects, homeSetup: dHomeSetup, repeat: dRepeat, support: dSupport })[drawerView]?.();
@@ -3784,12 +3891,13 @@ function dCheckout() {
       <div class="f"><label for="fName">${L("Имя", "Ism")}</label><input id="fName" name="name" value="${esc(d.name)}" autocomplete="name" placeholder="${L("Азиз", "Aziz")}"></div>
       <div class="f"><label for="fPhone">${L("Телефон", "Telefon")}</label><input id="fPhone" name="phone" value="${esc(d.phone)}" inputmode="tel" autocomplete="tel" placeholder="+998 90 123 45 67"><span class="err" id="phoneErr" hidden>${L("Введите номер в формате +998 XX XXX XX XX", "Raqamni +998 XX XXX XX XX formatida kiriting")}</span></div>
     </fieldset>
-    <fieldset><legend>${L("Способ получения", "Olish usuli")}</legend><div class="opts">
-      <label class="opt"><input type="radio" name="mode" value="yandex" ${d.mode === "yandex" ? "checked" : ""}><span><b>${storeDelivers() ? L("Доставка магазином", "Do‘kon yetkazib beradi", "Delivery by the store") : L("Яндекс Доставка", "Yandex Yetkazib berish")}</b><small>${storeDelivers() ? L("Курьер магазина привезёт; стоимость доставки магазин назовёт при подтверждении — оплата при получении", "Do‘kon kuryeri olib keladi; yetkazish narxini do‘kon tasdiqlashda aytadi — olganda to‘lanadi", "The store's courier brings it; the store names the delivery price when confirming — paid on receipt") : L("Курьер или грузовое авто — по весу и длине товаров", "Tovarlar vazni va uzunligiga qarab kuryer yoki yuk mashinasi", "A courier car or a cargo van — by the weight and length of the goods")}</small></span><span></span></label>
-      <label class="opt"><input type="radio" name="mode" value="pickup" ${d.mode === "pickup" ? "checked" : ""}><span><b>${L("Самовывоз из магазина", "Do‘kondan olib ketish")}</b><small>${L("Соберём за 30 минут", "30 daqiqada yig‘amiz")}</small></span><span class="tag">0 ${L("сум", "so‘m")}</span></label>
+    <fieldset><legend class="visually-hidden">${L("Способ получения", "Olish usuli")}</legend><div class="opts seg">
+      <label class="opt"><input type="radio" name="mode" value="yandex" ${d.mode === "yandex" ? "checked" : ""}>${ui("truck", 18)}<span><b>${L("Доставка", "Yetkazish", "Delivery")}</b><small>${storeDelivers() ? L("Курьер магазина привезёт; стоимость доставки магазин назовёт при подтверждении — оплата при получении", "Do‘kon kuryeri olib keladi; yetkazish narxini do‘kon tasdiqlashda aytadi — olganda to‘lanadi", "The store's courier brings it; the store names the delivery price when confirming — paid on receipt") : L("Курьер или грузовое авто — по весу и длине товаров", "Tovarlar vazni va uzunligiga qarab kuryer yoki yuk mashinasi", "A courier car or a cargo van — by the weight and length of the goods")}</small></span><span></span></label>
+      <label class="opt"><input type="radio" name="mode" value="pickup" ${d.mode === "pickup" ? "checked" : ""}>${ui("store", 18)}<span><b>${L("Самовывоз", "Olib ketish", "Pickup")}</b><small>${L("Соберём за 30 минут", "30 daqiqada yig‘amiz")}</small></span><span class="tag">0 ${L("сум", "so‘m")}</span></label>
     </div></fieldset>
     <fieldset id="addrSet" ${d.mode === "pickup" ? "hidden" : ""}><legend>${L("Адрес и время", "Manzil va vaqt")}</legend>
       <div class="f"><span class="lbl-row">${L("Дом на карте", "Uy xaritada", "Your house on the map")} <small class="mu">${L("— курьер приедет точно к метке", "— kuryer aynan belgiga keladi", "— the courier comes right to the pin")}</small></span>
+        <div class="ck-map" id="ckMap" data-act="addr-map" aria-hidden="true" ${d.la != null && d.lo != null ? "" : "hidden"}>${d.la != null && d.lo != null ? ckMapInner(+d.la, +d.lo) : ""}</div>
         <button type="button" class="addr-card" id="addrCard" data-act="addr-map">${addrCardInner(d)}</button>
         <input type="hidden" name="la" id="fLa" value="${d.la ?? ""}"><input type="hidden" name="lo" id="fLo" value="${d.lo ?? ""}"></div>
       <div class="f"><label for="fDistrict">${L("Район Ташкента", "Tuman (Toshkent shahri)", "District (Tashkent city)")}</label><select id="fDistrict" name="district">${DISTRICTS.map(x => `<option value="${x.id}" ${x.id === d.district ? "selected" : ""}>${L(x.ru, x.uz)}</option>`).join("")}</select></div>
@@ -3822,8 +3930,11 @@ function dCheckout() {
       <div class="f"><label for="fComment">${L("Комментарий к заказу", "Buyurtmaga izoh", "Order comment")} <small class="mu">${L("— увидят магазин и курьер", "— do‘kon va kuryer ko‘radi", "— the store and the courier see it")}</small></label><textarea id="fComment" name="comment" rows="2" maxlength="500" placeholder="${L("Позвоните за 10 минут; нужен один оттенок из одной партии", "10 daqiqa oldin qo‘ng‘iroq qiling; bir partiyadan bir tus kerak", "Call 10 minutes ahead; one shade from one batch")}">${esc(d.comment)}</textarea></div>
     </fieldset>
     <div id="shipBox" style="display:grid;gap:8px"></div>
+    <div class="ck-sumcard"><div id="totals" style="display:grid;gap:6px"></div></div>
   </form>`;
-  $("#dFoot").innerHTML = `<div id="totals" style="display:grid;gap:6px"></div><button class="btn btn-primary" type="submit" form="orderForm" id="payBtn" style="width:100%"></button>`;
+  $("#dFoot").innerHTML = `<div class="ck-foot"><div class="ck-tot"><small>${L("Итого", "Jami", "Total")}</small><b id="ckTotal">—</b></div><button class="btn btn-primary" type="submit" form="orderForm" id="payBtn"></button></div>`;
+  // the footer shows the same total as the summary card, whichever way it was last updated (local estimate or the server's figures)
+  new MutationObserver(() => { const n = $("#totals .sumrow.total .num"), c = $("#ckTotal"); if (c) c.textContent = n ? n.textContent : "—"; }).observe($("#totals"), { childList: true, subtree: true, characterData: true });
   const el = $("#orderForm");
   el.addEventListener("input", updateQuote);
   el.addEventListener("change", e => {
@@ -3846,6 +3957,7 @@ function updateQuote() {
   const qt = quote(d);
   $("#shipBox").innerHTML = `<legend>${L("Доставки", "Yetkazishlar")}</legend>` + qt.ships.map(s => `<div class="ship" data-ship-store="${esc(s.g.store.id)}">
     <div class="t"><b>${esc(s.g.store.name)}</b><span class="num" style="font-weight:700" data-ship-price>${s.t ? (s.byStore ? `<span class="mu">${L("доставку уточнит магазин", "yetkazishni do‘kon aniqlaydi", "delivery: the store will confirm")}</span>` : (s.full > s.price ? `<s>${fmt(s.full)}</s>` : "") + (s.price ? fmt(s.price) : L("Бесплатно", "Bepul"))) : L("Самовывоз", "Olib ketish")}</span></div>
+    <div class="ship-th" aria-hidden="true">${s.g.lines.slice(0, 8).map(l => `<span>${mini(l.p)}<i>${fmtN(l.q)}</i></span>`).join("")}</div>
     <small class="ship-goods">${L("Товары", "Mahsulotlar")} ${s.g.lines.length} ${L("поз.", "pozitsiya", s.g.lines.length === 1 ? "item" : "items")} · <span class="num">${fmt(s.g.sum)}</span></small>
     <small>${s.t ? (s.byStore ? `${L("Курьер магазина", "Do‘kon kuryeri", "The store's courier")} · ${fmtKg(s.g.kg)} · ~${s.dist.toFixed(1).replace(".", DEC)} ${L("км", "km")} · ${L("понадобится", "kerak bo‘ladi", "needs")} ${tName(s.t).toLowerCase()}` : `${tName(s.t)} · ${s.t.veh} · ${fmtKg(s.g.kg)} · ~${s.dist.toFixed(1).replace(".", DEC)} ${L("км", "km")} · ${d.when === "slot" ? L("завтра 10–14", "ertaga 10–14") : d.when === "vip" ? `${L("завтра", "ertaga")} ${d.hour}:00–${String(+d.hour + 1).padStart(2, "0")}:00` : etaStr(s.t)}`) : `${esc(L(s.g.store.addr, s.g.store.addrUz))} · ${esc(s.g.store.hours || "")}`}</small>
     ${(u => freshHTML(Number.isFinite(u) ? u : 0))(Math.min(...s.g.lines.map(l => l.p.offers.find(o => o.store === l.store)?.upd || Infinity)))}</div>`).join("") +
@@ -3875,8 +3987,30 @@ function updateQuote() {
 }
 const NAMES = ["Шерзод", "Бобур", "Жасур", "Отабек", "Дилшод", "Сардор"];
 const LET = "ABCDEFHKMOPTXYZ";
+/* «Оформить заказ?» — where, how it is paid and the total, one last look before the order goes to the stores */
+function askOrder(d) {
+  $(".ck-ask")?.remove();
+  const tot = $("#ckTotal")?.textContent || fmt(quote(d).total), pay = (payOptions(d).find(x => x[0] === d.pay) || [])[1] || "";
+  const where = d.mode === "pickup" ? L("Самовывоз из магазина", "Do‘kondan olib ketish", "Pickup at the store") : (d.street || "").trim() + (d.flat ? ", " + L("кв. ", "xonadon ", "flat ") + d.flat : "");
+  const el = document.createElement("div"); el.className = "ck-ask"; el.setAttribute("role", "dialog"); el.setAttribute("aria-modal", "true"); el.setAttribute("aria-labelledby", "ckAskT");
+  el.innerHTML = `<div class="ck-ask-box"><h3 id="ckAskT">${L("Оформить заказ?", "Buyurtma berilsinmi?", "Place this order?")}</h3><p>${L("Проверьте данные перед подтверждением", "Tasdiqlashdan oldin ma’lumotlarni tekshiring", "Check the details before confirming")}</p>
+    <div class="ck-ask-rows"><div><span>${L("Куда", "Qayerga", "Deliver to")}</span><b>${esc(where)}</b></div><div><span>${L("Оплата", "To‘lov", "Payment")}</span><b>${esc(pay)}</b></div><div><span>${L("Итого", "Jami", "Total")}</span><b class="num">${esc(tot)}</b></div></div>
+    <div class="ck-ask-btns"><button class="btn btn-line" type="button" data-ckask="no">${L("Отмена", "Bekor qilish", "Cancel")}</button><button class="btn btn-primary" type="button" id="ckGo" data-ckask="go">${L("Подтвердить", "Tasdiqlash", "Confirm")}</button></div></div>`;
+  document.body.appendChild(el); requestAnimationFrame(() => el.classList.add("on"));
+  let decided = false; // one answer per sheet: a double tap on «Подтвердить» sends one order
+  const close = () => { el.classList.remove("on"); setTimeout(() => el.remove(), 220); };
+  el.addEventListener("click", ev => {
+    const b = ev.target.closest("[data-ckask]");
+    if (!b && ev.target !== el || decided) return;
+    decided = true; close();
+    if (b?.dataset.ckask === "go") { submitOrder.ok = true; const pb = $("#payBtn"); if (pb) { pb.classList.add("busy"); setTimeout(() => pb.classList.remove("busy"), API ? 15000 : 700); } setTimeout(() => submitOrder({ preventDefault() {} }), API ? 0 : 650); }
+  });
+  el.addEventListener("keydown", ev => { if (ev.key === "Escape") close(); });
+  setTimeout(() => $("#ckGo")?.focus(), 60);
+}
 function submitOrder(e) {
   e.preventDefault();
+  const confirmed = submitOrder.ok; submitOrder.ok = false; // set only by «Подтвердить» in the sheet, for this one pass
   const d = readForm(); let digits = d.phone.replace(/\D/g, "");
   if (digits.length === 9) digits = "998" + digits; // typed without the country code — the usual way to say a number here
   if (/^998\d{9}$/.test(digits)) { d.phone = `+${digits.slice(0, 3)} ${digits.slice(3, 5)} ${digits.slice(5, 8)} ${digits.slice(8, 10)} ${digits.slice(10)}`; const fp = $("#fPhone"); if (fp && fp.value !== d.phone) fp.value = d.phone; }
@@ -3890,6 +4024,7 @@ function submitOrder(e) {
   if (!okA) return (String(d.flat || "").trim() ? $("#fFloor") : $("#fFlat")).focus();
   if (paymentsOff()) return toast(L("Онлайн-оплата ещё не подключена", "Onlayn to‘lov hali ulanmagan", "Online payment is not connected yet"));
   if (API && apiState !== "ok") { toast(apiState === "incompatible" ? L("Обновите приложение, чтобы оформить заказ", "Buyurtma berish uchun ilovani yangilang", "Update the app to place an order") : apiErr({ code: "offline" })); apiBoot(); return; }
+  if (!confirmed) return askOrder(d);
   if (API) return submitOrderApi(d, quote(d));
   const qt = quote(d), now = Date.now();
   const o = {
@@ -3915,33 +4050,119 @@ const STATUS_KEYS = (o, t) => t ? (o?.d?.delivery_by === "store" ? ["new", "asse
 const STEPS_P = o => [(o?.api ? o.pay_status === "paid" : !["cash", "store"].includes(o?.pay)) ? L("Заказ оплачен", "Buyurtma to‘landi") : L("Заказ принят", "Buyurtma qabul qilindi"), L("Магазин собирает заказ", "Do‘kon yig‘moqda"), L("Готов к выдаче", "Topshirishga tayyor")];
 const STEP_MS = 3500;
 function stepOf(o, i, len) { if (o.api) { const sh = o.ships[i]; return sh ? Math.min(len - 1, Math.max(0, sh.step)) : 0; } if (o.d.when !== "asap" && o.d.mode !== "pickup") return 1; return Math.max(0, Math.min(len - 1, Math.floor((Date.now() - o.t - i * 1200) / STEP_MS))); }
+/* ---- The order screen, in the style of delivery apps: a live map at the top (the store, the address, the courier when the carrier
+   reports a position) and the order as a sheet that slides over it: the step in words, the time to arrival when the carrier gives
+   one, a progress bar, the courier, the timeline with real times, where from and where to. Nothing here is invented: no ETA, courier
+   or position without data; the demo says it is a demo. ---- */
+let trkShip = 0, trkKeys = {};
+const trkShort = k => ({ new: L("Принят", "Qabul", "Placed"), assembling: L("Сборка", "Yig‘ish", "Packing"), searching: L("Поиск", "Qidiruv", "Search"), to_store: L("В магазин", "Do‘konga", "To store"), on_way: L("В пути", "Yo‘lda", "On the way"), delivered: L("Вручён", "Topshirildi", "Delivered"), ready: L("Готов", "Tayyor", "Ready") })[k] || k;
+const kmBetween = (a, b) => { const R = 6371, r = x => x * Math.PI / 180, dLa = r(b.la - a.la), dLo = r(b.lo - a.lo), q = Math.sin(dLa / 2) ** 2 + Math.cos(r(a.la)) * Math.cos(r(b.la)) * Math.sin(dLo / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(q)); };
+const kmTxt = km => (km < 10 ? km.toFixed(1).replace(".", DEC) : String(Math.round(km))) + " " + L("км", "km");
+/* the courier from the data we have: the carrier's "name · car · number", or the demo's name and plate */
+function trkCourier(o, s, c, t) {
+  const raw = c?.courier || s.courier; if (!raw) return null;
+  if (!o.api) return { name: lang === "ru" ? raw : ({ "Шерзод": "Sherzod", "Бобур": "Bobur", "Жасур": "Jasur", "Отабек": "Otabek", "Дилшод": "Dilshod", "Сардор": "Sardor" }[raw] || raw), car: t?.veh || "", plate: s.plate ? `${s.plate[0]} ${s.plate[1]} ${s.plate[2]} ${s.plate[3]}` : "" };
+  const [name, car, plate] = String(raw).split(" · "); return { name: name || raw, car: car || t?.veh || "", plate: plate || "" };
+}
+function trkState(o, s, i) {
+  const t = TARIFFS.find(x => x.id === s.tariff), steps = STEPS_FOR(o, t), keys = STATUS_KEYS(o, t), cur = stepOf(o, i, steps.length);
+  const key = o.api && o.status === "cancelled" || s.status === "cancelled" ? "cancelled" : s.status === "picked" ? "picked" : keys[cur];
+  return { t, steps, keys, cur, key };
+}
+function trkTitle(o, s, st, S, c) {
+  const store = st.name, who = trkCourier(o, s, c, S.t), home = o.d.la != null && o.d.lo != null ? { la: +o.d.la, lo: +o.d.lo } : null;
+  const near = c?.pos && home ? kmTxt(kmBetween({ la: +c.pos.la, lo: +c.pos.lo }, home)) : "";
+  switch (S.key) {
+    case "new": return [L("Заказ принят", "Buyurtma qabul qilindi", "Order placed"), L(`Отправили заказ в магазин «${store}»`, `Buyurtma «${store}» do‘koniga yuborildi`, `Sent to ${store}`)];
+    case "assembling": return [L("Магазин собирает заказ", "Do‘kon buyurtmani yig‘moqda", "The store is packing your order"), L(`«${store}» готовит ваши товары`, `«${store}» tovarlaringizni tayyorlamoqda`, `${store} is getting your goods ready`)];
+    case "searching": return [L("Ищем курьера", "Kuryer qidirilmoqda", "Finding a courier"), L("Яндекс подбирает курьера рядом с магазином", "Yandex do‘kon yaqinidan kuryer tanlamoqda", "Yandex is picking a courier near the store")];
+    case "to_store": return [L("Курьер едет в магазин", "Kuryer do‘konga ketmoqda", "The courier is going to the store"), who ? L(`${who.name} заберёт ваш заказ`, `${who.name} buyurtmangizni oladi`, `${who.name} will pick up your order`) : L("Курьер заберёт ваш заказ", "Kuryer buyurtmangizni oladi", "The courier will pick up your order")];
+    case "on_way": return [o.d?.delivery_by === "store" ? L("Курьер магазина в пути", "Do‘kon kuryeri yo‘lda", "The store's courier is on the way") : L("Курьер едет к вам", "Kuryer sizga kelmoqda", "On the way to you"), near ? L(`${who?.name || "Курьер"} в ${near} от вас`, `${who?.name || "Kuryer"} sizdan ${near} uzoqlikda`, `${who?.name || "The courier"} is ${near} away`) : L("Заказ уже едет к вам", "Buyurtma sizga kelmoqda", "Your order is on its way")];
+    case "delivered": return [L("Доставлено. Спасибо за заказ!", "Yetkazildi. Buyurtma uchun rahmat!", "Delivered. Thank you!"), L("Спасибо, что выбрали Quriliş Go", "Quriliş Go ni tanlaganingiz uchun rahmat", "Thanks for choosing Quriliş Go")];
+    case "ready": return [L("Заказ готов к выдаче", "Buyurtma topshirishga tayyor", "Ready for pickup"), `${L(st.addr, st.addrUz)} · ${L("назовите номер", "raqamni ayting", "say the number")} ${o.num}`];
+    case "picked": return [L("Заказ получен. Спасибо!", "Buyurtma olindi. Rahmat!", "Picked up. Thank you!"), L("Спасибо, что выбрали Quriliş Go", "Quriliş Go ni tanlaganingiz uchun rahmat", "Thanks for choosing Quriliş Go")];
+    default: return [L("Заказ отменён", "Buyurtma bekor qilindi", "Order cancelled"), L("Платить ничего не нужно", "Hech narsa to‘lash shart emas", "Nothing to pay")];
+  }
+}
+const trkClock = ms => { const sec = Math.max(0, Math.floor((Date.now() - ms) / 1000)), h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60), s2 = sec % 60; return (h ? h + ":" + String(m).padStart(2, "0") : m) + ":" + String(s2).padStart(2, "0"); };
+function trkEtaHTML(c, key) {
+  if (!c?.eta_min || !["to_store", "on_way"].includes(key)) return ""; // only while a courier is driving: no "5 min" while the store is still packing
+  const at = new Date(Date.now() + c.eta_min * 60000).toLocaleTimeString(LOCALE, { hour: "2-digit", minute: "2-digit" });
+  return `<div class="trk-eta"><b>${c.eta_min}<small>${L("мин", "daq", "min")}</small></b><span>${L("Прибытие", "Yetib kelish", "Arriving")} ${at}</span></div>`;
+}
+function trkWhoHTML(o, s, S, c) {
+  if (S.key === "searching") return `<div class="trk-card"><div class="trk-find">${L("Ищем вам курьера…", "Sizga kuryer qidirilmoqda…", "Finding you a courier…")}</div></div>`;
+  if (!["to_store", "on_way"].includes(S.key)) return "";
+  const who = trkCourier(o, s, c, S.t), byStore = o.d?.delivery_by === "store";
+  if (!who && !byStore) return "";
+  const name = who?.name || L("Курьер магазина", "Do‘kon kuryeri", "The store's courier");
+  const yaGo = s.tracking_url || c?.tracking_url;
+  return `<div class="trk-card"><div class="trk-who"><span class="trk-ava" aria-hidden="true">${esc(name.trim().charAt(0).toUpperCase())}</span><span><b>${esc(name)}</b><small>${byStore && !who ? L("Время доставки назовёт магазин", "Yetkazish vaqtini do‘kon aytadi", "The store names the delivery time") : !o.api ? L("Демо · телефон курьера придёт в SMS", "Demo · kuryer telefoni SMSda keladi", "Demo · the courier's phone comes by SMS") : L("Телефон курьера придёт в SMS", "Kuryer telefoni SMSda keladi", "The courier's phone comes by SMS")}</small></span>
+    <span class="trk-acts">${o.api ? `<button type="button" data-act="order-support" aria-label="${L("Написать в поддержку", "Yordamga yozish", "Write to support")}">${ui("chat", 18)}</button>` : ""}${yaGo ? `<a class="go" href="${esc(yaGo)}" target="_blank" rel="noopener" aria-label="${L("Открыть в Яндекс Go", "Yandex Go da ochish", "Open in Yandex Go")}">${ui("nav", 18)}</a>` : ""}</span></div>
+    ${who?.car || who?.plate ? `<div class="trk-veh"><span>${ui(S.t?.icon || "car", 18)} ${esc(who.car || "")}</span>${who.plate ? `<b>${esc(who.plate)}</b>` : ""}</div>` : ""}</div>`;
+}
+function trkRouteHTML(o, s, st) {
+  const from = storePt(st) || DIST[st.d], home = o.d.la != null && o.d.lo != null ? { la: +o.d.la, lo: +o.d.lo } : null;
+  const pickup = o.d?.mode === "pickup", km = !pickup && from && home ? kmBetween(from, home) : null;
+  return `<div class="trk-card"><div class="trk-route"><span class="ic">${ui("store", 18)}</span><span><small>${L("Откуда", "Qayerdan", "From")}</small>${esc(st.name)}${st.addr ? ` · ${esc(L(st.addr, st.addrUz || st.addr))}` : ""}</span>
+    ${pickup ? "" : `<span class="ln"></span><span></span><span class="ic home">${ui("pin", 18)}</span><span><small>${L("Куда", "Qayerga", "To")}</small>${esc(o.d.street || "")}${o.d.flat ? ", " + L("кв. ", "xonadon ", "flat ") + esc(o.d.flat) : ""}</span>`}</div>
+    ${km != null ? `<span class="trk-km">${ui("truck", 14)} ≈ ${kmTxt(km)} ${L("по прямой", "to‘g‘ri chiziqda", "as the crow flies")}</span>` : ""}</div>`;
+}
 function dTrack() {
-  const o = orders.find(x => x.num === drawerOrder); if (!o) return dOrders();
+  const o = orders.find(x => x.num === drawerOrder); if (!o) { $("#drawer").classList.remove("trk"); return dOrders(); }
   markOrdersSeen([o.num]);
   $("#dTitle").textContent = L("Заказ ", "Buyurtma ") + o.num;
-  const hm = ms => new Date(ms).toLocaleTimeString(LOCALE, { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  if (trkShip >= o.ships.length) trkShip = 0;
+  const i = trkShip, s = o.ships[i], st = STORE[s.store] || { id: s.store, name: s.store_name || L("Магазин", "Do‘kon", "Store"), d: "chil", addr: s.store_addr || "", addrUz: s.store_addr || "", hours: s.store_hours || "" };
+  const S = trkState(o, s, i), c = liveCache[s.id], [h1, h2] = trkTitle(o, s, st, S, c), done = ["delivered", "picked"].includes(S.key);
+  trkKeys[s.id] = S.key;
+  const hm = ms => new Date(ms).toLocaleTimeString(LOCALE, { hour: "2-digit", minute: "2-digit" });
+  const live = S.key === "cancelled" || done ? `<span class="trk-live off">${done ? L("Завершён", "Yakunlandi", "Completed") : L("Отменён", "Bekor qilindi", "Cancelled")}</span>` : `<span class="trk-live${o.api ? "" : " demo"}">${o.api ? "Live" : L("Демо", "Demo", "Demo")} · <time data-since="${o.t}">${trkClock(o.t)}</time></span>`;
   const sched = o.d.when === "slot" ? L("Доставка завтра, 10:00–14:00", "Yetkazish ertaga, 10:00–14:00") : o.d.when === "vip" ? `${L("Точный час", "Aniq soat", "Exact hour")} · ${L("завтра", "ertaga")} ${o.d.hour}:00–${String(+o.d.hour + 1).padStart(2, "0")}:00` : "";
-  $("#dBody").innerHTML = `${o.api ? `<div class="note">${o.status === "cancelled" ? L("Заказ отменён.", "Buyurtma bekor qilindi.") : (o.d?.delivery_by === "store" || !apiCfg?.yandex ? L("Статусы обновляет магазин — страница обновляется сама.", "Holatlarni do‘kon yangilaydi — sahifa o‘zi yangilanadi.", "The store updates the statuses — the page refreshes by itself.") : L("Статусы обновляют магазин и Яндекс Доставка — страница обновляется сама.", "Holatlarni do‘kon va Yandex yangilaydi — sahifa o‘zi yangilanadi.", "The store and Yandex Delivery update the statuses — the page refreshes by itself."))}</div>` : `<div class="note">${sched ? L("Демо: заказ ко времени ждёт своего интервала — курьера начнут искать за 90 минут до него. В рабочей версии статусы присылает Яндекс Доставка, а клиент получает SMS или уведомление в Yandex Go.", "Demo: vaqtli buyurtma o‘z oralig‘ini kutadi — kuryer undan 90 daqiqa oldin qidiriladi. To‘liq versiyada holatlarni Yandex yuboradi, mijoz SMS yoki Yandex Go xabarini oladi.", "Demo: a scheduled order waits for its time slot — the courier search starts 90 minutes before it. In the live version Yandex Delivery sends the statuses and the customer gets an SMS or a Yandex Go notification.") : L("Демо: статусы меняются каждые несколько секунд. В рабочей версии их присылает Яндекс Доставка, а клиент получает SMS или уведомление в Yandex Go.", "Demo: holatlar har necha soniyada o‘zgaradi. To‘liq versiyada ularni Yandex yuboradi, mijoz SMS yoki Yandex Go xabarini oladi.")}</div>`}
-    ${payExtra(o)}
-    ${o.api && o.status === "active" ? notifyNudgeHTML("buyer") : ""}
+  const prog = S.key === "cancelled" ? "" : `<div class="trk-prog" style="--n:${S.steps.length}">${S.steps.map((_, k) => `<i class="${k < S.cur || (k === S.cur && (k === S.steps.length - 1 || done)) ? "done" : k === S.cur ? "now" : ""}"></i>`).join("")}${S.keys.map((k, n) => `<span class="${n === S.cur ? "on" : ""}">${trkShort(k)}</span>`).join("")}</div>`;
+  const timeline = `<div class="trk-card"><h3>${L("Статус заказа", "Buyurtma holati", "Order status")}</h3><ol class="steps">${S.steps.map((n, k) => `<li class="${k < S.cur || (k === S.cur && k === S.steps.length - 1) ? "done" : k === S.cur ? "now" : ""}"><span class="d"></span><span>${n}</span><time class="mono">${k <= S.cur ? hm(o.api ? ((s.history || []).find(h => h.s === S.keys[k])?.t || s.status_at) : o.t + i * 1200 + k * STEP_MS) : ""}</time></li>`).join("")}</ol></div>`;
+  const totalsCard = `<div class="trk-card"><h3>${L("Состав и оплата", "Tarkib va to‘lov", "Items and payment")}</h3>
+    <div class="ship-th" aria-hidden="true">${s.lines.slice(0, 8).map(l => PROD[l.id] ? `<span>${mini(PROD[l.id])}<i>${fmtN(l.q)}</i></span>` : "").join("")}</div>
+    <div style="display:grid;gap:6px">${totalsHTML(o.goods, o.svc || 0, o.bdisc != null ? o.bdisc : (o.disc || 0), delRowHTML(o.del, o.d?.delivery_by === "store", o.del_store ?? null) + (o.bdisc != null && o.pd ? `<div class="sumrow disc"><span>${L("Промокод", "Promokod")} ${esc(o.promo || o.d?.promo || "")}</span><span class="num">−${fmt(o.pd)}</span></div>` : "") + (o.bdisc != null && o.pts ? `<div class="sumrow disc"><span>${L("Бонусами", "Bonus bilan")}</span><span class="num">−${fmt(o.pts)}</span></div>` : ""))}${o.cash ? `<div class="sumrow cash"><span>${L("Кешбэк", "Keshbek")}</span><span>+${fmt(o.cash)}</span></div>` : ""}<div class="sumrow total"><span>${o.d.pay === "store" || o.d.pay === "cash" ? (o.d?.delivery_by === "store" ? (o.del_store != null ? L("К оплате при получении", "Olganda to‘lanadi", "To pay on receipt") : L("К оплате при получении (товары)", "Olganda to‘lanadi (tovarlar)", "To pay on receipt (goods)")) : L("К оплате в магазине", "Do‘konda to‘lanadi", "To pay at the store")) : o.api && o.pay_status !== "paid" ? L("К оплате картой", "Karta bilan to‘lanadi", "To pay by card") : L("Оплачено", "To‘langan")}</span><span class="num">${fmt(o.total + (o.d?.delivery_by === "store" && o.del_store ? o.del_store : 0))}</span></div></div></div>`;
+  const notes = `${o.api ? "" : `<div class="note">${sched ? L("Демо: заказ ко времени ждёт своего интервала. В рабочей версии статусы присылают магазин и Яндекс Доставка.", "Demo: vaqtli buyurtma o‘z oralig‘ini kutadi. To‘liq versiyada holatlarni do‘kon va Yandex yuboradi.", "Demo: a scheduled order waits for its slot. In the live version the store and Yandex Delivery send the statuses.") : L("Демо: статусы меняются каждые несколько секунд. В рабочей версии их присылают магазин и Яндекс Доставка.", "Demo: holatlar har necha soniyada o‘zgaradi. To‘liq versiyada ularni do‘kon va Yandex yuboradi.", "Demo: the statuses change every few seconds. In the live version the store and Yandex Delivery send them.")}</div>`}
+    ${payExtra(o)}${o.api && o.status === "active" ? notifyNudgeHTML("buyer") : ""}
     ${sched && o.d?.delivery_by !== "store" ? `<div class="note vipn">${ui("clock", 14)} ${sched}. ${L("Поиск курьера начнётся за 90 минут до интервала.", "Kuryer qidiruvi oraliqdan 90 daqiqa oldin boshlanadi.")}</div>` : ""}
-    ${o.d?.mode !== "pickup" && o.d?.street ? `<div class="addr-line">${ui("pin", 14)} <span>${esc(o.d.street)}${o.d.private ? ", " + L("частный дом", "xususiy uy", "private house") : [o.d.entrance ? L("подъезд ", "kirish ", "entrance ") + esc(o.d.entrance) : "", o.d.flat ? L("кв. ", "xonadon ", "flat ") + esc(o.d.flat) : "", +o.d.floor > 1 ? L("этаж ", "qavat ", "floor ") + esc(o.d.floor) : ""].filter(Boolean).map(x => ", " + x).join("")}<small>${(o.d?.delivery_by === "store" && (o.d.help || (o.d.lift ? "one" : "none")) !== "none" ? L("Просили помочь занести — условия уточнит магазин", "Olib kirishga yordam so‘ralgan — shartlarni do‘kon aniqlaydi", "Help carrying in requested — the store confirms the terms") : HELP_TXT()[o.d.help || (o.d.lift ? "one" : "none")])}</small></span></div>` : ""}
-    ${o.ships.map((s, i) => {
-      const st = STORE[s.store] || { id: s.store, name: s.store_name || L("Магазин", "Do‘kon", "Store"), d: "chil", addr: s.store_addr || "", addrUz: s.store_addr || "", hours: s.store_hours || "" }, t = TARIFFS.find(x => x.id === s.tariff), steps = STEPS_FOR(o, t), cur = stepOf(o, i, steps.length);
-      return `<div class="track"><div class="track-h"><b>${esc(st.name)}</b><span class="pill ${s.status === "cancelled" ? "closed" : cur === steps.length - 1 ? "ok" : "acc"}">${s.status === "cancelled" ? L("Отменён", "Bekor qilindi") : t ? tName(t) : L("Самовывоз", "Olib ketish")}</span></div>
-        <ol class="steps">${steps.map((n, k) => `<li class="${k < cur || (k === cur && k === steps.length - 1) ? "done" : k === cur ? "now" : ""}"><span class="d"></span><span>${n}</span><time class="mono">${k <= cur ? hm(o.api ? ((s.history || []).find(h => h.s === STATUS_KEYS(o, s.tariff)[k])?.t || s.status_at) : o.t + i * 1200 + k * STEP_MS) : ""}</time></li>`).join("")}</ol>
-        ${o.api ? shipExtra(o, s) : ""}
-        ${problemHTML(o, s, i)}
-        ${t && cur >= 2 && cur < steps.length - 1 && s.status !== "cancelled" ? liveMapHTML(o, s, st, t) : ""}
-        ${t && cur >= 3 && s.plate ? `<div class="courier"><span>${lang === "ru" ? s.courier : ({ "Шерзод": "Sherzod", "Бобур": "Bobur", "Жасур": "Jasur", "Отабек": "Otabek", "Дилшод": "Dilshod", "Сардор": "Sardor" }[s.courier] || s.courier)} · ${t.veh}<small>${L("Телефон курьера придёт в SMS", "Kuryer telefoni SMSda keladi")}</small></span><span class="plate"><i>${s.plate[0]}</i>${s.plate[1]} ${s.plate[2]} ${s.plate[3]}</span></div>` : ""}
-        ${!t ? `<div class="courier"><span>${esc(L(st.addr, st.addrUz))}<small>${esc(st.hours || "")} · ${L("назовите номер", "raqamni ayting")} ${o.num}</small></span></div>` : ""}</div>`;
-    }).join("")}
-    <div style="display:grid;gap:6px">${totalsHTML(o.goods, o.svc || 0, o.bdisc != null ? o.bdisc : (o.disc || 0), delRowHTML(o.del, o.d?.delivery_by === "store", o.del_store ?? null) + (o.bdisc != null && o.pd ? `<div class="sumrow disc"><span>${L("Промокод", "Promokod")} ${esc(o.promo || o.d?.promo || "")}</span><span class="num">−${fmt(o.pd)}</span></div>` : "") + (o.bdisc != null && o.pts ? `<div class="sumrow disc"><span>${L("Бонусами", "Bonus bilan")}</span><span class="num">−${fmt(o.pts)}</span></div>` : ""))}${o.cash ? `<div class="sumrow cash"><span>${L("Кешбэк", "Keshbek")}</span><span>+${fmt(o.cash)}</span></div>` : ""}<div class="sumrow total"><span>${o.d.pay === "store" || o.d.pay === "cash" ? (o.d?.delivery_by === "store" ? (o.del_store != null ? L("К оплате при получении", "Olganda to‘lanadi", "To pay on receipt") : L("К оплате при получении (товары)", "Olganda to‘lanadi (tovarlar)", "To pay on receipt (goods)")) : L("К оплате в магазине", "Do‘konda to‘lanadi", "To pay at the store")) : o.api && o.pay_status !== "paid" ? L("К оплате картой", "Karta bilan to‘lanadi", "To pay by card") : L("Оплачено", "To‘langan")}</span><span class="num">${fmt(o.total + (o.d?.delivery_by === "store" && o.del_store ? o.del_store : 0))}</span></div></div>`;
-  if (o.api && o.status === "active" && o.ships.every(s => ["unpaid", "new", "assembling", "cancelled"].includes(s.status))) $("#dBody").insertAdjacentHTML("beforeend", `<button class="lnk" type="button" data-act="order-cancel" style="justify-self:start;color:var(--muted)">${L("Отменить заказ", "Buyurtmani bekor qilish")}</button>`);
-  if (o.api) $("#dBody").insertAdjacentHTML("beforeend", `<button class="lnk" type="button" data-act="order-support" style="justify-self:start">${ui("headset", 15)} ${L("Вопрос по заказу — написать в поддержку", "Buyurtma bo‘yicha savol — yordamga yozish", "A question about this order — write to support")}</button>`);
-  $("#dFoot").innerHTML = `<div style="display:grid;grid-template-columns:auto 1fr;gap:8px"><button class="btn btn-line" type="button" data-repeat="${o.num}">${ui("repeat", 18)} ${L("Повторить", "Takrorlash")}</button><button class="btn btn-dark" type="button" data-act="close-drawer">${L("Продолжить покупки", "Xaridni davom ettirish")}</button></div>`;
+    ${o.api ? shipExtra(o, s) : ""}${problemHTML(o, s, i)}`;
+  const doneCard = done ? `<div class="trk-card trk-done"><span class="ok-c">${ui("check", 30)}</span><b>${S.key === "picked" ? L("Заказ у вас", "Buyurtma sizda", "The order is yours") : L("Заказ доставлен", "Buyurtma yetkazildi", "Your order has arrived")}</b><button class="btn btn-primary" type="button" data-go="home" style="width:100%;border-radius:999px">${L("На главную", "Bosh sahifaga", "Back to home")}</button></div>` : "";
+  $("#dBody").innerHTML = `<div id="trk" data-num="${esc(o.num)}" data-ship="${s.id}">
+    <div class="trk-top"><div><button type="button" data-act="d-back" aria-label="${L("Назад", "Orqaga", "Back")}">${ui("back", 20)}</button><span class="trk-num">${L("Заказ", "Buyurtma", "Order")} ${esc(o.num)}</span><button type="button" data-act="trk-center" aria-label="${L("Показать на карте", "Xaritada ko‘rsatish", "Recentre the map")}">${ui("nav", 20)}</button></div></div>
+    <div class="trk-map">${liveMapHTML(o, s, st, S.t, true)}</div>
+    <div class="trk-sheet">
+      ${o.ships.length > 1 ? `<div class="trk-ships chips" role="tablist">${o.ships.map((x, k) => `<button class="chip${k === i ? " on" : ""}" type="button" role="tab" aria-selected="${k === i}" data-trkship="${k}">${esc((STORE[x.store] || {}).name || x.store_name || L("Магазин", "Do‘kon", "Store") + " " + (k + 1))}</button>`).join("")}</div>` : ""}
+      ${doneCard}
+      <div class="trk-card"><div class="trk-head"><div>${live}<h2 id="trkH">${esc(h1)}</h2><p id="trkP">${esc(h2)}</p></div><span id="trkEta">${trkEtaHTML(c, S.key)}</span></div>${prog}</div>
+      <div id="trkWho">${trkWhoHTML(o, s, S, c)}</div>
+      ${notes}
+      ${timeline}
+      ${trkRouteHTML(o, s, st)}
+      ${totalsCard}
+      <div class="trk-btns"><button class="btn btn-line" type="button" data-repeat="${o.num}">${ui("repeat", 18)} ${L("Повторить", "Takrorlash")}</button><button class="btn btn-dark" type="button" data-act="close-drawer">${L("Продолжить покупки", "Xaridni davom ettirish")}</button></div>
+      <div class="trk-links">${o.api && o.status === "active" && o.ships.every(x => ["unpaid", "new", "assembling", "cancelled"].includes(x.status)) ? `<button class="lnk" type="button" data-act="order-cancel" style="color:var(--muted)">${L("Отменить заказ", "Buyurtmani bekor qilish")}</button>` : ""}${o.api ? `<button class="lnk" type="button" data-act="order-support">${ui("headset", 15)} ${L("Вопрос по заказу — написать в поддержку", "Buyurtma bo‘yicha savol — yordamga yozish", "A question about this order — write to support")}</button>` : ""}</div>
+    </div></div>`;
+  $("#dFoot").innerHTML = "";
+  { const bd = $("#dBody"), box = $("#trk"); box.classList.toggle("up", bd.scrollTop > (box.querySelector(".trk-map")?.offsetHeight || 400) - 90); }
   if (document.querySelector(".livemap[data-ship]")) setTimeout(liveTick, 30);
 }
+/* a courier update: the words, the time to arrival and the courier card change in place; a new step redraws the screen */
+function trkLive(o, s, c) {
+  const box = $("#trk"); if (!box || box.dataset.num !== o.num || box.dataset.ship !== String(s.id)) return;
+  const i = o.ships.indexOf(s), S = trkState(o, s, i);
+  if (o.api && c?.status && c.status !== S.key && S.keys.includes(c.status)) S.key = c.status;
+  if (trkKeys[s.id] !== S.key) return renderDrawer();
+  const st = STORE[s.store] || { name: s.store_name || "", addr: "", addrUz: "" }, [h1, h2] = trkTitle(o, s, st, S, c);
+  const a = $("#trkH"), b = $("#trkP"), e = $("#trkEta"), w = $("#trkWho");
+  if (a) a.textContent = h1; if (b) b.textContent = h2; if (e) e.innerHTML = trkEtaHTML(c, S.key);
+  if (w) { const html = trkWhoHTML(o, s, S, c); if (w.innerHTML !== html) w.innerHTML = html; }
+}
+$("#dBody")?.addEventListener("scroll", e => { const box = $("#trk"); if (box) box.classList.toggle("up", e.currentTarget.scrollTop > (box.querySelector(".trk-map")?.offsetHeight || 400) - 90); }, { passive: true });
+setInterval(() => { const tm = document.querySelector("#trk time[data-since]"); if (tm && !document.hidden) tm.textContent = trkClock(+tm.dataset.since); }, 1000);
+// demo orders move on their own: redraw when a shipment reaches its next step
+setInterval(() => { if (drawerView !== "track" || document.hidden) return; const box = $("#trk"); if (!box) return; const o = orders.find(x => x.num === box.dataset.num); if (!o || o.api) return; const s = o.ships.find(x => String(x.id ?? "") === box.dataset.ship) || o.ships[trkShip]; if (s && trkState(o, s, o.ships.indexOf(s)).key !== trkKeys[s.id]) renderDrawer(); }, 1000);
 /* before an order is cancelled the buyer says why: the store reads it with the cancellation (and stops packing) */
 function cancelAsk(num) {
   if ($("#cancelForm")) return $("#cancelForm").scrollIntoView({ block: "nearest" });
@@ -4496,6 +4717,7 @@ function openAddrSheet() {
     closeAddrSheet();
     $("#orderForm")?.dispatchEvent(new Event("input", { bubbles: true }));
     const card = $("#addrCard"); if (card) card.innerHTML = addrCardInner({ la, lo, street: $("#fStreet")?.value.trim(), district: ds?.value });
+    const cm = $("#ckMap"); if (cm && la != null && lo != null) { cm.innerHTML = ckMapInner(+la, +lo); cm.hidden = false; }
     toast(L("Адрес сохранён — курьер приедет к метке", "Manzil saqlandi — kuryer belgiga keladi", "Address saved — the courier comes to the pin"));
   });
   requestAnimationFrame(() => el.classList.add("on"));
@@ -5297,7 +5519,7 @@ function showServerTotals(q) {
 }
 async function submitOrderApi(d, qt) {
   const btn = $("#payBtn"), lbl = btn.textContent;
-  btn.disabled = true; btn.textContent = L("Оформляем…", "Rasmiylashtirilmoqda…");
+  btn.disabled = true; btn.classList.add("busy"); btn.textContent = L("Оформляем…", "Rasmiylashtirilmoqda…");
   const body = { lines: cartLines().map(l => ({ id: l.p.id, store: l.store, q: l.q })), services: Object.keys(services).map(Number), bundles: bundlesOn, form: d, promo, points: qt.pts || 0, lang, expected_total: expectTotal ?? qt.total, app: NATIVE };
   try {
     const r = await api("POST", "/api/orders", body);
@@ -5312,7 +5534,7 @@ async function submitOrderApi(d, qt) {
     openDrawer("track", o.num);
     syncCatalog();
   } catch (e) {
-    btn.disabled = false; btn.textContent = lbl;
+    btn.disabled = false; btn.classList.remove("busy"); btn.textContent = lbl;
     if (e.code === "total_changed") { expectTotal = e.data.quote.total; showServerTotals(e.data.quote); toast(L(`Сумма уточнена: ${fmt(expectTotal)}. Проверьте и подтвердите ещё раз.`, `Summa aniqlandi: ${fmt(expectTotal)}. Tekshiring va yana tasdiqlang.`, `The total has been updated: ${fmt(expectTotal)}. Check it and confirm again.`)); }
     else if (e.code === "cart_changed") {
       const names = (e.data.problems || []).map(p => `${PROD[p.id] ? pName(PROD[p.id]) : "#" + p.id} — ${p.reason === "stock" ? L(`в наличии ${p.stock}`, `mavjud ${p.stock}`, `in stock: ${p.stock}`) : L("нет в продаже", "sotuvda yo‘q")}`).join("; ");
@@ -5693,26 +5915,32 @@ function payExtra(o) {
    from /api/orders/:num/courier (the Yandex position; without one the server answers "unavailable" and the map shows only the store,
    the address and the real status — no pretend car). Only the offline demo (no API) animates a courier here. ---- */
 const liveCache = {}; let liveTimer = 0;
+/* the checkout's address preview: OpenStreetMap tiles around the pin (no script map, nothing to load but three images in view) */
+function ckMapInner(la, lo) {
+  const z = 16, P = lmProj(z), c = P(la, lo), x0 = Math.floor(c.x) - 1, y0 = Math.floor(c.y) - 1;
+  let tiles = ""; for (let j = 0; j < 3; j++) for (let i = 0; i < 3; i++) tiles += `<img src="https://tile.openstreetmap.org/${z}/${x0 + i}/${y0 + j}.png" alt="" loading="lazy" decoding="async" onerror="this.style.visibility='hidden'">`;
+  return `<div class="ckm-t" style="left:calc(50% - ${((c.x - x0) * 256).toFixed(1)}px);top:calc(50% - ${((c.y - y0) * 256).toFixed(1)}px)">${tiles}</div>${PIN}<span class="attr">© OpenStreetMap</span>`;
+}
 function lmProj(z) { const n = 2 ** z; return (la, lo) => { const r = la * Math.PI / 180; return { x: (lo + 180) / 360 * n, y: (1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2 * n }; }; }
-function liveMapHTML(o, s, st, t) {
+function liveMapHTML(o, s, st, t, big) {
   const from = storePt(st) || DIST[st.d] || DIST[district], home = o.d.la != null && o.d.lo != null ? { la: +o.d.la, lo: +o.d.lo } : (DIST[o.d.district] || DIST[district]);
   if (!from || !home) return "";
   const cp = liveCache[s.id]?.pos, pts = [from, home].concat(cp ? [{ la: +cp.la, lo: +cp.lo }] : []);
   let z = 15, P, a, b, c0;
-  for (; z > 10; z--) { P = lmProj(z); a = P(from.la, from.lo); b = P(home.la, home.lo); const xs = pts.map(q => P(q.la, q.lo)); const w = Math.max(...xs.map(q => q.x)) - Math.min(...xs.map(q => q.x)), h = Math.max(...xs.map(q => q.y)) - Math.min(...xs.map(q => q.y)); c0 = { x: (Math.max(...xs.map(q => q.x)) + Math.min(...xs.map(q => q.x))) / 2, y: (Math.max(...xs.map(q => q.y)) + Math.min(...xs.map(q => q.y))) / 2 }; if (w < 1.25 && h < .9) break; } // store, home and the courier inside a ~400×300 px window
+  for (; z > 10; z--) { P = lmProj(z); a = P(from.la, from.lo); b = P(home.la, home.lo); const xs = pts.map(q => P(q.la, q.lo)); const w = Math.max(...xs.map(q => q.x)) - Math.min(...xs.map(q => q.x)), h = Math.max(...xs.map(q => q.y)) - Math.min(...xs.map(q => q.y)); c0 = { x: (Math.max(...xs.map(q => q.x)) + Math.min(...xs.map(q => q.x))) / 2, y: (Math.max(...xs.map(q => q.y)) + Math.min(...xs.map(q => q.y))) / 2 }; if (big ? w < 1.25 && h < 1.2 : w < 1.25 && h < .9) break; } // store, home and the courier inside a ~400×300 px window (the order screen: ~400×380)
   const cx = c0.x, cy = c0.y, x0 = Math.floor(cx) - 1, y0 = Math.floor(cy) - 1;
   let tiles = ""; for (let j = 0; j < 3; j++) for (let i = 0; i < 3; i++) tiles += `<img src="https://tile.openstreetmap.org/${z}/${x0 + i}/${y0 + j}.png" alt="" loading="lazy" decoding="async" onerror="this.style.visibility='hidden'">`;
   const px = p => ({ l: ((p.x - x0) * 256).toFixed(1), t: ((p.y - y0) * 256).toFixed(1) });
   const A = px(a), B = px(b), car = liveCache[s.id]?.pos ? px(P(liveCache[s.id].pos.la, liveCache[s.id].pos.lo)) : null;
-  const icon = ui(t.icon || "car", 18);
-  return `<div class="livemap" id="live${s.id}" data-ship="${s.id}" data-num="${esc(o.num)}" data-z="${z}" data-x0="${x0}" data-y0="${y0}" role="img" aria-label="${L("Карта: магазин, ваш адрес и курьер", "Xarita: do‘kon, manzilingiz va kuryer", "Map: the store, your address and the courier")}">
+  const icon = ui(t?.icon || "car", big ? 20 : 18);
+  return `<div class="livemap${big ? " big" : ""}${big && !t ? " pick" : ""}" id="live${s.id}" data-ship="${s.id}" data-num="${esc(o.num)}" data-z="${z}" data-x0="${x0}" data-y0="${y0}" role="img" aria-label="${L("Карта: магазин, ваш адрес и курьер", "Xarita: do‘kon, manzilingiz va kuryer", "Map: the store, your address and the courier")}">
     <div class="lm-t" style="left:calc(50% - ${((cx - x0) * 256).toFixed(1)}px);top:calc(50% - ${((cy - y0) * 256).toFixed(1)}px)">${tiles}
       <svg class="lm-line" viewBox="0 0 768 768"><line x1="${A.l}" y1="${A.t}" x2="${B.l}" y2="${B.t}" stroke="var(--accent)" stroke-width="3" stroke-dasharray="6 7" stroke-linecap="round" opacity=".8"/></svg>
       <div class="lm-m store" style="left:${A.l}px;top:${A.t}px" title="${esc(st.name)}"></div>
       <div class="lm-m home" style="left:${B.l}px;top:${B.t}px">${PIN}</div>
       <div class="lm-m car" id="lmcar${s.id}" style="left:${car ? car.l : A.l}px;top:${car ? car.t : A.t}px;${car ? "" : "display:none"}"><span>${icon}</span></div>
     </div><span class="attr">© OpenStreetMap</span></div>
-    <div class="lm-bar" id="lmbar${s.id}">${liveBarHTML(s.status ? s : { ...s, status: ["new", "assembling", "searching", "to_store", "on_way", "delivered"][stepOf(o, o.ships.indexOf(s), 6)] }, liveCache[s.id], t)}</div>`;
+    <div class="lm-bar" id="lmbar${s.id}"${big ? " hidden" : ""}>${liveBarHTML(s.status ? s : { ...s, status: ["new", "assembling", "searching", "to_store", "on_way", "delivered"][stepOf(o, o.ships.indexOf(s), 6)] }, liveCache[s.id], t)}</div>`;
 }
 function liveBarHTML(s, c, t) {
   const left = c?.eta_min ? `<b>~${c.eta_min} ${L("мин", "daq", "min")}</b> ` : "";
@@ -5754,6 +5982,7 @@ async function liveTick() {
       car.style.left = l.toFixed(1) + "px"; car.style.top = tp.toFixed(1) + "px"; car.style.display = "";
     } else car.style.display = "none";
     if (bar) bar.innerHTML = liveBarHTML({ ...s, status: c.status || status }, c, TARIFFS.find(x => x.id === s.tariff));
+    if ($("#trk")) trkLive(o, s, c);
   }
 }
 setInterval(() => { if (drawerView === "track" && !document.hidden) liveTick(); }, API ? 10000 : 2500);
@@ -9269,11 +9498,12 @@ document.addEventListener("change", e => {
   if (t.dataset && t.dataset.svc) { const id = +t.dataset.svc; if (t.checked) { services[id] = true; if (!qtyOf(id)) addToCart(id, null, 1, true); toast(L("Установка мастером добавлена в корзину", "Usta o‘rnatishi savatga qo‘shildi")); } else delete services[id]; LS.set("imorat.svc", services); }
 });
 document.addEventListener("click", e => {
-  const t = e.target.closest("[data-go],[data-act],[data-open],[data-add],[data-addo],[data-fav],[data-inc],[data-dec],[data-lang],[data-sub],[data-store],[data-q],[data-scroll],[data-scrollto],[data-seltab],[data-bought],[data-calc],[data-clear],[data-order],[data-sst],[data-bundle],[data-ask],[data-askp],[data-aiadd],[data-aiall],[data-svcoff],[data-photo],[data-photodel],[data-cmp],[data-oauth],[data-authstep],[data-wview],[data-wcalc],[data-watch],[data-repeat],[data-rp-store],[data-rp-ok],[data-projload],[data-projdel],[data-calccopy],[data-calcproj],[data-mk]");
+  const t = e.target.closest("[data-go],[data-act],[data-open],[data-add],[data-addo],[data-fav],[data-inc],[data-dec],[data-lang],[data-sub],[data-store],[data-q],[data-scroll],[data-scrollto],[data-seltab],[data-bought],[data-calc],[data-clear],[data-order],[data-sst],[data-bundle],[data-ask],[data-askp],[data-aiadd],[data-aiall],[data-svcoff],[data-photo],[data-photodel],[data-cmp],[data-oauth],[data-authstep],[data-wview],[data-wcalc],[data-watch],[data-repeat],[data-rp-store],[data-rp-ok],[data-projload],[data-projdel],[data-calccopy],[data-calcproj],[data-mk],[data-trkship]");
   if (!t) return;
   const ds = t.dataset;
   if (ds.go !== undefined) return go(ds.go, ds.sub);
   if (ds.mk !== undefined) return mkOpen(ds.mk);
+  if (ds.trkship !== undefined) { trkShip = +ds.trkship; return renderDrawer(); }
   if (ds.sub !== undefined) { f.sub = ds.sub || null; document.querySelectorAll(".chips [data-sub]").forEach(b => b.setAttribute("aria-pressed", (b.dataset.sub || null) === f.sub)); return renderList(); }
   if (ds.open) { e.preventDefault(); if (aiOpen && window.innerWidth <= 760) closeAI(); return openProduct(+ds.open); }
   if (ds.add) { fly(t); return addToCart(+ds.add); }
@@ -9318,6 +9548,7 @@ document.addEventListener("click", e => {
   switch (ds.act) {
     case "mega": return openMega();
     case "close-mega": return closeMega();
+    case "trk-center": { const box = $("#trk"); if (box) { const m = box.querySelector(".livemap"); if (m) { m.style.opacity = ".4"; } setTimeout(renderDrawer, 120); } return; }
     case "mk-back": return void mkBack();
     case "cart": return openDrawer("cart");
     case "favs": return openDrawer("favs");
