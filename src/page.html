@@ -812,7 +812,8 @@ html .drawer.swiped:not(.on), html .ai.swiped:not(.on), html .wpanel.swiped:not(
 .trk-top > div { position: absolute; left: 0; right: 0; top: calc(10px + env(safe-area-inset-top, 0px)); display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; gap: 10px; padding: 0 14px; pointer-events: none; }
 .trk-top button, .trk-top .trk-num { pointer-events: auto; }
 .trk-top::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: calc(64px + env(safe-area-inset-top, 0px)); background: var(--bg); box-shadow: 0 1px 0 var(--line); opacity: 0; transition: opacity .2s ease; pointer-events: none; }
-#trk.up .trk-top::before { opacity: 1; } /* the sheet has slid up under the buttons: they get a bar of their own */
+#trk.up .trk-top::before { opacity: 1; }
+#trk.now .trk-top::before { transition: none; } /* the sheet has slid up under the buttons: they get a bar of their own */
 .trk-top button { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: var(--surface); color: var(--ink); box-shadow: 0 2px 10px rgb(0 0 0 / .18); transition: transform .14s ease; }
 .trk-top button:active { transform: scale(.92); }
 .trk-top button svg { width: 20px; height: 20px; }
@@ -4145,7 +4146,9 @@ function dTrack() {
       <div class="trk-links">${o.api && o.status === "active" && o.ships.every(x => ["unpaid", "new", "assembling", "cancelled"].includes(x.status)) ? `<button class="lnk" type="button" data-act="order-cancel" style="color:var(--muted)">${L("Отменить заказ", "Buyurtmani bekor qilish")}</button>` : ""}${o.api ? `<button class="lnk" type="button" data-act="order-support">${ui("headset", 15)} ${L("Вопрос по заказу — написать в поддержку", "Buyurtma bo‘yicha savol — yordamga yozish", "A question about this order — write to support")}</button>` : ""}</div>
     </div></div>`;
   $("#dFoot").innerHTML = "";
-  { const bd = $("#dBody"), box = $("#trk"); box.classList.toggle("up", bd.scrollTop > (box.querySelector(".trk-map")?.offsetHeight || 400) - 90); }
+  { const bd = $("#dBody"), box = $("#trk"), up = bd.scrollTop > (box.querySelector(".trk-map")?.offsetHeight || 400) - 90;
+    /* a redraw while scrolled keeps the bar as it was instead of fading it in again */
+    if (up) { box.classList.add("now", "up"); requestAnimationFrame(() => requestAnimationFrame(() => box.classList.remove("now"))); } }
   if (document.querySelector(".livemap[data-ship]")) setTimeout(liveTick, 30);
 }
 /* a courier update: the words, the time to arrival and the courier card change in place; a new step redraws the screen */
