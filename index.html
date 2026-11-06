@@ -335,7 +335,17 @@ html.pg-anim, html.pg-anim body { overflow-x: clip; }
 .hdr-row .fx-btn:not(.th-btn) { display: none; }
 .search .ask .t { display: none; }
 .search input { padding-right: 124px; }
+.hdr-row { gap: 8px; }
+.hdr-row > .seg { display: none; }
+.lang-pick { position: relative; display: inline-flex; align-items: center; gap: 3px; height: 36px; padding: 0 8px 0 11px; flex: none; border: 1px solid var(--line-strong); border-radius: 11px; font-size: 13px; font-weight: 700; letter-spacing: .02em; }
+.lang-pick svg { transform: rotate(90deg); color: var(--muted); }
+.lang-pick select { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; font-size: 16px; cursor: pointer; }
+.lang-pick:has(select:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+.demo-badge { font-size: 10px; padding: 2px 6px; margin-left: 2px; }
 }
+.lang-pick { display: none; }
+@media (max-width: 760px) { .lang-pick { display: inline-flex; } }
+@media (max-width: 370px) { .hdr-row .th-btn { display: none; } }
 .tabbar { display: none; }
 :root { --tb-bg: color-mix(in srgb, var(--surface) 70%, transparent); --tb-line: color-mix(in srgb, var(--ink) 9%, transparent); --tb-pill: color-mix(in srgb, var(--ink) 10%, transparent); --tb-lens: rgb(255 255 255 / .6); }
 html[data-theme="dark"] { --tb-bg: rgb(52 46 41 / .62); --tb-line: rgb(255 255 255 / .1); --tb-pill: rgb(0 0 0 / .46); --tb-lens: rgb(255 255 255 / .16); }
@@ -704,6 +714,7 @@ footer { padding-block: 36px 40px; color: var(--muted); font-size: 13px; border-
 @media (max-width: 860px) { .cat-layout { grid-template-columns: 1fr; gap: 12px; } .side { position: static; max-height: none; } }
 .scrim-g { position: fixed; inset: 0; background: rgba(8, 14, 13, .5); z-index: 40; opacity: 0; pointer-events: none; transition: opacity .2s; }
 .scrim-g.on { opacity: 1; pointer-events: auto; }
+#scrim { visibility: hidden; transition: opacity .2s, visibility 0s linear .2s; } #scrim.on { visibility: visible; transition: opacity .2s, visibility 0s; } #scrim.dragging { transition: none; }
 .drawer, .ai { position: fixed; top: 0; right: 0; bottom: 0; width: min(500px, 100%); background: var(--surface); z-index: 50; box-shadow: var(--shadow); transform: translateX(105%); transition: transform .28s cubic-bezier(.2,.8,.2,1); display: flex; flex-direction: column; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); padding-right: env(safe-area-inset-right, 0px); visibility: hidden; }
 .drawer.on, .ai.on { transform: none; visibility: visible; }
 html .drawer, html .ai, html .wpanel { transition: transform .3s cubic-bezier(.2, .8, .2, 1), visibility 0s linear .3s; }
@@ -2979,7 +2990,7 @@ function renderHeader() {
     <div class="search" role="search">${ui("search", 18)}<input id="q" type="search" enterkeyhint="search" role="combobox" aria-controls="sugg" aria-expanded="false" aria-autocomplete="list" value="${esc(f.q)}" placeholder="${L("Цемент, смеситель, ламинат…", "Sement, aralashtirgich, laminat…")}" aria-label="${L("Поиск по каталогу", "Katalog bo‘yicha qidiruv")}" autocomplete="off"><div class="sugg" id="sugg" role="listbox" aria-label="${L("Подсказки поиска", "Qidiruv takliflari")}" hidden></div><span class="s-tools"><button class="s-ic" type="button" data-act="voice" ${SRec ? "" : "hidden"} aria-label="${L("Поиск голосом", "Ovozli qidiruv")}" title="${L("Поиск голосом", "Ovozli qidiruv")}">${ui("mic", 18)}</button><button class="s-ic" type="button" data-act="photo-search" ${photoAIon() ? "" : "hidden"} aria-label="${L("Поиск по фото", "Rasm bo‘yicha qidiruv")}" title="${L("Поиск по фото", "Rasm bo‘yicha qidiruv")}">${ui("camera", 18)}</button><button class="ask" type="button" data-act="ask-search">${ui("spark", 14)}<span class="t">${L("Спросить AI", "AI dan so‘rash")}</span></button></span><input type="file" id="psFile" accept="image/*" hidden></div>
     <label class="where" title="${L("Район доставки", "Yetkazish tumani")}">${ui("pin", 16)}<span class="visually-hidden">${L("Район доставки", "Yetkazish tumani")}</span><select id="distSel">${DISTRICTS.map(d => `<option value="${d.id}" ${d.id === district ? "selected" : ""}>${L(d.ru, d.uz)}</option>`).join("")}</select></label>
     <button class="fx-btn th-btn" type="button" data-act="theme-toggle" aria-label="${effTheme() === "dark" ? L("Тёмная тема — включить светлую", "Qorong‘i mavzu — yorug‘ini yoqish", "Dark theme — switch to light") : L("Светлая тема — включить тёмную", "Yorug‘ mavzu — qorong‘isini yoqish", "Light theme — switch to dark")}" title="${effTheme() === "dark" ? L("Тёмная тема", "Qorong‘i mavzu", "Dark theme") : L("Светлая тема", "Yorug‘ mavzu", "Light theme")}">${effTheme() === "dark" ? ui("moon", 18) : ui("sun", 18)}</button>
-    <div class="seg" role="group" aria-label="Язык / Til / Language"><button type="button" data-lang="ru" aria-pressed="${lang === "ru"}">RU</button><button type="button" data-lang="uz" aria-pressed="${lang === "uz"}">UZ</button><button type="button" data-lang="en" aria-pressed="${lang === "en"}">EN</button></div>
+    <div class="seg" role="group" aria-label="Язык / Til / Language"><button type="button" data-lang="ru" aria-pressed="${lang === "ru"}">RU</button><button type="button" data-lang="uz" aria-pressed="${lang === "uz"}">UZ</button><button type="button" data-lang="en" aria-pressed="${lang === "en"}">EN</button></div><label class="lang-pick"><span>${lang.toUpperCase()}</span>${ui("chev", 12)}<select data-langsel aria-label="Язык / Til / Language">${[["ru", "Русский"], ["uz", "Özbekça"], ["en", "English"]].map(([v, n]) => `<option value="${v}" ${lang === v ? "selected" : ""}>${n}</option>`).join("")}</select></label>
     <button class="hb" type="button" data-act="favs" aria-label="${L("Избранное", "Saralanganlar")}">${ui("heart", 22)}<span class="dot" id="favDot" hidden></span></button>
     <button class="hb" type="button" data-act="${user ? "profile" : "login"}" aria-label="${user ? L("Профиль", "Profil") : L("Войти", "Kirish")}">${user ? `<span class="av">${esc(initial(user.name))}</span>` : ui("user", 22)}</button>
     <button class="cart-btn" type="button" data-act="cart">${ui("cart", 18)}${L("Корзина", "Savat")}<span class="dot" id="cartDot" hidden>0</span></button>
@@ -3586,6 +3597,7 @@ function runCalc(key) {
 }
 function bindCalcs(pre) { document.querySelectorAll(`[data-calcbox^="${pre}:"]`).forEach(b => runCalc(b.dataset.calcbox)); }
 document.addEventListener("input", e => { const b = e.target.closest?.("[data-calcbox]"); if (b) runCalc(b.dataset.calcbox); });
+document.addEventListener("change", e => { if (e.target.matches?.("[data-langsel]")) { lang = e.target.value; LS.set("imorat.lang", lang); syncLangFormats(); renderAll(); } });
 document.addEventListener("change", e => { const b = e.target.closest?.("[data-calcbox]"); if (b && e.target.tagName === "SELECT") runCalc(b.dataset.calcbox); });
 
 /* ================= Catalog ================= */
