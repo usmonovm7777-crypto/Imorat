@@ -726,7 +726,8 @@ footer { padding-block: 36px 40px; color: var(--muted); font-size: 13px; border-
 .side summary::-webkit-details-marker { display: none; }
 .side .grp { padding: 4px 16px 16px; border-top: 1px solid var(--line); display: grid; gap: 6px; }
 .side .grp h4 { margin: 12px 0 4px; font-size: 12px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); }
-.side .cl { display: flex; justify-content: space-between; gap: 8px; text-align: left; padding: 5px 8px; border-radius: 8px; font-size: 14px; width: 100%; }
+.side .cl { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; text-align: left; padding: 5px 8px; border-radius: 8px; font-size: 14px; width: 100%; }
+.side .cl small { font-variant-numeric: tabular-nums; } /* the counts sit on the names' line, digits in one column */
 .side .cl:hover { background: var(--raised); }
 .side .cl[aria-current="true"] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
 .side .cl small { color: var(--faint); }
@@ -998,6 +999,12 @@ html:has(.modal.on) #scrim.on { opacity: 0; }
 }
 .toast { position: fixed; left: 50%; bottom: calc(20px + var(--nav-h) + env(safe-area-inset-bottom, 0px)); translate: -50% 0; background: var(--ink); color: var(--bg); padding: 11px 18px; border-radius: 999px; font-size: 14px; font-weight: 500; z-index: 70; opacity: 0; transform: translateY(8px); transition: opacity .2s, transform .2s; pointer-events: none; max-width: calc(100% - 32px); }
 .toast.on { opacity: 1; transform: none; }
+.toast.act { display: flex; align-items: center; gap: 14px; padding: 6px 6px 6px 18px; white-space: nowrap; }
+.toast.act.on { pointer-events: auto; }
+.toast-act { padding: 7px 14px; border-radius: 999px; font-weight: 700; color: var(--accent); background: color-mix(in srgb, var(--bg) 12%, transparent); }
+.cart-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 13px; color: var(--muted); margin-bottom: -6px; }
+.cart-clr { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; margin-right: -10px; border-radius: 999px; font-weight: 600; color: var(--muted); white-space: nowrap; }
+.cart-clr:hover { color: var(--signal); background: var(--signal-soft); }
 html.lock .toast { bottom: calc(110px + var(--nav-h) + env(safe-area-inset-bottom, 0px)); }
 
 /* ---------- Usta AI ---------- */
@@ -1100,12 +1107,27 @@ td .btn { padding: 6px 12px; font-size: 13px; border-radius: 9px; white-space: n
 .thumb img.photo { transition: transform .45s cubic-bezier(.2,.8,.2,1); }
 .card:hover .thumb img.photo { transform: scale(1.06); }
 html.lock { overflow: hidden; }
-.cat-tile { grid-template-rows: 1fr auto; padding: 12px; gap: 8px; overflow: hidden; }
+/* a category tile: the picture on top, the name (up to two lines) and the count under it, so every picture in a row
+   starts at the same height; rows are equal, and «Весь каталог» stretches over the free cells of the last row */
+.cat-tile { grid-template-rows: auto 1fr; padding: 10px 10px 12px; gap: 10px; overflow: hidden; }
 .cat-tile .cat-img { display: block; aspect-ratio: 4 / 3; max-width: 100%; border-radius: 10px; overflow: hidden; }
 .cat-tile .cat-img img { transition: transform .4s cubic-bezier(.2,.8,.2,1); }
 .cat-tile:hover .cat-img img { transform: scale(1.08) rotate(-1deg); }
-.cat-tile.all { align-content: space-between; }
-.cat-tile.all .ico { margin-top: auto; }
+.all-th { display: none; }
+@media (min-width: 761px) {
+  [data-w="cats"] .cat-grid { grid-auto-rows: 1fr; }
+  .cat-tile > span:first-child { order: 2; display: grid; gap: 2px; align-content: start; padding: 0 4px; }
+  .cat-tile br { display: none; }
+  .cat-tile b { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .cat-tile .cat-img { order: 1; }
+  .cat-tile.all { align-content: start; }
+  .cat-tile.all .ico { order: 1; width: 100%; height: auto; aspect-ratio: 4 / 3; margin: 0; border-radius: 10px; }
+  .cat-tile.all > span:last-child { order: 2; display: grid; gap: 2px; align-content: start; padding: 0 4px; }
+  .cat-tile.all.wide .ico { display: none; }
+  .cat-tile.all.wide .all-th { order: 1; display: flex; gap: 8px; height: var(--ih, 120px); min-width: 0; }
+  .all-th .cat-img { flex: 1 1 0; min-width: 0; height: 100%; aspect-ratio: auto; }
+  .all-th .cat-img[hidden] { display: none; }
+}
 .marquee { overflow: hidden; margin-top: 12px; border-radius: var(--r); background: var(--surface); border: 1px solid var(--line); padding-block: 10px; position: relative; }
 .marquee::before, .marquee::after { content: ""; position: absolute; top: 0; bottom: 0; width: 7%; z-index: 2; pointer-events: none; }
 .marquee::before { left: 0; background: linear-gradient(90deg, var(--surface), transparent); }
@@ -1287,6 +1309,74 @@ html.lock { overflow: hidden; }
 .acct .av { width: 52px; height: 52px; font-size: 20px; }
 .acct small { display: block; color: var(--muted); }
 .roles { display: grid; gap: 8px; }
+/* ---- Profile, in the style of phone apps: avatar header, counters, grouped lists like iOS Settings ---- */
+#drawer.prof { background: var(--bg); }
+#drawer.prof .d-head { border-bottom-color: transparent; }
+#drawer.prof .d-foot { display: none; }
+html #drawer.prof { padding-bottom: 0; }
+#drawer.prof #dBody { padding-top: 4px; padding-bottom: calc(28px + var(--nav-h, 0px)); }
+#drawer.prof.scrolled .d-head { border-bottom-color: var(--line); } /* the line under the title shows once the list moves under it */
+.prof { display: grid; gap: 14px; }
+.pf-hero { position: relative; display: grid; justify-items: center; text-align: center; gap: 4px; padding: 24px 16px 18px; border-radius: 24px; overflow: hidden;
+  background: radial-gradient(120% 80% at 50% -10%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 70%), var(--surface); border: 1px solid var(--line); }
+.pf-av { width: 84px; height: 84px; border-radius: 50%; display: grid; place-items: center; margin-bottom: 8px; font-family: var(--f-display); font-size: 34px; font-weight: 700; color: #fff;
+  background: linear-gradient(140deg, color-mix(in srgb, var(--accent) 80%, #fff), var(--accent) 45%, color-mix(in srgb, var(--accent) 70%, #000)); box-shadow: 0 0 0 4px var(--surface), 0 0 0 6px color-mix(in srgb, var(--accent) 40%, transparent), 0 10px 24px color-mix(in srgb, var(--accent) 30%, transparent); }
+.pf-av.lt { background: var(--raised); color: var(--muted); box-shadow: 0 0 0 4px var(--surface), 0 0 0 6px var(--line); }
+.pf-name { font-family: var(--f-display); font-size: 22px; font-weight: 700; letter-spacing: -.02em; line-height: 1.2; }
+.pf-ph { color: var(--muted); font-size: 14px; }
+.pf-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-top: 8px; }
+.pf-chip { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; color: var(--muted); background: color-mix(in srgb, var(--ink) 6%, transparent); }
+.pf-hero .btn { margin-top: 10px; }
+.pf-wide { justify-self: stretch; }
+.pf-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.pf-stat { display: grid; justify-items: center; gap: 2px; padding: 12px 4px 10px; border-radius: 18px; background: var(--surface); border: 1px solid var(--line); }
+.pf-stat .pf-sic { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; margin-bottom: 4px; color: var(--accent); background: var(--accent-soft); }
+.pf-stat b { font-family: var(--f-display); font-size: 20px; font-weight: 700; line-height: 1.1; }
+.pf-stat small { font-size: 11.5px; color: var(--muted); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pf-sec { display: grid; gap: 8px; }
+.pf-h { margin: 6px 4px 0; font-size: 13px; font-weight: 600; color: var(--muted); }
+.pf-h small { font-weight: 400; }
+.pf-h small::before { content: "— "; }
+.pf-group { display: grid; border-radius: 18px; background: var(--surface); border: 1px solid var(--line); overflow: hidden; }
+.pf-row { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 56px; padding: 10px 14px; text-align: left; color: var(--ink); text-decoration: none; position: relative; }
+.pf-group > .pf-row + .pf-row::before { content: ""; position: absolute; left: 58px; right: 0; top: 0; border-top: 1px solid var(--line); }
+.pf-ic { flex: none; width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; color: var(--ink); background: color-mix(in srgb, var(--ink) 7%, transparent); }
+.pf-t { flex: 1; min-width: 0; display: grid; line-height: 1.3; }
+.pf-t b { font-weight: 600; font-size: 15px; }
+.pf-t small { font-size: 12.5px; color: var(--muted); }
+.pf-chev { flex: none; display: grid; color: var(--faint); }
+button.pf-row:hover, a.pf-row:hover { background: color-mix(in srgb, var(--ink) 4%, transparent); }
+.pf-last { border-radius: 18px; background: var(--surface); border: 1px solid var(--line); }
+.pf-last .pf-ic { color: var(--accent); background: var(--accent-soft); }
+.pf-out .pf-t b, .pf-out .pf-ic { color: var(--signal); }
+.pf-out .pf-ic { background: var(--signal-soft); }
+.pf-out .pf-chev { display: none; }
+.pf-set { flex-wrap: wrap; row-gap: 8px; cursor: default; }
+.pf-set .seg { margin-left: auto; border: 0; padding: 3px; border-radius: 11px; background: color-mix(in srgb, var(--ink) 7%, var(--surface)); }
+.pf-set .seg button { padding: 6px 10px; border-radius: 8px; font-size: 12.5px; }
+.pf-set .seg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgb(0 0 0 / .16); }
+.pf-set .pf-btn { padding: 7px 14px; font-size: 13px; }
+.pf-hint { color: var(--muted); font-size: 12px; max-width: 160px; text-align: right; }
+.pf-selw { position: relative; display: flex; align-items: center; gap: 4px; color: var(--muted); }
+.pf-selw svg { transform: rotate(90deg); flex: none; }
+.pf-sel { appearance: none; -webkit-appearance: none; border: 0; background: transparent; color: var(--muted); font: inherit; font-size: 14px; text-align: right; text-align-last: right; padding: 4px 0; max-width: 128px; text-overflow: ellipsis; cursor: pointer; }
+.pf-sel:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+label.pf-row { cursor: pointer; }
+.pf-note { margin: 2px 4px 0; font-size: 12px; color: var(--muted); text-align: center; }
+.prof .bonus-card { border-radius: 18px; }
+@media (hover: none) { .pf-row:active, .pf-stat:active { background: color-mix(in srgb, var(--ink) 7%, var(--surface)); } .pf-stat { transition: transform .14s ease, background-color .15s ease; } .pf-stat:active { transform: scale(.97); } }
+/* who you are: tiles with an icon, the choice marked with a tick instead of a radio dot */
+.roles.rich { gap: 8px; }
+.roles.rich .opt { position: relative; grid-template-columns: 40px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 12px 48px 12px 12px; border-radius: 18px; background: var(--surface); transition: border-color .2s, background-color .2s; }
+.roles.rich .opt input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.roles.rich .opt:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+.roles.rich .ri { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; color: var(--muted); background: color-mix(in srgb, var(--ink) 7%, transparent); transition: background-color .2s, color .2s; }
+.roles.rich .opt small { font-size: 12.5px; }
+.roles.rich .rk { position: absolute; right: 14px; top: 50%; translate: 0 -50%; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; border: 1.5px solid var(--line-strong); color: transparent; transition: background-color .2s, border-color .2s; }
+.roles.rich .opt:has(input:checked) { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 7%, var(--surface)); }
+.roles.rich .opt:has(input:checked) .ri { color: var(--accent-ink); background: var(--accent); }
+.roles.rich .opt:has(input:checked) .rk { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.roles.rich .opt .tag { color: var(--accent); background: var(--accent-soft); padding: 2px 8px; border-radius: 999px; }
 .ds-tools { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
 .ds-tools .ib { font-size: 18px; }
 .ds-tools .ds-edit { padding: 7px 12px; font-size: 13px; margin-left: auto; }
@@ -2851,7 +2941,22 @@ function applyHome() {
   for (const id of order) for (const n of nodes[id] || []) { n.hidden = off.includes(id); if (anchor) anchor.after(n); else wrap.prepend(n); anchor = n; }
   const q = wrap.querySelector(":scope > .qcats"); if (q) q.hidden = !off.includes("cats"); // the quick category row only when the category grid is off
   const setup = wrap.querySelector(".home-setup"); if (setup) wrap.append(setup);
+  requestAnimationFrame(catSpan);
 }
+/* «Весь каталог» fills the rest of the last row of categories instead of leaving empty cells: it spans them and shows
+   a strip of category pictures at the same height as the other tiles' pictures */
+function catSpan() {
+  const g = document.querySelector('[data-w="cats"] .cat-grid'), all = g?.querySelector(".cat-tile.all"); if (!all) return;
+  all.style.gridColumn = ""; all.classList.remove("wide");
+  if (isPhone() || !g.offsetParent) return;
+  const cols = getComputedStyle(g).gridTemplateColumns.split(" ").length, rem = (g.children.length - 1) % cols;
+  if (cols < 2 || rem === cols - 1) return; // it fits the one free cell
+  all.style.gridColumn = `span ${cols - rem}`; all.classList.add("wide");
+  const ih = g.querySelector(".cat-img")?.offsetHeight || 120; all.style.setProperty("--ih", ih + "px");
+  const n = Math.max(2, Math.round((all.clientWidth - 20 + 8) / (ih * 1.05 + 8))); // about square pictures
+  all.querySelectorAll(".all-th .cat-img").forEach((x, i) => { x.hidden = i >= n; });
+}
+window.addEventListener("resize", () => { clearTimeout(catSpan.t); catSpan.t = setTimeout(catSpan, 120); }, { passive: true });
 /* Panels (drawer, product modal) take keyboard focus when they open and hand it back to the element that opened them. */
 const panelFocus = new WeakMap();
 function setPanel(el, on) {
@@ -2944,7 +3049,12 @@ function renderCmpBar() {
   if (!bar) { bar = document.createElement("div"); bar.id = "cmpBar"; bar.className = "cmp-bar"; document.body.appendChild(bar); }
   bar.innerHTML = `<span style="display:flex">${compare.map(id => mini(PROD[id])).join("")}</span><button class="go" type="button" data-act="compare">${L("Сравнить", "Solishtirish")} · ${compare.length}</button><button class="x" type="button" data-act="cmp-clear" aria-label="${L("Очистить сравнение", "Solishtirishni tozalash")}">${ui("close", 16)}</button>`;
 }
-function toast(m, ms = 2200) { const t = $("#toast"); t.textContent = m; t.classList.add("on"); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove("on"), ms); }
+function toast(m, ms = 2200, act) { // act = { label, fn }: a button in the toast (e.g. «Вернуть» after emptying the cart)
+  const t = $("#toast"); t.textContent = m; t.classList.toggle("act", !!act);
+  if (act) { const b = document.createElement("button"); b.type = "button"; b.className = "toast-act"; b.textContent = act.label; b.onclick = () => { clearTimeout(toast.t); t.classList.remove("on", "act"); b.remove(); act.fn(); }; t.append(b); }
+  t.classList.add("on"); clearTimeout(toast.t);
+  toast.t = setTimeout(() => { t.classList.remove("on"); setTimeout(() => { if (!t.classList.contains("on")) { t.classList.remove("act"); t.querySelector(".toast-act")?.remove(); } }, 250); }, ms);
+}
 
 /* ================= Header, footer, tabbar ================= */
 function renderHeader() {
@@ -3318,7 +3428,7 @@ function renderHome() {
     <section class="sec" id="cats" data-w="cats">
       <div class="sec-head"><div><h2 class="h-l">${L("Категории", "Toifalar")}</h2><p>${L("От цемента до кухонь и мангалов", "Sementdan oshxona va mangallargacha")}</p></div><button class="link" type="button" data-act="mega">${L("Все подкатегории", "Barcha bo‘limlar")} ${ui("chev", 16)}</button></div>
       <div class="cat-grid rv">${CATS.map(c => { const rp = PRODUCTS.find(p => p.cat === c.id && p.hit) || PRODUCTS.find(p => p.cat === c.id); return `<button class="cat-tile" type="button" data-go="cat-${c.id}" style="--h:${c.h}"><span><b>${L(c.ru, c.uz)}</b><br><small>${cnt(c.id)} ${L(plural(cnt(c.id), ["товар", "товара", "товаров"]), "mahsulot", cnt(c.id) === 1 ? "product" : "products")}</small></span><span class="cat-img studio${rp ? "" : " lt"}" style="--h:${rp ? hueOf(rp) : c.h}">${rp ? art(rp, L(c.ru, c.uz)) : `<span class="ico">${ic(c.icon)}</span>`}</span></button>`; }).join("")}
-        <button class="cat-tile all" type="button" data-go="catalog"><span class="ico">${ui("grid", 26)}</span><span><b>${L("Весь каталог", "Butun katalog")}</b><br><small>${PRODUCTS.length} ${L("товаров", "mahsulot")}</small></span></button></div>
+        <button class="cat-tile all" type="button" data-go="catalog"><span class="ico">${ui("grid", 26)}</span><span class="all-th" aria-hidden="true">${CATS.map(c => PRODUCTS.filter(p => p.cat === c.id && !p.hit)[1]).filter(Boolean).slice(0, 8).map(p => `<span class="cat-img studio" style="--h:${hueOf(p)}">${art(p, "")}</span>`).join("")}</span><span><b>${L("Весь каталог", "Butun katalog")}</b><br><small>${PRODUCTS.length} ${L("товаров", "mahsulot")}</small></span></button></div>
     </section>
 
     ${designTeaser()}
@@ -3738,13 +3848,14 @@ function closeDrawer() { dvBack = dvSlide = false; drawerView = null; setPanel($
 function renderDrawer() {
   if (drawerView === "profile" && !user) { closeDrawer(); openAuth("profile"); return; } // the profile exists only after signing in
   $("#drawer").classList.toggle("trk", drawerView === "track" && orders.some(x => x.num === drawerOrder)); // the order screen: map + sheet, no panel header
+  $("#drawer").classList.toggle("prof", drawerView === "profile"); // the profile: no footer bar, the list runs under the tab bar
   $("#dBack").innerHTML = ui("back", 16); $("#dClose").innerHTML = ui("close", 16);
   $("#dBack").hidden = !["checkout", "track", "orders", "watch", "projects"].includes(drawerView);
   ({ cart: dCart, checkout: dCheckout, track: dTrack, profile: dProfile, favs: dFavs, orders: dOrders, compare: dCompare, watch: dWatch, projects: dProjects, homeSetup: dHomeSetup, repeat: dRepeat, support: dSupport })[drawerView]?.();
   // another screen in the panel (checkout → the paid order, cart → checkout) starts at its top, not where the last one was scrolled
   const key = drawerView + "|" + (drawerView === "track" ? drawerOrder || "" : "");
   if (renderDrawer.last !== key) {
-    renderDrawer.last = key; const b = $("#dBody");
+    renderDrawer.last = key; const b = $("#dBody"); $("#drawer").classList.remove("scrolled");
     if (b) { b.scrollTop = 0; if (dvSlide && animOK()) { b.classList.remove("dv-fwd", "dv-back"); void b.offsetWidth; b.classList.add(dvBack ? "dv-back" : "dv-fwd"); } }
   }
   dvSlide = dvBack = false;
@@ -3825,6 +3936,8 @@ function dCart() {
   (gs.length > 1 ? `<div class="note">${storeDelivers() ? L(`Товары из ${gs.length} магазинов приедут ${gs.length} отдельными доставками — каждый магазин привозит своё.`, `${gs.length} ta do‘kondan mahsulotlar ${gs.length} ta alohida yetkazish bilan keladi — har bir do‘kon o‘zinikini olib keladi.`, `Goods from ${gs.length} stores arrive as ${gs.length} separate deliveries — each store brings its own.`) : L(`Товары из ${gs.length} магазинов приедут ${gs.length} отдельными доставками: Яндекс забирает заказ в каждом магазине.`, `${gs.length} ta do‘kondan mahsulotlar ${gs.length} ta alohida yetkazish bilan keladi: Yandex buyurtmani har bir do‘kondan alohida oladi.`, `Products from ${gs.length} stores will arrive as ${gs.length} separate deliveries: Yandex picks up the order at each store.`)}</div>` : "");
   if (!noDisc() && !promoUsed().includes(user ? user.id : "guest") && promo !== "IMORAT5") $("#dBody").insertAdjacentHTML("afterbegin", `<div class="hint-promo">${ui("gift", 16)} <span>${L("Первый заказ? Промокод", "Birinchi buyurtma? Promokod")} <b>IMORAT5</b> ${L("— скидка 5% на товары", "— mahsulotlarga 5% chegirma")}</span></div>`);
   { const ph = cartPlanHTML(); if (ph) $("#dBody").insertAdjacentHTML("afterbegin", ph); }
+  { const n = gs.reduce((a, g) => a + g.lines.length, 0); // what is in the cart, and one tap empties it (with «Вернуть» in the toast)
+    $("#dBody").insertAdjacentHTML("afterbegin", `<div class="cart-top"><span>${n} ${L(plural(n, ["позиция", "позиции", "позиций"]), "ta mahsulot", n === 1 ? "item" : "items")} · ${gs.length} ${L(plural(gs.length, ["магазин", "магазина", "магазинов"]), "ta do‘kon", gs.length === 1 ? "store" : "stores")}</span><button class="cart-clr" type="button" data-act="cart-clear">${ui("trash", 15)} ${L("Очистить корзину", "Savatni tozalash", "Clear the cart")}</button></div>`); }
   $("#dBody").insertAdjacentHTML("beforeend", `<div class="cart-note"><label for="cartNote">${ui("chat", 15)} ${L("Комментарий к заказу", "Buyurtmaga izoh", "Order comment")}</label><textarea id="cartNote" rows="2" maxlength="500" placeholder="${L("Что важно знать магазину при сборке: оттенок, партия, разгрузка, позвонить заранее…", "Do‘kon yig‘ishda nimani bilishi kerak: tus, partiya, tushirish, oldindan qo‘ng‘iroq…", "What the store should know when packing: shade, batch, unloading, call ahead…")}">${esc(form.comment || "")}</textarea></div>`);
   $("#cartNote").addEventListener("input", e => { form.comment = e.target.value.slice(0, 500); LS.set("imorat.form2", form); });
   $("#dBody").insertAdjacentHTML("beforeend", `<div class="save-proj" id="saveProj" hidden><label class="visually-hidden" for="projName">${L("Название проекта", "Loyiha nomi")}</label><input id="projName" placeholder="${L("Например: Ремонт ванной", "Masalan: Vannaxona ta’miri")}"><button class="btn btn-primary" type="button" data-act="proj-save" style="padding:8px 12px">${L("Сохранить", "Saqlash")}</button></div><button class="lnk" type="button" data-act="proj-open" style="justify-self:start">${ui("folder", 15)} ${L("Сохранить корзину как проект ремонта", "Savatni ta’mir loyihasi sifatida saqlash")}</button>`);
@@ -4162,7 +4275,7 @@ function trkLive(o, s, c) {
   if (a) a.textContent = h1; if (b) b.textContent = h2; if (e) e.innerHTML = trkEtaHTML(c, S.key);
   if (w) { const html = trkWhoHTML(o, s, S, c); if (w.innerHTML !== html) w.innerHTML = html; }
 }
-$("#dBody")?.addEventListener("scroll", e => { const box = $("#trk"); if (box) box.classList.toggle("up", e.currentTarget.scrollTop > (box.querySelector(".trk-map")?.offsetHeight || 400) - 90); }, { passive: true });
+$("#dBody")?.addEventListener("scroll", e => { $("#drawer").classList.toggle("scrolled", e.currentTarget.scrollTop > 4); const box = $("#trk"); if (box) box.classList.toggle("up", e.currentTarget.scrollTop > (box.querySelector(".trk-map")?.offsetHeight || 400) - 90); }, { passive: true });
 setInterval(() => { const tm = document.querySelector("#trk time[data-since]"); if (tm && !document.hidden) tm.textContent = trkClock(+tm.dataset.since); }, 1000);
 // demo orders move on their own: redraw when a shipment reaches its next step
 setInterval(() => { if (drawerView !== "track" || document.hidden) return; const box = $("#trk"); if (!box) return; const o = orders.find(x => x.num === box.dataset.num); if (!o || o.api) return; const s = o.ships.find(x => String(x.id ?? "") === box.dataset.ship) || o.ships[trkShip]; if (s && trkState(o, s, o.ships.indexOf(s)).key !== trkKeys[s.id]) renderDrawer(); }, 1000);
@@ -4264,30 +4377,47 @@ function dProfile() {
   fetchOrders();
   $("#dTitle").textContent = L("Профиль", "Profil");
   const last = orders[0];
-  $("#dBody").innerHTML = (user ? `<div class="acct"><span class="av">${esc(initial(user.name))}</span><span><b>${esc(user.name)}</b><small class="num">${user.staff ? esc(user.staff.login) + " · " + (user.owner ? L("владелец", "egasi", "owner") : L("сотрудник", "xodim", "staff")) : esc(user.phone)}</small><small>${user.email ? esc(user.email) + " · " : ""}${L("вход через", "kirish:")} ${viaName(user.via)}${user.role === "pro" ? ` · <span class="ws">${L("цены для мастеров", "ustalar uchun narxlar")}</span>` : ""}</small></span><button class="ib" type="button" data-act="logout" aria-label="${L("Выйти", "Chiqish")}" title="${L("Выйти", "Chiqish")}">${ui("logout", 16)}</button></div>`
-    : `<div class="acct" style="grid-template-columns:1fr"><span><b>${L("Войдите, чтобы сохранять заказы", "Buyurtmalarni saqlash uchun kiring")}</b><small>${L("По номеру телефона — займёт меньше минуты", "Telefon raqami bilan — bir daqiqadan kam", "With your phone number — takes under a minute")}</small></span><button class="btn btn-primary" type="button" data-act="login">${L("Войти или зарегистрироваться", "Kirish yoki ro‘yxatdan o‘tish")}</button></div>`) + `
-    ${user && myStore && !user.staff ? `<button class="btn ${sellerMode() ? "btn-line" : "btn-primary"}" type="button" data-act="shopper-toggle" style="justify-self:stretch">${ui(sellerMode() ? "cart" : "store", 18)} ${sellerMode() ? L("Открыть витрину покупателя", "Xaridor vitrinasini ochish", "Open the buyer shelf") : L("Вернуться в кабинет магазина", "Do‘kon kabinetiga qaytish", "Back to the store cabinet")}</button>` : ""}
-    ${user && !user.staff && !user.store_id && !myStore ? `<div class="f" id="roleBox"><span>${L("Кто вы?", "Siz kimsiz?")} <small class="mu">${L("— от этого зависят цены и подсказки", "— narxlar va maslahatlar shunga bog‘liq", "— prices and tips depend on it")}</small></span>${rolesHTML(user.store_id || user.role === "seller" ? "store" : user.role === "pro" ? "pro" : "buyer", "prole")}</div>` : ""}
+  /* the profile in the style of phone apps: a header with the avatar, counters, then grouped lists like iOS Settings */
+  const row = (attrs, icon, title, sub = "", right = "", cls = "") => `<button class="pf-row${cls}" type="button" ${attrs}><span class="pf-ic">${ui(icon, 18)}</span><span class="pf-t"><b>${title}</b>${sub ? `<small>${sub}</small>` : ""}</span>${right}<span class="pf-chev">${ui("chev", 16)}</span></button>`;
+  const stat = (act, icon, n, label, full) => `<button class="pf-stat" type="button" ${act} aria-label="${full}: ${n}"><span class="pf-sic">${ui(icon, 18)}</span><b class="num">${n}</b><small>${label}</small></button>`;
+  const segRow = (icon, title, sub, seg) => `<div class="pf-row pf-set"><span class="pf-ic">${ui(icon, 18)}</span><span class="pf-t"><b>${title}</b>${sub ? `<small>${sub}</small>` : ""}</span>${seg}</div>`;
+  const notif = !API || !user ? "" : NATIVE ? segRow("bell", L("Уведомления", "Bildirishnomalar"), L("На этом телефоне", "Shu telefonda", "On this phone"), pushState.perm === "granted" && pushState.token ? `<span class="pill ok">${L("включены", "yoqilgan", "on")}</span>` : pushState.perm === "denied" ? `<small class="pf-hint">${L("Разрешите в настройках телефона", "Telefon sozlamalarida ruxsat bering", "Allow in the phone settings")}</small>` : `<button class="btn btn-line pf-btn" type="button" data-act="push-native-on">${L("Включить", "Yoqish")}</button>`)
+    : window.IMORAT_APP ? "" : segRow("bell", L("Уведомления", "Bildirishnomalar"), L("На этом устройстве", "Shu qurilmada"), LS.get("imorat.push", false) ? `<span class="pill ok">${L("включены", "yoqilgan")}</span>` : `<button class="btn btn-line pf-btn" type="button" data-act="push-on">${L("Включить", "Yoqish")}</button>`);
+  const roleTag = user?.staff ? (user.owner ? L("владелец", "egasi", "owner") : L("сотрудник", "xodim", "staff")) : user?.store_id || myStore ? L("магазин", "do‘kon", "store") : user?.role === "pro" ? L("мастер", "usta", "pro") : L("покупатель", "xaridor", "buyer");
+  $("#dBody").innerHTML = `<div class="prof">` + (user ? `<div class="pf-hero"><span class="pf-av">${esc(initial(user.name))}</span>
+      <b class="pf-name">${esc(user.name)}</b><span class="pf-ph num">${user.staff ? esc(user.staff.login) : esc(user.phone)}</span>${user.email ? `<span class="pf-ph">${esc(user.email)}</span>` : ""}
+      <span class="pf-chips"><span class="pf-chip">${ui("user", 13)} ${roleTag}</span><span class="pf-chip">${L("вход:", "kirish:", "sign-in:")} ${viaName(user.via)}</span>${user.role === "pro" && discOn() ? `<span class="pf-chip ws">${L("цены для мастеров", "ustalar uchun narxlar")}</span>` : ""}</span></div>`
+    : `<div class="pf-hero"><span class="pf-av lt">${ui("user", 30)}</span><b class="pf-name">${L("Войдите, чтобы сохранять заказы", "Buyurtmalarni saqlash uchun kiring")}</b><span class="pf-ph">${L("По номеру телефона — займёт меньше минуты", "Telefon raqami bilan — bir daqiqadan kam", "With your phone number — takes under a minute")}</span><button class="btn btn-primary" type="button" data-act="login">${L("Войти или зарегистрироваться", "Kirish yoki ro‘yxatdan o‘tish")}</button></div>`) + `
+    ${user && myStore && !user.staff ? `<button class="btn ${sellerMode() ? "btn-line" : "btn-primary"} pf-wide" type="button" data-act="shopper-toggle">${ui(sellerMode() ? "cart" : "store", 18)} ${sellerMode() ? L("Открыть витрину покупателя", "Xaridor vitrinasini ochish", "Open the buyer shelf") : L("Вернуться в кабинет магазина", "Do‘kon kabinetiga qaytish", "Back to the store cabinet")}</button>` : ""}
+    <div class="pf-stats">${stat('data-act="orders"', "clock", orders.length, L("Заказы", "Buyurtmalar", "Orders"), L("Мои заказы", "Buyurtmalarim"))}${stat('data-act="favs"', "heart", favs.length, L("Избранное", "Saralangan", "Saved"), L("Избранное", "Saralanganlar"))}${stat('data-act="projects"', "folder", projects.length, L("Проекты", "Loyihalar", "Projects"), L("Проекты ремонта", "Ta’mir loyihalari"))}${stat('data-act="watch"', "bell", watch.length, L("Цены", "Narxlar", "Prices"), L("Слежу за ценой", "Narx kuzatuvi"))}</div>
+    ${last ? (() => { const [st, done] = orderStatus(last); return `<button class="pf-row pf-last" type="button" data-order="${esc(last.num)}"><span class="pf-ic">${ui("truck", 18)}</span><span class="pf-t"><small>${L("Последний заказ", "Oxirgi buyurtma", "Last order")}</small><b class="num">${esc(last.num)}</b></span><span class="pill ${done ? "ok" : "acc"}">${st}</span><span class="pf-chev">${ui("chev", 16)}</span></button>`; })() : ""}
     ${bonusOn() ? bonusCardHTML() : ""}
-    ${notifyRows()}
-    <div class="f"><label for="pDist">${L("Район доставки по умолчанию", "Standart yetkazish tumani")}</label><select id="pDist" class="sel">${DISTRICTS.map(x => `<option value="${x.id}" ${x.id === district ? "selected" : ""}>${L(x.ru, x.uz)}</option>`).join("")}</select></div>
-    ${APP_MODE ? "" : `<div class="f"><span>${L("Оформление", "Ko‘rinish", "Appearance")}</span><div class="seg" role="group" style="justify-self:start"><button type="button" data-look="on" aria-pressed="${fxPref === "on"}">${L("Яркое", "Yorqin")}</button><button type="button" data-look="off" aria-pressed="${fxPref === "off"}">${L("Простое", "Oddiy")}</button><button type="button" data-look="auto" aria-pressed="${fxPref === "auto"}">${L("Авто", "Avto")}</button></div><small style="color:var(--muted)">${L("Яркое — подсветка и анимации. Простое — спокойно и быстрее на слабом телефоне.", "Yorqin — yoritish va animatsiyalar. Oddiy — sokin va kuchsiz telefonda tezroq.")}</small></div>`}
-    <div class="f"><span>${L("Тема", "Mavzu")}</span><div class="seg" role="group" style="justify-self:start"><button type="button" data-theme-set="auto" aria-pressed="${themePref === "auto"}">${L("Авто", "Avto")}</button><button type="button" data-theme-set="light" aria-pressed="${themePref === "light"}">${L("Светлая", "Yorug‘")}</button><button type="button" data-theme-set="dark" aria-pressed="${themePref === "dark"}">${L("Тёмная", "Qorong‘i")}</button></div></div>
-    <div class="f"><span>${L("Язык", "Til")}</span><div class="seg" role="group" style="justify-self:start"><button type="button" data-lang="ru" aria-pressed="${lang === "ru"}">Русский</button><button type="button" data-lang="uz" aria-pressed="${lang === "uz"}">Özbekça</button><button type="button" data-lang="en" aria-pressed="${lang === "en"}">English</button></div></div>
-    <div style="display:grid;gap:8px">
-      <button class="order-row" type="button" data-act="orders"><b>${L("Мои заказы", "Buyurtmalarim")}</b><b class="num">${orders.length}</b><small>${last ? `${L("Последний", "Oxirgi")}: ${last.num} · ${orderStatus(last)[0]}` : L("Пока пусто", "Hozircha bo‘sh")}</small></button>
-      <button class="order-row" type="button" data-act="projects"><b>${L("Проекты ремонта", "Ta’mir loyihalari")}</b><b class="num">${projects.length}</b><small>${L("Сохранённые списки материалов", "Saqlangan material ro‘yxatlari")}</small></button>
-      <button class="order-row" type="button" data-act="watch"><b>${L("Слежу за ценой", "Narx kuzatuvi")}</b><b class="num">${watch.length}</b><small>${L("Сообщим о снижении цены", "Narx tushsa xabar beramiz")}</small></button>
-      <button class="order-row" type="button" data-act="favs"><b>${L("Избранное", "Saralanganlar")}</b><b class="num">${favs.length}</b><small>${L("Сохранённые товары", "Saqlangan mahsulotlar")}</small></button>
-      ${user?.admin ? `<button class="order-row" type="button" data-go="admin"><b>${L("Панель Quriliş Go", "Quriliş Go paneli")}</b>${ui("calc", 18)}<small>${user.owner ? L("Оборот, заказы, магазины, модерация, сотрудники", "Aylanma, buyurtmalar, do‘konlar, moderatsiya, xodimlar", "Turnover, orders, stores, moderation, staff") : L("Модерация магазинов, мастеров и жалоб", "Do‘kon, usta va shikoyatlar moderatsiyasi", "Moderation of stores, masters and complaints")}</small></button>` : ""}
-      ${user?.staff && !user.staff.env ? `<button class="order-row" type="button" data-act="pw-change"><b>${L("Сменить пароль", "Parolni almashtirish", "Change password")}</b>${ui("shield", 18)}<small>${L("Другие ваши сессии завершатся", "Boshqa sessiyalaringiz tugaydi", "Your other sessions will end")}</small></button>` : ""}
-      <button class="order-row" type="button" data-go="masters" data-mtabgo="mine"><b>${L("Заявки мастерам", "Ustalarga so‘rovlar")}</b>${ui("wrench", 18)}<small>${L("Плиточники, электрики, сантехники", "Kafelchi, elektrik, santexnik")}</small></button>
-      <button class="order-row" type="button" data-act="ai"><b>Usta AI</b>${ui("spark", 18)}<small>${L("Подбор материалов и советы", "Material tanlash va maslahatlar")}</small></button>
-      <button class="order-row" type="button" data-act="home-setup"><b>${L("Настроить главную", "Bosh sahifani sozlash", "Customize home")}</b>${ui("grid", 18)}<small>${L("Какие блоки показывать и в каком порядке", "Qaysi bloklar va qanday tartibda", "Which blocks to show and in what order")}</small></button>
-      ${user && user.store_id && myStore ? `<button class="order-row" type="button" data-go="seller"><b>${esc(myStore.name)}</b>${ui("store", 18)}<small>${L("Кабинет продавца", "Sotuvchi kabineti")} · ${(ST_STATUS()[myStore.status] || ST_STATUS().pending)[0]}</small></button>` : user?.staff ? `<button class="order-row" type="button" data-go="admin"><b>${L("Панель Quriliş Go", "Quriliş Go paneli", "Quriliş Go panel")}</b>${ui("store", 18)}<small>${user.owner ? L("Магазины, заказы, финансы, сотрудники", "Do‘konlar, buyurtmalar, moliya, xodimlar", "Stores, orders, finance, staff") : L("Магазины, заказы, жалобы", "Do‘konlar, buyurtmalar, shikoyatlar", "Stores, orders, complaints")}</small></button>` : `<button class="order-row" type="button" data-act="store-reg"><b>${L("Добавить свой магазин", "Do‘konimni qo‘shish")}</b>${ui("store", 18)}<small>${stage0() ? L("Продавайте на Quriliş Go: витрина, заказы онлайн, 0% комиссии", "Quriliş Go’da soting: vitrina, onlayn buyurtmalar, 0% komissiya", "Sell on Quriliş Go: a storefront, online orders, 0% commission") : L("Продавайте на Quriliş Go: витрина, заказы, доставка Яндекс", "Quriliş Go’da soting: vitrina, buyurtmalar, Yandex yetkazish")}</small></button>`}${API ? "" : `<button class="order-row" type="button" data-go="seller"><b>${L("Кабинет продавца", "Sotuvchi kabineti")}</b>${ui("chev", 18)}<small>${L("Для магазинов-партнёров", "Hamkor do‘konlar uchun")}</small></button>`}
-      ${APP_MODE ? `<div class="p-docs"><b>${L("Документы", "Hujjatlar", "Documents")}</b><a href="${legalUrl("privacy")}" target="_blank" rel="noopener">${L("Политика конфиденциальности", "Maxfiylik siyosati", "Privacy policy")}</a><a href="${legalUrl("terms")}" target="_blank" rel="noopener">${L("Пользовательское соглашение", "Foydalanuvchi kelishuvi", "Terms of use")}</a><a href="${legalUrl("delete-account")}" target="_blank" rel="noopener">${L("Удаление аккаунта", "Akkauntni o‘chirish", "Delete your account")}</a></div>` : ""}
-    </div>`;
-  $("#dFoot").innerHTML = `${API && user ? `<div style="display:flex;gap:14px;flex-wrap:wrap"><button class="lnk" type="button" data-act="logout-all" style="font-size:12px;color:var(--muted)">${L("Выйти на всех устройствах", "Barcha qurilmalardan chiqish")}</button><button class="lnk" type="button" data-act="del-account" style="font-size:12px;color:var(--muted)">${L("Удалить аккаунт", "Akkauntni o‘chirish", "Delete account")}</button></div>` : ""}<span style="font-size:12px;color:var(--muted)">${(API ? L("Аккаунт, заказы и магазин хранятся на сервере Quriliş Go.", "Akkaunt, buyurtmalar va do‘kon Quriliş Go serverida saqlanadi.") : L("Данные этого прототипа хранятся только в вашем браузере.", "Prototip ma’lumotlari faqat brauzeringizda saqlanadi."))}</span>`;
+    ${user && !user.staff && !user.store_id && !myStore ? `<section class="pf-sec" id="roleBox"><h3 class="pf-h">${L("Кто вы?", "Siz kimsiz?")} <small>${L("от этого зависят цены и подсказки", "narxlar va maslahatlar shunga bog‘liq", "prices and tips depend on it")}</small></h3>${rolesHTML(user.store_id || user.role === "seller" ? "store" : user.role === "pro" ? "pro" : "buyer", "prole", true)}</section>` : ""}
+    <section class="pf-sec"><h3 class="pf-h">${L("Настройки", "Sozlamalar", "Settings")}</h3><div class="pf-group">
+      ${notif}
+      <label class="pf-row pf-set" for="pDist"><span class="pf-ic">${ui("pin", 18)}</span><span class="pf-t"><b>${L("Район доставки", "Yetkazish tumani", "Delivery district")}</b><small>${L("по умолчанию", "standart", "by default")}</small></span><span class="pf-selw"><select id="pDist" class="pf-sel">${DISTRICTS.map(x => `<option value="${x.id}" ${x.id === district ? "selected" : ""}>${L(x.ru, x.uz)}</option>`).join("")}</select>${ui("chev", 14)}</span></label>
+      ${segRow("moon", L("Тема", "Mavzu"), "", `<div class="seg" role="group" aria-label="${L("Тема", "Mavzu")}"><button type="button" data-theme-set="auto" aria-pressed="${themePref === "auto"}">${L("Авто", "Avto")}</button><button type="button" data-theme-set="light" aria-pressed="${themePref === "light"}">${L("Светлая", "Yorug‘")}</button><button type="button" data-theme-set="dark" aria-pressed="${themePref === "dark"}">${L("Тёмная", "Qorong‘i")}</button></div>`)}
+      ${segRow("chat", L("Язык", "Til"), "", `<div class="seg" role="group" aria-label="${L("Язык", "Til")}"><button type="button" data-lang="ru" aria-pressed="${lang === "ru"}">Русский</button><button type="button" data-lang="uz" aria-pressed="${lang === "uz"}">Özbekça</button><button type="button" data-lang="en" aria-pressed="${lang === "en"}">English</button></div>`)}
+      ${APP_MODE ? "" : segRow("spark", L("Оформление", "Ko‘rinish", "Appearance"), L("Подсветка и анимации", "Yoritish va animatsiyalar", "Glow and animations"), `<div class="seg" role="group" aria-label="${L("Оформление", "Ko‘rinish", "Appearance")}"><button type="button" data-look="on" aria-pressed="${fxPref === "on"}">${L("Яркое", "Yorqin")}</button><button type="button" data-look="off" aria-pressed="${fxPref === "off"}">${L("Простое", "Oddiy")}</button><button type="button" data-look="auto" aria-pressed="${fxPref === "auto"}">${L("Авто", "Avto")}</button></div>`)}
+    </div></section>
+    <section class="pf-sec"><h3 class="pf-h">${L("Ремонт и покупки", "Ta’mir va xaridlar", "Renovation and shopping")}</h3><div class="pf-group">
+      ${row('data-go="masters" data-mtabgo="mine"', "wrench", L("Заявки мастерам", "Ustalarga so‘rovlar"), L("Плиточники, электрики, сантехники", "Kafelchi, elektrik, santexnik"))}
+      ${row('data-act="ai"', "spark", "Usta AI", L("Подбор материалов и советы", "Material tanlash va maslahatlar"))}
+      ${row('data-act="home-setup"', "grid", L("Настроить главную", "Bosh sahifani sozlash", "Customize home"), L("Какие блоки показывать и в каком порядке", "Qaysi bloklar va qanday tartibda", "Which blocks to show and in what order"))}
+    </div></section>
+    <section class="pf-sec"><h3 class="pf-h">${user?.staff || user?.admin ? L("Работа", "Ish", "Work") : L("Для бизнеса", "Biznes uchun", "For business")}</h3><div class="pf-group">
+      ${user?.admin && !user?.staff ? row('data-go="admin"', "calc", L("Панель Quriliş Go", "Quriliş Go paneli"), user.owner ? L("Оборот, заказы, магазины, модерация, сотрудники", "Aylanma, buyurtmalar, do‘konlar, moderatsiya, xodimlar", "Turnover, orders, stores, moderation, staff") : L("Модерация магазинов, мастеров и жалоб", "Do‘kon, usta va shikoyatlar moderatsiyasi", "Moderation of stores, masters and complaints")) : ""}
+      ${user && user.store_id && myStore ? row('data-go="seller"', "store", esc(myStore.name), `${L("Кабинет продавца", "Sotuvchi kabineti")} · ${(ST_STATUS()[myStore.status] || ST_STATUS().pending)[0]}`)
+        : user?.staff ? row('data-go="admin"', "store", L("Панель Quriliş Go", "Quriliş Go paneli", "Quriliş Go panel"), user.owner ? L("Магазины, заказы, финансы, сотрудники", "Do‘konlar, buyurtmalar, moliya, xodimlar", "Stores, orders, finance, staff") : L("Магазины, заказы, жалобы", "Do‘konlar, buyurtmalar, shikoyatlar", "Stores, orders, complaints"))
+        : row('data-act="store-reg"', "store", L("Добавить свой магазин", "Do‘konimni qo‘shish"), stage0() ? L("Продавайте на Quriliş Go: витрина, заказы онлайн, 0% комиссии", "Quriliş Go’da soting: vitrina, onlayn buyurtmalar, 0% komissiya", "Sell on Quriliş Go: a storefront, online orders, 0% commission") : L("Продавайте на Quriliş Go: витрина, заказы, доставка Яндекс", "Quriliş Go’da soting: vitrina, buyurtmalar, Yandex yetkazish"))}
+      ${API ? "" : row('data-go="seller"', "idcard", L("Кабинет продавца", "Sotuvchi kabineti"), L("Для магазинов-партнёров", "Hamkor do‘konlar uchun"))}
+      ${user?.staff && !user.staff.env ? row('data-act="pw-change"', "lock", L("Сменить пароль", "Parolni almashtirish", "Change password"), L("Другие ваши сессии завершатся", "Boshqa sessiyalaringiz tugaydi", "Your other sessions will end")) : ""}
+    </div></section>
+    ${APP_MODE ? `<section class="pf-sec"><h3 class="pf-h">${L("Документы", "Hujjatlar", "Documents")}</h3><div class="pf-group">${[["privacy", "shield", L("Политика конфиденциальности", "Maxfiylik siyosati", "Privacy policy")], ["terms", "idcard", L("Пользовательское соглашение", "Foydalanuvchi kelishuvi", "Terms of use")], ["delete-account", "trash", L("Удаление аккаунта", "Akkauntni o‘chirish", "Delete your account")]].map(([k, icon, t]) => `<a class="pf-row" href="${legalUrl(k)}" target="_blank" rel="noopener"><span class="pf-ic">${ui(icon, 18)}</span><span class="pf-t"><b>${t}</b></span><span class="pf-chev">${ui("chev", 16)}</span></a>`).join("")}</div></section>` : ""}
+    ${user ? `<div class="pf-group">${row('data-act="logout"', "logout", L("Выйти", "Chiqish", "Sign out"), "", "", " pf-out")}${API ? row('data-act="logout-all"', "lock", L("Выйти на всех устройствах", "Barcha qurilmalardan chiqish"), "", "", " pf-out") + row('data-act="del-account"', "trash", L("Удалить аккаунт", "Akkauntni o‘chirish", "Delete account"), "", "", " pf-out") : ""}</div>` : ""}
+    <p class="pf-note">${API ? L("Аккаунт, заказы и магазин хранятся на сервере Quriliş Go.", "Akkaunt, buyurtmalar va do‘kon Quriliş Go serverida saqlanadi.") : L("Данные этого прототипа хранятся только в вашем браузере.", "Prototip ma’lumotlari faqat brauzeringizda saqlanadi.")}</p>
+  </div>`;
+  $("#dFoot").innerHTML = "";
   $("#pDist").addEventListener("change", e => { setDistrict(e.target.value); renderHeader(); });
   $("#roleBox")?.addEventListener("change", async e => {
     if (e.target.name !== "prole") return; const v = e.target.value;
@@ -4831,11 +4961,11 @@ function bindStoreForm() {
 }
 
 /* the three kinds of people on Quriliş Go — asked once after sign-up and changeable in the profile */
-const rolesHTML = (role, name = "role") => `<div class="roles opts">
-  <label class="opt"><input type="radio" name="${name}" value="buyer" ${role === "buyer" ? "checked" : ""}><span><b>${L("Покупатель", "Xaridor")}</b><small>${L("Ремонт дома или квартиры", "Uy yoki kvartira ta’miri")}</small></span><span></span></label>
-  <label class="opt"><input type="radio" name="${name}" value="pro" ${role === "pro" ? "checked" : ""}><span><b>${L("Мастер или прораб", "Usta yoki prorab")}</b><small>${discOn() ? L("Оптовая цена −3% на материалы с первой штуки", "Materiallarga birinchi donadan −3% ulgurji narx") : L("Делаете ремонт для клиентов: сметы, списки материалов, заявки", "Mijozlar uchun ta’mir: smeta, materiallar ro‘yxati, buyurtmalar", "You renovate for clients: estimates, material lists, requests")}</small></span>${discOn() ? `<span class="tag">−3%</span>` : ""}</label>
-  <label class="opt"><input type="radio" name="${name}" value="store" ${role === "store" ? "checked" : ""}><span><b>${L("Хочу добавить свой магазин", "Do‘konimni qo‘shmoqchiman")}</b><small>${stage0() ? L("Продавайте на Quriliş Go: витрина, заказы онлайн, 0% комиссии", "Quriliş Go’da soting: vitrina, onlayn buyurtmalar, 0% komissiya", "Sell on Quriliş Go: a storefront, online orders, 0% commission") : L("Продавайте на Quriliş Go: витрина, заказы и доставка Яндекс", "Quriliş Go’da soting: vitrina, buyurtmalar va Yandex yetkazish")}</small></span><span class="tag">${ui("store", 14)}</span></label>
-</div>`;
+const rolesHTML = (role, name = "role", rich) => { const ri = icon => rich ? `<span class="ri">${ui(icon, 20)}</span>` : "", rk = rich ? `<span class="rk">${ui("check", 13)}</span>` : ""; return `<div class="roles opts${rich ? " rich" : ""}">
+  <label class="opt"><input type="radio" name="${name}" value="buyer" ${role === "buyer" ? "checked" : ""}>${ri("home")}<span><b>${L("Покупатель", "Xaridor")}</b><small>${L("Ремонт дома или квартиры", "Uy yoki kvartira ta’miri")}</small></span><span></span>${rk}</label>
+  <label class="opt"><input type="radio" name="${name}" value="pro" ${role === "pro" ? "checked" : ""}>${ri("wrench")}<span><b>${L("Мастер или прораб", "Usta yoki prorab")}</b><small>${discOn() ? L("Оптовая цена −3% на материалы с первой штуки", "Materiallarga birinchi donadan −3% ulgurji narx") : L("Делаете ремонт для клиентов: сметы, списки материалов, заявки", "Mijozlar uchun ta’mir: smeta, materiallar ro‘yxati, buyurtmalar", "You renovate for clients: estimates, material lists, requests")}</small></span>${discOn() ? `<span class="tag">−3%</span>` : ""}${rk}</label>
+  <label class="opt"><input type="radio" name="${name}" value="store" ${role === "store" ? "checked" : ""}>${ri("store")}<span><b>${L("Хочу добавить свой магазин", "Do‘konimni qo‘shmoqchiman")}</b><small>${stage0() ? L("Продавайте на Quriliş Go: витрина, заказы онлайн, 0% комиссии", "Quriliş Go’da soting: vitrina, onlayn buyurtmalar, 0% komissiya", "Sell on Quriliş Go: a storefront, online orders, 0% commission") : L("Продавайте на Quriliş Go: витрина, заказы и доставка Яндекс", "Quriliş Go’da soting: vitrina, buyurtmalar va Yandex yetkazish")}</small></span>${rich ? "" : `<span class="tag">${ui("store", 14)}</span>`}${rk}</label>
+</div>`; };
 function renderAuth() {
   const b = $("#authBox"), st = auth.step;
   b.classList.toggle("wide", st === "store");
@@ -6076,12 +6206,6 @@ function deleteAccountFlow() {
   };
 }
 async function logoutAll() { try { await api("POST", "/api/me/logout-all"); } catch (e) {} logout(); toast(L("Вы вышли на всех устройствах", "Barcha qurilmalarda chiqdingiz")); }
-function notifyRows() {
-  if (!API || !user) return "";
-  return `<div class="notif-box"><b>${L("Уведомления", "Bildirishnomalar")}</b>
-    ${NATIVE ? `<div class="nrow"><span>${ui("bell", 16)} ${L("На этом телефоне", "Shu telefonda", "On this phone")}</span>${pushState.perm === "granted" && pushState.token ? `<span class="pill ok">${L("включены", "yoqilgan", "on")}</span>` : pushState.perm === "denied" ? `<small style="color:var(--muted)">${L("Разрешите уведомления в настройках телефона", "Telefon sozlamalarida bildirishnomalarga ruxsat bering", "Allow notifications in the phone settings")}</small>` : `<button class="btn btn-line" type="button" data-act="push-native-on">${L("Включить", "Yoqish")}</button>`}</div>` : window.IMORAT_APP ? "" : `<div class="nrow"><span>${ui("bell", 16)} ${L("На этом устройстве", "Shu qurilmada")}</span>${LS.get("imorat.push", false) ? `<span class="pill ok">${L("включены", "yoqilgan")}</span>` : `<button class="btn btn-line" type="button" data-act="push-on">${L("Включить", "Yoqish")}</button>`}</div>`}
-  </div>`;
-}
 
 /* ---- Seller cabinet: live refresh with a sound for new orders ---- */
 let sellerPoll = 0, lastNewIds = null;
@@ -9639,6 +9763,12 @@ document.addEventListener("click", e => {
     case "compare": return openDrawer("compare");
     case "cmp-clear": compare = []; LS.set("imorat.cmp", compare); renderCmpBar(); return drawerView === "compare" ? closeDrawer() : undefined;
     case "ai-cmp": return openAI(L(`Сравни ${compare.map(id => `[[${id}]]`).join(", ")}: что лучше выбрать и для каких задач подходит каждый?`, `${compare.map(id => `[[${id}]]`).join(", ")} ni solishtir: qaysi birini tanlash yaxshi va har biri qaysi vazifaga mos?`, `Compare ${compare.map(id => `[[${id}]]`).join(", ")}: which is the better choice and what tasks is each one suited for?`));
+    case "cart-clear": { // empties the cart at once; «Вернуть» in the toast puts everything back for 6 seconds
+      const was = { cart: { ...cart }, services: { ...services }, bundles: [...bundlesOn] };
+      const keep = () => { LS.set("imorat.svc", services); LS.set("imorat.bundles", bundlesOn); saveCart(); refreshCards(); if (drawerView === "cart") renderDrawer(); };
+      cart = {}; services = {}; bundlesOn = []; keep();
+      return toast(L("Корзина очищена", "Savat tozalandi", "Cart cleared"), 6000, { label: L("Вернуть", "Qaytarish", "Undo"), fn: () => { cart = was.cart; services = was.services; bundlesOn = was.bundles; keep(); } });
+    }
     case "ai-cart": return openAI(L("Проверь мою корзину: всё ли нужное есть для работы, хватит ли количества, что можно заменить дешевле?", "Savatimni tekshir: ish uchun hammasi bormi, miqdor yetadimi, nimani arzonroqqa almashtirish mumkin?"));
   }
 });
