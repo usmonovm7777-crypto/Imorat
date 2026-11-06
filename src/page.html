@@ -189,7 +189,9 @@ html.pg-anim, html.pg-anim body { overflow-x: clip; }
 /* Launch animation (the app every start, the site once per visit), built like a presentation opening: the mark comes up in a pale
    diamond, dark diamonds open out from the centre and turn the screen dark, two diagonals are drawn, the mark rises and the name
    comes into focus under it, then everything fades into the app. Fixed colours: it looks the same in both themes. */
-#intro { position: fixed; inset: 0; z-index: 9999; overflow: hidden; background: #F4F1EC; --t: min(22vw, 96px); animation: inOut .42s cubic-bezier(.4, 0, .2, 1) 2.25s both; }
+/* iOS Safari paints the status bar with this layer's own background colour, so the colour follows the picture: light at the
+   start, dark once the dark diamonds cover the screen (~1.2 s), light again as the intro dissolves into the app */
+#intro { position: fixed; inset: 0; z-index: 9999; overflow: hidden; background: #F4F1EC; --t: min(22vw, 96px); animation: inBg .25s ease 1.2s both, inOut .42s cubic-bezier(.4, 0, .2, 1) 2.25s both; }
 #intro.skip { animation: inSkip .3s ease both; }
 #intro .idm, #intro .idf { position: absolute; left: 50%; top: 50%; width: 60vmax; height: 60vmax; margin: -30vmax 0 0 -30vmax; rotate: 45deg; transform: scale(0); }
 #intro .idm { animation: idmGrow .72s cubic-bezier(.7, 0, .2, 1) var(--d) both; }
@@ -216,8 +218,9 @@ html.pg-anim, html.pg-anim body { overflow-x: clip; }
 @keyframes itlIn { from { transform: scaleX(0); } }
 @keyframes itxIn { from { opacity: 0; filter: blur(10px); letter-spacing: .16em; transform: scale(1.06); } }
 @keyframes itsIn { from { opacity: 0; transform: translateY(8px); } }
-@keyframes inOut { to { opacity: 0; transform: scale(1.04); visibility: hidden; } }
-@keyframes inSkip { to { opacity: 0; transform: scale(1.04); visibility: hidden; } }
+@keyframes inBg { to { background-color: #171412; } }
+@keyframes inOut { to { opacity: 0; transform: scale(1.04); visibility: hidden; background-color: #F4F1EC; } }
+@keyframes inSkip { to { opacity: 0; transform: scale(1.04); visibility: hidden; background-color: #F4F1EC; } }
 .logo b { font-family: var(--f-display); font-weight: 700; font-size: 19px; letter-spacing: -.03em; }
 .logo b em { font-style: normal; color: var(--accent); margin-left: .2em; }
 .cat-btn { display: inline-flex; align-items: center; gap: 8px; background: var(--accent); color: var(--accent-ink); border-radius: 12px; padding: 10px 16px; font-weight: 600; flex: none; }
@@ -2800,7 +2803,7 @@ function showIntro() {
     <div class="itx"><i></i><b>Quriliş<em>go</em></b><small>${L("Строительные магазины Ташкента", "Toshkent qurilish do‘konlari", "Tashkent building stores")}</small></div>`;
   document.body.appendChild(el);
   let gone = false; const done = () => { if (!gone) { gone = true; el.remove(); } };
-  el.addEventListener("animationend", e => { if (e.target === el) done(); }); // gone the moment it has faded out
+  el.addEventListener("animationend", e => { if (e.target === el && e.animationName !== "inBg") done(); }); // gone the moment it has faded out (not when the background turns dark)
   const t = setTimeout(done, 3200); // and in any case
   el.addEventListener("click", () => { clearTimeout(t); el.classList.add("skip"); setTimeout(done, 450); }, { once: true }); // a tap opens at once
 }
