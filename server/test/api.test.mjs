@@ -1942,3 +1942,16 @@ test("Master shows finished jobs: photos up to 12, a new photo goes back to mode
   const j2 = await up2.json(); assert.equal(j2.master.works.length, 2); assert.equal(j2.master.status, "pending", "a new public photo is checked again");
   const del = await call("DELETE", "/api/masters/me/works/0", null, tok); assert.equal(del.status, 200); assert.equal(del.data.master.works.length, 1);
 });
+
+test("Owner watches every store on its own: list and one store's page", async () => {
+  const A = globalThis.ADMIN;
+  const l = await call("GET", "/api/admin/stores-overview?days=30", null, A);
+  assert.equal(l.status, 200, JSON.stringify(l.data)); assert.ok(l.data.stores.length > 3);
+  const s = l.data.stores.find(x => x.orders > 0) || l.data.stores[0];
+  for (const k of ["id", "name", "status", "orders", "gmv", "done", "cancelled", "fail_pct", "open", "products", "out_of_stock", "stars", "reviews", "problems"]) assert.ok(k in s, k);
+  const one = await call("GET", `/api/admin/stores-overview/${s.id}?days=7`, null, A);
+  assert.equal(one.status, 200); assert.equal(one.data.series.length, 7); assert.equal(one.data.store.id, s.id); assert.ok(Array.isArray(one.data.recent));
+  assert.equal((await call("GET", "/api/admin/stores-overview/nope", null, A)).status, 404);
+  const buyer = (await login("907770099")).data.token;
+  assert.equal((await call("GET", "/api/admin/stores-overview", null, buyer)).status, 403);
+});
