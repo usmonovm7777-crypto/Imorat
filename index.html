@@ -168,10 +168,18 @@ linear-gradient(180deg, hsl(var(--h) var(--tile-s) var(--tile-l)) 0 70%, hsl(var
 .hdr-row { display: flex; align-items: center; gap: 12px; padding-block: 12px; }
 .logo { display: flex; align-items: center; gap: 9px; flex: none; }
 .logo-mark { width: 32px; height: 32px; display: block; flex: none; }
-html.sellerm .hdr .search, html.sellerm .cat-btn, html.sellerm .cart-btn, html.sellerm .rail-nav, html.sellerm .hb[data-act="favs"], html.sellerm .menu-btn, html.sellerm #fab, html.sellerm #foot, html.sellerm #cmpBar { display: none !important; }
+html.workm .hdr .search, html.workm .cat-btn, html.workm .cart-btn, html.workm .rail-nav, html.workm .hb[data-act="favs"], html.workm .menu-btn, html.workm .where, html.workm #fab, html.workm #foot, html.workm #cmpBar, html.workm #supBtn,
+html.loginm .hdr .search, html.loginm .cat-btn, html.loginm .cart-btn, html.loginm .rail-nav, html.loginm .hb, html.loginm .menu-btn, html.loginm .where, html.loginm #fab, html.loginm #foot, html.loginm #cmpBar, html.loginm #tabbar, html.loginm #supBtn { display: none !important; }
+html.adminm #supBtn { display: none !important; }
+.work-shop { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; font-size: 13.5px; }
+html.workm .hdr-row .logo { margin-right: 0; }
+.work-back { background: var(--ink); color: var(--bg); }
+.work-back .wrap { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-block: 8px; font-size: 13.5px; flex-wrap: wrap; }
+.work-back span { display: inline-flex; align-items: center; gap: 6px; }
+.work-back .btn { padding: 7px 14px; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; }
+@media (max-width: 760px) { .work-shop span { display: none; } .work-shop { padding: 8px 10px; } html.workm .seller-chip { order: 4; margin-right: auto; } }
 .seller-chip { display: inline-flex; align-items: center; gap: 6px; min-width: 0; max-width: 46vw; padding: 5px 10px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-size: 12.5px; font-weight: 700; }
 .seller-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-@media (max-width: 760px) { html.sellerm .seller-chip { order: 4; margin-right: auto; } }
 #app.pg-in { animation: pgIn .34s cubic-bezier(.2, .8, .2, 1) both; }
 html.pg-anim, html.pg-anim body { overflow-x: clip; }
 .pg-ghost { position: fixed; inset: 0; overflow: hidden; pointer-events: none; background: var(--bg); will-change: transform; }
@@ -1197,6 +1205,29 @@ input, select, textarea { font-size: 16px !important; }
 .soc.tg:disabled { opacity: .5; cursor: not-allowed; }
 .or { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 13px; }
 .or::before, .or::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+.lp { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 470px); gap: 48px; align-items: center; min-height: calc(100vh - 160px); padding-block: 32px 48px; }
+.lp-info { display: grid; gap: 16px; justify-items: start; }
+.lp-info .logo b { font-family: var(--f-display); font-size: 22px; }
+.lp-info .h-l { margin: 4px 0 0; font-size: clamp(30px, 4vw, 44px); letter-spacing: -.03em; line-height: 1.05; }
+.lp-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.lp-list li { display: flex; gap: 10px; align-items: flex-start; font-size: 15.5px; }
+.lp-list svg { flex: none; margin-top: 3px; color: var(--ok); }
+.lp-card { background: var(--surface); border: 1px solid var(--line); border-radius: 24px; box-shadow: var(--shadow-md, 0 18px 50px rgb(0 0 0 / .1)); overflow: hidden; }
+@media (max-width: 760px) { .lp { grid-template-columns: 1fr; gap: 18px; min-height: 0; padding-block: 12px 32px; } .lp-card { order: -1; border-radius: 20px; } .lp-info .h-l { font-size: 26px; } .lp-info .logo { display: none; } }
+.au-more { display: grid; gap: 6px; justify-items: center; font-size: 12.5px; }
+.au-more .lnk { color: var(--muted); font-size: 12.5px; }
+.adm-head { display: flex; justify-content: space-between; align-items: end; gap: 12px; flex-wrap: wrap; margin: 18px 0 12px; }
+.adm-head .h-l { margin: 0; }
+.adm-head .mu { margin: 4px 0 0; }
+.adm-tabs { display: flex; gap: 6px; flex-wrap: wrap; padding: 4px; border-radius: 14px; background: color-mix(in srgb, var(--ink) 6%, var(--surface)); width: fit-content; margin-bottom: 4px; }
+.adm-tabs button { display: inline-flex; align-items: center; gap: 7px; padding: 9px 14px; border-radius: 10px; font-weight: 600; font-size: 14px; color: var(--muted); }
+.adm-tabs button[aria-selected="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgb(0 0 0 / .14); }
+.adm-n { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; display: inline-grid; place-items: center; font-size: 11.5px; background: var(--signal); color: #fff; }
+.adm-empty { display: grid; justify-items: center; text-align: center; gap: 8px; padding: 32px 20px; margin-top: 12px; color: var(--muted); }
+.adm-empty svg { color: var(--ok); }
+.adm-empty p { margin: 0; max-width: 460px; }
+.adm-chip { background: color-mix(in srgb, var(--ink) 8%, transparent); color: var(--ink); }
+@media (max-width: 760px) { html.adminm .adm-tabs, html.masterm .adm-tabs { display: none; } .adm-head { margin-top: 10px; } }
 .au-form { display: grid; gap: 14px; }
 .af { display: grid; gap: 7px; }
 .af > label, .af-l label { font-weight: 600; font-size: 14.5px; }
@@ -3051,7 +3082,7 @@ function renderHeader() {
   $("#hdr").innerHTML = `
   <div class="wrap hdr-row">
     <button class="menu-btn" type="button" data-act="widgets" aria-label="${L("Инструменты: калькуляторы, Usta AI, дизайнер, доставка", "Asboblar: kalkulyatorlar, Usta AI, dizayner, yetkazish", "Tools: calculators, Usta AI, designer, delivery")}" title="${L("Инструменты", "Asboblar", "Tools")}">${ui("menu", 22)}<span class="dot" aria-hidden="true" hidden></span></button>
-    <button class="logo" type="button" data-go="home" aria-label="Quriliş Go">${markSVG()}<b>Quriliş<em>go</em></b></button>${sellerMode() ? `<span class="seller-chip" title="${esc(myStore.name)}">${ui("store", 14)}<span>${esc(myStore.name)}</span></span>` : ""}${API ? "" : `<span class="demo-badge" title="${L("Демо-режим: данные хранятся только в этом браузере, заказы и оплата не настоящие", "Demo rejim: ma’lumotlar faqat shu brauzerda, buyurtma va to‘lov haqiqiy emas", "Demo mode: data stays in this browser, orders and payments are not real")}">${L("демо", "demo", "demo")}</span>`}
+    <button class="logo" type="button" data-go="home" aria-label="Quriliş Go">${markSVG()}<b>Quriliş<em>go</em></b></button>${workChipHTML()}${API ? "" : `<span class="demo-badge" title="${L("Демо-режим: данные хранятся только в этом браузере, заказы и оплата не настоящие", "Demo rejim: ma’lumotlar faqat shu brauzerda, buyurtma va to‘lov haqiqiy emas", "Demo mode: data stays in this browser, orders and payments are not real")}">${L("демо", "demo", "demo")}</span>`}
     <button class="cat-btn" type="button" data-act="mega">${ui("grid", 18)}${L("Каталог", "Katalog")}</button>
     <div class="search" role="search">${ui("search", 18)}<input id="q" type="search" enterkeyhint="search" role="combobox" aria-controls="sugg" aria-expanded="false" aria-autocomplete="list" value="${esc(f.q)}" placeholder="${L("Цемент, смеситель, ламинат…", "Sement, aralashtirgich, laminat…")}" aria-label="${L("Поиск по каталогу", "Katalog bo‘yicha qidiruv")}" autocomplete="off"><div class="sugg" id="sugg" role="listbox" aria-label="${L("Подсказки поиска", "Qidiruv takliflari")}" hidden></div><span class="s-tools"><button class="s-ic" type="button" data-act="voice" ${SRec ? "" : "hidden"} aria-label="${L("Поиск голосом", "Ovozli qidiruv")}" title="${L("Поиск голосом", "Ovozli qidiruv")}">${ui("mic", 18)}</button><button class="s-ic" type="button" data-act="photo-search" ${photoAIon() ? "" : "hidden"} aria-label="${L("Поиск по фото", "Rasm bo‘yicha qidiruv")}" title="${L("Поиск по фото", "Rasm bo‘yicha qidiruv")}">${ui("camera", 18)}</button><button class="ask" type="button" data-act="ask-search">${ui("spark", 14)}<span class="t">${L("Спросить AI", "AI dan so‘rash")}</span></button></span><input type="file" id="psFile" accept="image/*" hidden></div>
     <label class="where" title="${L("Район доставки", "Yetkazish tumani")}">${ui("pin", 16)}<span class="visually-hidden">${L("Район доставки", "Yetkazish tumani")}</span><select id="distSel">${DISTRICTS.map(d => `<option value="${d.id}" ${d.id === district ? "selected" : ""}>${L(d.ru, d.uz)}</option>`).join("")}</select></label>
@@ -3060,7 +3091,9 @@ function renderHeader() {
     <button class="hb" type="button" data-act="favs" aria-label="${L("Избранное", "Saralanganlar")}">${ui("heart", 22)}<span class="dot" id="favDot" hidden></span></button>
     <button class="hb" type="button" data-act="${user ? "profile" : "login"}" aria-label="${user ? L("Профиль", "Profil") : L("Войти", "Kirish")}">${user ? `<span class="av">${esc(initial(user.name))}</span>` : ui("user", 22)}</button>
     <button class="cart-btn" type="button" data-act="cart">${ui("cart", 18)}${L("Корзина", "Savat")}<span class="dot" id="cartDot" hidden>0</span></button>
+    ${workMode() && workMode() !== "admin" ? `<button class="btn btn-line work-shop" type="button" data-act="shopper-toggle">${ui("cart", 16)}<span>${L("Открыть маркетплейс", "Marketpleysni ochish", "Open the marketplace")}</span></button>` : ""}
   </div>
+  ${!workMode() && canWork() ? `<div class="work-back"><div class="wrap"><span>${ui("cart", 15)} ${L("Вы в маркетплейсе как покупатель", "Siz marketpleysda xaridor sifatidasiz", "You are in the marketplace as a buyer")}</span><button class="btn btn-primary" type="button" data-act="shopper-toggle">${ui("back", 15)} ${myStore ? L("Вернуться в кабинет магазина", "Do‘kon kabinetiga qaytish", "Back to the store cabinet") : L("Вернуться в кабинет мастера", "Usta kabinetiga qaytish", "Back to the master cabinet")}</button></div></div>` : ""}
   <div class="wrap"><nav class="rail-nav" aria-label="${L("Популярные разделы", "Ommabop bo‘limlar")}">
     <button type="button" class="ai-l" data-act="ai">${ui("spark", 15)}Usta AI</button>
     <button type="button" class="ms-l" data-go="masters">${ui("wrench", 15)}${L("Мастера", "Ustalar")}</button>
@@ -3086,7 +3119,7 @@ function renderFooter() {
     <div><b>${L("Покупателям", "Xaridorlarga")}</b><ul><li><button type="button" data-act="support">${L("Поддержка — написать нам", "Yordam — bizga yozing", "Support — write to us")}</button></li><li><button type="button" data-go="catalog">${L("Весь каталог", "Butun katalog")}</button></li><li><button type="button" data-act="ai">Usta AI</button></li><li><button type="button" data-scroll="calc">${L("Калькуляторы ремонта", "Ta’mir kalkulyatorlari")}</button></li><li><button type="button" data-go="list">${L("Список покупок → корзина", "Xaridlar ro‘yxati → savat")}</button></li><li><button type="button" data-act="orders">${L("Мои заказы", "Buyurtmalarim")}</button></li></ul></div>
     <div><b>${L("Доставка и оплата", "Yetkazish va to‘lov")}</b><ul><li>${storeDelivers() ? L("Доставка магазином или самовывоз", "Do‘kon yetkazib beradi yoki olib ketish", "Delivery by the store or pickup") : L("Яндекс Доставка", "Yandex Yetkazib berish")}</li><li>${stage0() ? L("Оплата при получении", "Olganda to‘lov", "Payment on receipt") : L("Оплата картой на сайте", "Saytda karta bilan to‘lov", "Card payment on the site")}</li><li><button type="button" data-go="masters">${L("Мастера и спецтехника", "Ustalar va maxsus texnika", "Pros and machinery")}</button></li></ul></div>
     <div><b>${L("Документы", "Hujjatlar", "Documents")}</b><ul><li><a href="${legalUrl("privacy")}" target="_blank" rel="noopener">${L("Политика конфиденциальности", "Maxfiylik siyosati", "Privacy policy")}</a></li><li><a href="${legalUrl("terms")}" target="_blank" rel="noopener">${L("Пользовательское соглашение", "Foydalanuvchi kelishuvi", "Terms of use")}</a></li><li><a href="${legalUrl("delete-account")}" target="_blank" rel="noopener">${L("Удаление аккаунта", "Akkauntni o‘chirish", "Delete your account")}</a></li></ul></div>
-    <div><b>${L("Партнёрам", "Hamkorlarga")}</b><ul><li><button type="button" data-go="seller">${L("Кабинет продавца", "Sotuvchi kabineti")}</button></li><li><button type="button" data-scroll="stores">${L("Магазины", "Do‘konlar")}</button></li><li><button type="button" data-go="owner">${L("Вход для владельца и админов", "Egasi va adminlar uchun kirish", "Owner and admin sign-in")}</button></li><li><button type="button" data-go="masters" data-mtabgo="me">${L("Стать мастером", "Usta bo‘lish")}</button></li></ul></div>
+    <div><b>${L("Партнёрам", "Hamkorlarga")}</b><ul><li><button type="button" data-go="partner">${L("Вход для продавцов и мастеров", "Sotuvchi va ustalar uchun kirish", "Sign-in for sellers and pros")}</button></li><li><button type="button" data-go="staff">${L("Вход для сотрудников", "Xodimlar uchun kirish", "Staff sign-in")}</button></li><li><button type="button" data-go="seller">${L("Кабинет продавца", "Sotuvchi kabineti")}</button></li><li><button type="button" data-scroll="stores">${L("Магазины", "Do‘konlar")}</button></li><li><button type="button" data-go="owner">${L("Вход для владельца и админов", "Egasi va adminlar uchun kirish", "Owner and admin sign-in")}</button></li><li><button type="button" data-go="masters" data-mtabgo="me">${L("Стать мастером", "Usta bo‘lish")}</button></li></ul></div>
   </div>`;
 }
 function labelTables(root = document) {
@@ -3130,6 +3163,14 @@ $("#tabbar").addEventListener("click", e => {
 }, true);
 function renderTabbar() { renderTabbar0(); tbPill(); }
 function renderTabbar0() {
+  const wm = workMode();
+  if (wm === "admin" || wm === "master") { // the panel's and the master's own bottom bars
+    const items = wm === "admin" ? ADMIN_TABS().map(([id, icn, lbl]) => [id, icn, lbl, "atab"]) : MASTER_TABS().map(([id, icn, lbl]) => [id, icn, lbl, "mwtab"]);
+    const cur = drawerView ? "profile" : wm === "admin" ? adminTabNow() : (masterTab || "req");
+    const cnt = wm === "admin" ? adminCounts() : { req: (mApi.me?.requests || []).filter(q => q.status === "new").length };
+    $("#tabbar").innerHTML = `<div class="tb-row">${[...items, ["profile", "user", L("Профиль", "Profil", "Profile"), "profile"]].map(([id, icn, lbl, kind]) => `<button type="button" ${kind === "profile" ? 'data-act="profile"' : `data-${kind}="${id}"`} aria-current="${cur === id}">${ui(icn, 22)}<span>${lbl}</span>${cnt[id] ? `<span class="dot">${cnt[id]}</span>` : ""}</button>`).join("")}</div>`;
+    return;
+  }
   if (sellerMode()) {
     const cur = drawerView ? "profile" : route.view === "seller" ? (sellerTab || "orders") : "";
     const items = [["orders", "clock", L("Заказы", "Buyurtmalar", "Orders")], ["goods", "grid", L("Товары", "Mahsulotlar", "Goods")], ["store", "store", L("Магазин", "Do‘kon", "Store")], ["money", "wallet", L("Финансы", "Moliya", "Finance")], ["profile", "user", L("Профиль", "Profil", "Profile")]];
@@ -4482,15 +4523,29 @@ const fmtPhone = d => { d = d.slice(0, 9); return [d.slice(0, 2), d.slice(2, 5),
 const fullPhone = d => "+998 " + fmtPhone(d);
 const initial = n => (String(n || "?").trim()[0] || "?").toUpperCase();
 const viaName = v => ({ google: "Google", apple: "Apple", telegram: "Telegram", phone: L("номер телефона", "telefon raqami"), password: L("логин и пароль", "login va parol", "login and password") }[v] || v);
-function openAuth(then, step = "start") {
-  if (widOpen) closeWidgets();
+function openAuth(then, step = "start", page) {
+  if (widOpen && !page) closeWidgets();
   const edit = step === "store" && then === "seller-edit";
   const ms = edit ? myStore || {} : {};
   auth = { step, then: then || null, via: null, flow: step === "reg" ? "reg" : "login", roleSet: false, mkind: "show", pwTicket: "", phone: "", code: "", devCode: "", sentAt: 0, name: user?.name || "", email: "", hide: false, err: "", ticket: "",
     role: then === "store" ? "store" : "buyer", dist: user?.district || district, busy: false, pending: null, edit,
     loc: ms.la != null && ms.loc_src && ms.loc_src !== "district" ? { la: ms.la, lo: ms.lo, src: ms.loc_src } : null, mapOpen: false,
     st: edit ? { name: ms.name, descr: ms.descr, cats: ms.cats || [], phone: digitsOf(ms.phone).slice(-9), telegram: ms.telegram, hours: ms.hours, district: ms.d, addr: ms.addr, landmark: ms.landmark } : { phone: digitsOf(user?.phone).slice(-9) } };
+  if (page) { auth.page = page; return renderAuth(); } // the separate sign-in pages (#partner, #staff): the same steps right on the page
   setPanel($("#authM"), true); renderAuth(); syncLock();
+}
+/* separate sign-in pages: «для продавцов и мастеров» (phone + password, then their own window) and «для сотрудников» (login + password) */
+function renderLoginPage(kind) {
+  const staff = kind === "staff";
+  const pts = staff ? [L("Анкеты магазинов и мастеров, встречи и договоры", "Do‘kon va usta anketalari, uchrashuv va shartnomalar", "Store and pro applications, meetings and contracts"), L("Жалобы по заказам и поддержка покупателей", "Buyurtma shikoyatlari va xaridorlarni qo‘llab-quvvatlash", "Order complaints and buyer support"), L("Цифры, финансы и сотрудники — у владельца", "Raqamlar, moliya va xodimlar — egasida", "Figures, finance and staff — for the owner")]
+    : [L("Магазин: заказы, товары и цены, финансы", "Do‘kon: buyurtmalar, mahsulot va narxlar, moliya", "Store: orders, goods and prices, finance"), L("Мастер: заявки клиентов, анкета и фото работ", "Usta: mijoz so‘rovlari, anketa va ish rasmlari", "Pro: client requests, profile and photos of work"), L("Маркетплейс — одной кнопкой, когда нужно что-то купить", "Marketpleys — biror narsa kerak bo‘lsa bir tugma bilan", "The marketplace is one button away when you need to buy")];
+  $("#app").innerHTML = `<div class="wrap lp"><div class="lp-info">
+      <span class="logo" aria-hidden="true">${markSVG()}<b>Quriliş<em>go</em></b></span>
+      <h1 class="h-l">${staff ? L("Панель Quriliş Go", "Quriliş Go paneli", "Quriliş Go panel") : L("Кабинет продавца и мастера", "Sotuvchi va usta kabineti", "Seller and pro cabinet")}</h1>
+      <ul class="lp-list">${pts.map(x => `<li>${ui("check", 16)}<span>${x}</span></li>`).join("")}</ul>
+      <p class="mu">${staff ? L("Продавцы и мастера входят на своей странице:", "Sotuvchi va ustalar o‘z sahifasida kiradi:", "Sellers and pros sign in on their own page:") : L("Покупаете для себя?", "O‘zingiz uchun xarid qilasizmi?", "Buying for yourself?")} ${staff ? `<button class="lnk" type="button" data-go="partner">${L("вход для продавцов и мастеров", "sotuvchi va ustalar uchun kirish", "sign-in for sellers and pros")}</button>` : `<button class="lnk" type="button" data-go="home">${L("Перейти в маркетплейс", "Marketpleysga o‘tish", "Go to the marketplace")}</button>`}</p>
+    </div><div class="lp-card" id="authPage"></div></div>`;
+  openAuth(null, staff ? "staff" : "start", kind);
 }
 const openStoreReg = () => (user ? openAuth("store", "store") : openAuth("store"));
 function closeAuth() { setPanel($("#authM"), false); clearInterval(authTimer); syncLock(); }
@@ -4527,7 +4582,7 @@ function otpReturn(otp, slots) {
     return sl.animate([{ transform: `rotate(450deg) translate(${o.dx}px, ${o.dy}px)` }, { transform: "rotate(360deg) translate(0px, 0px)" }], { duration: 520, delay: (5 - i) * 25, easing: "cubic-bezier(.3,0,.2,1)", fill: "forwards" }).finished.catch(() => {}).then(() => { sl.getAnimations({ subtree: true }).forEach(a => a.cancel()); sl.style.transform = ""; sl.style.transformOrigin = ""; sl._orbit = null; }); }));
 }
 const shownCodeNow = () => (!API ? auth.code : auth.devCode) || "";
-function authBusy() { document.querySelectorAll("#authBox button[type=submit]").forEach(b => { b.disabled = true; b.textContent = L("Подождите…", "Kuting…"); }); }
+function authBusy() { document.querySelectorAll("#authBox button[type=submit], #authPage button[type=submit]").forEach(b => { b.disabled = true; b.textContent = L("Подождите…", "Kuting…"); }); }
 async function sendCode() {
   auth.err = "";
   if (!API) { auth.code = String(100000 + Math.floor(Math.random() * 900000)); auth.sentAt = Date.now(); auth.step = "code"; return renderAuth(); }
@@ -4593,11 +4648,13 @@ function finishAuth(u, token) {
   const then = auth.then; closeAuth(); renderHeader(); renderTabbar(); counts();
   if (u.api) { bonusApi = null; loadBonus(); loadStockWatch(); fetchOrders(); teamProj = null; if (LS.get("imorat.teamPending", "")) loadTeams(); } else if (LS.get("imorat.refPending", "")) { const rc = LS.get("imorat.refPending", ""); LS.set("imorat.refPending", ""); setTimeout(() => applyRefCode(rc, true), 400); }
   toast(then === "seller" ? L("Магазин отправлен на проверку", "Do‘kon tekshiruvga yuborildi") : L(`Добро пожаловать, ${u.name}!`, `Xush kelibsiz, ${u.name}!`, `Welcome, ${u.name}!`));
-  if (then === "master-me") { mf.tab = "me"; mf.sel = null; mf.edit = false; go("masters"); setTimeout(() => toast(L("Заполните анкету и добавьте фото своих работ — после проверки их увидят клиенты", "Anketani to‘ldiring va ishlaringiz rasmlarini qo‘shing — tekshiruvdan keyin mijozlar ko‘radi", "Fill in the profile and add photos of your work — clients see them after a check")), 400); }
+  if (then === "master-me") { LS.set("imorat.masterAcct", u.id); LS.set("imorat.shopperView", false); masterTab = "prof"; mf.tab = "me"; mf.sel = null; mf.edit = false; renderHeader(); go("masters"); setTimeout(() => toast(L("Заполните анкету и добавьте фото своих работ — после проверки их увидят клиенты", "Anketani to‘ldiring va ishlaringiz rasmlarini qo‘shing — tekshiruvdan keyin mijozlar ko‘radi", "Fill in the profile and add photos of your work — clients see them after a check")), 400); }
   else if (then === "checkout") openDrawer("checkout"); else if (then === "profile") openDrawer("profile"); else if (then === "seller") { sellerData = null; go("seller"); } else if (typeof then === "function") setTimeout(then, 0); else if (drawerView === "profile") renderDrawer();
   if (route.view === "masters" && typeof then !== "function") { mApi.list = null; mApi.me = undefined; renderMasters(); }
   if (["admin", "store", "shop", "flat"].includes(route.view) && typeof then !== "function") { dash = null; renderMain(); }
   if (route.view === "catalog") renderList(true); else if (route.view === "seller" && then !== "seller") { sellerData = null; renderSeller(); }
+  if (u.api && u.role === "pro" && !masterFlag()) loadMasters(true); // a master's profile decides the master window
+  if ((workMode() || ["partner", "staff"].includes(route.view)) && typeof then !== "function" && then !== "checkout") { renderHeader(); renderTabbar(); renderMain(); }
 }
 
 /* ---- Store location: GPS or a point on the map of Tashkent (OpenStreetMap tiles, zoom 12) ---- */
@@ -4973,9 +5030,9 @@ async function demoHash(pw, salt) {
 }
 const PW_MIN = 8;
 function renderAuth() {
-  const b = $("#authBox"), st = auth.step;
+  const b = (auth.page && $("#authPage")) || $("#authBox"), st = auth.step;
   b.classList.toggle("wide", st === "store");
-  const close = `<button class="ib m-close" type="button" data-act="close-auth" aria-label="${L("Закрыть", "Yopish")}">${ui("close", 18)}</button>`;
+  const close = auth.page ? "" : `<button class="ib m-close" type="button" data-act="close-auth" aria-label="${L("Закрыть", "Yopish")}">${ui("close", 18)}</button>`;
   const back = to => `<button class="lnk" type="button" data-authstep="${to}" style="justify-self:start">${L("← Назад", "← Orqaga")}</button>`;
   const phoneForm = (title, sub) => `<h2>${title}</h2><p>${sub}</p>
     <form id="authPhone" class="au-form" novalidate>
@@ -4986,7 +5043,7 @@ function renderAuth() {
   let h = "";
   const fine = `<p class="fine">${L("Продолжая, вы соглашаетесь с", "Davom etib, siz", "By continuing you agree to the")} <a href="${legalUrl("terms")}" target="_blank" rel="noopener">${L("условиями сервиса", "xizmat shartlari", "terms of use")}</a> ${L("и", "va", "and the")} <a href="${legalUrl("privacy")}" target="_blank" rel="noopener">${L("политикой конфиденциальности", "maxfiylik siyosatiga", "privacy policy")}</a>${L(".", " rozilik bildirasiz.", ".")}</p>`;
   if (st === "start") {
-    h = `<h2>${auth.then === "checkout" ? L("Войдите, чтобы оформить заказ", "Buyurtma berish uchun kiring", "Sign in to place the order") : auth.then === "store" ? L("Войдите, чтобы добавить магазин", "Do‘kon qo‘shish uchun kiring", "Sign in to add a store") : L("Вход", "Tizimga kirish", "Sign in")}</h2>
+    h = `<h2>${auth.page === "partner" ? L("Вход для продавцов и мастеров", "Sotuvchi va ustalar uchun kirish", "Sign-in for sellers and pros") : auth.then === "checkout" ? L("Войдите, чтобы оформить заказ", "Buyurtma berish uchun kiring", "Sign in to place the order") : auth.then === "store" ? L("Войдите, чтобы добавить магазин", "Do‘kon qo‘shish uchun kiring", "Sign in to add a store") : L("Вход", "Tizimga kirish", "Sign in")}</h2>
       ${authSwitch(L("Нет аккаунта?", "Akkauntingiz yo‘q bo‘lsa", "No account yet?"), L("Зарегистрироваться", "Ro‘yxatdan o‘tish", "Sign up"), "reg")}
       <form id="authLogin" class="au-form" novalidate autocomplete="on">
         ${phoneField("lPh", L("Номер телефона", "Telefon raqamingiz", "Phone number"), "username")}
@@ -4998,7 +5055,7 @@ function renderAuth() {
       <button class="btn btn-line au-alt" type="button" id="aUseCode" data-authstep="sms">${ui("chat", 18)} ${L("Войти по коду из SMS", "SMS kod orqali kirish", "Sign in with an SMS code")}</button>
       ${fine}
       ${API ? "" : `<p class="demo">${L("Демо-режим: SMS не отправляется — код появится прямо на экране, а аккаунты и пароли хранятся только в этом браузере.", "Demo rejim: SMS yuborilmaydi — kod ekranda chiqadi, akkaunt va parollar faqat shu brauzerda saqlanadi.", "Demo mode: no SMS is sent — the code appears on the screen; accounts and passwords stay in this browser only.")}</p>`}
-      <button class="lnk" type="button" data-authstep="staff" style="justify-self:center;font-size:12.5px;color:var(--muted)">${L("Вход для сотрудников Quriliş Go", "Quriliş Go xodimlari uchun kirish", "Quriliş Go staff sign-in")}</button>`;
+      ${auth.page ? "" : `<div class="au-more"><button class="lnk" type="button" data-act="go-partner">${L("Вход для продавцов и мастеров", "Sotuvchi va ustalar uchun kirish", "Sign-in for sellers and pros")}</button><button class="lnk" type="button" data-authstep="staff">${L("Вход для сотрудников Quriliş Go", "Quriliş Go xodimlari uchun kirish", "Quriliş Go staff sign-in")}</button></div>`}`;
   } else if (st === "reg") {
     const R = [["buyer", "home", L("Покупатель", "Xaridor", "Buyer"), L("Покупаю материалы для ремонта дома или квартиры", "Uy yoki kvartira ta’miri uchun material xarid qilaman", "I buy materials for a home or flat renovation")],
       ["pro", "wrench", L("Мастер или прораб", "Usta yoki prorab", "Pro or foreman"), L("Бесплатно показываю свои работы клиентам или веду объекты как прораб", "Ishlarimni mijozlarga bepul ko‘rsataman yoki prorab sifatida obyekt yuritaman", "I show my work to clients for free or run sites as a foreman")],
@@ -5006,7 +5063,7 @@ function renderAuth() {
     h = `<h2>${L("Регистрация", "Ro‘yxatdan o‘tish", "Sign up")}</h2>
       ${authSwitch(L("Уже есть аккаунт?", "Avval ro‘yxatdan o‘tgan bo‘lsangiz", "Already registered?"), L("Войти", "Tizimga kiring", "Sign in"), "start")}
       <form id="authReg" class="au-form" novalidate><fieldset><legend class="visually-hidden">${L("Как вы будете пользоваться Quriliş Go", "Quriliş Go’dan qanday foydalanasiz", "How you will use Quriliş Go")}</legend><div class="au-roles">
-        ${R.map(([v, ic, tt, d]) => `<label class="au-role"><input type="radio" name="regrole" value="${v}" ${auth.roleSet && auth.role === v ? "checked" : ""}><span class="au-rc" aria-hidden="true"></span><span class="au-ri">${ui(ic, 22)}</span><span class="au-rt"><b>${tt}</b><small>${d}</small></span></label>`).join("")}
+        ${(auth.page === "partner" ? R.slice(1) : R).map(([v, ic, tt, d]) => `<label class="au-role"><input type="radio" name="regrole" value="${v}" ${auth.roleSet && auth.role === v ? "checked" : ""}><span class="au-rc" aria-hidden="true"></span><span class="au-ri">${ui(ic, 22)}</span><span class="au-rt"><b>${tt}</b><small>${d}</small></span></label>`).join("")}
       </div></fieldset>
       <button class="btn btn-primary au-go" type="submit" id="regGo" ${auth.roleSet ? "" : "disabled"}>${L("Продолжить", "Davom etish", "Continue")}</button></form>`;
   } else if (st === "regphone") {
@@ -5029,7 +5086,7 @@ function renderAuth() {
         ${reset ? "" : `<button class="lnk" type="button" data-act="auth-skip-pw" style="justify-self:center">${L("Позже", "Keyinroq", "Later")}</button>`}
       </form>`;
   } else if (st === "staff") {
-    h = `${back("start")}<h2>${L("Вход для сотрудников", "Xodimlar uchun kirish", "Staff sign-in")}</h2>
+    h = `${auth.page === "staff" ? "" : back("start")}<h2>${L("Вход для сотрудников", "Xodimlar uchun kirish", "Staff sign-in")}</h2>
       <p>${L("Логин и пароль выдаёт владелец Quriliş Go. Покупатели и магазины входят по номеру телефона.", "Login va parolni Quriliş Go egasi beradi. Xaridorlar va do‘konlar telefon raqami bilan kiradi.", "The owner of Quriliş Go issues the login and password. Buyers and stores sign in with a phone number.")}</p>
       <form id="authStaff" novalidate style="display:grid;gap:10px" autocomplete="on">
         <div class="f"><label for="aLogin">${L("Логин", "Login", "Login")}</label><input id="aLogin" name="username" autocomplete="username" autocapitalize="off" spellcheck="false" value="${esc(auth.login || "")}"></div>
@@ -5304,6 +5361,7 @@ function logout() {
   sup = { msgs: null, unread: 0, busy: false, poll: 0, order: null }; setTimeout(supBadge, 0);
   nativePushForget();
   forgetAccountData();
+  LS.set("imorat.shopperView", false);
   user = null; apiToken = ""; LS.set("imorat.token", ""); sellerData = null; adminToken = ""; LS.set("imorat.adminToken", ""); adminState = { need: null }; adminStores = null; adminFin = null; staffList = null; staffNew = null; dash = null;
   if (API) { myStore = null; LS.set("imorat.myStore", null); if (drawerView === "track") drawerView = "orders"; }
   else if (was) { const ds = LS.get("imorat.demoStores", {}); if (myStore) ds[digitsOf(was.phone).slice(-9)] = myStore; LS.set("imorat.demoStores", ds); myStore = null; LS.set("imorat.myStore", null); sellerStore = "usta"; LS.set("imorat.sellerStore", sellerStore); } // demo: the next account does not see this one's store
@@ -5982,18 +6040,44 @@ function adminHTML(topShown) {
   if (adminState.need) return adminGateHTML();
   if (!adminStores) { loadAdmin(); return ""; }
   if (user.owner && !adminFin && !adminState.finLoading) { adminState.finLoading = true; loadAdminFin().finally(() => { adminState.finLoading = false; }); }
+  return `${topShown ? "" : adminSupportHTML() + adminModHTML()}${adminStoresHTML()}${adminProblemsHTML()}${adminMastersHTML()}${user.owner ? adminFinanceHTML() : ""}`;
+}
+function adminStoresHTML() {
+  if (!adminStores) { loadAdmin(); return ""; }
   const pend = adminStores.filter(s => s.status === "pending" || s.status === "meeting");
-  return `${topShown ? "" : adminSupportHTML() + adminModHTML()}<div class="panel" style="margin-top:12px"><div class="panel-h"><h2 class="h-m">${L("Модерация магазинов", "Do‘konlar moderatsiyasi")}</h2><span class="pill ${pend.length ? "warn" : "ok"}">${pend.length} ${L("ждут", "kutmoqda")}</span></div>
+  return `<div class="panel" style="margin-top:12px"><div class="panel-h"><h2 class="h-m">${L("Модерация магазинов", "Do‘konlar moderatsiyasi")}</h2><span class="pill ${pend.length ? "warn" : "ok"}">${pend.length} ${L("ждут", "kutmoqda")}</span></div>
     <div class="tbl-wrap"><table><thead><tr><th>${L("Магазин", "Do‘kon")}</th><th>${L("Владелец", "Egasi")}</th><th>${L("Статус", "Holat")}</th><th></th></tr></thead><tbody>
     ${adminStores.slice(0, 40).map(s => { const [lb, c] = ST_STATUS()[s.status] || ["?", "mute"]; return `<tr><td><b>${esc(s.name)}</b><br><small style="color:var(--muted)">${dName(s.d)}, ${esc(s.addr)} · ${(s.cats || []).map(catName).join(", ")}</small><br><small>${esc(s.descr || "")}</small></td><td style="font-size:13px">${esc(s.owner_name || "—")}<br><span class="num">${esc(s.owner_phone ? "+" + s.owner_phone : "")}</span></td><td><span class="pill ${c}">${lb}</span>${s.status === "active" ? `<br><small style="color:${s.promo ? "var(--ok)" : "var(--muted)"}">${s.promo ? L("комиссия 0% до", "komissiya 0% gacha:", "0% commission until") + " " + new Date(s.free_until).toLocaleDateString(LOCALE) : L("комиссия", "komissiya", "commission") + " " + pct(feeInfo().ours)}</small>` : ""}</td>
       <td style="white-space:nowrap">${s.status !== "active" ? admStoreWay(s) : `<button class="btn btn-line" type="button" data-admf="${esc(s.id)}" title="${L("Ещё 3 месяца без комиссии Quriliş Go", "Yana 3 oy Quriliş Go komissiyasisiz", "Three more months without the Quriliş Go commission")}">0% +3 ${L("мес", "oy", "mo")}</button>`} ${["pending", "meeting"].includes(s.status) ? `<button class="btn btn-line" type="button" data-adm="${esc(s.id)}|rejected">${L("Отклонить", "Rad etish")}</button>` : s.status === "active" ? `<button class="btn btn-line" type="button" data-adm="${esc(s.id)}|blocked">${L("Скрыть", "Yashirish")}</button>` : ""} <button class="btn btn-line" type="button" data-admv="${esc(s.id)}|${s.verified ? 0 : 1}">${s.verified ? "✓ " + L("Проверен", "Tekshirilgan") : L("Отметить проверенным", "Tekshirilgan deb belgilash")}</button></td></tr>`; }).join("")}
-    </tbody></table></div></div>${adminProblemsHTML()}${adminMastersHTML()}${user.owner ? adminFinanceHTML() : ""}`;
+    </tbody></table></div></div>`;
 }
 let sellerTab = LS.get("imorat.sellerTab", "");
 /* Seller mode: a store owner (once the store is registered or approved, and on every sign-in) works in the cabinet — on the site and in
    the app the buyer shelf is out of the way: a seller tab bar, a slim header, home and catalogue open the cabinet. "Витрина покупателя"
    in the profile switches to the shelf and back (remembered in this browser). Staff accounts are never in it. */
-function sellerMode() { return !!(user && myStore && !user.staff && !LS.get("imorat.shopperView", false)); }
+function workChipHTML() {
+  const wm = workMode();
+  if (wm === "seller") return `<span class="seller-chip" title="${esc(myStore.name)}">${ui("store", 14)}<span>${esc(myStore.name)}</span></span>`;
+  if (wm === "admin") return `<span class="seller-chip adm-chip">${ui("shield", 14)}<span>${user.owner ? L("Панель владельца", "Egasi paneli", "Owner panel") : L("Панель модератора", "Moderator paneli", "Moderator panel")}</span></span>`;
+  if (wm === "master") return `<span class="seller-chip">${ui("wrench", 14)}<span>${L("Кабинет мастера", "Usta kabineti", "Master cabinet")}</span></span>`;
+  return "";
+}
+/* ================= Work windows =================
+   After signing in each kind of account gets its own window without the shop around it: admins and the owner — the panel
+   (applications, complaints, support, figures); sellers — the store cabinet; masters — requests, profile and photos of work.
+   Sellers and masters can open the marketplace as buyers and come back («Открыть маркетплейс» / «Вернуться в кабинет»). */
+const masterFlag = () => !!user && LS.get("imorat.masterAcct", "") === user.id;
+function isMasterAcct() { if (!user || user.staff || user.admin || myStore) return false; return API ? !!mApi.me?.master || masterFlag() : (!!myMasterDemo && user.role === "pro") || masterFlag(); }
+function workMode() {
+  if (!user) return null;
+  if (user.admin) return "admin";
+  if (LS.get("imorat.shopperView", false)) return null;
+  if (myStore && !user.staff) return "seller";
+  if (isMasterAcct()) return "master";
+  return null;
+}
+const canWork = () => !!user && !user.admin && ((myStore && !user.staff) || isMasterAcct()); // has a cabinet to come back to from the marketplace
+function sellerMode() { return workMode() === "seller"; }
 /* switches the visible section of the seller cabinet without re-rendering (forms keep what was typed) */
 function sellerShowTab(id) {
   if (!document.getElementById("stp-" + id)) return;
@@ -8126,6 +8210,7 @@ async function loadMasters(force) {
   try {
     const [l, me, mine] = await Promise.all([api("GET", "/api/masters"), user ? api("GET", "/api/masters/me").catch(() => null) : null, user ? api("GET", "/api/me/master-requests").catch(() => null) : null]);
     mApi.list = l.masters; mApi.me = me; mApi.mine = mine?.requests || [];
+    if (me?.master && user) { LS.set("imorat.masterAcct", user.id); if (route.view !== "masters") { renderHeader(); renderTabbar(); renderMain(); } }
   } catch (e) { mApi.list = mApi.list || []; toast(apiErr(e)); }
   mApi.busy = false; if (route.view === "masters") renderMasters();
 }
@@ -8207,14 +8292,19 @@ const worksHTML = (works, own) => !works?.length && !own ? "" : `<div class="mwo
 function masterCabinetHTML() {
   const me = API ? mApi.me?.master : myMasterDemo, reqs = API ? mApi.me?.requests || [] : [];
   if (!me || mf.edit) return masterFormHTML(me);
+  return masterProfPanelHTML(me) + masterReqsPanelHTML(reqs);
+}
+function masterProfPanelHTML(me) {
   const stl = { pending: [L("На проверке у модератора", "Moderator tekshiruvida"), "warn"], active: [L("Опубликован", "E’lon qilingan"), "ok"], rejected: [L("Отклонён", "Rad etildi"), "sig"], blocked: [L("Заблокирован", "Bloklangan"), "sig"] }[me.status || "active"] || ["", "mute"];
   return `<div class="panel" style="display:grid;gap:10px"><div class="panel-h"><h2 class="h-m">${L("Мой профиль мастера", "Usta profilim")}</h2><span class="pill ${stl[1]}">${stl[0]}</span></div>
     ${me.note ? `<p class="note" style="margin:0">${esc(me.note)}</p>` : ""}
     <div>${(me.specs || []).map(s => `<span class="pill mute">${esc(mSpecName(s))}</span>`).join(" ")}</div>
     <p style="margin:0">${esc(me.about || "")}</p>
     ${worksHTML(me.works || [], true)}
-    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-line" type="button" data-medit>${L("Изменить анкету", "Anketani o‘zgartirish")}</button>${me.id ? `<button class="btn btn-line" type="button" data-mopen="${esc(me.id)}">${L("Как видят клиенты", "Mijozlar qanday ko‘radi")}</button>` : ""}</div></div>
-    <div class="panel" style="margin-top:12px"><div class="panel-h"><h2 class="h-m">${L("Заявки от клиентов", "Mijozlardan so‘rovlar")}</h2>${API ? `<button class="btn btn-line" type="button" data-mreload>${ui("repeat", 16)} ${L("Обновить", "Yangilash")}</button>` : ""}</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-line" type="button" data-medit>${L("Изменить анкету", "Anketani o‘zgartirish")}</button>${me.id ? `<button class="btn btn-line" type="button" data-mopen="${esc(me.id)}">${L("Как видят клиенты", "Mijozlar qanday ko‘radi")}</button>` : ""}</div></div>`;
+}
+function masterReqsPanelHTML(reqs) {
+  return `<div class="panel" style="margin-top:12px"><div class="panel-h"><h2 class="h-m">${L("Заявки от клиентов", "Mijozlardan so‘rovlar")}</h2>${API ? `<button class="btn btn-line" type="button" data-mreload>${ui("repeat", 16)} ${L("Обновить", "Yangilash")}</button>` : ""}</div>
     ${reqs.length ? reqs.map(q => `<div class="mreq"><div class="mreq-h"><b>${esc(q.name || L("Клиент", "Mijoz"))}</b>${mStatusPill(q.status)}</div><p>${esc(q.text)}</p><small class="mu">${esc(q.when)}${q.district ? ` · ${dName(q.district)}${q.street ? ", " + esc(q.street) : ""}` : ""} · <a href="tel:+${esc(String(q.phone).replace(/\D/g, ""))}">+${esc(String(q.phone).replace(/\D/g, ""))}</a></small>
       <div class="mreq-a">${q.status === "new" ? `<button class="btn btn-primary" type="button" data-mreq="${q.id}|accepted">${L("Принять", "Qabul qilish")}</button><button class="btn btn-line" type="button" data-mreq="${q.id}|declined">${L("Отказаться", "Rad etish")}</button>` : q.status === "accepted" ? `<button class="btn btn-primary" type="button" data-mreq="${q.id}|done">${L("Работа выполнена", "Ish bajarildi")}</button>` : ""}${q.stars ? `<span class="s">${"★".repeat(q.stars)}</span> ${esc(q.review || "")}` : ""}</div></div>`).join("") : `<p class="mu" style="margin:0">${API ? L("Заявок пока нет. Когда клиент позовёт вас, заявка появится здесь.", "Hozircha so‘rov yo‘q. Mijoz chaqirsa, so‘rov shu yerda chiqadi.") : L("В демо-версии заявки от клиентов не приходят — на настоящем сайте они появятся здесь.", "Demo versiyada mijozlardan so‘rov kelmaydi — haqiqiy saytda shu yerda chiqadi.")}</p>`}</div>`;
 }
@@ -8233,7 +8323,27 @@ function masterFormHTML(me) {
     <span class="err" id="mfErr" hidden></span>
     <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-primary" type="submit">${me ? L("Сохранить", "Saqlash") : L("Отправить анкету", "Anketani yuborish")}</button>${me ? `<button class="btn btn-line" type="button" data-mcancel>${L("Отмена", "Bekor qilish")}</button>` : ""}</div></form>`;
 }
+/* the master's own window: requests from clients, the profile with photos of work; the marketplace is one button away */
+let masterTab = LS.get("imorat.masterTab", "req");
+const MASTER_TABS = () => [["req", "clock", L("Заявки", "So‘rovlar", "Requests")], ["prof", "idcard", L("Анкета и работы", "Anketa va ishlar", "Profile and work")]];
+function renderMasterWork() {
+  if (API && user && (mApi.me === undefined || mApi.list === null) && !mApi.busy) loadMasters();
+  const me = API ? mApi.me?.master : myMasterDemo, reqs = API ? mApi.me?.requests || [] : [];
+  const sel = mf.sel && me && mf.sel === me.id ? { ...me, mine: true } : null;
+  if (sel) { $("#app").innerHTML = `<div class="wrap mpage">${masterProfileHTML(sel)}</div>`; return; } // «Как видят клиенты»
+  const tab = MASTER_TABS().some(x => x[0] === masterTab) ? masterTab : "req";
+  const nNew = reqs.filter(q => q.status === "new").length;
+  const stl = me ? ({ pending: L("анкета на проверке", "anketa tekshiruvda", "profile under review"), active: L("анкета опубликована", "anketa e’lon qilingan", "profile published"), rejected: L("анкета отклонена", "anketa rad etildi", "profile rejected"), blocked: L("анкета скрыта", "anketa yashirilgan", "profile hidden") }[me.status || "active"] || "") : L("анкета ещё не заполнена", "anketa hali to‘ldirilmagan", "profile not filled in yet");
+  const body = tab === "req"
+    ? (!me ? `<div class="panel adm-empty">${ui("idcard", 22)}<p>${L("Сначала заполните анкету и добавьте фото работ. После проверки клиенты увидят вас в разделе «Мастера» и смогут позвать.", "Avval anketani to‘ldiring va ish rasmlarini qo‘shing. Tekshiruvdan keyin mijozlar sizni «Ustalar» bo‘limida ko‘rib chaqira oladi.", "Fill in the profile and add photos of your work first. After a check clients see you under «Pros» and can call you.")}</p><button class="btn btn-primary" type="button" data-mwtab="prof">${L("Заполнить анкету", "Anketani to‘ldirish", "Fill in the profile")}</button></div>` : masterReqsPanelHTML(reqs).replace('style="margin-top:12px"', ""))
+    : (!me || mf.edit ? masterFormHTML(me) : masterProfPanelHTML(me));
+  $("#app").innerHTML = `<div class="wrap adm mwork"><div class="adm-head"><div><h1 class="h-l">${MASTER_TABS().find(x => x[0] === tab)[2]}</h1><p class="mu">${esc(me?.name || user?.name || "")} · ${stl}</p></div></div>
+    <nav class="adm-tabs" role="tablist" aria-label="${L("Разделы кабинета", "Kabinet bo‘limlari", "Cabinet sections")}">${MASTER_TABS().map(([id, icn, lbl]) => `<button type="button" role="tab" data-mwtab="${id}" aria-selected="${id === tab}">${ui(icn, 16)}<span>${lbl}</span>${id === "req" && nNew ? `<b class="adm-n">${nNew}</b>` : ""}</button>`).join("")}</nav>
+    ${body}</div>`;
+}
+document.addEventListener("click", e => { const t = e.target.closest("[data-mwtab]"); if (!t) return; masterTab = t.dataset.mwtab; LS.set("imorat.masterTab", masterTab); mf.edit = false; if (drawerView) closeDrawer(); if (route.view !== "masters") location.hash = "masters"; else renderMasters(); renderTabbar(); window.scrollTo(0, 0); });
 function renderMasters() {
+  if (workMode() === "master") return renderMasterWork();
   if (API && mApi.list === null) { loadMasters(); }
   const all = mastersAll(), myReq = API ? mApi.mine || [] : mReqsDemo, isMaster = API ? !!mApi.me?.master : !!myMasterDemo;
   const sel = mf.sel && (all.find(m => m.id === mf.sel) || (API && mApi.me?.master?.id === mf.sel ? { ...mApi.me.master, mine: true } : null));
@@ -9063,6 +9173,28 @@ document.addEventListener("click", async e => {
     staffList = null; renderAdmin();
   } catch (er) { t.disabled = false; toast(apiErr(er)); }
 });
+/* the panel's sections: applications (stores, masters, goods and reviews to check), complaints, support, figures (owner) */
+let adminTab = LS.get("imorat.adminTab", "req");
+const ADMIN_TABS = () => [["req", "idcard", L("Заявки", "Arizalar", "Applications")], ["issues", "alert", L("Жалобы", "Shikoyatlar", "Complaints")], ["sup", "chat", L("Поддержка", "Yordam", "Support")], ...(user?.owner ? [["stats", "bolt", L("Обзор", "Ko‘rsatkichlar", "Overview")]] : [])];
+function adminTabNow() { return ADMIN_TABS().some(x => x[0] === adminTab) ? adminTab : "req"; }
+function adminCounts() {
+  const modN = amod.data ? Object.values(amod.data).filter(Array.isArray).reduce((a, x) => a + x.length, 0) : 0;
+  return { req: (adminStores || []).filter(s => ["pending", "meeting"].includes(s.status)).length + (adminMasters || []).filter(m => m.status === "pending").length + modN,
+    issues: Array.isArray(adminProblems) ? adminProblems.filter(p => ["open", "answered"].includes(p.status)).length : 0, sup: Array.isArray(asup.threads) ? asup.threads.filter(x => x.unread).length : 0 };
+}
+function adminHeadHTML(extra = "") {
+  const tab = adminTabNow(), cnt = adminCounts(), cur = ADMIN_TABS().find(x => x[0] === tab);
+  return `<div class="adm-head"><div><h1 class="h-l">${cur[2]}</h1><p class="mu">${user.owner ? L("Владелец", "Egasi", "Owner") : L("Сотрудник", "Xodim", "Staff")} · ${esc(user.staff?.login || user.name || "")}</p></div>${extra}</div>
+    <nav class="adm-tabs" role="tablist" aria-label="${L("Разделы панели", "Panel bo‘limlari", "Panel sections")}">${ADMIN_TABS().map(([id, icn, lbl]) => `<button type="button" role="tab" data-atab="${id}" aria-selected="${id === tab}">${ui(icn, 16)}<span>${lbl}</span>${cnt[id] ? `<b class="adm-n">${cnt[id]}</b>` : ""}</button>`).join("")}</nav>`;
+}
+function adminSectionHTML(tab) {
+  const empty = tx => `<div class="panel adm-empty">${ui("check", 22)}<p>${tx}</p></div>`;
+  if (!API) return tab === "sup" ? demoSupportHTML() : empty(L("В демо-версии здесь пусто. На рабочем сайте здесь будут анкеты магазинов и мастеров, товары и отзывы на проверке, жалобы по заказам.", "Demo versiyada bu yer bo‘sh. Haqiqiy saytda do‘kon va usta anketalari, tekshiruvdagi mahsulot va sharhlar, buyurtma shikoyatlari bo‘ladi.", "Empty in the demo. On the working site: store and master applications, goods and reviews to check, order complaints."));
+  if (tab === "req") return adminStoresHTML() + adminMastersHTML() + adminModHTML();
+  if (tab === "issues") return adminProblemsHTML() || empty(L("Открытых жалоб нет", "Ochiq shikoyatlar yo‘q", "No open complaints"));
+  return adminSupportHTML();
+}
+document.addEventListener("click", e => { const t = e.target.closest("[data-atab]"); if (!t) return; adminTab = t.dataset.atab; LS.set("imorat.adminTab", adminTab); if (drawerView) closeDrawer(); if (route.view !== "admin") location.hash = "admin"; else renderAdmin(); renderTabbar(); window.scrollTo(0, 0); });
 function renderAdmin() {
   const crumbs = `<nav class="crumbs"><button type="button" data-go="home">${L("Главная", "Asosiy")}</button>${ui("chev", 12)}<span>${L("Панель Quriliş Go", "Quriliş Go paneli")}</span></nav>`;
   let D;
@@ -9071,17 +9203,13 @@ function renderAdmin() {
     if (!user.admin) { $("#app").innerHTML = `<div class="wrap">${crumbs}<div class="panel" style="margin:12px 0">${L("Эта страница только для модераторов Quriliş Go.", "Bu sahifa faqat Quriliş Go moderatorlari uchun.")}</div></div>`; return; }
     if (adminState.need) { $("#app").innerHTML = `<div class="wrap">${crumbs}${adminGateHTML()}</div>`; return; }
     if (user.staff?.must_change) { $("#app").innerHTML = `<div class="wrap">${crumbs}<div class="panel" style="margin:12px 0;display:grid;gap:10px;justify-items:start"><h1 class="h-l" style="margin:0">${L("Смените временный пароль", "Vaqtinchalik parolni almashtiring", "Change the temporary password")}</h1><p class="mu" style="margin:0">${L("Пароль, который вам передали, одноразовый — задайте свой, и панель откроется.", "Sizga berilgan parol bir martalik — o‘zingiznikini qo‘ying, panel ochiladi.", "The password you were given is temporary — set your own and the panel opens.")}</p><button class="btn btn-primary" type="button" data-act="pw-change">${L("Задать пароль", "Parol qo‘yish", "Set a password")}</button></div></div>`; return; }
-    if (!user.owner) { // a helper: moderation, complaints and masters — no money, no analytics
-      $("#app").innerHTML = `<div class="wrap adm">${crumbs}<h1 class="h-l">${L("Модерация Quriliş Go", "Quriliş Go moderatsiyasi", "Quriliş Go moderation")}</h1>
-        <p class="mu" style="margin:4px 0 0">${L("Вы вошли как сотрудник", "Siz xodim sifatida kirdingiz", "You are signed in as staff")}${user.staff ? ` · <b>${esc(user.staff.login)}</b>` : ""}. ${L("Финансы и аналитика доступны только владельцу.", "Moliya va tahlil faqat egasiga ochiq.", "Finance and analytics are the owner's only.")} <button class="lnk" type="button" data-act="pw-change">${L("Сменить пароль", "Parolni almashtirish", "Change password")}</button></p>
-        ${adminHTML()}</div>`;
-      return;
-    }
+    if (adminTabNow() !== "stats") { $("#app").innerHTML = `<div class="wrap adm">${adminHeadHTML()}${adminSectionHTML(adminTabNow())}</div>`; return; } // applications, complaints, support
     if (!dash) { $("#app").innerHTML = `<div class="wrap">${crumbs}<div class="panel" style="margin:12px 0">${L("Загружаем…", "Yuklanmoqda…")}</div></div>`; loadDash(); return; }
     if (dash.error !== undefined) { $("#app").innerHTML = `<div class="wrap">${crumbs}<div class="panel" style="margin:12px 0">${esc(dash.error || "")}</div></div>`; return; }
     D = dash;
   } else {
     if (!user?.admin) { $("#app").innerHTML = `<div class="wrap">${crumbs}<div class="panel" style="margin:12px 0;display:grid;gap:10px;justify-items:start"><h1 class="h-l" style="margin:0">${L("Панель владельца", "Egasi paneli", "Owner panel")}</h1><p class="mu" style="margin:0">${L("Вход по логину и паролю владельца или админа. В демо есть тестовый вход — логин и пароль показаны в окне входа.", "Egasi yoki admin login va paroli bilan kirish. Demoda sinov kirishi bor — login va parol kirish oynasida ko‘rsatilgan.", "Sign in with the owner's or an admin's login and password. The demo has a test sign-in — shown in the sign-in window.")}</p><button class="btn btn-primary" type="button" data-act="owner-login">${L("Войти", "Kirish", "Sign in")}</button></div></div>`; return; }
+    if (adminTabNow() !== "stats") { $("#app").innerHTML = `<div class="wrap adm">${adminHeadHTML()}${adminSectionHTML(adminTabNow())}</div>`; return; }
     D = demoDash();
   }
   const big = v => v >= 1e6 ? `${(Math.round(v / 1e5) / 10).toString().replace(".", DEC)} ${L("млн", "mln")}` : `${fmtN(v / 1000)} ${L("тыс", "ming")}`;
@@ -9092,11 +9220,9 @@ function renderAdmin() {
   const chart = `<svg class="chart st-chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="${L("Оборот и заказы по дням", "Kunlik aylanma va buyurtmalar")}">${D.series.map((x, i) => `<rect class="bar" x="${(i * bw + bw * .15).toFixed(1)}" y="${(H - x.gmv / mx * H).toFixed(1)}" width="${(bw * .7).toFixed(1)}" height="${(x.gmv / mx * H).toFixed(1)}" rx="2"><title>${x.day}: ${fmt(x.gmv)} · ${x.orders}</title></rect>`).join("")}<polyline points="${line}" fill="none" stroke="var(--signal)" stroke-width="2" vector-effect="non-scaling-stroke"/></svg>`;
   const att = [[c.stores_pending, L(plural(c.stores_pending, ["магазин ждёт проверки", "магазина ждут проверки", "магазинов ждут проверки"]), "do‘kon tekshiruvni kutmoqda", c.stores_pending === 1 ? "store awaits review" : "stores await review"), "seller"], [c.masters_pending, L(plural(c.masters_pending, ["анкета мастера", "анкеты мастеров", "анкет мастеров"]), "usta anketasi", c.masters_pending === 1 ? "pro profile" : "pro profiles"), "seller"], [c.problems_open, L(plural(c.problems_open, ["жалоба открыта", "жалобы открыты", "жалоб открыто"]), "ochiq shikoyat", c.problems_open === 1 ? "open complaint" : "open complaints"), "seller"], [c.questions_open, L(plural(c.questions_open, ["вопрос без ответа магазина", "вопроса без ответа магазина", "вопросов без ответа магазина"]), "do‘kon javob bermagan savol", c.questions_open === 1 ? "question without a store reply" : "questions without a store reply"), null]].filter(x => x[0]);
   const tbl = (head, rows) => `<div class="tbl-wrap"><table><thead><tr>${head.map((h, i) => `<th class="${i ? "r" : ""}">${h}</th>`).join("")}</tr></thead><tbody>${rows.join("") || `<tr><td colspan="${head.length}" class="mu">${L("Пока нет данных", "Hozircha ma’lumot yo‘q")}</td></tr>`}</tbody></table></div>`;
-  $("#app").innerHTML = `<div class="wrap adm">${crumbs}
-    <div class="ds-head" style="display:flex;justify-content:space-between;gap:12px;align-items:end;flex-wrap:wrap"><div><h1 class="h-l">${L("Панель Quriliş Go", "Quriliş Go paneli")} ${D.demo ? `<span class="pill mute">${L("демо-данные", "demo ma’lumot")}</span>` : ""}</h1><p class="mu" style="margin:0">${L("Как идут дела у маркетплейса", "Marketpleys ishlari qanday ketmoqda")}</p></div>
-      <div class="seg" role="group" aria-label="${L("Период", "Davr")}">${[7, 30, 90].map(n => `<button type="button" data-dashdays="${n}" aria-pressed="${dashDays === n}">${n} ${L("дн", "kun")}</button>`).join("")}</div></div>
+  if (API && user.owner && !adminFin && !adminState.finLoading) { adminState.finLoading = true; loadAdminFin().finally(() => { adminState.finLoading = false; }); }
+  $("#app").innerHTML = `<div class="wrap adm">${adminHeadHTML(`<div class="seg" role="group" aria-label="${L("Период", "Davr")}">${[7, 30, 90].map(n => `<button type="button" data-dashdays="${n}" aria-pressed="${dashDays === n}">${n} ${L("дн", "kun")}</button>`).join("")}</div>`)}${D.demo ? `<p class="mu" style="margin:0 0 8px"><span class="pill mute">${L("демо-данные", "demo ma’lumotlar", "demo data")}</span></p>` : ""}
     ${att.length ? `<div class="adm-att">${att.map(([n, tx, go]) => `<button type="button" class="chip" ${go ? `data-go="${go}"` : ""}><b>${n}</b> ${tx}</button>`).join("")}</div>` : ""}
-    ${API ? adminSupportHTML() + adminModHTML() : demoSupportHTML()}
     <div class="kpis adm-k">
       <div class="kpi"><span>${L("Оборот товаров", "Mahsulot aylanmasi")}</span><b>${big(t.gmv)}</b>${delta(t.gmv, t.gmv_prev)}</div>
       <div class="kpi"><span>${L("Заказов", "Buyurtmalar")}</span><b>${fmtN(t.orders)}</b>${delta(t.orders, t.orders_prev)}</div>
@@ -9115,7 +9241,7 @@ function renderAdmin() {
     <div class="panel" style="margin-top:12px"><div class="panel-h"><h2 class="h-m">${ui("clock", 18)} ${L("Магазины, которые подводят", "Buyurtmalarni buzayotgan do‘konlar")}</h2></div>
       <p class="mu" style="margin:0 0 8px;font-size:13px">${L("Срывы (не принял, нет в наличии, не передал курьеру) и долгое подтверждение. Позвоните им — это прямо влияет на доверие покупателей.", "Buzilgan buyurtmalar (qabul qilmadi, mavjud emas, kuryerga bermadi) va uzoq tasdiqlash. Ularga qo‘ng‘iroq qiling — bu xaridorlar ishonchiga bevosita ta’sir qiladi.")}</p>
       ${tbl([L("Магазин", "Do‘kon"), L("Срывы", "Buzilganlar"), L("Принимает за", "Qabul qiladi"), L("Заказы", "Buyurt.")], D.slow_stores.map(x => `<tr><td><button type="button" class="slink" data-go="store-${esc(x.id)}">${esc(x.name)}</button></td><td class="r num" style="color:${x.fail_pct > 5 ? "var(--signal)" : "inherit"}">${x.fail} · ${x.fail_pct}%</td><td class="r num">${x.accept_min != null ? x.accept_min + " " + L("мин", "daq") : "—"}</td><td class="r num">${x.orders}</td></tr>`))}</div>
-    ${API ? staffPanelHTML() + adminHTML(true) : `<p class="mu" style="font-size:13px">${L("В демо-версии показаны примерные цифры. На рабочем сайте здесь будут настоящие данные и модерация магазинов, мастеров и жалоб.", "Demo versiyada taxminiy raqamlar ko‘rsatilgan. Haqiqiy saytda bu yerda haqiqiy ma’lumotlar va do‘konlar, ustalar va shikoyatlar moderatsiyasi bo‘ladi.")}</p>`}
+    ${API ? (user.owner ? adminFinanceHTML() : "") + staffPanelHTML() : `<p class="mu" style="font-size:13px">${L("В демо-версии показаны примерные цифры. На рабочем сайте здесь будут настоящие данные и модерация магазинов, мастеров и жалоб.", "Demo versiyada taxminiy raqamlar ko‘rsatilgan. Haqiqiy saytda bu yerda haqiqiy ma’lumotlar va do‘konlar, ustalar va shikoyatlar moderatsiyasi bo‘ladi.")}</p>`}
   </div>`;
 }
 document.addEventListener("click", e => { const t = e.target.closest("[data-dashdays]"); if (!t || route.view !== "admin") return; dashDays = +t.dataset.dashdays; dash = null; renderAdmin(); });
@@ -9706,13 +9832,21 @@ function parseHash() {
   if (h === "support") return { view: "home", cat: null, support: true };
   if (h.startsWith("store-")) return { view: "store", cat: null, store: h.slice(6) };
   if (h === "catalog") return { view: "catalog", cat: null };
+  if (h === "partner" || h === "staff") return { view: h, cat: null }; // the separate sign-in pages: sellers and masters, staff
   if (h.startsWith("cat-") && CAT[h.slice(4)]) return { view: "catalog", cat: h.slice(4) };
   if (/^p-\d+$/.test(h) && PROD[+h.slice(2)]) return { view: "catalog", cat: PROD[+h.slice(2)].cat, prod: +h.slice(2) };
   return { view: "home", cat: null };
 }
 function renderMain() {
-  if (sellerMode() && !["seller", "admin", "owner"].includes(route.view)) { history.replaceState(null, "", "#seller"); route = parseHash(); }
-  document.documentElement.classList.toggle("sellerm", sellerMode());
+  const wm = workMode(), H = document.documentElement;
+  const to = h => { history.replaceState(null, "", "#" + h); route = parseHash(); };
+  if (user && ["partner", "staff"].includes(route.view)) to(wm === "admin" ? "admin" : wm === "seller" ? "seller" : wm === "master" ? "masters" : "");
+  else if (wm === "seller" && !["seller", "admin", "owner"].includes(route.view)) to("seller");
+  else if (wm === "admin" && !["admin", "store"].includes(route.view)) to("admin");
+  else if (wm === "master" && route.view !== "masters") to("masters");
+  H.classList.toggle("workm", !!wm); H.classList.toggle("sellerm", wm === "seller"); H.classList.toggle("adminm", wm === "admin"); H.classList.toggle("masterm", wm === "master");
+  H.classList.toggle("loginm", !user && ["partner", "staff"].includes(route.view));
+  if (["partner", "staff"].includes(route.view)) return renderLoginPage(route.view);
   if (route.view === "catalog") renderCatalog();
   else if (route.view === "seller") renderSeller();
   else if (route.view === "design") renderDesign();
@@ -9886,6 +10020,7 @@ document.addEventListener("click", e => {
     case "stmt-csv": return statementCSV();
     case "api-retry": { const b = e.target.closest("button"); if (b) { b.disabled = true; b.textContent = L("Проверяем…", "Tekshirilmoqda…", "Checking…"); } return apiBoot().then(() => { if (apiState !== "ok") renderApiBar(); }); }
     case "auth-resend": return sendCode();
+    case "go-partner": closeAuth(); return go("partner");
     case "auth-skip-pw": return finishAuth(auth.pending || user, apiToken || undefined); // set a password later (profile → «Пароль»)
     case "more": { // append the next 36 cards; the ones already shown stay as they are (no re-render, no blink, no jump)
       const grid = $("#grid"), list = filtered(), from = grid ? grid.querySelectorAll(".card").length : 0;
@@ -9920,7 +10055,7 @@ document.addEventListener("click", e => {
     case "staff-hide": staffNew = null; return renderAdmin();
     case "home-reset": resetHome(); if (drawerView === "homeSetup") dHomeSetup(); return toast(L("Главная как по умолчанию", "Bosh sahifa standart holatda", "Home reset to default"));
     case "stores-all": { const st = $(".stores"); if (st) st.classList.add("all"); t.closest(".stores-more")?.remove(); return; }
-    case "shopper-toggle": { const toShelf = sellerMode(); LS.set("imorat.shopperView", toShelf); closeDrawer(); renderHeader(); location.hash = toShelf ? "home" : "seller"; renderMain(); toast(toShelf ? L("Витрина покупателя. Вернуться в кабинет — в профиле", "Xaridor vitrinasi. Kabinetga qaytish — profilda", "Buyer shelf. Back to the cabinet — in the profile") : L("Кабинет магазина", "Do‘kon kabineti", "Store cabinet")); return; }
+    case "shopper-toggle": { const toShelf = !!workMode(); LS.set("imorat.shopperView", toShelf); closeDrawer(); renderHeader(); location.hash = toShelf ? "home" : myStore ? "seller" : "masters"; renderMain(); toast(toShelf ? L("Маркетплейс. Вернуться в кабинет — кнопка сверху", "Marketpleys. Kabinetga qaytish — yuqoridagi tugma", "Marketplace. Back to the cabinet — the button at the top") : L("Кабинет магазина", "Do‘kon kabineti", "Store cabinet")); return; }
     case "theme-toggle": return setLook(null, effTheme() === "dark" ? "light" : "dark");
     case "ai-calc": { const c = CALCS.find(x => x.id === wCalc), items = calcOut["w:" + wCalc] || []; const rows = [...document.querySelectorAll("#w-" + wCalc + "-res > div")].map(d => d.innerText.replace(/\s+/g, " ")).join("; "); return openAI(L(`Проверь мой расчёт «${c.ru}»: ${rows}. Материалы: ${items.map(([p, q]) => `[[${p.id}:${q}]]`).join(", ")}. Всё ли учтено и что ещё понадобится?`, `«${c.uz}» hisobimni tekshir: ${rows}. Materiallar: ${items.map(([p, q]) => `[[${p.id}:${q}]]`).join(", ")}. Hammasi hisobga olinganmi, yana nima kerak?`, `Check my “${L(c.ru, c.uz)}” estimate: ${rows}. Materials: ${items.map(([p, q]) => `[[${p.id}:${q}]]`).join(", ")}. Is everything accounted for, and what else will I need?`)); }
     case "close-modal": return closeModal();
