@@ -102,6 +102,10 @@ export function openDb(path, catalogPath, opts = {}) {
   addCol("products", "img_orig", "TEXT"); addCol("products", "cut_img", "TEXT"); addCol("products", "cut_state", "TEXT"); addCol("products", "cut_err", "TEXT"); addCol("products", "cut_warn", "TEXT"); addCol("products", "cut_at", "INTEGER");
   addCol("products", "dims", "TEXT"); addCol("shipments", "loaders_failed", "INTEGER NOT NULL DEFAULT 0"); // package size [l,w,h] m; the carrier refused the loader
   addCol("stores", "prices_confirmed_at", "INTEGER"); addCol("stores", "prices_reminded_at", "INTEGER"); // the seller's "prices and stock are current" stamp and the last reminder
+  addCol("users", "pw_hash", "TEXT"); addCol("users", "pw_at", "INTEGER"); // sign-in by phone + password (the phone is confirmed by an SMS code once, at registration)
+  addCol("stores", "meet_at", "INTEGER"); addCol("stores", "meet_place", "TEXT NOT NULL DEFAULT ''"); // the meeting where the store's contract is signed
+  addCol("stores", "contract_no", "TEXT NOT NULL DEFAULT ''"); addCol("stores", "contract_at", "INTEGER"); addCol("stores", "contract_by", "TEXT"); // signed on paper; the admin records it and opens access
+  addCol("masters", "works", "TEXT NOT NULL DEFAULT '[]'"); // photos of the master's finished jobs, shown on the public profile after moderation
   addCol("users", "deleted_at", "INTEGER"); // account deleted by its owner: personal data wiped, the row keeps the orders' accounting trail
   addCol("orders", "paid_at", "INTEGER"); addCol("orders", "pay_ref", "TEXT");
   raw.exec(`CREATE TABLE IF NOT EXISTS payments(id INTEGER PRIMARY KEY AUTOINCREMENT, provider TEXT NOT NULL, pid TEXT NOT NULL, order_id INTEGER NOT NULL REFERENCES orders(id),

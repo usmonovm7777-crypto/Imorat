@@ -1,4 +1,4 @@
-import { HttpError, bad, readJson, int, str } from "./http.js";
+import { HttpError, bad, readJson, readBody, int, str } from "./http.js";
 import { escHtml as h } from "./telegram.js";
 
 /* Masters (tilers, electricians, plumbers…): public profiles approved by a moderator,
@@ -8,13 +8,13 @@ export const SPECS = ["tile", "elec", "plumb", "paint", "floor", "drywall", "wel
 export const PRICE_UNITS = ["job", "m2", "hour", "day", "pt", "shift", "trip", "m3"];
 const REQ_MOVES = { master: { new: ["accepted", "declined"], accepted: ["done"] }, buyer: { new: ["cancelled"], accepted: ["cancelled"] } };
 
-export function registerMasters({ r, db, cfg, ref, need, needAdmin, audit, lim, tg, push, sms, log }) {
+export function registerMasters({ r, db, cfg, ref, need, needAdmin, audit, lim, tg, push, sms, log, saveImage, removeUpload = () => {}, mediaUrl = x => x }) {
   const D = new Set(ref.districts.map(d => d.id));
   const safe = p => Promise.resolve(p).catch(e => log.warn("[masters]", e.message));
   const stats = () => Object.fromEntries(db.all(`SELECT master_id, AVG(stars) a, COUNT(stars) n, SUM(status='done') done FROM master_requests GROUP BY master_id`)
     .map(x => [x.master_id, { stars: x.n ? Math.round(x.a * 10) / 10 : null, reviews: x.n || 0, done: x.done || 0 }]));
   const pub = (m, st = {}) => ({ id: m.id, name: m.name, specs: JSON.parse(m.specs), districts: JSON.parse(m.districts), exp: m.exp, price: m.price, price_unit: m.price_unit, about: m.about,
-    status: m.status, note: m.note, created: m.created_at, busy: !!m.busy, stars: st.stars ?? null, reviews: st.reviews || 0, done: st.done || 0 });
+    status: m.status, note: m.note, created: m.created_at, busy: !!m.busy, works: JSON.parse(m.works || "[]").map(mediaUrl), stars: st.stars ?? null, reviews: st.reviews || 0, done: st.done || 0 });
   const mine = u => db.get("SELECT * FROM masters WHERE user_id=?", u.id);
   const firstName = n => String(n || "").split(" ")[0];
   const digits = v => String(v || "").replace(/\D/g, "");
@@ -89,6 +89,26 @@ export function registerMasters({ r, db, cfg, ref, need, needAdmin, audit, lim, 
     if (!m) throw new HttpError(404, "not_found", "No master profile yet");
     if (typeof b.busy === "boolean") db.run("UPDATE masters SET busy=? WHERE id=?", b.busy ? 1 : 0, m.id);
     return { master: pub(db.get("SELECT * FROM masters WHERE id=?", m.id), stats()[m.id]) };
+  });
+  /* photos of finished jobs ("show my work for free"): up to 12; a new photo on an approved profile sends it back to the moderator */
+  const MAX_WORKS = 12;
+  r.post("/api/masters/me/works", async req => {
+    const u = need(req), m = mine(u); if (!m) throw new HttpError(404, "not_found", "Fill in the master profile first");
+    lim.hit("master-work:" + u.id, 40, 86400_000);
+    const works = JSON.parse(m.works || "[]"); if (works.length >= MAX_WORKS) throw bad("too_many", `Up to ${MAX_WORKS} photos`);
+    const path = saveImage(await readBody(req, 5 * 1024 * 1024), "w" + m.id);
+    works.push(path);
+    db.run("UPDATE masters SET works=?, updated_at=?, status=CASE WHEN status='active' THEN 'pending' ELSE status END WHERE id=?", JSON.stringify(works), Date.now(), m.id);
+    audit(req, "master.work_add", m.id);
+    return { master: pub(mine(u), stats()[m.id]) };
+  });
+  r.del("/api/masters/me/works/:n", (req, res, p) => {
+    const u = need(req), m = mine(u); if (!m) throw new HttpError(404, "not_found", "No master profile yet");
+    const works = JSON.parse(m.works || "[]"), n = Number(p.n);
+    if (!Number.isInteger(n) || n < 0 || n >= works.length) throw new HttpError(404, "not_found", "No such photo");
+    const [gone] = works.splice(n, 1); removeUpload(gone);
+    db.run("UPDATE masters SET works=?, updated_at=? WHERE id=?", JSON.stringify(works), Date.now(), m.id);
+    return { master: pub(mine(u), stats()[m.id]) };
   });
   r.post("/api/masters/me", async req => {
     const u = need(req), b = await readJson(req), old = mine(u);

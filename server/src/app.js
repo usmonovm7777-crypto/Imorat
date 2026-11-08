@@ -188,11 +188,13 @@ export function createApp(cfg, log = console) {
   };
   /* delete a file this server saved earlier (a replaced photo); anything outside the uploads folder is ignored */
   const removeUpload = path => { if (typeof path === "string" && path.startsWith("/uploads/")) { try { unlinkSync(join(cfg.uploadsDir, path.slice("/uploads/".length).replace(/[^\w.-]/g, ""))); } catch {} } };
+  /* the way to access for a new store: application → the admin checks it and sets a meeting → the contract is signed on paper → access opens */
+  const contractView = s => ({ meet_at: s.meet_at || null, meet_place: s.meet_place || "", contract_no: s.contract_no || "", contract_at: s.contract_at || null });
   const publicStore = s => ({
     id: s.id, name: s.name, d: s.district, addr: s.addr, addrUz: s.addr_uz || s.addr, hours: s.hours, ru: s.ru || s.descr.slice(0, 80), uz: s.uz || s.ru || s.descr.slice(0, 80),
     descr: s.descr, cats: JSON.parse(s.cats || "[]"), phone: s.phone, telegram: s.telegram, verified: !!s.verified, landmark: s.landmark, la: s.la, lo: s.lo, status: s.status, loc_src: s.loc_src, note: s.review_note, created: s.created_at
   });
-  const ownerStore = s => ({ ...publicStore(s), payout_to: s.payout_to || "", free_until: s.free_until || null, prices_confirmed_at: s.prices_confirmed_at || null }); // the store's own view adds its payout details, free months, price confirmation
+  const ownerStore = s => ({ ...publicStore(s), payout_to: s.payout_to || "", free_until: s.free_until || null, prices_confirmed_at: s.prices_confirmed_at || null, ...contractView(s) }); // the store's own view adds its payout details, free months, price confirmation
 
   /* ---------- meta ---------- */
   r.get("/api/health", () => ({ ok: true, time: Date.now(), name: "imorat-api", version: PKG_VERSION, contract: API_CONTRACT, min_client: MIN_CLIENT }));
@@ -245,8 +247,44 @@ export function createApp(cfg, log = console) {
         db.run(`UPDATE users SET ${col}=?, email=CASE WHEN email='' THEN ? ELSE email END, name=CASE WHEN name='' THEN ? ELSE name END WHERE id=?`, link.sub, link.email || "", link.name || "", u.id);
         u = db.get("SELECT * FROM users WHERE id=?", u.id);
       }
-      return { ...session(u), is_new: isNew || !u.name };
+      // a short ticket that lets this person set (or reset) the password right after confirming the phone by SMS
+      return { ...session(u), is_new: isNew || !u.name, has_password: !!u.pw_hash, pw_ticket: signJwt({ typ: "pwset", sub: u.id }, cfg.jwtSecret, 900) };
     });
+  });
+  /* ---------- sign in by phone + password (buyers, masters, sellers). The password is set after the phone is confirmed by an SMS code
+     (registration or "forgot password"); failures are limited per number and per address, and every answer to a wrong pair is the same ---------- */
+  r.post("/api/auth/login", async req => {
+    const b = await readJson(req);
+    let phone = ""; try { phone = parsePhone(b.phone); } catch { throw new HttpError(401, "bad_login", "Wrong phone number or password"); }
+    const password = typeof b.password === "string" ? b.password : "";
+    const failKey = "pw-fail:" + phone + ":" + req.ip, phoneKey = "pw-fail-ph:" + phone;
+    lim.hit("pw-ip:" + req.ip, 40, 15 * 60000);
+    lim.hit(failKey, 8, 15 * 60000, 0); lim.hit(phoneKey, 40, 3600_000, 0); // weight 0: a check only — failures are counted below
+    const u = db.get("SELECT * FROM users WHERE phone=? AND deleted_at IS NULL", phone);
+    const ok = verifyPassword(password, u?.pw_hash) && !!u?.pw_hash; // an unknown number is checked against a dummy hash: same timing
+    if (!ok) {
+      try { lim.hit(failKey, 8, 15 * 60000); lim.hit(phoneKey, 40, 3600_000); } catch { /* this attempt still answers 401; the next one gets 429 */ }
+      throw new HttpError(401, "bad_login", "Wrong phone number or password");
+    }
+    if (staffOf(u)) throw new HttpError(403, "staff_account", "Staff sign in with their login on the staff page");
+    db.run("INSERT INTO audit(user_id,action,target,details,ip,created_at) VALUES(?,?,?,?,?,?)", u.id, "login.password", u.id, "{}", req.ip, Date.now());
+    return { ...session(u), is_new: !u.name, has_password: true };
+  });
+  /* set or change the password: right after an SMS code (pw_ticket), with the current password, or the first time for an account
+     that has none. Changing an existing password ends the other sessions. */
+  r.post("/api/auth/password", async req => {
+    const u = need(req), b = await readJson(req);
+    if (staffOf(u)) throw new HttpError(403, "staff_account", "Staff change their password in the staff panel");
+    lim.hit("pwset:" + u.id, 10, 3600_000);
+    const t = b.ticket ? verifyJwt(b.ticket, cfg.jwtSecret) : null;
+    const byTicket = !!t && t.typ === "pwset" && t.sub === u.id;
+    if (u.pw_hash && !byTicket && !verifyPassword(typeof b.current === "string" ? b.current : "", u.pw_hash)) throw new HttpError(403, "bad_current", "Enter your current password or confirm the phone by SMS");
+    const hash = hashPassword(b.password, 8);
+    const had = !!u.pw_hash;
+    db.run("UPDATE users SET pw_hash=?, pw_at=?, token_ver=token_ver+? WHERE id=?", hash, Date.now(), had ? 1 : 0, u.id);
+    audit(req, had ? "password.change" : "password.set", u.id);
+    const fresh = db.get("SELECT * FROM users WHERE id=?", u.id);
+    return { ...session(fresh), has_password: true };
   });
 
   async function social(req, prov, token, nameHint) {
@@ -1072,11 +1110,16 @@ export function createApp(cfg, log = console) {
     return { ok: true, finance: storeFinance(s.id) };
   });
   r.get("/api/admin/audit", req => { needOwner(req); return { log: db.all("SELECT a.*, u.name, u.phone FROM audit a LEFT JOIN users u ON u.id=a.user_id ORDER BY a.id DESC LIMIT 100") }; });
-  r.get("/api/admin/stores", req => { needAdmin(req); return { stores: db.all("SELECT s.*, u.name owner_name, u.phone owner_phone FROM stores s LEFT JOIN users u ON u.id=s.owner_id ORDER BY s.status='pending' DESC, s.created_at DESC").map(s => ({ ...publicStore(s), owner_name: s.owner_name, owner_phone: s.owner_phone, loc_src: s.loc_src, created: s.created_at, note: s.review_note, free_until: s.free_until, promo: inPromo(s) })) }; });
+  r.get("/api/admin/stores", req => { needAdmin(req); return { stores: db.all("SELECT s.*, u.name owner_name, u.phone owner_phone FROM stores s LEFT JOIN users u ON u.id=s.owner_id ORDER BY s.status='pending' DESC, s.created_at DESC").map(s => ({ ...publicStore(s), owner_name: s.owner_name, owner_phone: s.owner_phone, loc_src: s.loc_src, created: s.created_at, note: s.review_note, free_until: s.free_until, promo: inPromo(s), ...contractView(s) })) }; });
   r.patch("/api/admin/stores/:id", async (req, res, p) => {
     const adm = needAdmin(req), b = await readJson(req);
     const s = db.get("SELECT * FROM stores WHERE id=?", p.id); if (!s) throw new HttpError(404, "not_found", "Store not found");
-    if (b.status && !["active", "pending", "rejected", "blocked"].includes(b.status)) throw bad("bad_status", "Unknown status");
+    if (b.status && !["active", "pending", "meeting", "rejected", "blocked"].includes(b.status)) throw bad("bad_status", "Unknown status");
+    // access opens only after the contract is signed on paper: the admin records its number (once; a blocked store comes back without it)
+    const contractNo = b.contract_no != null ? str(b.contract_no, 40) : "";
+    if (b.status === "active" && s.status !== "active" && !s.contract_no && !contractNo && process.env.STORE_AUTO_APPROVE !== "1") throw bad("contract_required", "Record the signed contract number before opening access");
+    let meetAt; if (b.meet_at !== undefined) { meetAt = b.meet_at ? new Date(b.meet_at).getTime() : null; if (b.meet_at && !Number.isFinite(meetAt)) throw bad("bad_date", "meet_at must be a date"); }
+    if (b.status === "meeting" && !meetAt && !s.meet_at) throw bad("meeting_required", "Set the date and place of the meeting");
     if ((b.owner_phone !== undefined || b.free_until !== undefined) && !isOwner(adm)) throw new HttpError(403, "owner_only", "Only the owner of Quriliş Go moves a store to another person or changes its free months");
     // validate everything before the first write, so a bad owner phone does not leave a half-applied change
     const newOwner = b.owner_phone ? db.get("SELECT * FROM users WHERE phone=?", parsePhone(b.owner_phone)) : null;
@@ -1084,10 +1127,12 @@ export function createApp(cfg, log = console) {
     // the free months start on the day of approval; an admin may also move or end them by hand ("free_until": date, "" ends them now)
     let freeUntil; if (b.free_until !== undefined) { if (b.free_until === "" || b.free_until === null) freeUntil = Date.now(); else { freeUntil = new Date(b.free_until).getTime(); if (!Number.isFinite(freeUntil)) throw bad("bad_date", "free_until must be a date"); } }
     else if (b.status === "active" && s.status !== "active" && !s.free_until) freeUntil = addMonths(Date.now(), cfg.promoMonths);
+    if (meetAt !== undefined || b.meet_place != null) db.run("UPDATE stores SET meet_at=?, meet_place=? WHERE id=?", meetAt !== undefined ? meetAt : s.meet_at, b.meet_place != null ? str(b.meet_place, 200).replace(/[<>]/g, "") : s.meet_place, s.id);
+    if (contractNo && contractNo !== s.contract_no) db.run("UPDATE stores SET contract_no=?, contract_at=?, contract_by=? WHERE id=?", contractNo.replace(/[<>]/g, ""), Date.now(), adm.id, s.id);
     db.run("UPDATE stores SET status=COALESCE(?,status), review_note=COALESCE(?,review_note), verified=COALESCE(?,verified), free_until=COALESCE(?,free_until) WHERE id=?", b.status || null, b.note != null ? str(b.note, 300) : null, b.verified == null ? null : b.verified ? 1 : 0, freeUntil ?? null, s.id);
     audit(req, "store." + (b.status || "edit"), s.id, { note: str(b.note, 300), owner_phone: str(b.owner_phone, 20) });
     if (b.status === "active" && s.status !== "active") channel.storeApproved(s).catch(e => log.warn("[channel]", e.message));
-    if (b.status && s.owner_id) { const ow = db.get("SELECT tg_chat FROM users WHERE id=?", s.owner_id); if (ow?.tg_chat) tg.send(ow.tg_chat, b.status === "active" ? `🎉 Магазин «${s.name.replace(/[<>&]/g, "")}» одобрен и виден покупателям на Quriliş Go.` : `Статус магазина «${s.name.replace(/[<>&]/g, "")}»: ${b.status}.${b.note ? " " + str(b.note, 300).replace(/[<>&]/g, "") : ""}`); }
+    if (b.status && s.owner_id) { const ow = db.get("SELECT tg_chat FROM users WHERE id=?", s.owner_id); if (ow?.tg_chat) tg.send(ow.tg_chat, b.status === "meeting" ? (() => { const x = db.get("SELECT meet_at, meet_place FROM stores WHERE id=?", s.id); return `📅 Анкета магазина «${s.name.replace(/[<>&]/g, "")}» проверена. Встреча для подписания договора: ${new Date(x.meet_at).toLocaleString("ru-RU", { timeZone: "Asia/Tashkent", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })}${x.meet_place ? ", " + x.meet_place.replace(/[<>&]/g, "") : ""}. После подписания откроем доступ к кабинету.`; })() : b.status === "active" ? `🎉 Магазин «${s.name.replace(/[<>&]/g, "")}» одобрен и виден покупателям на Quriliş Go.` : `Статус магазина «${s.name.replace(/[<>&]/g, "")}»: ${b.status}.${b.note ? " " + str(b.note, 300).replace(/[<>&]/g, "") : ""}`); }
     if (newOwner) {
       const ou = newOwner;
       db.tx(() => { db.run("UPDATE stores SET owner_id=? WHERE id=?", ou.id, s.id); db.run("UPDATE users SET role='seller', store_id=? WHERE id=?", s.id, ou.id);
@@ -1130,7 +1175,7 @@ export function createApp(cfg, log = console) {
     return { ok: true };
   });
 
-  const mastersApi = registerMasters({ r, db, cfg, ref, need, needAdmin, audit, lim, tg, push, sms, log });
+  const mastersApi = registerMasters({ r, db, cfg, ref, need, needAdmin, audit, lim, tg, push, sms, log, saveImage, removeUpload, mediaUrl });
   bot = registerBot({ db, cfg, ref, tg, bonus, masters: mastersApi, log, hooks: {
     /* the store's delivery price typed in the bot: the same rules as the cabinet (store-delivered, not handed over yet, 0 … 5 000 000) */
     deliveryPrice(shipId, price, u) {

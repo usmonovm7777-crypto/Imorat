@@ -104,10 +104,10 @@ export async function verifyIdToken(token, { jwksUrl, issuers, audience }) {
    scrypt with a random salt; the stored string carries its own parameters, so they can be raised later without breaking old hashes.
    The owner's hash lives in server/.env (OWNER_PASSWORD_HASH), never in the repository; helpers' hashes live in the database. */
 const SCRYPT = { N: 32768, r: 8, p: 1, len: 32, maxmem: 128 * 1024 * 1024 }; // ~90 ms on a small VPS; maxmem must grow with N or scrypt throws
-export function hashPassword(password) {
-  if (typeof password !== "string") throw bad("weak_password", "Password must be a string of at least 10 characters");
+export function hashPassword(password, min = 10) { // staff: 10+ characters; buyers, masters and sellers: 8+
+  if (typeof password !== "string") throw bad("weak_password", `Password must be a string of at least ${min} characters`);
   const pw = password;
-  if (pw.length < 10 || pw.length > 256) throw bad("weak_password", "Password must be 10 to 256 characters");
+  if (pw.length < min || pw.length > 256) throw bad("weak_password", `Password must be ${min} to 256 characters`);
   const salt = randomBytes(16);
   const key = scryptSync(pw.normalize("NFKC"), salt, SCRYPT.len, { N: SCRYPT.N, r: SCRYPT.r, p: SCRYPT.p, maxmem: SCRYPT.maxmem });
   return `scrypt$${SCRYPT.N}$${SCRYPT.r}$${SCRYPT.p}$${salt.toString("base64url")}$${key.toString("base64url")}`;
@@ -135,6 +135,6 @@ export function publicUser(u, admins = [], staff = null) {
     id: u.id, name: u.name, phone: u.phone ? prettyPhone(u.phone) : "", email: u.email, role: u.role, district: u.district,
     store_id: u.store_id || null, via: staff ? "password" : u.google_sub ? "google" : u.apple_sub ? "apple" : "phone",
     admin: !!role, owner: role === "owner", staff: staff ? { login: staff.login, role: staff.role, must_change: !!staff.must_change, env: !!staff.from_env } : null,
-    created: u.created_at, points: u.points || 0
+    created: u.created_at, points: u.points || 0, has_password: !!u.pw_hash
   };
 }

@@ -1187,7 +1187,7 @@ input, select, textarea { font-size: 16px !important; }
 }
 .auth-box { grid-template-columns: 1fr; width: min(440px, 100%); }
 .auth-in { padding: 30px 28px 26px; display: grid; gap: 14px; }
-.auth-in h2 { font-family: var(--f-display); font-weight: 600; font-size: 22px; letter-spacing: -.02em; margin: 6px 0 0; padding-right: 36px; }
+.auth-in h2 { font-family: var(--f-display); font-weight: 700; font-size: 25px; letter-spacing: -.02em; margin: 6px 0 0; padding-right: 36px; }
 .auth-in > p { margin: 0; color: var(--muted); font-size: 14px; }
 .soc { display: flex; align-items: center; justify-content: center; gap: 10px; border: 1.5px solid var(--line-strong); border-radius: 12px; padding: 13px; font-weight: 600; background: var(--surface); width: 100%; }
 .soc:hover { border-color: var(--ink); }
@@ -1197,6 +1197,43 @@ input, select, textarea { font-size: 16px !important; }
 .soc.tg:disabled { opacity: .5; cursor: not-allowed; }
 .or { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 13px; }
 .or::before, .or::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+.au-form { display: grid; gap: 14px; }
+.af { display: grid; gap: 7px; }
+.af > label, .af-l label { font-weight: 600; font-size: 14.5px; }
+.af-l { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.af-l .lnk { font-size: 13.5px; text-decoration: underline; text-underline-offset: 3px; }
+.phone-in.au { border: 1.5px solid transparent; background: color-mix(in srgb, var(--ink) 5%, var(--surface)); border-radius: 12px; min-height: 54px; }
+.phone-in.au:focus-within { border-color: var(--accent); background: var(--surface); }
+.phone-in.au span { display: inline-flex; align-items: center; gap: 10px; border-right: 0; padding: 0 2px 0 16px; color: var(--ink); font-weight: 500; font-size: 16px; }
+.uzf { width: 28px; height: 19px; border-radius: 3px; box-shadow: 0 0 0 1px rgb(0 0 0 / .1); flex: none; }
+.phone-in.au input { font-size: 16px; padding: 14px 12px; }
+.pw-in { position: relative; }
+.pw-in input, .au-in { width: 100%; min-height: 54px; border: 1.5px solid transparent; background: color-mix(in srgb, var(--ink) 5%, var(--surface)); border-radius: 12px; padding: 14px 54px 14px 16px; font: inherit; font-size: 16px; color: var(--ink); outline: none; }
+.au-in { padding-right: 16px; }
+.pw-in input:focus, .au-in:focus { border-color: var(--accent); background: var(--surface); }
+.pw-eye { position: absolute; right: 6px; top: 50%; translate: 0 -50%; width: 42px; height: 42px; display: grid; place-items: center; border-radius: 10px; color: var(--ink); }
+.pw-eye:hover { background: color-mix(in srgb, var(--ink) 6%, transparent); }
+.au-go { min-height: 52px; font-size: 16px; }
+.au-go:disabled { opacity: .45; cursor: default; }
+.au-sw { margin: -6px 0 2px !important; font-size: 14.5px !important; }
+.au-sw .lnk { font-weight: 600; color: var(--accent); text-decoration: underline; text-underline-offset: 3px; margin-left: 4px; }
+.au-or { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 13px; }
+.au-or::before, .au-or::after { content: ""; flex: 1; border-top: 1px solid var(--line); }
+.au-alt { min-height: 48px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.au-hint { color: var(--muted); font-size: 12.5px; margin-top: -8px; }
+.au-roles { display: grid; gap: 12px; }
+.au-role { position: relative; display: grid; grid-template-columns: 24px 46px minmax(0, 1fr); align-items: center; gap: 14px; padding: 18px; border-radius: 16px; background: color-mix(in srgb, var(--ink) 4%, var(--surface)); border: 1.5px solid transparent; cursor: pointer; transition: border-color .2s, background-color .2s; }
+.au-role input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.au-rc { width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--ink); display: grid; place-items: center; }
+.au-role:has(input:checked) { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 7%, var(--surface)); }
+.au-role:has(input:checked) .au-rc { border-color: var(--accent); }
+.au-role:has(input:checked) .au-rc::after { content: ""; width: 12px; height: 12px; border-radius: 50%; background: var(--accent); }
+.au-role:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+.au-ri { width: 46px; height: 46px; border-radius: 13px; display: grid; place-items: center; background: var(--surface); color: var(--accent); }
+.au-rt { display: grid; gap: 3px; }
+.au-rt b { font-family: var(--f-display); font-size: 17px; letter-spacing: -.01em; }
+.au-rt small { color: var(--muted); font-size: 13.5px; line-height: 1.4; }
+@media (max-width: 420px) { .au-role { grid-template-columns: 22px minmax(0, 1fr); padding: 16px; } .au-ri { display: none; } }
 .phone-in { display: flex; border: 1.5px solid var(--line); border-radius: 12px; background: var(--raised); overflow: hidden; }
 .phone-in:focus-within { border-color: var(--accent); }
 .phone-in span { padding: 12px 12px 12px 14px; font-weight: 600; border-right: 1px solid var(--line); color: var(--muted); font-variant-numeric: tabular-nums; }
@@ -1819,6 +1856,30 @@ select { max-width: 100%; }
 .st-banner { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: 12px; background: var(--signal-soft); font-size: 14px; margin: 4px 0 12px; }
 .st-banner.ok { background: color-mix(in srgb, var(--ok) 13%, transparent); }
 .st-banner .pill { flex: none; }
+.st-banner.st-way { display: grid; gap: 12px; background: color-mix(in srgb, var(--accent) 7%, var(--surface)); border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent); padding: 14px 16px; }
+.st-way-h { display: grid; gap: 6px; justify-items: start; }
+.st-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
+.st-steps li { position: relative; display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 12px; padding: 0 0 14px; }
+.st-steps li:last-child { padding-bottom: 0; }
+.st-steps li:not(:last-child)::before { content: ""; position: absolute; left: 12px; top: 26px; bottom: 2px; border-left: 2px solid var(--line); }
+.st-steps li.done:not(:last-child)::before { border-color: var(--ok); }
+.st-steps .d { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 700; background: var(--surface); border: 2px solid var(--line); color: var(--muted); }
+.st-steps li.done .d { background: var(--ok); border-color: var(--ok); color: #fff; }
+.st-steps li.cur .d { border-color: var(--accent); color: var(--accent); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 16%, transparent); }
+.st-steps b { display: block; font-size: 14px; line-height: 26px; }
+.st-steps li:not(.done):not(.cur) b { color: var(--muted); }
+.st-steps small { display: block; color: var(--muted); font-size: 13px; line-height: 1.45; }
+.st-steps li.cur small b { display: inline; line-height: inherit; color: var(--ink); }
+.mworks { display: grid; gap: 8px; margin: 4px 0; }
+.mw-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px; }
+.mw { position: relative; margin: 0; aspect-ratio: 1; border-radius: 12px; overflow: hidden; background: var(--raised); }
+.mw img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.mw-del { position: absolute; top: 6px; right: 6px; width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: rgb(0 0 0 / .55); color: #fff; }
+.mw-add { display: grid; place-content: center; justify-items: center; gap: 6px; border: 1.5px dashed var(--line-strong); color: var(--muted); font-size: 13px; font-weight: 600; background: transparent; }
+.mw-add:hover { border-color: var(--accent); color: var(--accent); }
+.adm-way { display: grid; gap: 8px; min-width: 240px; white-space: normal; }
+.adm-way label { display: grid; gap: 4px; font-size: 12.5px; color: var(--muted); }
+.adm-way input { padding: 8px 10px; border: 1.5px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--ink); font: inherit; font-size: 14px; }
 .store-info { display: grid; gap: 8px; margin-bottom: 12px; }
 .store-info a { color: var(--accent); }
 @media (max-width: 760px) { .loc-btns, .auth-in .two { grid-template-columns: 1fr; } }
@@ -2126,7 +2187,11 @@ const UI = {
   tag: '<path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8Z"/><circle cx="7.5" cy="7.5" r="1.5"/>',
   calc: '<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8M8 12h.01M12 12h.01M16 12h.01M8 16h.01M12 16h.01M16 16h.01"/>',
   pkg: '<path d="M3 7l9-4 9 4v10l-9 4-9-4z"/><path d="M3 7l9 4 9-4M12 11v10"/>',
-  alert: '<path d="M12 3.5 2.5 20h19z"/><path d="M12 10v4.5M12 17.5v.01"/>'
+  alert: '<path d="M12 3.5 2.5 20h19z"/><path d="M12 10v4.5M12 17.5v.01"/>',
+  eye: '<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+  eyeoff: '<path d="M3 3l18 18M10.6 5.1A10.6 10.6 0 0 1 12 5c6.4 0 10 7 10 7a17.6 17.6 0 0 1-3.2 4.1M6.6 6.6C3.8 8.4 2 12 2 12s3.6 7 10 7a10 10 0 0 0 5.4-1.6M9.9 9.9a3 3 0 0 0 4.2 4.2"/>',
+  cal: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+  pen: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>'
 };
 const ui = (k, s = 20) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${UI[k]}</svg>`;
 
@@ -4421,7 +4486,7 @@ function openAuth(then, step = "start") {
   if (widOpen) closeWidgets();
   const edit = step === "store" && then === "seller-edit";
   const ms = edit ? myStore || {} : {};
-  auth = { step, then: then || null, via: null, phone: "", code: "", devCode: "", sentAt: 0, name: user?.name || "", email: "", hide: false, err: "", ticket: "",
+  auth = { step, then: then || null, via: null, flow: step === "reg" ? "reg" : "login", roleSet: false, mkind: "show", pwTicket: "", phone: "", code: "", devCode: "", sentAt: 0, name: user?.name || "", email: "", hide: false, err: "", ticket: "",
     role: then === "store" ? "store" : "buyer", dist: user?.district || district, busy: false, pending: null, edit,
     loc: ms.la != null && ms.loc_src && ms.loc_src !== "district" ? { la: ms.la, lo: ms.lo, src: ms.loc_src } : null, mapOpen: false,
     st: edit ? { name: ms.name, descr: ms.descr, cats: ms.cats || [], phone: digitsOf(ms.phone).slice(-9), telegram: ms.telegram, hours: ms.hours, district: ms.d, addr: ms.addr, landmark: ms.landmark } : { phone: digitsOf(user?.phone).slice(-9) } };
@@ -4510,21 +4575,26 @@ function afterLogin(r) {
   if (u.staff) { if (user && user.id !== u.id) forgetAccountData(); user = u; LS.set("imorat.user", u); adminToken = ""; LS.set("imorat.adminToken", ""); adminState.need = null; closeAuth(); renderHeader(); renderTabbar(); toast(u.owner ? L("Вы вошли как владелец", "Egasi sifatida kirdingiz", "Signed in as the owner") : L("Вы вошли как сотрудник", "Xodim sifatida kirdingiz", "Signed in as staff")); if (route.view !== "admin") location.hash = "admin"; else renderMain(); return; }
   ordersFetched = false; setTimeout(fetchOrders, 50); // the person's orders: "Вы заказывали" and the status watcher
   sup = { msgs: null, unread: 0, busy: false, poll: 0, order: null }; setTimeout(() => supLoad(true), 80);
+  auth.pwTicket = r.pw_ticket || "";
   if (r.is_new) { auth.pending = u; auth.name = u.name || auth.name; auth.step = "profile"; return renderAuth(); }
-  if (auth.then === "store" && !u.store_id) { auth.pending = u; auth.name = u.name; auth.dist = u.district; auth.step = "store"; return renderAuth(); }
+  if (auth.flow === "forgot") { auth.pending = u; auth.step = "newpw"; return renderAuth(); } // the SMS code is confirmed: a new password
+  if ((auth.then === "store" || (auth.flow === "reg" && auth.role === "store")) && !u.store_id) { auth.pending = u; auth.name = u.name; auth.dist = u.district; auth.st = { ...auth.st, phone: auth.st?.phone || auth.phone }; auth.step = "store"; return renderAuth(); }
+  if (["sms", "reg"].includes(auth.flow) && r.has_password === false) { auth.pending = u; auth.step = "newpw"; return renderAuth(); } // offer a password (can be skipped)
   finishAuth(u, r.token);
 }
 function finishAuth(u, token) {
   if (u.api && user && digitsOf(user.phone) !== digitsOf(u.phone)) forgetAccountData(); else if (u.api) { orders = orders.filter(o => !o.api); ordersFetched = false; }
   if (token) { apiToken = token; LS.set("imorat.token", token); }
-  user = u; if (!u.api) accounts[digitsOf(u.phone).slice(-9)] = u; LS.set("imorat.user", user); LS.set("imorat.accounts", accounts);
+  if (!u.api) { const k = digitsOf(u.phone).slice(-9); accounts[k] = { ...(accounts[k] || {}), ...u }; const { pwh, pwSalt, ...pub } = u; u = pub; } // the password hash stays in the demo accounts, not in the session
+  user = u; LS.set("imorat.user", user); LS.set("imorat.accounts", accounts);
   if (!u.api) { const ds = LS.get("imorat.demoStores", {}), mine = ds[digitsOf(u.phone).slice(-9)] || null; if (myStore && !mine && !Object.values(ds).some(x => x?.id === myStore.id)) ds[digitsOf(u.phone).slice(-9)] = myStore; myStore = ds[digitsOf(u.phone).slice(-9)] || null; LS.set("imorat.demoStores", ds); LS.set("imorat.myStore", myStore); if (myStore) { STORE[myStore.id] = myStore; sellerStore = myStore.id; LS.set("imorat.sellerStore", sellerStore); } } // demo: each phone keeps its own store
   if (u.district) { district = u.district; LS.set("imorat.district", district); }
   form.name = u.name; form.phone = u.phone; LS.set("imorat.form2", form);
   const then = auth.then; closeAuth(); renderHeader(); renderTabbar(); counts();
   if (u.api) { bonusApi = null; loadBonus(); loadStockWatch(); fetchOrders(); teamProj = null; if (LS.get("imorat.teamPending", "")) loadTeams(); } else if (LS.get("imorat.refPending", "")) { const rc = LS.get("imorat.refPending", ""); LS.set("imorat.refPending", ""); setTimeout(() => applyRefCode(rc, true), 400); }
   toast(then === "seller" ? L("Магазин отправлен на проверку", "Do‘kon tekshiruvga yuborildi") : L(`Добро пожаловать, ${u.name}!`, `Xush kelibsiz, ${u.name}!`, `Welcome, ${u.name}!`));
-  if (then === "checkout") openDrawer("checkout"); else if (then === "profile") openDrawer("profile"); else if (then === "seller") { sellerData = null; go("seller"); } else if (typeof then === "function") setTimeout(then, 0); else if (drawerView === "profile") renderDrawer();
+  if (then === "master-me") { mf.tab = "me"; mf.sel = null; mf.edit = false; go("masters"); setTimeout(() => toast(L("Заполните анкету и добавьте фото своих работ — после проверки их увидят клиенты", "Anketani to‘ldiring va ishlaringiz rasmlarini qo‘shing — tekshiruvdan keyin mijozlar ko‘radi", "Fill in the profile and add photos of your work — clients see them after a check")), 400); }
+  else if (then === "checkout") openDrawer("checkout"); else if (then === "profile") openDrawer("profile"); else if (then === "seller") { sellerData = null; go("seller"); } else if (typeof then === "function") setTimeout(then, 0); else if (drawerView === "profile") renderDrawer();
   if (route.view === "masters" && typeof then !== "function") { mApi.list = null; mApi.me = undefined; renderMasters(); }
   if (["admin", "store", "shop", "flat"].includes(route.view) && typeof then !== "function") { dash = null; renderMain(); }
   if (route.view === "catalog") renderList(true); else if (route.view === "seller" && then !== "seller") { sellerData = null; renderSeller(); }
@@ -4876,7 +4946,7 @@ function bindStoreForm() {
       descr: s.descr, cats: s.cats, phone: body.phone, telegram: s.telegram.replace(/^@/, ""), landmark: s.landmark, la: body.la ?? DIST[s.district].la, lo: body.lo ?? DIST[s.district].lo, loc_src: body.loc_src, status: prev.status || "pending", mine: true, created: prev.created || Date.now() };
     myStore = st; LS.set("imorat.myStore", st); STORE[st.id] = st; sellerStore = st.id; LS.set("imorat.sellerStore", sellerStore);
     if (auth.edit) { closeAuth(); renderSeller(); toast(L("Данные магазина сохранены", "Do‘kon ma’lumotlari saqlandi")); return; }
-    const base = user || { id: "u" + Date.now().toString(36), name: auth.name, phone: fullPhone(auth.phone), email: auth.email || "", via: auth.via || "phone", district: auth.dist, created: Date.now() };
+    const base = user || auth.pending || { id: "u" + Date.now().toString(36), name: auth.name, phone: fullPhone(auth.phone), email: auth.email || "", via: auth.via || "phone", district: auth.dist, created: Date.now() };
     auth.then = "seller";
     finishAuth({ ...base, role: "seller", store_id: st.id });
   });
@@ -4888,27 +4958,76 @@ const rolesHTML = (role, name = "role", rich) => { const ri = icon => rich ? `<s
   <label class="opt"><input type="radio" name="${name}" value="pro" ${role === "pro" ? "checked" : ""}>${ri("wrench")}<span><b>${L("Мастер или прораб", "Usta yoki prorab")}</b><small>${discOn() ? L("Оптовая цена −3% на материалы с первой штуки", "Materiallarga birinchi donadan −3% ulgurji narx") : L("Делаете ремонт для клиентов: сметы, списки материалов, заявки", "Mijozlar uchun ta’mir: smeta, materiallar ro‘yxati, buyurtmalar", "You renovate for clients: estimates, material lists, requests")}</small></span>${discOn() ? `<span class="tag">−3%</span>` : ""}${rk}</label>
   <label class="opt"><input type="radio" name="${name}" value="store" ${role === "store" ? "checked" : ""}>${ri("store")}<span><b>${L("Хочу добавить свой магазин", "Do‘konimni qo‘shmoqchiman")}</b><small>${stage0() ? L("Продавайте на Quriliş Go: витрина, заказы онлайн, 0% комиссии", "Quriliş Go’da soting: vitrina, onlayn buyurtmalar, 0% komissiya", "Sell on Quriliş Go: a storefront, online orders, 0% commission") : L("Продавайте на Quriliş Go: витрина, заказы и доставка Яндекс", "Quriliş Go’da soting: vitrina, buyurtmalar va Yandex yetkazish")}</small></span>${rich ? "" : `<span class="tag">${ui("store", 14)}</span>`}${rk}</label>
 </div>`; };
+/* the sign-in pieces in the look of the sample: grey fields, the flag with +998, an eye on the password */
+const UZ_FLAG = `<svg class="uzf" viewBox="0 0 30 20" aria-hidden="true"><rect width="30" height="20" fill="#1EB53A"/><rect width="30" height="13.4" fill="#fff"/><rect width="30" height="6.6" fill="#0099B5"/><rect y="6.6" width="30" height=".7" fill="#CE1126"/><rect y="12.7" width="30" height=".7" fill="#CE1126"/><circle cx="5.2" cy="3.3" r="2.3" fill="#fff"/><circle cx="6.1" cy="3.3" r="2.05" fill="#0099B5"/></svg>`;
+const phoneField = (id, label, auto = "tel-national") => `<div class="af"><label for="${id}">${label}</label><div class="phone-in au"><span>${UZ_FLAG}+998</span><input id="${id}" inputmode="tel" autocomplete="${auto}" placeholder="90 123 45 67" value="${esc(fmtPhone(auth.phone))}"></div></div>`;
+const pwField = (id, label, auto, extra = "") => `<div class="af"><div class="af-l"><label for="${id}">${label}</label>${extra}</div><div class="pw-in"><input id="${id}" type="password" autocomplete="${auto}" autocapitalize="off" spellcheck="false"><button type="button" class="pw-eye" data-pweye="${id}" aria-label="${L("Показать пароль", "Parolni ko‘rsatish", "Show the password")}" aria-pressed="false">${ui("eye", 20)}</button></div></div>`;
+const authSwitch = (txt, link, step) => `<p class="au-sw">${txt} <button class="lnk" type="button" data-authstep="${step}">${link}</button></p>`;
+/* demo only (no server): passwords of this browser's demo accounts are kept as a salted PBKDF2 hash, never as text */
+async function demoHash(pw, salt) {
+  salt = salt || [...crypto.getRandomValues(new Uint8Array(12))].map(x => x.toString(16).padStart(2, "0")).join("");
+  if (!crypto.subtle) return { salt, hash: "x" + [...(salt + pw)].reduce((h, c) => (Math.imul(h ^ c.charCodeAt(0), 16777619) >>> 0), 2166136261).toString(16) };
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(pw), "PBKDF2", false, ["deriveBits"]);
+  const bits = await crypto.subtle.deriveBits({ name: "PBKDF2", salt: new TextEncoder().encode(salt), iterations: 120000, hash: "SHA-256" }, key, 256);
+  return { salt, hash: [...new Uint8Array(bits)].map(x => x.toString(16).padStart(2, "0")).join("") };
+}
+const PW_MIN = 8;
 function renderAuth() {
   const b = $("#authBox"), st = auth.step;
   b.classList.toggle("wide", st === "store");
   const close = `<button class="ib m-close" type="button" data-act="close-auth" aria-label="${L("Закрыть", "Yopish")}">${ui("close", 18)}</button>`;
   const back = to => `<button class="lnk" type="button" data-authstep="${to}" style="justify-self:start">${L("← Назад", "← Orqaga")}</button>`;
   const phoneForm = (title, sub) => `<h2>${title}</h2><p>${sub}</p>
-    <form id="authPhone" novalidate style="display:grid;gap:10px">
-      <label class="visually-hidden" for="aPh">${L("Номер телефона", "Telefon raqami")}</label>
-      <div class="phone-in"><span>+998</span><input id="aPh" inputmode="tel" autocomplete="tel-national" placeholder="90 123 45 67" value="${esc(fmtPhone(auth.phone))}"></div>
+    <form id="authPhone" class="au-form" novalidate>
+      ${phoneField("aPh", L("Номер телефона", "Telefon raqamingiz", "Phone number"))}
       <span class="err" id="aPhErr" role="alert" ${auth.err ? "" : "hidden"}>${esc(auth.err)}</span>
-      <button class="btn btn-primary" type="submit">${L("Получить код по SMS", "SMS orqali kod olish")}</button>
+      <button class="btn btn-primary au-go" type="submit">${L("Получить код по SMS", "SMS orqali kod olish", "Get an SMS code")}</button>
     </form>`;
   let h = "";
+  const fine = `<p class="fine">${L("Продолжая, вы соглашаетесь с", "Davom etib, siz", "By continuing you agree to the")} <a href="${legalUrl("terms")}" target="_blank" rel="noopener">${L("условиями сервиса", "xizmat shartlari", "terms of use")}</a> ${L("и", "va", "and the")} <a href="${legalUrl("privacy")}" target="_blank" rel="noopener">${L("политикой конфиденциальности", "maxfiylik siyosatiga", "privacy policy")}</a>${L(".", " rozilik bildirasiz.", ".")}</p>`;
   if (st === "start") {
-    h = `<span class="logo" aria-hidden="true">${markSVG()}<b>Quriliş<em>go</em></b></span>
-      <h2>${auth.then === "checkout" ? L("Войдите, чтобы оформить заказ", "Buyurtma berish uchun kiring") : auth.then === "store" ? L("Войдите, чтобы добавить магазин", "Do‘kon qo‘shish uchun kiring") : L("Вход или регистрация", "Kirish yoki ro‘yxatdan o‘tish")}</h2>
-      <p>${L("Один аккаунт для заказов, избранного и Usta AI. Новый аккаунт создаётся автоматически по номеру телефона.", "Buyurtmalar, saralanganlar va Usta AI uchun bitta akkaunt. Yangi akkaunt telefon raqami bo‘yicha avtomatik yaratiladi.", "One account for orders, favourites and Usta AI. A new account is created automatically from your phone number.")}</p>
-      ${phoneForm("", "").replace("<h2></h2><p></p>", "")}
-      <p class="fine">${L("Продолжая, вы соглашаетесь с", "Davom etib, siz", "By continuing you agree to the")} <a href="${legalUrl("terms")}" target="_blank" rel="noopener">${L("условиями сервиса", "xizmat shartlari", "terms of use")}</a> ${L("и", "va", "and the")} <a href="${legalUrl("privacy")}" target="_blank" rel="noopener">${L("политикой конфиденциальности", "maxfiylik siyosatiga", "privacy policy")}</a>${L(".", " rozilik bildirasiz.", ".")}</p>
-      ${API ? "" : `<p class="demo">${L("Демо-режим: SMS не отправляется — код для входа появится прямо на экране.", "Demo rejim: SMS yuborilmaydi — kirish kodi to‘g‘ridan-to‘g‘ri ekranda chiqadi.", "Demo mode: no SMS is sent — the sign-in code appears right on the screen.")}</p>`}
-      ${true ? `<button class="lnk" type="button" data-authstep="staff" style="justify-self:center;font-size:12.5px;color:var(--muted)">${L("Вход для сотрудников Quriliş Go", "Quriliş Go xodimlari uchun kirish", "Quriliş Go staff sign-in")}</button>` : ""}`;
+    h = `<h2>${auth.then === "checkout" ? L("Войдите, чтобы оформить заказ", "Buyurtma berish uchun kiring", "Sign in to place the order") : auth.then === "store" ? L("Войдите, чтобы добавить магазин", "Do‘kon qo‘shish uchun kiring", "Sign in to add a store") : L("Вход", "Tizimga kirish", "Sign in")}</h2>
+      ${authSwitch(L("Нет аккаунта?", "Akkauntingiz yo‘q bo‘lsa", "No account yet?"), L("Зарегистрироваться", "Ro‘yxatdan o‘tish", "Sign up"), "reg")}
+      <form id="authLogin" class="au-form" novalidate autocomplete="on">
+        ${phoneField("lPh", L("Номер телефона", "Telefon raqamingiz", "Phone number"), "username")}
+        ${pwField("lPw", L("Пароль", "Parol", "Password"), "current-password", `<button class="lnk" type="button" data-authstep="forgot">${L("Забыли пароль?", "Parolni unutdingizmi?", "Forgot the password?")}</button>`)}
+        <span class="err" id="lErr" role="alert" hidden></span>
+        <button class="btn btn-primary au-go" type="submit">${L("Войти", "Tizimga kirish", "Sign in")}</button>
+      </form>
+      <div class="au-or"><span>${L("или", "yoki", "or")}</span></div>
+      <button class="btn btn-line au-alt" type="button" id="aUseCode" data-authstep="sms">${ui("chat", 18)} ${L("Войти по коду из SMS", "SMS kod orqali kirish", "Sign in with an SMS code")}</button>
+      ${fine}
+      ${API ? "" : `<p class="demo">${L("Демо-режим: SMS не отправляется — код появится прямо на экране, а аккаунты и пароли хранятся только в этом браузере.", "Demo rejim: SMS yuborilmaydi — kod ekranda chiqadi, akkaunt va parollar faqat shu brauzerda saqlanadi.", "Demo mode: no SMS is sent — the code appears on the screen; accounts and passwords stay in this browser only.")}</p>`}
+      <button class="lnk" type="button" data-authstep="staff" style="justify-self:center;font-size:12.5px;color:var(--muted)">${L("Вход для сотрудников Quriliş Go", "Quriliş Go xodimlari uchun kirish", "Quriliş Go staff sign-in")}</button>`;
+  } else if (st === "reg") {
+    const R = [["buyer", "home", L("Покупатель", "Xaridor", "Buyer"), L("Покупаю материалы для ремонта дома или квартиры", "Uy yoki kvartira ta’miri uchun material xarid qilaman", "I buy materials for a home or flat renovation")],
+      ["pro", "wrench", L("Мастер или прораб", "Usta yoki prorab", "Pro or foreman"), L("Бесплатно показываю свои работы клиентам или веду объекты как прораб", "Ishlarimni mijozlarga bepul ko‘rsataman yoki prorab sifatida obyekt yuritaman", "I show my work to clients for free or run sites as a foreman")],
+      ["store", "store", L("Продавец", "Sotuvchi", "Seller"), L("Продаю стройматериалы: анкета, проверка, договор — и свой магазин на Quriliş Go", "Qurilish mollarini sotaman: anketa, tekshiruv, shartnoma — va Quriliş Go’da o‘z do‘konim", "I sell building materials: application, check, contract — and my own store on Quriliş Go")]];
+    h = `<h2>${L("Регистрация", "Ro‘yxatdan o‘tish", "Sign up")}</h2>
+      ${authSwitch(L("Уже есть аккаунт?", "Avval ro‘yxatdan o‘tgan bo‘lsangiz", "Already registered?"), L("Войти", "Tizimga kiring", "Sign in"), "start")}
+      <form id="authReg" class="au-form" novalidate><fieldset><legend class="visually-hidden">${L("Как вы будете пользоваться Quriliş Go", "Quriliş Go’dan qanday foydalanasiz", "How you will use Quriliş Go")}</legend><div class="au-roles">
+        ${R.map(([v, ic, tt, d]) => `<label class="au-role"><input type="radio" name="regrole" value="${v}" ${auth.roleSet && auth.role === v ? "checked" : ""}><span class="au-rc" aria-hidden="true"></span><span class="au-ri">${ui(ic, 22)}</span><span class="au-rt"><b>${tt}</b><small>${d}</small></span></label>`).join("")}
+      </div></fieldset>
+      <button class="btn btn-primary au-go" type="submit" id="regGo" ${auth.roleSet ? "" : "disabled"}>${L("Продолжить", "Davom etish", "Continue")}</button></form>`;
+  } else if (st === "regphone") {
+    h = back("reg") + phoneForm(auth.role === "store" ? L("Регистрация продавца", "Sotuvchi sifatida ro‘yxatdan o‘tish", "Seller sign-up") : auth.role === "pro" ? L("Регистрация мастера", "Usta sifatida ro‘yxatdan o‘tish", "Pro sign-up") : L("Регистрация покупателя", "Xaridor sifatida ro‘yxatdan o‘tish", "Buyer sign-up"),
+      L("Подтвердим номер кодом из SMS — так никто не зарегистрируется на ваш номер. Потом зададите пароль.", "Raqamni SMS kod bilan tasdiqlaymiz — shunda hech kim sizning raqamingizga ro‘yxatdan o‘ta olmaydi. Keyin parol o‘rnatasiz.", "We confirm the number with an SMS code so nobody can sign up with your number. Then you set a password.")) + fine;
+  } else if (st === "sms") {
+    h = back("start") + phoneForm(L("Вход по коду из SMS", "SMS kod orqali kirish", "Sign in with an SMS code"), L("Если вы ещё не задали пароль или не помните его. После входа предложим задать пароль.", "Agar parol o‘rnatmagan bo‘lsangiz yoki eslay olmasangiz. Kirgandan keyin parol o‘rnatishni taklif qilamiz.", "If you have no password yet or do not remember it. After signing in we offer to set one.")) + fine
+      + (API ? "" : `<p class="demo">${L("Демо-режим: SMS не отправляется — код для входа появится прямо на экране.", "Demo rejim: SMS yuborilmaydi — kirish kodi to‘g‘ridan-to‘g‘ri ekranda chiqadi.", "Demo mode: no SMS is sent — the sign-in code appears right on the screen.")}</p>`);
+  } else if (st === "forgot") {
+    h = back("start") + phoneForm(L("Восстановление пароля", "Parolni tiklash", "Reset the password"), L("Пришлём код на номер аккаунта, затем вы зададите новый пароль. Другие ваши сессии завершатся.", "Akkaunt raqamiga kod yuboramiz, keyin yangi parol o‘rnatasiz. Boshqa sessiyalaringiz tugaydi.", "We send a code to the account's number, then you set a new password. Your other sessions end."));
+  } else if (st === "newpw") {
+    const reset = auth.flow === "forgot";
+    h = `<h2>${reset ? L("Новый пароль", "Yangi parol", "New password") : L("Задайте пароль", "Parol o‘rnating", "Set a password")}</h2>
+      <p>${reset ? L("Номер подтверждён. Придумайте новый пароль — не короче 8 символов.", "Raqam tasdiqlandi. Yangi parol o‘ylab toping — kamida 8 ta belgi.", "The number is confirmed. Choose a new password, at least 8 characters.") : L("Теперь вы сможете входить по номеру и паролю, без SMS. Не короче 8 символов.", "Endi raqam va parol bilan, SMSsiz kira olasiz. Kamida 8 ta belgi.", "From now on you sign in with the number and the password, no SMS. At least 8 characters.")}</p>
+      <form id="authNewPw" class="au-form" novalidate>
+        <input type="text" name="username" autocomplete="username" value="${esc(fullPhone(auth.phone))}" hidden>
+        ${pwField("nPw", L("Пароль", "Parol", "Password"), "new-password")}
+        <span class="err" id="nErr" role="alert" hidden></span>
+        <button class="btn btn-primary au-go" type="submit">${L("Сохранить и войти", "Saqlash va kirish", "Save and continue")}</button>
+        ${reset ? "" : `<button class="lnk" type="button" data-act="auth-skip-pw" style="justify-self:center">${L("Позже", "Keyinroq", "Later")}</button>`}
+      </form>`;
   } else if (st === "staff") {
     h = `${back("start")}<h2>${L("Вход для сотрудников", "Xodimlar uchun kirish", "Staff sign-in")}</h2>
       <p>${L("Логин и пароль выдаёт владелец Quriliş Go. Покупатели и магазины входят по номеру телефона.", "Login va parolni Quriliş Go egasi beradi. Xaridorlar va do‘konlar telefon raqami bilan kiradi.", "The owner of Quriliş Go issues the login and password. Buyers and stores sign in with a phone number.")}</p>
@@ -4950,7 +5069,7 @@ function renderAuth() {
     const shownCode = !API ? auth.code : auth.devCode;
     const demoNote = shownCode ? `<div class="demo otp-msg"><span class="mi">${ui("send", 16)}</span><span><small>${L("Сообщение · код", "Xabar · kod", "Message · code")}</small><b class="mono">${shownCode}</b> ${L("— ваш код подтверждения", "— tasdiqlash kodingiz", "— your verification code")}<br><small style="text-transform:none;letter-spacing:0">${!API ? L("Демо: SMS не отправляется", "Demo: SMS yuborilmaydi", "Demo: no SMS is sent") : L("Тестовый режим сервера: SMS пока не отправляется", "Server test rejimi: SMS hali yuborilmaydi", "Server test mode: no SMS yet")}</small></span><button class="btn btn-line" type="button" id="otpFill">${L("Заполнить", "To‘ldirish", "Fill")}</button></div>` : "";
     const dots = [...Array(10)].map((_, i) => { const a = i * 36 + 12, r = 84 + (i % 3) * 14; return `<i class="otp-dot" style="--x:${Math.round(Math.cos(a * Math.PI / 180) * r)}px;--y:${Math.round(Math.sin(a * Math.PI / 180) * r)}px;--d:${(i * 0.06).toFixed(2)}s"></i>`; }).join("");
-    h = `${back(auth.via ? "phone" : "start")}<div class="otp-title"><h2 id="otpH">${L("Введите код из SMS", "SMS koddagi raqamlarni kiriting")}</h2>
+    h = `${back(auth.via ? "phone" : auth.flow === "reg" ? "regphone" : auth.flow === "forgot" ? "forgot" : "sms")}<div class="otp-title"><h2 id="otpH">${L("Введите код из SMS", "SMS koddagi raqamlarni kiriting")}</h2>
       <p id="otpP">${L("Отправили 6 цифр на", "6 xonali kod yuborildi:")} <b class="num">${fullPhone(auth.phone)}</b></p></div>
       <form id="authCode" novalidate style="display:grid;gap:10px">
         <label class="visually-hidden" for="aCode">${L("Код из SMS", "SMS kod")}</label>
@@ -4971,24 +5090,73 @@ function renderAuth() {
         <button class="lnk" type="button" id="aResend" data-act="auth-resend" style="justify-self:center" disabled></button>
       </form>`;
   } else if (st === "profile") {
-    const role = auth.role || "buyer";
-    h = `<h2>${L("Почти готово", "Deyarli tayyor")}</h2><p>${L("Расскажите немного о себе, чтобы мы показывали правильные цены и доставку.", "To‘g‘ri narx va yetkazishni ko‘rsatishimiz uchun o‘zingiz haqingizda ayting.")}</p>
-      <form id="authProfile" novalidate style="display:grid;gap:12px">
-        <div class="f"><label for="pName">${L("Как к вам обращаться", "Sizga qanday murojaat qilaylik")}</label><input id="pName" autocomplete="name" value="${esc(auth.name)}" placeholder="${L("Азиз", "Aziz")}"></div>
-        <fieldset><legend>${L("Кто вы?", "Siz kimsiz?")}</legend>${rolesHTML(role, "role")}</fieldset>
+    const role = auth.role || "buyer", mk = auth.mkind || "show";
+    const goTxt = r => r === "store" ? L("Дальше: анкета магазина", "Keyingisi: do‘kon anketasi", "Next: the store application") : r === "pro" && (auth.mkind || "show") === "show" && auth.roleSet ? L("Дальше: анкета и фото работ", "Keyingisi: anketa va ish rasmlari", "Next: profile and photos of work") : L("Готово", "Tayyor", "Done");
+    h = `<h2>${L("Почти готово", "Deyarli tayyor", "Almost done")}</h2><p>${auth.roleSet ? L("Как к вам обращаться и пароль для входа.", "Sizga qanday murojaat qilaylik va kirish uchun parol.", "Your name and a password to sign in.") : L("Расскажите немного о себе и задайте пароль для входа.", "O‘zingiz haqingizda ayting va kirish uchun parol o‘rnating.", "Tell us a little about yourself and set a password.")}</p>
+      <form id="authProfile" class="au-form" novalidate>
+        <div class="af"><label for="pName">${L("Как к вам обращаться", "Sizga qanday murojaat qilaylik", "Your name")}</label><input class="au-in" id="pName" autocomplete="name" value="${esc(auth.name)}" placeholder="${L("Азиз", "Aziz")}"></div>
+        <input type="text" name="username" autocomplete="username" value="${esc(fullPhone(auth.phone))}" hidden>
+        ${pwField("pPw", L("Придумайте пароль", "Parol o‘ylab toping", "Create a password"), "new-password")}<small class="au-hint">${L("Не короче 8 символов. Дальше входите по номеру и паролю.", "Kamida 8 ta belgi. Keyin raqam va parol bilan kirasiz.", "At least 8 characters. From now on you sign in with the number and the password.")}</small>
+        ${auth.roleSet ? (role === "pro" ? `<fieldset><legend>${L("Как вы будете работать", "Qanday ishlaysiz", "How you will work")}</legend><div class="opts">
+            <label class="opt"><input type="radio" name="mkind" value="show" ${mk === "show" ? "checked" : ""}><span><b>${L("Показывать свои работы бесплатно", "Ishlarimni bepul ko‘rsatish", "Show my work for free")}</b><small>${L("Анкета и фото готовых работ на сайте — клиенты найдут вас и позовут. После проверки модератором.", "Saytda anketa va tayyor ishlar rasmlari — mijozlar sizni topib chaqiradi. Moderator tekshiruvidan keyin.", "A profile and photos of finished jobs on the site — clients find you and call. After a moderator's check.")}</small></span><span></span></label>
+            <label class="opt"><input type="radio" name="mkind" value="prorab" ${mk === "prorab" ? "checked" : ""}><span><b>${L("Я прораб", "Men prorabman", "I am a foreman")}</b><small>${L("Сметы, списки материалов и заказы для объектов — без публичной анкеты.", "Obyektlar uchun smeta, materiallar ro‘yxati va buyurtmalar — ochiq anketasiz.", "Estimates, material lists and orders for your sites — no public profile.")}</small></span><span></span></label></div></fieldset>` : "")
+          : `<fieldset><legend>${L("Кто вы?", "Siz kimsiz?")}</legend>${rolesHTML(role, "role")}</fieldset>`}
         <span class="err" id="pErr" role="alert" hidden>${L("Укажите имя", "Ismni kiriting")}</span>
-        <button class="btn btn-primary" type="submit" id="pGo">${role === "store" ? L("Дальше: данные магазина", "Keyingisi: do‘kon ma’lumotlari") : L("Готово", "Tayyor")}</button>
+        <button class="btn btn-primary au-go" type="submit" id="pGo">${goTxt(role)}</button>
       </form>`;
   } else if (st === "store") {
     h = storeFormHTML();
   }
   b.innerHTML = close + `<div class="auth-in">${h}</div>`;
+  b.querySelectorAll("[data-pweye]").forEach(btn => btn.addEventListener("click", () => {
+    const inp = document.getElementById(btn.dataset.pweye), show = inp.type === "password";
+    inp.type = show ? "text" : "password"; btn.setAttribute("aria-pressed", String(show)); btn.innerHTML = ui(show ? "eyeoff" : "eye", 20);
+    btn.setAttribute("aria-label", show ? L("Скрыть пароль", "Parolni yashirish", "Hide the password") : L("Показать пароль", "Parolni ko‘rsatish", "Show the password")); inp.focus();
+  }));
+  const phoneOk = d => /^(33|50|55|77|88|90|91|93|94|95|97|98|99|20|71)\d{7}$/.test(d);
+  const lph = $("#lPh");
+  if (lph) {
+    lph.addEventListener("input", () => { const d = digitsOf(lph.value).slice(0, 9); lph.value = fmtPhone(d); auth.phone = d; });
+    $("#authLogin").addEventListener("submit", async e => {
+      e.preventDefault(); const er = $("#lErr"), d = digitsOf(lph.value), pw = $("#lPw").value, btn = e.target.querySelector("button[type=submit]");
+      const fail = m => { er.textContent = m; er.hidden = false; btn.disabled = false; btn.textContent = L("Войти", "Tizimga kirish", "Sign in"); };
+      if (!phoneOk(d)) { fail(L("Введите 9 цифр мобильного номера, например 90 123 45 67", "9 xonali mobil raqamni kiriting, masalan 90 123 45 67", "Enter the 9 digits of a mobile number, e.g. 90 123 45 67")); return lph.focus(); }
+      if (!pw) { fail(L("Введите пароль", "Parolni kiriting", "Enter the password")); return $("#lPw").focus(); }
+      auth.phone = d; auth.flow = "login"; er.hidden = true; btn.disabled = true; btn.textContent = L("Входим…", "Kirilmoqda…", "Signing in…");
+      const wrong = L("Неверный номер или пароль. Если вы входили по SMS и ещё не задали пароль — войдите по коду из SMS.", "Raqam yoki parol noto‘g‘ri. Agar SMS orqali kirgan bo‘lsangiz va parol o‘rnatmagan bo‘lsangiz — SMS kod orqali kiring.", "Wrong number or password. If you used SMS codes and have no password yet, sign in with an SMS code.");
+      if (!API) {
+        const acc = accounts[d];
+        if (!acc?.pwh || (await demoHash(pw, acc.pwSalt)).hash !== acc.pwh) return fail(wrong);
+        return finishAuth({ ...acc, via: "phone" });
+      }
+      try { const r = await api("POST", "/api/auth/login", { phone: "998" + d, password: pw }); afterLogin(r); }
+      catch (ex) { fail(ex.code === "bad_login" ? wrong : ex.code === "rate_limited" ? L("Слишком много попыток — подождите 15 минут или войдите по коду из SMS", "Urinishlar ko‘p — 15 daqiqa kuting yoki SMS kod orqali kiring", "Too many attempts — wait 15 minutes or sign in with an SMS code") : ex.code === "staff_account" ? L("Сотрудники входят по логину — «Вход для сотрудников» внизу", "Xodimlar login bilan kiradi — pastdagi «Xodimlar uchun kirish»", "Staff sign in with their login — «Staff sign-in» below") : apiErr(ex)); }
+    });
+    setTimeout(() => (auth.phone ? $("#lPw") : lph).focus(), 60);
+  }
+  if (st === "reg") {
+    const rf = $("#authReg");
+    rf.addEventListener("change", e => { if (e.target.name === "regrole") { auth.role = e.target.value; auth.roleSet = true; $("#regGo").disabled = false; } });
+    rf.addEventListener("submit", e => { e.preventDefault(); if (!auth.roleSet) return; auth.flow = "reg"; auth.step = "regphone"; auth.err = ""; renderAuth(); });
+  }
+  if (st === "newpw") {
+    $("#authNewPw").addEventListener("submit", async e => {
+      e.preventDefault(); const er = $("#nErr"), pw = $("#nPw").value, btn = e.target.querySelector("button[type=submit]");
+      if (pw.length < PW_MIN) { er.textContent = L("Не короче 8 символов", "Kamida 8 ta belgi", "At least 8 characters"); er.hidden = false; return $("#nPw").focus(); }
+      btn.disabled = true; er.hidden = true;
+      const u = auth.pending || user;
+      if (!API) { const k = digitsOf(u.phone).slice(-9), hp = await demoHash(pw); accounts[k] = { ...(accounts[k] || u), pwh: hp.hash, pwSalt: hp.salt }; LS.set("imorat.accounts", accounts); toast(L("Пароль сохранён", "Parol saqlandi", "Password saved")); return finishAuth({ ...accounts[k], via: "phone" }); }
+      try { const r = await api("POST", "/api/auth/password", { password: pw, ticket: auth.pwTicket || undefined }); toast(L("Пароль сохранён", "Parol saqlandi", "Password saved")); finishAuth(fromApiUser(r.user), r.token); }
+      catch (ex) { er.textContent = ex.code === "weak_password" ? L("Не короче 8 символов", "Kamida 8 ta belgi", "At least 8 characters") : apiErr(ex); er.hidden = false; btn.disabled = false; }
+    });
+    setTimeout(() => $("#nPw").focus(), 60);
+  }
   const ph = $("#aPh");
   if (ph) {
     ph.addEventListener("input", () => { const d = digitsOf(ph.value).slice(0, 9); ph.value = fmtPhone(d); auth.phone = d; });
     $("#authPhone").addEventListener("submit", e => {
       e.preventDefault(); const d = digitsOf(ph.value);
-      if (!/^(33|50|55|77|88|90|91|93|94|95|97|98|99|20|71)\d{7}$/.test(d)) { auth.err = L("Введите 9 цифр мобильного номера, например 90 123 45 67", "9 xonali mobil raqamni kiriting, masalan 90 123 45 67"); const er = $("#aPhErr"); er.textContent = auth.err; er.hidden = false; ph.focus(); return; }
+      if (!phoneOk(d)) { auth.err = L("Введите 9 цифр мобильного номера, например 90 123 45 67", "9 xonali mobil raqamni kiriting, masalan 90 123 45 67"); const er = $("#aPhErr"); er.textContent = auth.err; er.hidden = false; ph.focus(); return; }
       auth.phone = d; sendCode();
     });
     if (st !== "start") setTimeout(() => ph.focus(), 60);
@@ -5045,7 +5213,9 @@ function renderAuth() {
       if (API) return afterLogin(r);
       const acc = accounts[auth.phone];
       if (acc) {
-        if (auth.then === "store" && !acc.store_id) { auth.pending = acc; auth.name = acc.name; auth.step = "store"; return renderAuth(); }
+        if (auth.flow === "forgot") { auth.pending = acc; auth.step = "newpw"; return renderAuth(); }
+        if ((auth.then === "store" || (auth.flow === "reg" && auth.role === "store")) && !acc.store_id) { auth.pending = acc; auth.name = acc.name; auth.step = "store"; return renderAuth(); }
+        if (!acc.pwh && ["sms", "reg"].includes(auth.flow)) { auth.pending = acc; auth.step = "newpw"; return renderAuth(); }
         return finishAuth({ ...acc, via: auth.via || acc.via, email: auth.email || acc.email });
       }
       auth.step = "profile"; renderAuth();
@@ -5087,19 +5257,35 @@ function renderAuth() {
   }
   if (st === "profile") {
     const pf = $("#authProfile");
-    pf.addEventListener("change", e => { if (e.target.name === "role") { auth.role = e.target.value; $("#pGo").textContent = auth.role === "store" ? L("Дальше: данные магазина", "Keyingisi: do‘kon ma’lumotlari") : L("Готово", "Tayyor"); } });
+    const label = () => { const r = auth.roleSet ? auth.role : pf.querySelector("[name=role]:checked")?.value || "buyer", mk = pf.querySelector("[name=mkind]:checked")?.value || "show";
+      return r === "store" ? L("Дальше: анкета магазина", "Keyingisi: do‘kon anketasi", "Next: the store application") : r === "pro" && auth.roleSet && mk === "show" ? L("Дальше: анкета и фото работ", "Keyingisi: anketa va ish rasmlari", "Next: profile and photos of work") : L("Готово", "Tayyor", "Done"); };
+    pf.addEventListener("change", e => { if (e.target.name === "role") auth.role = e.target.value; if (e.target.name === "mkind") auth.mkind = e.target.value; $("#pGo").textContent = label(); });
     pf.addEventListener("submit", async e => {
-      e.preventDefault(); const nm = $("#pName").value.trim(); if (nm.length < 2) { $("#pErr").hidden = false; return; }
-      const role = pf.querySelector("[name=role]:checked").value, dist = auth.dist || auth.pending?.district || district; // the district is asked at checkout
-      auth.name = nm; auth.dist = dist; auth.role = role;
-      if (role === "store") { auth.st = { ...auth.st, district: auth.st?.district || dist }; auth.fromProfile = true; auth.step = "store"; return renderAuth(); }
+      e.preventDefault(); const er = $("#pErr"), fail = m => { er.textContent = m; er.hidden = false; };
+      const nm = $("#pName").value.trim(); if (nm.length < 2) { fail(L("Укажите имя", "Ismni kiriting", "Enter your name")); return $("#pName").focus(); }
+      const pw = $("#pPw").value; if (pw.length < PW_MIN) { fail(L("Пароль — не короче 8 символов", "Parol — kamida 8 ta belgi", "The password needs at least 8 characters")); return $("#pPw").focus(); }
+      const role = auth.roleSet ? auth.role : pf.querySelector("[name=role]:checked").value, mk = pf.querySelector("[name=mkind]:checked")?.value || "show";
+      const dist = auth.dist || auth.pending?.district || district; // the district is asked at checkout
+      auth.name = nm; auth.dist = dist; auth.role = role; auth.mkind = mk;
+      const next = role === "pro" && auth.roleSet && mk === "show" ? "master-me" : auth.then;
+      er.hidden = true;
       if (API) {
         if (auth.busy) return; auth.busy = true; authBusy();
-        try { const r = await api("PATCH", "/api/me", { name: nm, district: dist, role }); auth.busy = false; finishAuth(fromApiUser(r.user)); }
-        catch (e2) { auth.busy = false; renderAuth(); const er = $("#pErr"); er.textContent = apiErr(e2); er.hidden = false; }
+        try {
+          const me = await api("PATCH", "/api/me", { name: nm, district: dist, role: role === "store" ? "buyer" : role });
+          const r = await api("POST", "/api/auth/password", { password: pw, ticket: auth.pwTicket || undefined });
+          auth.busy = false; const u = fromApiUser(r.user || me.user);
+          if (r.token) { apiToken = r.token; LS.set("imorat.token", r.token); }
+          if (role === "store") { auth.pending = u; auth.st = { ...auth.st, district: auth.st?.district || dist, phone: auth.st?.phone || auth.phone }; auth.fromProfile = false; auth.step = "store"; return renderAuth(); }
+          auth.then = next; finishAuth(u, r.token);
+        } catch (e2) { auth.busy = false; renderAuth(); const er2 = $("#pErr"); er2.textContent = e2.code === "weak_password" ? L("Пароль — не короче 8 символов", "Parol — kamida 8 ta belgi", "The password needs at least 8 characters") : apiErr(e2); er2.hidden = false; }
         return;
       }
-      finishAuth({ id: "u" + Date.now().toString(36), name: nm, phone: fullPhone(auth.phone), email: auth.email || "", via: auth.via || "phone", role, district: dist, created: Date.now() });
+      const hp = await demoHash(pw), k = digitsOf(fullPhone(auth.phone)).slice(-9);
+      const acc = { id: "u" + Date.now().toString(36), name: nm, phone: fullPhone(auth.phone), email: auth.email || "", via: auth.via || "phone", role: role === "store" ? "buyer" : role, district: dist, created: Date.now(), pwh: hp.hash, pwSalt: hp.salt };
+      accounts[k] = acc; LS.set("imorat.accounts", accounts);
+      if (role === "store") { auth.pending = acc; auth.st = { ...auth.st, district: auth.st?.district || dist, phone: auth.st?.phone || auth.phone }; auth.fromProfile = false; auth.step = "store"; return renderAuth(); }
+      auth.then = next; finishAuth(acc);
     });
     setTimeout(() => $("#pName").focus(), 60);
   }
@@ -5677,7 +5863,7 @@ async function serverAI(bot, idx, file) {
 /* ================= Seller cabinet on the server ================= */
 const SH_LABEL = () => ({ new: [L("Новый", "Yangi"), "sig"], assembling: [L("Собирается", "Yig‘ilmoqda"), "warn"], searching: [L("Ищем курьера", "Kuryer qidirilmoqda"), "acc"], to_store: [L("Курьер едет", "Kuryer kelmoqda"), "acc"], on_way: [L("В пути", "Yo‘lda"), "acc"], delivered: [L("Доставлен", "Yetkazildi"), "ok"], ready: [L("Готов к выдаче", "Topshirishga tayyor"), "acc"], picked: [L("Выдан", "Topshirildi"), "ok"], cancelled: [L("Отменён", "Bekor qilindi"), "mute"] });
 const SH_NEXT = (byStore = false) => ({ assembling: L("Начать сборку", "Yig‘ishni boshlash"), searching: L("Вызвать курьера", "Kuryer chaqirish"), ready: L("Готов к выдаче", "Topshirishga tayyor"), picked: L("Выдан покупателю", "Xaridorga berildi"), to_store: L("Курьер назначен", "Kuryer tayinlandi"), on_way: byStore ? L("Курьер выехал", "Kuryer yo‘lga chiqdi", "Courier has left") : L("Курьер забрал", "Kuryer oldi"), delivered: L("Доставлен", "Yetkazildi"), cancelled: L("Нет в наличии", "Mavjud emas") });
-const ST_STATUS = () => ({ pending: [L("На проверке", "Tekshiruvda"), "warn"], active: [L("Активен", "Faol"), "ok"], rejected: [L("Отклонён", "Rad etildi"), "sig"], blocked: [L("Заблокирован", "Bloklangan"), "sig"] });
+const ST_STATUS = () => ({ pending: [L("На проверке", "Tekshiruvda"), "warn"], meeting: [L("Встреча и договор", "Uchrashuv va shartnoma", "Meeting and contract"), "acc"], active: [L("Активен", "Faol"), "ok"], rejected: [L("Отклонён", "Rad etildi"), "sig"], blocked: [L("Заблокирован", "Bloklangan"), "sig"] });
 async function loadSeller() {
   try {
     sellerData = await api("GET", "/api/seller/summary");
@@ -5729,12 +5915,22 @@ function sellerPitchHTML() {
     <ol class="steps sel-steps">${steps.map(([t, d], i) => `<li class="done"><span class="d">${i + 1}</span><span><b>${t}</b><small style="color:var(--muted)">${d}</small></span></li>`).join("")}</ol>
     <p class="mu" style="margin:10px 0 0;font-size:13px">${L("Что нужно от магазина: отвечать на заказ в течение 20 минут в рабочее время и держать цены свежими — раз в неделю бот напомнит. Условия не меняются без вашего отдельного согласия.", "Do‘kondan nima kerak: ish vaqtida buyurtmaga 20 daqiqa ichida javob berish va narxlarni yangilab turish — haftada bir bot eslatadi. Shartlar sizning alohida roziligingizsiz o‘zgarmaydi.", "What the store does: answer an order within 20 minutes in working hours and keep prices fresh — the bot reminds once a week. The terms never change without your separate consent.")}</p></div>`;
 }
+const meetWhen = ms => new Date(ms).toLocaleString(LOCALE, { timeZone: "Asia/Tashkent", weekday: "short", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
 function storeBanner(s, demo) {
   const [lbl, cls] = ST_STATUS()[s.status] || ST_STATUS().pending;
-  const msg = s.status === "pending" ? L("Модератор Quriliş Go проверит данные магазина, обычно в течение дня. Добавляйте товары уже сейчас — они появятся в каталоге после одобрения.", "Quriliş Go moderatori do‘kon ma’lumotlarini odatda bir kun ichida tekshiradi. Mahsulotlarni hozirdan qo‘shing — tasdiqlangach katalogda chiqadi.")
-    : s.status === "active" ? L("Магазин виден покупателям в каталоге и на карте доставки.", "Do‘kon katalogda va yetkazish xaritasida xaridorlarga ko‘rinadi.")
+  if (s.status === "pending" || s.status === "meeting") { // a new store: application → check → meeting and contract → access
+    const meet = s.status === "meeting";
+    const steps = [[L("Анкета отправлена", "Anketa yuborildi", "Application sent"), "", "done"],
+      [L("Проверка анкеты", "Anketani tekshirish", "Application check"), meet ? "" : L("Модератор Quriliş Go проверит данные магазина и позвонит, чтобы договориться о встрече.", "Quriliş Go moderatori do‘kon ma’lumotlarini tekshiradi va uchrashuv kelishish uchun qo‘ng‘iroq qiladi.", "A Quriliş Go moderator checks the store's details and calls to arrange a meeting."), meet ? "done" : "cur"],
+      [L("Встреча и подписание договора", "Uchrashuv va shartnomani imzolash", "Meeting and signing the contract"), meet ? `${s.meet_at ? `<b>${esc(meetWhen(s.meet_at))}</b>` : ""}${s.meet_place ? ` · ${esc(s.meet_place)}` : ""}<br>${L("Договор подписываем лично. Подробности сообщим по телефону.", "Shartnomani shaxsan imzolaymiz. Tafsilotlarni telefonda aytamiz.", "We sign the contract in person. Details by phone.")}` : L("Договор подписываем лично, на встрече — без него доступ к продажам не открывается.", "Shartnoma uchrashuvda shaxsan imzolanadi — usiz savdoga ruxsat ochilmaydi.", "The contract is signed in person at the meeting — sales do not open without it."), meet ? "cur" : ""],
+      [L("Доступ открыт", "Kirish ochildi", "Access opens"), L("Магазин появится в каталоге, начнут приходить заказы.", "Do‘kon katalogda chiqadi, buyurtmalar kela boshlaydi.", "The store appears in the catalogue and orders start coming in."), ""]];
+    return `<div class="st-banner st-way"><div class="st-way-h"><span class="pill ${cls}">${lbl}</span><span>${L("Пока доступ закрыт, можно добавлять товары — они появятся в каталоге после подписания договора.", "Kirish yopiq ekan, mahsulot qo‘shish mumkin — ular shartnoma imzolangach katalogda chiqadi.", "While access is closed you can add goods — they appear in the catalogue after the contract is signed.")}</span></div>
+      <ol class="st-steps">${steps.map(([tt, d, c], n) => `<li class="${c}"><span class="d">${c === "done" ? ui("check", 13) : n + 1}</span><span><b>${tt}</b>${d ? `<small>${d}</small>` : ""}</span></li>`).join("")}</ol>
+      ${demo ? `<button class="lnk" type="button" data-act="store-approve-demo">${meet ? L("Демо: договор подписан — открыть доступ", "Demo: shartnoma imzolandi — kirishni ochish", "Demo: contract signed — open access") : L("Демо: модератор назначил встречу", "Demo: moderator uchrashuv belgiladi", "Demo: the moderator set a meeting")}</button>` : ""}</div>`;
+  }
+  const msg = s.status === "active" ? L("Магазин виден покупателям в каталоге и на карте доставки.", "Do‘kon katalogda va yetkazish xaritasida xaridorlarga ko‘rinadi.")
     : L("Магазин скрыт из каталога.", "Do‘kon katalogdan yashirilgan.") + (s.note ? " " + esc(s.note) : "");
-  return `<div class="st-banner ${s.status === "active" ? "ok" : ""}"><span class="pill ${cls}">${lbl}</span><span>${msg}${demo && s.status === "pending" ? ` <button class="lnk" type="button" data-act="store-approve-demo">${L("Демо: одобрить сейчас", "Demo: hozir tasdiqlash")}</button>` : ""}</span></div>`;
+  return `<div class="st-banner ${s.status === "active" ? "ok" : ""}"><span class="pill ${cls}">${lbl}</span><span>${msg}</span></div>`;
 }
 function storeCardHTML(s) {
   return `<div class="panel store-info"><div class="panel-h"><h2 class="h-m">${L("О магазине", "Do‘kon haqida")}</h2><button class="btn btn-line" type="button" data-act="store-edit">${L("Изменить", "O‘zgartirish")}</button></div>
@@ -5763,16 +5959,34 @@ document.addEventListener("click", async e => {
   try { await adminApi("PATCH", "/api/admin/masters/" + encodeURIComponent(id), { status: st }); toast(st === "active" ? L("Мастер одобрен и виден покупателям", "Usta tasdiqlandi va xaridorlarga ko‘rinadi") : L("Статус мастера изменён", "Usta holati o‘zgardi")); adminStores = null; adminMasters = null; renderMain(); }
   catch (er) { t.disabled = false; toast(apiErr(er)); }
 });
+/* a store that is not open yet: set the meeting (date, time, place), then record the signed contract number — that opens access.
+   A store that already has a contract on file (blocked earlier) comes back with one button. */
+let admWay = { meet: null, sign: null };
+function admStoreWay(s) {
+  const id = esc(s.id);
+  if (s.contract_no) return `<button class="btn btn-primary" type="button" data-adm="${id}|active">${L("Открыть доступ", "Kirishni ochish", "Open access")}</button><br><small class="mu">${L("Договор", "Shartnoma", "Contract")} № ${esc(s.contract_no)}</small><br>`;
+  const meetInfo = s.meet_at ? `<small class="mu">${ui("cal", 12)} ${esc(meetWhen(s.meet_at))}${s.meet_place ? " · " + esc(s.meet_place) : ""}</small><br>` : "";
+  if (admWay.meet === s.id) {
+    const d = s.meet_at ? new Date(s.meet_at + 5 * 3600_000).toISOString().slice(0, 16) : "";
+    return `<div class="adm-way"><label>${L("Дата и время (Ташкент)", "Sana va vaqt (Toshkent)", "Date and time (Tashkent)")}<input type="datetime-local" id="awAt${id}" value="${d}"></label><label>${L("Место", "Joy", "Place")}<input id="awPl${id}" maxlength="200" value="${esc(s.meet_place || "")}" placeholder="${L("Офис, адрес или магазин", "Ofis, manzil yoki do‘kon", "Office, address or the store")}"></label>
+      <div><button class="btn btn-primary" type="button" data-admmeetgo="${id}">${L("Назначить", "Belgilash", "Set")}</button> <button class="btn btn-line" type="button" data-admway="">${L("Отмена", "Bekor", "Cancel")}</button></div></div>`;
+  }
+  if (admWay.sign === s.id) return `<div class="adm-way">${meetInfo}<label>${L("Номер подписанного договора", "Imzolangan shartnoma raqami", "Signed contract number")}<input id="awNo${id}" maxlength="40" placeholder="QG-2026/001"></label>
+      <div><button class="btn btn-primary" type="button" data-admsigngo="${id}">${L("Договор подписан — открыть доступ", "Shartnoma imzolandi — kirishni ochish", "Contract signed — open access")}</button> <button class="btn btn-line" type="button" data-admway="">${L("Отмена", "Bekor", "Cancel")}</button></div></div>`;
+  return s.status === "meeting"
+    ? `${meetInfo}<button class="btn btn-primary" type="button" data-admway="sign|${id}">${ui("pen", 15)} ${L("Договор подписан", "Shartnoma imzolandi", "Contract signed")}</button> <button class="btn btn-line" type="button" data-admway="meet|${id}">${L("Перенести", "Ko‘chirish", "Move")}</button>`
+    : `<button class="btn btn-primary" type="button" data-admway="meet|${id}">${ui("cal", 15)} ${L("Назначить встречу", "Uchrashuv belgilash", "Set a meeting")}</button>`;
+}
 function adminHTML(topShown) {
   if (!user?.admin) return "";
   if (adminState.need) return adminGateHTML();
   if (!adminStores) { loadAdmin(); return ""; }
   if (user.owner && !adminFin && !adminState.finLoading) { adminState.finLoading = true; loadAdminFin().finally(() => { adminState.finLoading = false; }); }
-  const pend = adminStores.filter(s => s.status === "pending");
+  const pend = adminStores.filter(s => s.status === "pending" || s.status === "meeting");
   return `${topShown ? "" : adminSupportHTML() + adminModHTML()}<div class="panel" style="margin-top:12px"><div class="panel-h"><h2 class="h-m">${L("Модерация магазинов", "Do‘konlar moderatsiyasi")}</h2><span class="pill ${pend.length ? "warn" : "ok"}">${pend.length} ${L("ждут", "kutmoqda")}</span></div>
     <div class="tbl-wrap"><table><thead><tr><th>${L("Магазин", "Do‘kon")}</th><th>${L("Владелец", "Egasi")}</th><th>${L("Статус", "Holat")}</th><th></th></tr></thead><tbody>
     ${adminStores.slice(0, 40).map(s => { const [lb, c] = ST_STATUS()[s.status] || ["?", "mute"]; return `<tr><td><b>${esc(s.name)}</b><br><small style="color:var(--muted)">${dName(s.d)}, ${esc(s.addr)} · ${(s.cats || []).map(catName).join(", ")}</small><br><small>${esc(s.descr || "")}</small></td><td style="font-size:13px">${esc(s.owner_name || "—")}<br><span class="num">${esc(s.owner_phone ? "+" + s.owner_phone : "")}</span></td><td><span class="pill ${c}">${lb}</span>${s.status === "active" ? `<br><small style="color:${s.promo ? "var(--ok)" : "var(--muted)"}">${s.promo ? L("комиссия 0% до", "komissiya 0% gacha:", "0% commission until") + " " + new Date(s.free_until).toLocaleDateString(LOCALE) : L("комиссия", "komissiya", "commission") + " " + pct(feeInfo().ours)}</small>` : ""}</td>
-      <td style="white-space:nowrap">${s.status !== "active" ? `<button class="btn btn-primary" type="button" data-adm="${esc(s.id)}|active">${L("Одобрить", "Tasdiqlash")}</button>` : `<button class="btn btn-line" type="button" data-admf="${esc(s.id)}" title="${L("Ещё 3 месяца без комиссии Quriliş Go", "Yana 3 oy Quriliş Go komissiyasisiz", "Three more months without the Quriliş Go commission")}">0% +3 ${L("мес", "oy", "mo")}</button>`} ${s.status === "pending" ? `<button class="btn btn-line" type="button" data-adm="${esc(s.id)}|rejected">${L("Отклонить", "Rad etish")}</button>` : s.status === "active" ? `<button class="btn btn-line" type="button" data-adm="${esc(s.id)}|blocked">${L("Скрыть", "Yashirish")}</button>` : ""} <button class="btn btn-line" type="button" data-admv="${esc(s.id)}|${s.verified ? 0 : 1}">${s.verified ? "✓ " + L("Проверен", "Tekshirilgan") : L("Отметить проверенным", "Tekshirilgan deb belgilash")}</button></td></tr>`; }).join("")}
+      <td style="white-space:nowrap">${s.status !== "active" ? admStoreWay(s) : `<button class="btn btn-line" type="button" data-admf="${esc(s.id)}" title="${L("Ещё 3 месяца без комиссии Quriliş Go", "Yana 3 oy Quriliş Go komissiyasisiz", "Three more months without the Quriliş Go commission")}">0% +3 ${L("мес", "oy", "mo")}</button>`} ${["pending", "meeting"].includes(s.status) ? `<button class="btn btn-line" type="button" data-adm="${esc(s.id)}|rejected">${L("Отклонить", "Rad etish")}</button>` : s.status === "active" ? `<button class="btn btn-line" type="button" data-adm="${esc(s.id)}|blocked">${L("Скрыть", "Yashirish")}</button>` : ""} <button class="btn btn-line" type="button" data-admv="${esc(s.id)}|${s.verified ? 0 : 1}">${s.verified ? "✓ " + L("Проверен", "Tekshirilgan") : L("Отметить проверенным", "Tekshirilgan deb belgilash")}</button></td></tr>`; }).join("")}
     </tbody></table></div></div>${adminProblemsHTML()}${adminMastersHTML()}${user.owner ? adminFinanceHTML() : ""}`;
 }
 let sellerTab = LS.get("imorat.sellerTab", "");
@@ -5910,7 +6124,7 @@ function renderSellerApi() {
   m3dWatch(); cutWatch();
 }
 document.addEventListener("click", async e => {
-  const t = e.target.closest("[data-shipst],[data-sphoto],[data-adm]"); if (!t) return;
+  const t = e.target.closest("[data-shipst],[data-sphoto],[data-adm],[data-admway],[data-admmeetgo],[data-admsigngo]"); if (!t) return;
   const ds = t.dataset;
   if (ds.shipst) {
     const [id, st] = ds.shipst.split("|");
@@ -5923,6 +6137,15 @@ document.addEventListener("click", async e => {
     try { await api("PATCH", "/api/seller/shipments/" + id, note ? { status: st, note } : { status: st }); toast(st === "on_way" ? L("Покупателю сообщили, что курьер выехал", "Xaridorga kuryer yo‘lga chiqqani aytildi", "The buyer was told the courier has left") : st === "searching" ? L("Курьер вызван — заказ передан в Яндекс Доставку", "Kuryer chaqirildi — buyurtma Yandexga berildi") : L("Статус обновлён", "Holat yangilandi")); sellerData = null; renderSeller(); }
     catch (er) { t.disabled = false; toast(apiErr(er)); }
   } else if (ds.sphoto) { photoTarget = "api:" + ds.sphoto; $("#photoIn").click(); }
+  else if (ds.admway !== undefined) { const [k, id] = ds.admway.split("|"); admWay = { meet: k === "meet" ? id : null, sign: k === "sign" ? id : null }; renderMain(); setTimeout(() => document.getElementById((k === "meet" ? "awAt" : "awNo") + id)?.focus(), 30); }
+  else if (ds.admmeetgo || ds.admsigngo) {
+    const id = ds.admmeetgo || ds.admsigngo, body = {};
+    if (ds.admmeetgo) { const at = document.getElementById("awAt" + id)?.value, pl = (document.getElementById("awPl" + id)?.value || "").trim(); if (!at) return toast(L("Укажите дату и время встречи", "Uchrashuv sana va vaqtini kiriting", "Set the date and time")); body.status = "meeting"; body.meet_at = at + ":00+05:00"; body.meet_place = pl; }
+    else { const no = (document.getElementById("awNo" + id)?.value || "").trim(); if (!no) return toast(L("Впишите номер подписанного договора", "Imzolangan shartnoma raqamini yozing", "Enter the signed contract number")); body.status = "active"; body.contract_no = no; }
+    t.disabled = true;
+    try { await adminApi("PATCH", "/api/admin/stores/" + encodeURIComponent(id), body); toast(ds.admmeetgo ? L("Встреча назначена — продавцу сообщили", "Uchrashuv belgilandi — sotuvchiga xabar berildi", "Meeting set — the seller was told") : L("Договор записан, магазин открыт", "Shartnoma yozildi, do‘kon ochildi", "Contract recorded, the store is open")); admWay = { meet: null, sign: null }; adminStores = null; sellerData = null; renderMain(); syncCatalog(); }
+    catch (er) { t.disabled = false; toast(apiErr(er)); }
+  }
   else if (ds.adm) {
     const [id, st] = ds.adm.split("|"); t.disabled = true;
     try { await adminApi("PATCH", "/api/admin/stores/" + encodeURIComponent(id), { status: st }); toast(st === "active" ? L("Магазин одобрен и виден в каталоге", "Do‘kon tasdiqlandi va katalogda ko‘rinadi") : L("Статус магазина изменён", "Do‘kon holati o‘zgardi")); adminStores = null; sellerData = null; renderMain(); syncCatalog(); }
@@ -7224,6 +7447,7 @@ let photoTarget = null, newPhoto = "", newFrom = null, sellerAll = false, seller
 $("#photoIn").addEventListener("change", async e => {
   const fl = e.target.files?.[0]; e.target.value = ""; if (!fl) return;
   try {
+    if (photoTarget === "mwork") return addMasterWork(await resizeImg(fl, API ? 1280 : 640));
     const data = await resizeImg(fl, API && (photoTarget === "new" || String(photoTarget).startsWith("api:")) ? 1280 : 560);
     if (String(photoTarget).startsWith("api:")) { const pid = String(photoTarget).slice(4); try { await api("POST", `/api/seller/products/${pid}/photo`, await (await fetch(data)).blob()); toast(L("Фото товара обновлено на витрине", "Mahsulot rasmi vitrinada yangilandi")); sellerData = null; renderSeller(); syncCatalog(); } catch (e2) { toast(apiErr(e2)); } return; }
     if (photoTarget === "new") { newPhoto = data; newFrom = null; if ($("#aLib")) $("#aLib").hidden = true; const pv = $("#aPhotoPv"); if (pv) pv.innerHTML = `<img src="${data}" alt="">${L("Фото добавлено", "Rasm qo‘shildi")}`; return; }
@@ -7928,7 +8152,7 @@ function masterProfileHTML(m) {
       <div class="mc-top"><span class="mav big" style="--h:${mHue(m.id)}">${esc(mInitials(mName(m)))}</span><div><h1 class="h-l" style="margin:0">${esc(mName(m))}</h1><div class="mc-rate">${m.stars ? `<span class="s">${ui("star", 14)}${Number(m.stars).toFixed(1).replace(".", DEC)}</span> ${m.reviews} ${L(plural(m.reviews, ["отзыв", "отзыва", "отзывов"]), "sharh", m.reviews === 1 ? "review" : "reviews")}` : L("Новый мастер — пока без отзывов", "Yangi usta — hali sharh yo‘q")}${m.done ? ` · ${m.done} ${L("выполненных работ", "bajarilgan ish")}` : ""}</div></div></div>
       ${m.demo ? `<div class="note">${L("Это пример анкеты, чтобы показать, как будет работать раздел. Настоящие мастера появятся после запуска.", "Bu bo‘lim qanday ishlashini ko‘rsatish uchun namuna anketa. Haqiqiy ustalar ishga tushgandan keyin paydo bo‘ladi.")}</div>` : ""}
       <div class="mc-specs">${(m.specs || []).map(s => `<span class="pill mute">${MSPECS().find(x => x[0] === s)?.[2] || ""} ${esc(mSpecName(s))}</span>`).join("")}</div>
-      <p>${esc(mAbout(m))}</p>
+      <p>${esc(mAbout(m))}</p>${worksHTML(m.works)}
       <dl class="specs"><dt>${L("Опыт", "Tajriba")}</dt><dd>${m.exp} ${L(plural(m.exp, ["год", "года", "лет"]), "yil", m.exp === 1 ? "year" : "years")}</dd><dt>${L("Цена", "Narx")}</dt><dd>${m.price ? `${L("от", "")} ${fmt(m.price)}${L("", "dan")} ${U[m.price_unit] || ""}` : L("по договорённости", "kelishiladi")}</dd><dt>${L("Районы", "Tumanlar")}</dt><dd>${(m.districts || []).map(dName).join(", ")}</dd></dl>
       <h2 class="h-m">${L("Отзывы", "Sharhlar")}</h2>
       ${revs.length ? revs.map(r => `<div class="mrev"><b>${esc(r.name || L("Покупатель", "Xaridor"))}</b> <span class="s">${"★".repeat(r.stars)}${"☆".repeat(5 - r.stars)}</span>${r.text ? `<p>${esc(r.text)}</p>` : ""}</div>`).join("") : `<p class="mu">${L("Отзывов пока нет.", "Hozircha sharh yo‘q.")}</p>`}
@@ -7957,6 +8181,29 @@ function myRequestsHTML() {
     <div class="mreq-a">${["new", "accepted"].includes(q.status) ? `<button class="btn btn-line" type="button" data-mreq="${q.id}|cancelled">${L("Отменить", "Bekor qilish")}</button>` : ""}
     ${q.status === "done" && !q.stars ? `<span class="mstars" role="group" aria-label="${L("Оценка", "Baho")}">${[1, 2, 3, 4, 5].map(n => `<button type="button" data-mrate="${q.id}|${n}" aria-label="${n}">★</button>`).join("")}</span>` : q.stars ? `<span class="s">${"★".repeat(q.stars)}</span>` : ""}</div></div>`).join("")}</div>`;
 }
+/* photos of finished jobs: the free showcase of a master. Up to 12; on the server a new photo goes back to the moderator */
+const MW_MAX = 12;
+async function addMasterWork(dataUrl) {
+  if (API) {
+    try { const r = await api("POST", "/api/masters/me/works", await (await fetch(dataUrl)).blob()); mApi.me = { ...(mApi.me || {}), master: r.master }; toast(r.master.status === "pending" ? L("Фото добавлено — покажем его клиентам после проверки", "Rasm qo‘shildi — tekshiruvdan keyin mijozlarga ko‘rsatamiz", "Photo added — clients see it after a check") : L("Фото добавлено", "Rasm qo‘shildi", "Photo added")); }
+    catch (e) { toast(e.code === "too_many" ? L("Не больше 12 фото", "12 tadan ko‘p emas", "Up to 12 photos") : apiErr(e)); }
+  } else {
+    const w = [...(myMasterDemo?.works || [])]; if (w.length >= MW_MAX) return toast(L("Не больше 12 фото", "12 tadan ko‘p emas", "Up to 12 photos"));
+    myMasterDemo = { ...myMasterDemo, works: [...w, dataUrl] };
+    if (!LS.set("imorat.master", myMasterDemo)) { myMasterDemo = { ...myMasterDemo, works: w }; return toast(L("Не хватает места в браузере для фото", "Brauzerda rasm uchun joy yetmaydi")); }
+    toast(L("Фото добавлено", "Rasm qo‘shildi", "Photo added"));
+  }
+  renderMasters();
+}
+async function delMasterWork(n, btn) {
+  if (API) { btn.disabled = true; try { const r = await api("DELETE", "/api/masters/me/works/" + n); mApi.me = { ...(mApi.me || {}), master: r.master }; } catch (e) { btn.disabled = false; return toast(apiErr(e)); } }
+  else { myMasterDemo = { ...myMasterDemo, works: (myMasterDemo?.works || []).filter((_, i) => i !== n) }; LS.set("imorat.master", myMasterDemo); }
+  renderMasters();
+}
+const worksHTML = (works, own) => !works?.length && !own ? "" : `<div class="mworks"><div class="panel-h"><h2 class="h-m">${own ? L("Мои работы", "Ishlarim", "My work") : L("Работы мастера", "Usta ishlari", "The master's work")}</h2>${own ? `<span class="mu" style="font-size:13px">${works.length} / ${MW_MAX}</span>` : ""}</div>
+  ${own ? `<p class="mu" style="margin:0;font-size:13px">${L("Бесплатно: фото готовых работ видят клиенты в вашей анкете. Новое фото показываем после проверки модератором.", "Bepul: tayyor ishlar rasmlarini mijozlar anketangizda ko‘radi. Yangi rasm moderator tekshiruvidan keyin ko‘rsatiladi.", "Free: clients see photos of finished jobs in your profile. A new photo shows after a moderator's check.")}</p>` : ""}
+  <div class="mw-grid">${(works || []).map((src, i) => `<figure class="mw"><img src="${esc(mediaSrc(src))}" alt="${L("Работа мастера", "Usta ishi", "Work")} ${i + 1}" loading="lazy">${own ? `<button class="mw-del" type="button" data-mwdel="${i}" aria-label="${L("Удалить фото", "Rasmni o‘chirish", "Delete the photo")} ${i + 1}">${ui("trash", 15)}</button>` : ""}</figure>`).join("")}
+  ${own && (works || []).length < MW_MAX ? `<button class="mw mw-add" type="button" data-mwadd>${ui("camera", 22)}<span>${L("Добавить фото", "Rasm qo‘shish", "Add a photo")}</span></button>` : ""}</div></div>`;
 function masterCabinetHTML() {
   const me = API ? mApi.me?.master : myMasterDemo, reqs = API ? mApi.me?.requests || [] : [];
   if (!me || mf.edit) return masterFormHTML(me);
@@ -7965,6 +8212,7 @@ function masterCabinetHTML() {
     ${me.note ? `<p class="note" style="margin:0">${esc(me.note)}</p>` : ""}
     <div>${(me.specs || []).map(s => `<span class="pill mute">${esc(mSpecName(s))}</span>`).join(" ")}</div>
     <p style="margin:0">${esc(me.about || "")}</p>
+    ${worksHTML(me.works || [], true)}
     <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-line" type="button" data-medit>${L("Изменить анкету", "Anketani o‘zgartirish")}</button>${me.id ? `<button class="btn btn-line" type="button" data-mopen="${esc(me.id)}">${L("Как видят клиенты", "Mijozlar qanday ko‘radi")}</button>` : ""}</div></div>
     <div class="panel" style="margin-top:12px"><div class="panel-h"><h2 class="h-m">${L("Заявки от клиентов", "Mijozlardan so‘rovlar")}</h2>${API ? `<button class="btn btn-line" type="button" data-mreload>${ui("repeat", 16)} ${L("Обновить", "Yangilash")}</button>` : ""}</div>
     ${reqs.length ? reqs.map(q => `<div class="mreq"><div class="mreq-h"><b>${esc(q.name || L("Клиент", "Mijoz"))}</b>${mStatusPill(q.status)}</div><p>${esc(q.text)}</p><small class="mu">${esc(q.when)}${q.district ? ` · ${dName(q.district)}${q.street ? ", " + esc(q.street) : ""}` : ""} · <a href="tel:+${esc(String(q.phone).replace(/\D/g, ""))}">+${esc(String(q.phone).replace(/\D/g, ""))}</a></small>
@@ -8041,8 +8289,10 @@ document.addEventListener("submit", async e => {
   }
 });
 document.addEventListener("click", async e => {
-  const t = e.target.closest("[data-mopen],[data-mback],[data-mtab],[data-mspec],[data-mwhen],[data-mfspec],[data-mfdist],[data-medit],[data-mcancel],[data-mreq],[data-mrate],[data-mreload],[data-mlogin],[data-mfind]"); if (!t) return;
+  const t = e.target.closest("[data-mopen],[data-mback],[data-mtab],[data-mspec],[data-mwhen],[data-mfspec],[data-mfdist],[data-medit],[data-mcancel],[data-mreq],[data-mrate],[data-mreload],[data-mlogin],[data-mfind],[data-mwadd],[data-mwdel]"); if (!t) return;
   const s = t.dataset;
+  if (s.mwadd != null) { photoTarget = "mwork"; return $("#photoIn").click(); }
+  if (s.mwdel != null) return delMasterWork(+s.mwdel, t);
   if (s.mfind != null) { mf = { ...mf, spec: s.mfind, sel: null, tab: "find" }; return go("masters"); }
   if (s.mopen && route.view !== "masters") { mf = { ...mf, sel: s.mopen, form: null, tab: "find" }; return go("masters"); }
   if (route.view !== "masters") return;
@@ -9568,7 +9818,7 @@ document.addEventListener("click", e => {
     navigator.clipboard?.writeText(txt).then(() => toast(L("Расчёт скопирован — можно отправить мастеру", "Hisob nusxalandi — ustaga yuborish mumkin")), () => toast(L("Не удалось скопировать, выделите текст вручную", "Nusxalab bo‘lmadi, matnni qo‘lda belgilang"))) ?? toast(L("Копирование недоступно в этом окне", "Bu oynada nusxalash mavjud emas")); return; }
   if (ds.calcproj) { const key = ds.calcproj, c = CALCS.find(x => x.id === key.split(":")[1]), items = calcOut[key] || []; if (!items.length) return toast(L("Нечего сохранять", "Saqlash uchun hech narsa yo‘q")); const pc = {}; items.forEach(([p, q]) => { pc[p.id + "|" + bestOffer(p).store] = q; }); const nm = L(c.ru, c.uz) + " · " + new Date().toLocaleDateString(LOCALE); projects.unshift({ id: "pr" + Date.now().toString(36), name: nm, cart: pc, t: Date.now() }); LS.set("imorat.projects", projects); return toast(L(`Сохранено в «Проекты ремонта»`, `«Ta’mir loyihalari»ga saqlandi`, `Saved to “Renovation projects”`)); }
   if (ds.oauth) return startOAuth(ds.oauth);
-  if (ds.authstep) { auth.step = ds.authstep; auth.err = ""; return renderAuth(); }
+  if (ds.authstep) { const s = ds.authstep; auth.step = s; auth.err = ""; if (s === "reg" || s === "regphone") auth.flow = "reg"; else if (s === "sms" || s === "forgot") auth.flow = s; else if (s === "start") auth.flow = "login"; return renderAuth(); }
   if (ds.cmp) { toggleCompare(+ds.cmp); return openProduct(+ds.cmp); }
   if (ds.addo) { const [id, s] = ds.addo.split("|"); addToCart(+id, s); return openProduct(+id); }
   if (ds.fav) return toggleFav(+ds.fav);
@@ -9607,7 +9857,10 @@ document.addEventListener("click", e => {
     case "login": return openAuth();
     case "store-reg": return openStoreReg();
     case "store-edit": return openAuth("seller-edit", "store");
-    case "store-approve-demo": if (myStore) { myStore.status = "active"; LS.set("imorat.myStore", myStore); toast(L("Демо: магазин одобрен", "Demo: do‘kon tasdiqlandi")); } return renderSeller();
+    case "store-approve-demo": if (myStore) { // demo: the moderator's two steps — a meeting, then the signed contract
+      if (myStore.status === "meeting") { myStore.status = "active"; myStore.contract_no = "DEMO-1"; myStore.contract_at = Date.now(); toast(L("Демо: договор подписан, доступ открыт", "Demo: shartnoma imzolandi, kirish ochildi", "Demo: contract signed, access open")); }
+      else { const d = new Date(); d.setDate(d.getDate() + 1); d.setHours(11, 0, 0, 0); myStore.status = "meeting"; myStore.meet_at = d.getTime(); myStore.meet_place = L("Офис Quriliş Go (демо)", "Quriliş Go ofisi (demo)", "Quriliş Go office (demo)"); toast(L("Демо: встреча назначена", "Demo: uchrashuv belgilandi", "Demo: meeting set")); }
+      LS.set("imorat.myStore", myStore); STORE[myStore.id] = myStore; } return renderSeller();
     case "seller-reload": sellerData = null; adminStores = null; adminFin = null; return renderMain();
     case "install": if (widOpen) closeWidgets(); return installApp();
     case "fx-toggle": { const on = !motionOK(); setLook(on ? "on" : "off"); toast(on ? L("✨ Яркий режим: подсветка и анимации", "✨ Yorqin rejim: yoritish va animatsiyalar") : L("Простой режим: без анимаций", "Oddiy rejim: animatsiyalarsiz")); return; }
@@ -9633,6 +9886,7 @@ document.addEventListener("click", e => {
     case "stmt-csv": return statementCSV();
     case "api-retry": { const b = e.target.closest("button"); if (b) { b.disabled = true; b.textContent = L("Проверяем…", "Tekshirilmoqda…", "Checking…"); } return apiBoot().then(() => { if (apiState !== "ok") renderApiBar(); }); }
     case "auth-resend": return sendCode();
+    case "auth-skip-pw": return finishAuth(auth.pending || user, apiToken || undefined); // set a password later (profile → «Пароль»)
     case "more": { // append the next 36 cards; the ones already shown stay as they are (no re-render, no blink, no jump)
       const grid = $("#grid"), list = filtered(), from = grid ? grid.querySelectorAll(".card").length : 0;
       shownN += 36;

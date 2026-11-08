@@ -198,17 +198,17 @@ test("store registration → admin approval → products → order to the store"
   const up = await fetch(`${base}/api/seller/products/${np.data.product.id}/photo`, { method: "POST", headers: { authorization: "Bearer " + seller, "content-type": "image/png" }, body: png });
   const upj = await up.json(); assert.equal(up.status, 200, JSON.stringify(upj));
   assert.equal((await fetch(base + upj.img)).status, 200);
-  const notAdmin = await call("PATCH", `/api/admin/stores/${sid}`, { status: "active" }, seller);
+  const notAdmin = await call("PATCH", `/api/admin/stores/${sid}`, { status: "active", contract_no: "T-1" }, seller);
   assert.equal(notAdmin.status, 403);
   const adminRaw = (await login("901111111")).data.token;
-  assert.equal((await call("PATCH", `/api/admin/stores/${sid}`, { status: "active" }, adminRaw)).data.error, "mfa_setup_required");
+  assert.equal((await call("PATCH", `/api/admin/stores/${sid}`, { status: "active", contract_no: "T-1" }, adminRaw)).data.error, "mfa_setup_required");
   const setup = await call("POST", "/api/admin/mfa/setup", null, adminRaw);
   assert.match(setup.data.url, /^otpauth:\/\/totp\//);
   assert.equal((await call("POST", "/api/admin/mfa/verify", { code: "000000" }, adminRaw)).data.error, "mfa_wrong");
   const admin = (await call("POST", "/api/admin/mfa/verify", { code: totp(setup.data.secret) }, adminRaw)).data.token;
   globalThis.ADMIN = admin;
-  assert.equal((await call("PATCH", `/api/admin/stores/${sid}`, { status: "active" }, adminRaw)).data.error, "mfa_required");
-  assert.equal((await call("PATCH", `/api/admin/stores/${sid}`, { status: "active" }, admin)).status, 200);
+  assert.equal((await call("PATCH", `/api/admin/stores/${sid}`, { status: "active", contract_no: "T-1" }, adminRaw)).data.error, "mfa_required");
+  assert.equal((await call("PATCH", `/api/admin/stores/${sid}`, { status: "active", contract_no: "T-1" }, admin)).status, 200);
   const cat = (await call("GET", "/api/catalog")).data;
   assert.ok(cat.stores.some(s => s.id === sid));
   assert.ok(cat.products.some(p => p.id === np.data.product.id));
@@ -269,7 +269,7 @@ test("Bulky goods: the vehicle follows the longest item, not only the weight; se
   // a seller's own product with its package size in centimetres
   const seller = (await login("993330002")).data.token;
   const st = await call("POST", "/api/seller/store", { name: "Uzun Mollar", descr: "Магазин длинных товаров для проверки габаритов", cats: ["build"], phone: "712003300", addr: "ул. Габаритная, 2", hours: "09:00–18:00", district: "chil" }, seller);
-  assert.equal((await call("PATCH", `/api/admin/stores/${st.data.store.id}`, { status: "active" }, globalThis.ADMIN)).status, 200);
+  assert.equal((await call("PATCH", `/api/admin/stores/${st.data.store.id}`, { status: "active", contract_no: "T-1" }, globalThis.ADMIN)).status, 200);
   const np = await call("POST", "/api/seller/products", { ru: "Плинтус МДФ 2,4 м", cat: "build", sub: "wood", unit: "pcs", price: 45000, stock: 20, kg: 0.8, dims_cm: [240, 8, 2] }, seller);
   assert.equal(np.status, 200, JSON.stringify(np.data));
   const own = (await call("GET", "/api/catalog")).data.products.find(p => p.id === np.data.product.id); assert.deepEqual(own.dims, [2.4, 0.08, 0.02]);
@@ -286,7 +286,7 @@ test("Telegram: link seller, order arrives with buttons, accept from Telegram", 
   const st = await call("POST", "/api/seller/store", { name: "Tez Qurilish", descr: "Сухие смеси и инструмент рядом с метро", cats: ["build"], phone: "712223344", addr: "ул. Мукими, 7", hours: "00:00–00:00", district: "yunus" }, seller);
   assert.equal(st.status, 200, JSON.stringify(st.data));
   const sid = st.data.store.id;
-  await call("PATCH", `/api/admin/stores/${sid}`, { status: "active" }, globalThis.ADMIN);
+  await call("PATCH", `/api/admin/stores/${sid}`, { status: "active", contract_no: "T-1" }, globalThis.ADMIN);
   await call("POST", "/api/seller/offers", { product_id: 2, price: 57000, stock: 50 }, seller);
   const link = await call("POST", "/api/me/telegram", null, seller);
   assert.match(link.data.url, /^https:\/\/t\.me\/imorat_test_bot\?start=[0-9a-f]+$/);
@@ -335,7 +335,7 @@ test("Seller deadlines: reminder, SMS, auto-cancel restores stock and lowers rel
   const st = await call("POST", "/api/seller/store", { name: "Sekin Market", descr: "Магазин, который забывает про заказы", cats: ["build"], phone: "712220000", addr: "ул. Тест, 1", hours: "00:00–00:00", district: "yunus" }, seller);
   assert.equal(st.status, 200, JSON.stringify(st.data));
   const sid = st.data.store.id;
-  await call("PATCH", `/api/admin/stores/${sid}`, { status: "active" }, globalThis.ADMIN);
+  await call("PATCH", `/api/admin/stores/${sid}`, { status: "active", contract_no: "T-1" }, globalThis.ADMIN);
   await call("POST", "/api/seller/offers", { product_id: 3, price: 60000, stock: 10 }, seller);
   const buyer = (await login("990002222")).data.token;
   const o = await call("POST", "/api/orders", { lines: [{ id: 3, store: sid, q: 4 }], form: { name: "Тест", phone: "998990002222", mode: "pickup", pay: "store" } }, buyer);
@@ -467,7 +467,7 @@ test("Bonus points: referral code, welcome after the first delivery, capped cash
   const seller = (await login("996660011")).data.token;
   const st = await call("POST", "/api/seller/store", { name: "Bonus Qurilish", descr: "Магазин для проверки бонусов и кешбэка", cats: ["build"], phone: "712001122", addr: "ул. Бонусная, 3", hours: "00:00–00:00", district: "yunus" }, seller);
   const sid = st.data.store.id;
-  await call("PATCH", `/api/admin/stores/${sid}`, { status: "active" }, globalThis.ADMIN);
+  await call("PATCH", `/api/admin/stores/${sid}`, { status: "active", contract_no: "T-1" }, globalThis.ADMIN);
   await call("POST", "/api/seller/offers", { product_id: 1, price: 59000, stock: 500 }, seller);
   const a = (await login("996660022")).data.token, b = (await login("996660033")).data.token;
   const ab = (await call("GET", "/api/me/bonus", null, a)).data;
@@ -585,7 +585,7 @@ test("Seller statistics: anonymous views and cart adds, orders, price position",
   const seller = (await login("997770011")).data.token;
   const st = await call("POST", "/api/seller/store", { name: "Stat Market", descr: "Магазин для проверки статистики продавца", cats: ["build"], phone: "712009988", addr: "ул. Статистики, 9", hours: "00:00–00:00", district: "chil" }, seller);
   const sid = st.data.store.id;
-  await call("PATCH", `/api/admin/stores/${sid}`, { status: "active" }, globalThis.ADMIN);
+  await call("PATCH", `/api/admin/stores/${sid}`, { status: "active", contract_no: "T-1" }, globalThis.ADMIN);
   await call("POST", "/api/seller/offers", { product_id: 2, price: 70000, stock: 50 }, seller); // pricier than the market
   await call("POST", "/api/seller/offers", { product_id: 4, price: 30000, stock: 50 }, seller); // cheapest
   const ev = await call("POST", "/api/events", { events: [{ t: "view", id: 2 }, { t: "view", id: 2 }, { t: "view", id: 4 }, { t: "cart", id: 2, store: sid }, { t: "cart", id: 2, store: "usta" }, { t: "nope", id: 2 }, { t: "view", id: 99999999 }] });
@@ -609,7 +609,7 @@ test("Telegram channel: new store post, product of the day with photo, new produ
   // a seller drops a price and adds a product → next day both are posted
   const seller = (await login("995550011")).data.token;
   const st = await call("POST", "/api/seller/store", { name: "Arzon Qurilish", descr: "Магазин для проверки канала Telegram", cats: ["build"], phone: "712005544", addr: "ул. Канальная, 1", hours: "00:00–00:00", district: "chil" }, seller);
-  await call("PATCH", `/api/admin/stores/${st.data.store.id}`, { status: "active" }, globalThis.ADMIN);
+  await call("PATCH", `/api/admin/stores/${st.data.store.id}`, { status: "active", contract_no: "T-1" }, globalThis.ADMIN);
   await call("POST", "/api/seller/offers", { product_id: 3, price: 40000, stock: 10 }, seller);
   await call("POST", "/api/seller/products", { ru: "Клей для газоблока Arzon, 25 кг", cat: "build", sub: "dry", unit: "bag25", price: 39000, stock: 20, kg: 25 }, seller);
   const kinds = await ch.daily(Date.now() + 86400000, true);
@@ -627,7 +627,7 @@ test("Order problems: buyer reports with a photo, store answers, moderator resol
   const seller = (await login("993330011")).data.token;
   const st = await call("POST", "/api/seller/store", { name: "Shikoyat Test", descr: "Магазин для проверки жалоб покупателей", cats: ["build"], phone: "712003300", addr: "ул. Жалоб, 2", hours: "00:00–00:00", district: "chil" }, seller);
   const sid = st.data.store.id;
-  await call("PATCH", `/api/admin/stores/${sid}`, { status: "active" }, globalThis.ADMIN);
+  await call("PATCH", `/api/admin/stores/${sid}`, { status: "active", contract_no: "T-1" }, globalThis.ADMIN);
   await call("POST", "/api/seller/offers", { product_id: 5, price: 1300, stock: 1000 }, seller);
   const buyer = (await login("993330022")).data.token, other = (await login("993330033")).data.token;
   const o = await call("POST", "/api/orders", { lines: [{ id: 5, store: sid, q: 100 }], form: { name: "Азиз", phone: "998993330022", mode: "pickup", pay: "store" } }, buyer);
@@ -658,7 +658,7 @@ test("Questions to a store, answers, public FAQ; verified badge", async () => {
   const st = await call("POST", "/api/seller/store", { name: "Savol Market", descr: "Магазин для проверки вопросов покупателей", cats: ["paint"], phone: "712002200", telegram: "@savolmarket", addr: "ул. Вопросов, 4", hours: "00:00–00:00", district: "yakka" }, seller);
   const sid = st.data.store.id;
   await call("POST", `/api/stores/${sid}/questions`, { text: "Есть ли краска?" }, (await login("992220022")).data.token).then(r => assert.equal(r.status, 404, "pending store"));
-  await call("PATCH", `/api/admin/stores/${sid}`, { status: "active", verified: true }, globalThis.ADMIN);
+  await call("PATCH", `/api/admin/stores/${sid}`, { status: "active", verified: true, contract_no: "T-1" }, globalThis.ADMIN);
   const cat = (await call("GET", "/api/catalog")).data.stores.find(s => s.id === sid);
   assert.equal(cat.verified, true); assert.match(cat.phone, /712002200$/); assert.equal(cat.telegram, "savolmarket");
   await call("POST", "/api/seller/offers", { product_id: 7, price: 80000, stock: 5 }, seller);
@@ -679,7 +679,7 @@ test("Back in stock alert and product reviews with a photo", async () => {
   const seller = (await login("991110011")).data.token;
   const st = await call("POST", "/api/seller/store", { name: "Nalichie Test", descr: "Магазин для проверки наличия и отзывов", cats: ["tools"], phone: "712001100", addr: "ул. Наличия, 1", hours: "00:00–00:00", district: "mirob" }, seller);
   const sid = st.data.store.id;
-  await call("PATCH", `/api/admin/stores/${sid}`, { status: "active" }, globalThis.ADMIN);
+  await call("PATCH", `/api/admin/stores/${sid}`, { status: "active", contract_no: "T-1" }, globalThis.ADMIN);
   const np = await call("POST", "/api/seller/products", { ru: "Уровень строительный 120 см", cat: "tools", sub: "measure", unit: "pcs", price: 150000, stock: 0, kg: 1 }, seller);
   assert.equal(np.status, 200, JSON.stringify(np.data)); const pid = np.data.product.id;
   const buyer = (await login("991110022")).data.token;
@@ -839,7 +839,7 @@ test("Card payment: Payme and Click callbacks, store sees the order only after t
   const seller = (await login("998880011")).data.token;
   const st = await call("POST", "/api/seller/store", { name: "Karta Market", descr: "Магазин для проверки онлайн-оплаты картой", cats: ["build"], phone: "712004455", addr: "ул. Картовая, 7", hours: "00:00–00:00", district: "yunus" }, seller);
   assert.equal(st.status, 200, JSON.stringify(st.data)); const sid = st.data.store.id;
-  await call("PATCH", `/api/admin/stores/${sid}`, { status: "active" }, globalThis.ADMIN);
+  await call("PATCH", `/api/admin/stores/${sid}`, { status: "active", contract_no: "T-1" }, globalThis.ADMIN);
   await call("POST", "/api/seller/offers", { product_id: 1, price: 60000, stock: 20 }, seller);
   const cfgR = (await call("GET", "/api/config")).data;
   assert.deepEqual(cfgR.payments, ["payme", "click"], "both providers offered once their keys are set");
@@ -929,7 +929,7 @@ test("Card payment: Payme and Click callbacks, store sees the order only after t
 
 test("Finance with card payments: money held once, a partner's share survives another store's cancellation, admin can mark an order paid", async () => {
   const sellerA = (await login("998880033")).data.token, sellerB = (await login("998880044")).data.token;
-  const mk = async (tok, name) => { const r = await call("POST", "/api/seller/store", { name, descr: "Магазин для проверки финансов по картам", cats: ["build"], phone: "712004466", addr: "ул. Финансовая, 1", hours: "00:00–00:00", district: "chil" }, tok); assert.equal(r.status, 200, JSON.stringify(r.data)); await call("PATCH", `/api/admin/stores/${r.data.store.id}`, { status: "active" }, globalThis.ADMIN); return r.data.store.id; };
+  const mk = async (tok, name) => { const r = await call("POST", "/api/seller/store", { name, descr: "Магазин для проверки финансов по картам", cats: ["build"], phone: "712004466", addr: "ул. Финансовая, 1", hours: "00:00–00:00", district: "chil" }, tok); assert.equal(r.status, 200, JSON.stringify(r.data)); await call("PATCH", `/api/admin/stores/${r.data.store.id}`, { status: "active", contract_no: "T-1" }, globalThis.ADMIN); return r.data.store.id; };
   const A = await mk(sellerA, "Fin A"), B = await mk(sellerB, "Fin B");
   await call("POST", "/api/seller/offers", { product_id: 1, price: 100000, stock: 50 }, sellerA);
   await call("POST", "/api/seller/offers", { product_id: 2, price: 100000, stock: 50 }, sellerB);
@@ -1036,7 +1036,7 @@ test("Finance with card payments: money held once, a partner's share survives an
 
 test("Guard rails: admin shipment moves, partial cancellation refunds points, competitor products, paused masters, disputes, odd JSON", async () => {
   const seller = (await login("998880066")).data.token, rival = (await login("998880077")).data.token;
-  const mk = async (tok, name) => { const r = await call("POST", "/api/seller/store", { name, descr: "Магазин для проверки ограничений сервера", cats: ["build"], phone: "712004477", addr: "ул. Проверочная, 2", hours: "00:00–00:00", district: "chil" }, tok); assert.equal(r.status, 200, JSON.stringify(r.data)); await call("PATCH", `/api/admin/stores/${r.data.store.id}`, { status: "active" }, globalThis.ADMIN); return r.data.store.id; };
+  const mk = async (tok, name) => { const r = await call("POST", "/api/seller/store", { name, descr: "Магазин для проверки ограничений сервера", cats: ["build"], phone: "712004477", addr: "ул. Проверочная, 2", hours: "00:00–00:00", district: "chil" }, tok); assert.equal(r.status, 200, JSON.stringify(r.data)); await call("PATCH", `/api/admin/stores/${r.data.store.id}`, { status: "active", contract_no: "T-1" }, globalThis.ADMIN); return r.data.store.id; };
   const A = await mk(seller, "Guard A"), B = await mk(rival, "Guard B");
   await call("POST", "/api/seller/offers", { product_id: 1, price: 100000, stock: 50 }, seller);
   await call("POST", "/api/seller/offers", { product_id: 2, price: 100000, stock: 50 }, rival);
@@ -1650,7 +1650,7 @@ test("Moderation: a store's new product and a review text wait for the team; rej
     const seller = (await login("997770001")).data.token;
     const st = await call("POST", "/api/seller/store", { name: "Moder Test", descr: "Магазин для проверки модерации товаров", cats: ["build"], phone: "71 200 30 41", addr: "ул. Тестовая, 1", district: "chil" }, seller);
     assert.equal(st.status, 200, JSON.stringify(st.data));
-    assert.equal((await call("PATCH", `/api/admin/stores/${st.data.store.id}`, { status: "active" }, globalThis.ADMIN)).status, 200);
+    assert.equal((await call("PATCH", `/api/admin/stores/${st.data.store.id}`, { status: "active", contract_no: "T-1" }, globalThis.ADMIN)).status, 200);
     const np = await call("POST", "/api/seller/products", { ru: "Клей плиточный Moder, 25 кг", cat: "build", sub: "dry", unit: "bag50", price: 41000, stock: 30, kg: 25 }, seller);
     assert.equal(np.status, 200); assert.equal(np.data.product.review, "pending");
     const pid = np.data.product.id;
@@ -1685,7 +1685,7 @@ test("AI 3D model from one photo: our own worker pulls jobs, the GLB is checked,
   try {
     const seller = (await login("997770031")).data.token;
     const st = await call("POST", "/api/seller/store", { name: "3D Test", descr: "Магазин для проверки 3D-моделей товаров", cats: ["build"], phone: "71 200 30 77", addr: "ул. Объёмная, 3", district: "chil" }, seller);
-    assert.equal((await call("PATCH", `/api/admin/stores/${st.data.store.id}`, { status: "active" }, globalThis.ADMIN)).status, 200);
+    assert.equal((await call("PATCH", `/api/admin/stores/${st.data.store.id}`, { status: "active", contract_no: "T-1" }, globalThis.ADMIN)).status, 200);
     const pid = (await call("POST", "/api/seller/products", { ru: "Цемент 3D-тест, 50 кг", cat: "build", sub: "dry", unit: "bag50", price: 60000, stock: 10, kg: 50 }, seller)).data.product.id;
     const png = pngRGBA(96, 96, (x, y) => [200, 180 + (x % 30), 140, 255]);
     const photo = () => fetch(`${base}/api/seller/products/${pid}/photo`, { method: "POST", headers: { authorization: "Bearer " + seller, "content-type": "image/png" }, body: png }).then(r => r.json());
@@ -1731,7 +1731,7 @@ test("AI 3D model from one photo: our own worker pulls jobs, the GLB is checked,
     assert.equal((await call("POST", `/api/seller/products/${pid}/model3d/publish`, { publish: false }, other)).status, 403);
     // the look library: another store puts up the same product at once — copies of the photo and the model, no new job
     const st2 = await call("POST", "/api/seller/store", { name: "3D Copy", descr: "Второй магазин для библиотеки 3D-моделей", cats: ["build"], phone: "71 200 30 78", addr: "ул. Объёмная, 5", district: "chil" }, other);
-    assert.equal((await call("PATCH", `/api/admin/stores/${st2.data.store.id}`, { status: "active" }, globalThis.ADMIN)).status, 200);
+    assert.equal((await call("PATCH", `/api/admin/stores/${st2.data.store.id}`, { status: "active", contract_no: "T-1" }, globalThis.ADMIN)).status, 200);
     const lib = (await call("GET", "/api/seller/look-library?q=" + encodeURIComponent("цемент 3D"), null, other)).data.items;
     const hit = lib.find(x => x.id === pid); assert.ok(hit && hit.m3d && !hit.own && hit.store_name === "3D Test", JSON.stringify(lib));
     const jobsBefore = app.db.get("SELECT COUNT(*) n FROM m3d_jobs").n;
@@ -1771,7 +1771,7 @@ test("the Python AI 3D worker takes jobs from the queue, uploads a GLB, reports 
     M.workerToken = "w-live-77"; M.perDay = 100;
     const seller = (await login("997770041")).data.token;
     const st = await call("POST", "/api/seller/store", { name: "3D Worker", descr: "Магазин для проверки AI-воркера 3D", cats: ["build"], phone: "71 200 30 79", addr: "ул. Объёмная, 7", district: "chil" }, seller);
-    assert.equal((await call("PATCH", `/api/admin/stores/${st.data.store.id}`, { status: "active" }, globalThis.ADMIN)).status, 200);
+    assert.equal((await call("PATCH", `/api/admin/stores/${st.data.store.id}`, { status: "active", contract_no: "T-1" }, globalThis.ADMIN)).status, 200);
     const mk = async ru => { const pid = (await call("POST", "/api/seller/products", { ru, cat: "build", sub: "dry", unit: "bag50", price: 30000, stock: 5, kg: 50 }, seller)).data.product.id; await fetch(`${base}/api/seller/products/${pid}/photo`, { method: "POST", headers: { authorization: "Bearer " + seller, "content-type": "image/png" }, body: pngRGBA(60, 90, (x, y) => (y < 45 ? [210, 60, 40, 255] : [40, 90, 200, 255])) }); return pid; };
     const state = async pid => (await call("GET", `/api/seller/products/${pid}/model3d`, null, seller)).data.model3d;
     const a = await mk("Шпаклёвка 3D-воркер, 25 кг");
@@ -1819,7 +1819,7 @@ test("AI photo studio: white background, the product's pixels untouched, the ori
     M.workerToken = "w-live-88"; M.perDay = 100;
     const seller = (await login("997770051")).data.token;
     const st = await call("POST", "/api/seller/store", { name: "Фото Студия", descr: "Магазин для проверки AI-фотостудии", cats: ["build"], phone: "71 200 30 81", addr: "ул. Белая, 1", district: "chil" }, seller);
-    assert.equal((await call("PATCH", `/api/admin/stores/${st.data.store.id}`, { status: "active" }, globalThis.ADMIN)).status, 200);
+    assert.equal((await call("PATCH", `/api/admin/stores/${st.data.store.id}`, { status: "active", contract_no: "T-1" }, globalThis.ADMIN)).status, 200);
     const pid = (await call("POST", "/api/seller/products", { ru: "Ведро малярное, 12 л", cat: "build", sub: "dry", unit: "bag50", price: 30000, stock: 5, kg: 50 }, seller)).data.product.id;
     // the seller's photo: a product with a fine pattern on a blue table
     const png = pngRGBA(120, 90, (x, y) => (x > 30 && x < 90 && y > 15 && y < 80 ? [180 + (x * 7 + y * 3) % 60, 90 + (x * y) % 70, 30 + (x + 2 * y) % 50, 255] : [40, 90, 200, 255]));
@@ -1882,3 +1882,63 @@ test("AI photo studio: white background, the product's pixels untouched, the ori
   } finally { Object.assign(M, keep); }
 });
 const mediaUrlOf = p => (p && p.startsWith("/uploads/") ? CFG.publicUrl + p : p);
+
+test("Phone + password: set after the SMS code, sign in, reset by SMS; a store opens only after the contract", async () => {
+  const phone = "907770011";
+  const v = await login(phone); assert.equal(v.status, 200); assert.equal(v.data.has_password, false); assert.ok(v.data.pw_ticket);
+  const tok = v.data.token;
+  // no password yet: the password sign-in answers the same as for a wrong one
+  assert.equal((await call("POST", "/api/auth/login", { phone, password: "whatever-1" })).data.error, "bad_login");
+  assert.equal((await call("POST", "/api/auth/password", { password: "short" }, tok)).data.error, "weak_password");
+  const set = await call("POST", "/api/auth/password", { password: "my-pass-123", ticket: v.data.pw_ticket }, tok);
+  assert.equal(set.status, 200, JSON.stringify(set.data)); assert.equal(set.data.user.has_password, true);
+  const ok = await call("POST", "/api/auth/login", { phone: "+998 90 777 00 11", password: "my-pass-123" });
+  assert.equal(ok.status, 200); assert.ok(ok.data.token); assert.equal(ok.data.user.has_password, true);
+  assert.equal((await call("POST", "/api/auth/login", { phone, password: "my-pass-124" })).status, 401);
+  assert.equal((await call("POST", "/api/auth/login", { phone: "905550000", password: "my-pass-123" })).data.error, "bad_login"); // unknown number: same answer
+  // changing an existing password needs the current one or a fresh SMS ticket, and ends the other sessions
+  assert.equal((await call("POST", "/api/auth/password", { password: "new-pass-456" }, ok.data.token)).data.error, "bad_current");
+  const ch = await call("POST", "/api/auth/password", { password: "new-pass-456", current: "my-pass-123" }, ok.data.token);
+  assert.equal(ch.status, 200);
+  assert.equal((await call("GET", "/api/me", null, ok.data.token)).status, 401, "the old session ends after the change");
+  const v2 = await login(phone); // "forgot password": SMS code → new password with the ticket
+  assert.equal(v2.data.has_password, true);
+  assert.equal((await call("POST", "/api/auth/password", { password: "reset-pass-789", ticket: v2.data.pw_ticket }, v2.data.token)).status, 200);
+  assert.equal((await call("POST", "/api/auth/login", { phone, password: "reset-pass-789" })).status, 200);
+  // wrong passwords are limited per number and address
+  let last; for (let i = 0; i < 10; i++) last = await call("POST", "/api/auth/login", { phone, password: "nope-nope-" + i });
+  assert.equal(last.status, 429);
+
+  // a seller: application → meeting → contract → access
+  const s = await login("907770022"); const st = s.data.token;
+  const reg = await call("POST", "/api/seller/store", { name: "Contract Test", district: "chil", addr: "Чиланзар, 9", phone: "907770022", descr: "Цемент и смеси", cats: ["build"] }, st);
+  assert.equal(reg.status, 200, JSON.stringify(reg.data)); const sid = reg.data.store.id; assert.equal(reg.data.store.status, "pending");
+  const A = globalThis.ADMIN;
+  assert.equal((await call("PATCH", `/api/admin/stores/${sid}`, { status: "active" }, A)).data.error, "contract_required");
+  assert.equal((await call("PATCH", `/api/admin/stores/${sid}`, { status: "meeting" }, A)).data.error, "meeting_required");
+  const meet = await call("PATCH", `/api/admin/stores/${sid}`, { status: "meeting", meet_at: "2026-11-20T11:00:00+05:00", meet_place: "Офис, Чиланзар" }, A);
+  assert.equal(meet.status, 200, JSON.stringify(meet.data));
+  const mine = await call("GET", "/api/seller/summary", null, st);
+  assert.equal(mine.data.store.status, "meeting"); assert.equal(mine.data.store.meet_place, "Офис, Чиланзар"); assert.equal(mine.data.store.meet_at, Date.parse("2026-11-20T11:00:00+05:00"));
+  const open = await call("PATCH", `/api/admin/stores/${sid}`, { status: "active", contract_no: "QG-2026/015" }, A);
+  assert.equal(open.status, 200);
+  const after = await call("GET", "/api/seller/summary", null, st);
+  assert.equal(after.data.store.status, "active"); assert.equal(after.data.store.contract_no, "QG-2026/015"); assert.ok(after.data.store.contract_at);
+  // blocked and back: the contract is already on file
+  await call("PATCH", `/api/admin/stores/${sid}`, { status: "blocked" }, A);
+  assert.equal((await call("PATCH", `/api/admin/stores/${sid}`, { status: "active" }, A)).status, 200);
+});
+
+test("Master shows finished jobs: photos up to 12, a new photo goes back to moderation", async () => {
+  const m = await login("907770033"); const tok = m.data.token;
+  assert.equal((await fetch(base + "/api/masters/me/works", { method: "POST", headers: { authorization: "Bearer " + tok }, body: pngRGBA(4, 4, () => [200, 100, 50, 255]) })).status, 404, "profile first");
+  const prof = await call("POST", "/api/masters/me", { name: "Ахмад Плиточник", specs: ["tile"], districts: ["chil"], exp: 5, price: 50000, price_unit: "m2", about: "Плитка и керамогранит" }, tok);
+  assert.equal(prof.status, 200, JSON.stringify(prof.data));
+  const up = await fetch(base + "/api/masters/me/works", { method: "POST", headers: { authorization: "Bearer " + tok }, body: pngRGBA(8, 8, () => [200, 100, 50, 255]) });
+  const j = await up.json(); assert.equal(up.status, 200, JSON.stringify(j)); assert.equal(j.master.works.length, 1); assert.match(j.master.works[0], /\/uploads\/w/);
+  const id = j.master.id;
+  assert.equal((await call("PATCH", `/api/admin/masters/${id}`, { status: "active" }, globalThis.ADMIN)).status, 200);
+  const up2 = await fetch(base + "/api/masters/me/works", { method: "POST", headers: { authorization: "Bearer " + tok }, body: pngRGBA(8, 8, () => [200, 100, 50, 255]) });
+  const j2 = await up2.json(); assert.equal(j2.master.works.length, 2); assert.equal(j2.master.status, "pending", "a new public photo is checked again");
+  const del = await call("DELETE", "/api/masters/me/works/0", null, tok); assert.equal(del.status, 200); assert.equal(del.data.master.works.length, 1);
+});
