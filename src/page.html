@@ -202,7 +202,10 @@ html.pg-anim, html.pg-anim body { overflow-x: clip; }
    comes into focus under it, then everything fades into the app. Fixed colours: it looks the same in both themes. */
 /* iOS Safari paints the status bar with this layer's own background colour, so the colour follows the picture: light at the
    start, dark once the dark diamonds cover the screen (~1.2 s), light again as the intro dissolves into the app */
-#intro { position: fixed; inset: 0; z-index: 9999; overflow: hidden; background: #F4F1EC; --t: min(22vw, 96px); animation: inBg .25s ease 1.2s both, inOut .42s cubic-bezier(.4, 0, .2, 1) 2.25s both; }
+html.intro-on, html.intro-on body { background: #171412 !important; color-scheme: dark; } /* the strip under the status bar is dark while the intro runs */
+html.intro-on body::before { content: ""; position: fixed; inset: 0; z-index: 9998; background: #171412; animation: inCover 0s linear 4s forwards; } /* covers the page until the intro is drawn (and lets go after 4 s whatever happens) */
+@keyframes inCover { to { visibility: hidden; } }
+#intro { position: fixed; inset: 0; z-index: 9999; overflow: hidden; background: #171412; --t: min(22vw, 96px); animation: inOut .42s cubic-bezier(.4, 0, .2, 1) 2.25s both; }
 #intro.skip { animation: inSkip .3s ease both; }
 #intro .idm, #intro .idf { position: absolute; left: 50%; top: 50%; width: 60vmax; height: 60vmax; margin: -30vmax 0 0 -30vmax; rotate: 45deg; transform: scale(0); }
 #intro .idm { animation: idmGrow .72s cubic-bezier(.7, 0, .2, 1) var(--d) both; }
@@ -229,7 +232,6 @@ html.pg-anim, html.pg-anim body { overflow-x: clip; }
 @keyframes itlIn { from { transform: scaleX(0); } }
 @keyframes itxIn { from { opacity: 0; filter: blur(10px); letter-spacing: .16em; transform: scale(1.06); } }
 @keyframes itsIn { from { opacity: 0; transform: translateY(8px); } }
-@keyframes inBg { to { background-color: #171412; } }
 @keyframes inOut { to { opacity: 0; transform: scale(1.04); visibility: hidden; background-color: #F4F1EC; } }
 @keyframes inSkip { to { opacity: 0; transform: scale(1.04); visibility: hidden; background-color: #F4F1EC; } }
 .logo b { font-family: var(--f-display); font-weight: 700; font-size: 19px; letter-spacing: -.03em; }
@@ -2109,6 +2111,19 @@ select { max-width: 100%; }
 .calc-res > div > span:first-child { flex: 0 1 auto; }
 .calc .row3 .f label, .calc .row2 .f label { min-height: 2.6em; display: flex; align-items: end; line-height: 1.25; }
 </style>
+<script>/* the launch animation is dark from the first frame, and so is the strip under the phone's status bar: the page background
+   (what Safari on iPhone samples for that strip) and theme-color go dark before anything is painted; showIntro() gives them back */
+(function () { try {
+  var app = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true || !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+  var seen = false; try { seen = sessionStorage.getItem("imorat.intro") === "1"; } catch (e) {}
+  var m = document.querySelector('meta[name="theme-color"]:not([media])'); if (!m) { m = document.createElement("meta"); m.name = "theme-color"; document.head.appendChild(m); }
+  if (!/[?&]intro=1/.test(location.search) && (matchMedia("(prefers-reduced-motion: reduce)").matches || navigator.webdriver || (!app && seen))) { // no intro: the header's colour at once
+    var th = "auto"; try { th = JSON.parse(localStorage.getItem("imorat.theme") || '"auto"'); } catch (e) {}
+    m.content = th === "dark" || (th !== "light" && matchMedia("(prefers-color-scheme: dark)").matches) ? "#1D1A17" : "#FFFFFF"; return;
+  }
+  document.documentElement.classList.add("intro-on"); m.content = "#171412";
+} catch (e) {} })();
+</script>
 
 <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs><linearGradient id="qg1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFA126"/><stop offset="1" stop-color="#F2520D"/></linearGradient><linearGradient id="qg2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#EE4A1C"/><stop offset="1" stop-color="#C4260F"/></linearGradient><linearGradient id="qg3" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFBE73"/><stop offset="1" stop-color="#F27A2E"/></linearGradient><linearGradient id="qg4" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F7861F"/><stop offset="1" stop-color="#D63D0E"/></linearGradient><radialGradient id="artsh"><stop offset="0" stop-color="#0d1513"/><stop offset=".5" stop-color="#0d1513" stop-opacity=".8"/><stop offset="1" stop-color="#0d1513" stop-opacity="0"/></radialGradient></defs></svg>
 <div class="api-bar" id="apiBar" role="alert" hidden></div>
@@ -2944,17 +2959,20 @@ const HERO_SITE = (() => {
 function showIntro() {
   const force = /[?&]intro=1/.test(location.search);
   let seen = false; try { seen = sessionStorage.getItem("imorat.intro") === "1"; sessionStorage.setItem("imorat.intro", "1"); } catch (e) {}
-  if (!force && (mqReduce.matches || navigator.webdriver || (!APP_MODE && seen))) return;
+  const light = () => { document.documentElement.classList.remove("intro-on"); applyLook(); }; // the page colours and status bar back to the theme
+  if (!force && (mqReduce.matches || navigator.webdriver || (!APP_MODE && seen))) return light();
+  nativeBar(true);
   const el = document.createElement("div"); el.id = "intro"; el.setAttribute("aria-hidden", "true");
   el.innerHTML = `<i class="idm d1"></i><i class="idm d2"></i><i class="idm d3"></i><i class="idf f1"></i><i class="idf f2"></i>
     <svg class="ilines" viewBox="0 0 100 100" preserveAspectRatio="none"><path d="M0 0L100 100" pathLength="1" vector-effect="non-scaling-stroke"/><path d="M100 0L0 100" pathLength="1" vector-effect="non-scaling-stroke"/></svg>
     <div class="ilogo"><svg viewBox="0 0 100 100">${MARK_TILES.join("")}</svg></div>
     <div class="itx"><i></i><b>Quriliş<em>go</em></b><small>${L("Строительные магазины Ташкента", "Toshkent qurilish do‘konlari", "Tashkent building stores")}</small></div>`;
   document.body.appendChild(el);
-  let gone = false; const done = () => { if (!gone) { gone = true; el.remove(); } };
-  el.addEventListener("animationend", e => { if (e.target === el && e.animationName !== "inBg") done(); }); // gone the moment it has faded out (not when the background turns dark)
+  let gone = false; const done = () => { if (!gone) { gone = true; el.remove(); light(); } };
+  el.addEventListener("animationstart", e => { if (e.target === el && e.animationName === "inOut") light(); }); // the status bar turns with the page as the intro fades
+  el.addEventListener("animationend", e => { if (e.target === el) done(); }); // gone the moment it has faded out
   const t = setTimeout(done, 3200); // and in any case
-  el.addEventListener("click", () => { clearTimeout(t); el.classList.add("skip"); setTimeout(done, 450); }, { once: true }); // a tap opens at once
+  el.addEventListener("click", () => { clearTimeout(t); el.classList.add("skip"); light(); setTimeout(done, 450); }, { once: true }); // a tap opens at once
 }
 const markSVG = (cls = "logo-mark") => `<svg class="${cls}" viewBox="0 0 100 100" aria-hidden="true" focusable="false">${MARK_TILES.map((t, i) => `<g class="mt mt${i}">${t}</g>`).join("")}</svg>`;
 const mini = p => `<span class="mini studio" style="--h:${hueOf(p)}">${art(p)}</span>`;
@@ -3048,7 +3066,15 @@ function applyLook() {
   else if (themeSet) { document.documentElement.removeAttribute("data-theme"); themeSet = false; }
   const dark = themePref === "dark" || (themePref === "auto" && matchMedia("(prefers-color-scheme: dark)").matches);
   let m = document.querySelector('meta[name="theme-color"]:not([media])'); if (!m) { m = document.createElement("meta"); m.name = "theme-color"; document.head.appendChild(m); }
-  m.content = dark ? "#1D1A17" : "#FFFFFF"; // same as the header surface
+  const intro = document.documentElement.classList.contains("intro-on");
+  m.content = intro ? "#171412" : dark ? "#1D1A17" : "#FFFFFF"; // same as the header surface (dark while the launch animation runs)
+  nativeBar(intro || dark);
+}
+/* the app (Capacitor): the native status bar takes the same colour; light text on dark, dark text on light */
+function nativeBar(dark) {
+  const sb = window.Capacitor?.Plugins?.StatusBar; if (!sb || !window.Capacitor?.isNativePlatform?.()) return;
+  const intro = document.documentElement.classList.contains("intro-on");
+  try { sb.setStyle({ style: dark ? "DARK" : "LIGHT" })?.catch?.(() => {}); sb.setBackgroundColor?.({ color: intro ? "#171412" : dark ? "#1D1A17" : "#FFFFFF" })?.catch?.(() => {}); } catch (e) {}
 }
 applyLook();
 const motionOK = () => document.documentElement.classList.contains("fx");

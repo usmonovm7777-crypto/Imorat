@@ -4,8 +4,8 @@
   "webDir": "www",
   "server": { "androidScheme": "https" },
   "plugins": {
-    "SplashScreen": { "launchShowDuration": 500, "backgroundColor": "#F6F4F0", "showSpinner": false },
-    "StatusBar": { "style": "LIGHT", "backgroundColor": "#F6F4F0" },
+    "SplashScreen": { "launchShowDuration": 500, "backgroundColor": "#171412", "showSpinner": false },
+    "StatusBar": { "style": "DARK", "backgroundColor": "#171412" },
     "PushNotifications": { "presentationOptions": ["badge", "sound", "alert"] }
   }
 }
