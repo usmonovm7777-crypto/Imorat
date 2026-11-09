@@ -50,7 +50,7 @@ export function issueOtp(db, secret, phone, fixedCode = null) {
   if (wc >= MAX_PER_HOUR) throw new HttpError(429, "otp_hourly", "Too many codes for this number, try again in an hour", { retry_in: Math.ceil((ws + 3600_000 - now) / 1000) });
   const code = fixedCode || String(randomInt(100000, 1000000)); // fixedCode: the reviewers' account from REVIEW_ACCOUNTS
   db.run(`INSERT INTO otp(phone,code_hash,expires_at,attempts,sent_at,window_start,window_count) VALUES(?,?,?,?,?,?,?)
-          ON CONFLICT(phone) DO UPDATE SET code_hash=excluded.code_hash, expires_at=excluded.expires_at, attempts=0,
+          ON CONFLICT(phone) DO UPDATE SET code_hash=excluded.code_hash, expires_at=excluded.expires_at, attempts=CASE WHEN ${fixedCode ? 1 : 0} THEN otp.attempts ELSE 0 END,
           sent_at=excluded.sent_at, window_start=excluded.window_start, window_count=excluded.window_count`,
     phone, hashCode(secret, phone, code), now + OTP_TTL, 0, now, ws, wc + 1);
   return code;
@@ -112,6 +112,31 @@ export function hashPassword(password, min = 10) { // staff: 10+ characters; buy
   const key = scryptSync(pw.normalize("NFKC"), salt, SCRYPT.len, { N: SCRYPT.N, r: SCRYPT.r, p: SCRYPT.p, maxmem: SCRYPT.maxmem });
   return `scrypt$${SCRYPT.N}$${SCRYPT.r}$${SCRYPT.p}$${salt.toString("base64url")}$${key.toString("base64url")}`;
 }
+/* What makes a chosen password too easy to guess (the same rules as the sign-up form in the app). Returns a reason code or "".
+   short — fewer than `min` characters; mix — no letter or no digit; same — mostly one character (11111111, aaaa1111);
+   run — five or more characters in a row of the alphabet, digits or keyboard (12345, abcde, qwert, йцуке) or four of the same;
+   common — a well-known password or one built on such a word (password1, parol123, qwerty12, toshkent2024);
+   personal — contains the phone number or the name. Temporary passwords made by the server are not checked (they are random). */
+const PW_ROWS = ["abcdefghijklmnopqrstuvwxyz", "0123456789", "qwertyuiop", "asdfghjkl", "zxcvbnm", "йцукенгшщзхъ", "фывапролджэ", "ячсмитьбю", "абвгдеёжзийклмнопрстуфхцчшщъыьэюя", "1qaz2wsx3edc", "qazwsxedc"];
+const PW_WORDS = ["password", "passw0rd", "parol", "parol1", "qwerty", "qwertyui", "admin", "administrator", "iloveyou", "letmein", "welcome", "monkey", "dragon", "master", "sunshine", "football", "baseball", "superman", "batman", "princess", "starwars", "secret", "login", "user", "test", "guest", "uzbekistan", "ozbekiston", "o‘zbekiston", "tashkent", "toshkent", "samarkand", "samarqand", "qurilish", "quriliş", "qurilishgo", "imorat", "imoratgo", "usta", "sevgi", "lyubov", "parolparol", "пароль", "любовь", "привет", "йцукен", "qwertyuiop", "zaq12wsx", "1q2w3e4r", "1q2w3e", "q1w2e3r4", "123qwe", "qwe123", "asdf", "asdfgh", "zxcvbn"];
+const PW_TR = { а: "a", б: "b", в: "v", г: "g", д: "d", е: "e", ё: "yo", ж: "j", з: "z", и: "i", й: "y", к: "k", л: "l", м: "m", н: "n", о: "o", п: "p", р: "r", с: "s", т: "t", у: "u", ф: "f", х: "x", ц: "ts", ч: "ch", ш: "sh", щ: "sh", ъ: "", ы: "i", ь: "", э: "e", ю: "yu", я: "ya", ў: "o", қ: "q", ғ: "g", ҳ: "h" };
+const pwNameForms = name => { const out = new Set(); for (const w of String(name || "").normalize("NFKC").toLowerCase().split(/[\s.-]+/)) { if (w.length < 3) continue; out.add(w); const t = [...w].map(c => PW_TR[c] ?? c).join(""); out.add(t); out.add(t.replace(/x/g, "h")); out.add(t.replace(/j/g, "zh")); } return [...out].filter(w => w.length >= 3); }; // Азиз → aziz, Шерзод → sherzod, Хуршид → xurshid / hurshid
+export function passwordProblem(pw, { min = 8, phone = "", name = "" } = {}) {
+  if (typeof pw !== "string" || pw.length < min) return "short";
+  if (pw.length > 256) return "long";
+  const s = pw.normalize("NFKC").toLowerCase();
+  const uniq = new Set(s).size; if (uniq < 4 || uniq * 3 < s.length || /^(.+?)\1{2,}$/u.test(s)) return "same";
+  if (/(.)\1{3}/u.test(s)) return "run";
+  for (const row of PW_ROWS) for (const r of [row, [...row].reverse().join("")]) for (let i = 0; i + 5 <= r.length; i++) if (s.includes(r.slice(i, i + 5))) return "run";
+  if (!/\p{L}/u.test(s) || !/\p{N}/u.test(s)) return "mix";
+  const core = s.replace(/[^\p{L}]+/gu, "");
+  if (PW_WORDS.includes(s) || (core.length >= 4 && PW_WORDS.includes(core))) return "common";
+  const digits = String(phone || "").replace(/\D/g, ""); if (digits.length >= 7 && s.replace(/\D/g, "").includes(digits.slice(-7))) return "personal";
+  if (pwNameForms(name).some(w => s.includes(w))) return "personal";
+  return "";
+}
+const PW_SAY = { short: "Password must be at least %d characters", long: "Password must be at most 256 characters", mix: "Use both letters and digits", same: "Too many repeated characters", run: "Avoid runs like 12345, abcde, qwerty or 1111", common: "This password is too common", personal: "Do not use your phone number or name in the password" };
+export function assertStrongPassword(pw, opts = {}) { const why = passwordProblem(pw, opts); if (why) throw bad("weak_password", PW_SAY[why].replace("%d", opts.min || 8), { reason: why }); }
 const DUMMY_HASH = `scrypt$${SCRYPT.N}$${SCRYPT.r}$${SCRYPT.p}$${Buffer.alloc(16, 7).toString("base64url")}$${Buffer.alloc(32, 9).toString("base64url")}`;
 export function verifyPassword(password, stored) {
   // an unknown login is checked against a dummy hash, so "no such login" and "wrong password" take the same time

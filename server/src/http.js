@@ -48,7 +48,7 @@ export async function readJson(req, limit = 256 * 1024) {
 
 export function send(res, status, data, headers = {}) {
   const body = JSON.stringify(data);
-  res.writeHead(status, { "Content-Type": "application/json; charset=utf-8", "Content-Length": Buffer.byteLength(body), ...headers });
+  res.writeHead(status, { "Content-Type": "application/json; charset=utf-8", "Content-Length": Buffer.byteLength(body), "X-Content-Type-Options": "nosniff", ...headers });
   res.end(body);
 }
 
@@ -77,6 +77,14 @@ export class Limiter {
 }
 
 /* X-Forwarded-For is trusted only behind our own proxy (TRUST_PROXY=1), otherwise anyone could fake it to dodge rate limits */
-export const clientIp = req => (process.env.TRUST_PROXY === "1" && String(req.headers["x-forwarded-for"] || "").split(",").pop().trim()) || req.socket.remoteAddress || "?";
+export const clientIp = req => ipKey((process.env.TRUST_PROXY === "1" && String(req.headers["x-forwarded-for"] || "").split(",").pop().trim()) || req.socket.remoteAddress || "?");
+/* limits count an IPv6 client by its /64 network: one home or phone gets a whole /64, so rotating addresses inside it changes nothing */
+export function ipKey(ip) {
+  ip = String(ip || "?").replace(/^::ffff:(?=\d+\.\d+\.\d+\.\d+$)/i, "");
+  if (!ip.includes(":")) return ip;
+  const [head, tail = ""] = ip.split("::"), h = head ? head.split(":") : [], t = tail ? tail.split(":") : [];
+  const full = [...h, ...Array(Math.max(0, 8 - h.length - t.length)).fill("0"), ...t];
+  return full.slice(0, 4).map(x => (x || "0").toLowerCase().replace(/^0+(?=.)/, "")).join(":") + "::/64";
+}
 export const int = (v, min, max) => { const n = Math.floor(Number(v)); return Number.isFinite(n) && n >= min && n <= max ? n : null; };
 export const str = (v, max = 200) => (typeof v === "string" ? v.trim().slice(0, max) : "");

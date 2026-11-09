@@ -4,7 +4,7 @@
      node tools/owner.mjs hash --stdin    reads the password from stdin (used by `imorat owner`, so it never appears in argv or history)
      node tools/owner.mjs check HASH      asks for a password and says whether it matches the hash
    The password itself is never written anywhere: only the scrypt hash goes to server/.env (OWNER_PASSWORD_HASH), next to OWNER_LOGIN. */
-import { hashPassword, verifyPassword } from "../src/auth.js";
+import { hashPassword, verifyPassword, passwordProblem } from "../src/auth.js";
 import { createInterface } from "node:readline";
 
 const ask = (q, hidden) => new Promise(res => {
@@ -19,6 +19,8 @@ if (cmd === "hash") {
   let pw;
   if (args.includes("--stdin")) pw = await readStdin();
   else { pw = await ask("Password for the owner's panel sign-in (min 10 characters, not shown): ", true); const again = await ask("Once more: ", true); if (pw !== again) { console.error("The two passwords differ"); process.exit(2); } }
+  const why = passwordProblem(pw, { min: 10 }); // the same rules as everyone's passwords, 10+ characters for the panel
+  if (why) { console.error({ short: "At least 10 characters", mix: "Use both letters and digits", same: "Too many repeated characters", run: "Avoid runs like 12345, abcde, qwerty or 1111", common: "This password is too common", long: "At most 256 characters" }[why] || why); process.exit(2); }
   let hash; try { hash = hashPassword(pw); } catch (e) { console.error(e.message); process.exit(2); }
   console.log(hash);
 } else if (cmd === "check") {

@@ -27,6 +27,9 @@ export function loadConfig(env = process.env) {
   if (smsMode === "telegram" && !env.TELEGRAM_BOT_TOKEN) throw new Error("SMS_MODE=telegram needs TELEGRAM_BOT_TOKEN: sign-in goes through the bot");
   // In production a forgotten ESKIZ_* would hand out sign-in codes in API responses; refuse to start unless this is a declared test server
   if (prod && smsMode === "dev" && env.ALLOW_DEV_SMS !== "1") throw new Error("SMS is in dev mode: set ESKIZ_EMAIL/ESKIZ_PASSWORD, or ALLOW_DEV_SMS=1 on a test server only");
+  // the Payme sandbox key marks orders paid without money: a production server takes it only while Payme's own test run is declared
+  if (prod && env.PAYME_TEST_KEY && env.PAYME_SANDBOX !== "1") throw new Error("PAYME_TEST_KEY is set on a production server: remove it (or set PAYME_SANDBOX=1 only while Payme tests the integration)");
+  if (prod && String(env.JWT_SECRET || "").length < 32) throw new Error("JWT_SECRET must be at least 32 random characters in production");
   if (prod && env.COURIER_SIMULATION === "1") throw new Error("COURIER_SIMULATION is for test servers only: a production server shows real courier coordinates or none");
   if (!!String(env.OWNER_LOGIN || "").trim() !== !!String(env.OWNER_PASSWORD_HASH || "").trim()) throw new Error("OWNER_LOGIN and OWNER_PASSWORD_HASH go together: run `imorat owner` (or node tools/owner.mjs hash) to set both");
   if (env.OWNER_PASSWORD_HASH && !/^scrypt\$\d+\$\d+\$\d+\$[A-Za-z0-9_-]+\$[A-Za-z0-9_-]+$/.test(String(env.OWNER_PASSWORD_HASH).trim())) throw new Error("OWNER_PASSWORD_HASH is not a hash made by `imorat owner` — never put the password itself there");
@@ -38,7 +41,7 @@ export function loadConfig(env = process.env) {
     dbPath: env.DB_PATH || "data/imorat.db",
     catalogPath: env.CATALOG_PATH || new URL("../data/catalog.json", import.meta.url).pathname,
     // DEMO_STORES=0 on the real site: the 9 sample stores and their prices are not seeded (and are removed if they were); only real stores sell
-    demoStores: env.DEMO_STORES !== "0",
+    demoStores: prod ? env.DEMO_STORES === "1" : env.DEMO_STORES !== "0", // a production server has no sample stores unless asked for (a test server)
     // orders are paid by card on the site; ALLOW_PAY_AT_STORE=1 re-enables "pay the store on pickup" (tests, special launches)
     allowPayAtStore: env.ALLOW_PAY_AT_STORE === "1",
     uploadsDir: env.UPLOADS_DIR || "uploads",
@@ -107,12 +110,13 @@ export function loadConfig(env = process.env) {
     supportPhone: String(env.SUPPORT_PHONE || "").replace(/[^\d+]/g, ""), // emergency contact handed to the Yandex courier (defaults to the buyer's phone)
     nativePush: loadNativePushConfig(env), // FCM / APNs keys for the Android and iPhone app (see push_native.js)
     // sign-in for app-store reviewers: "998900000000:123456" — the code is fixed, no SMS is sent; several pairs separated by commas
-    reviewAccounts: Object.fromEntries(String(env.REVIEW_ACCOUNTS || "").split(",").map(x => x.trim().split(":")).filter(x => x.length === 2 && /^998\d{9}$/.test(x[0]) && /^\d{4,8}$/.test(x[1]))),
+    reviewAccounts: Object.fromEntries(String(env.REVIEW_ACCOUNTS || "").split(",").map(x => x.trim().split(":")).filter(x => x.length === 2 && /^998\d{9}$/.test(x[0]) && /^\d{6,8}$/.test(x[1]))),
     smsSellerTemplate: env.SMS_SELLER_TEMPLATE || "Qurilish Go: yangi buyurtma {num}. Iltimos, qabul qiling.",
     channel: { chat: env.TELEGRAM_CHANNEL ?? "@imoratgo", hour: Number(env.CHANNEL_HOUR ?? 10), dropPct: Number(env.CHANNEL_DROP_PCT ?? 0.05) },
     // Mobile operators in Uzbekistan put many phones behind one IP (CGNAT), so per-IP limits are generous;
     // the real protection is per phone number (5 codes an hour) and per account.
-    otpPerIpHour: Number(env.OTP_PER_IP_HOUR || 150),
+    otpPerIpHour: Number(env.OTP_PER_IP_HOUR || 150), // mobile operators put many phones behind one address, so this stays generous…
+    smsPerHour: Number(env.SMS_PER_HOUR || 400), smsPerDay: Number(env.SMS_PER_DAY || 4000), // …and an overall budget caps what an SMS flood can cost
     ratePerIpMin: Number(env.RATE_PER_IP_MIN || 3000),
     /* the points programme is switched off until the owner turns it on (BONUS_ON=1): no cashback, no spending, no referral rewards */
     bonus: { enabled: env.BONUS_ON === "1", rate: Number(env.BONUS_RATE ?? 0.01), ratePro: Number(env.BONUS_RATE_PRO ?? 0.02), rateVip: Number(env.BONUS_RATE_VIP ?? 0.03), maxShare: Number(env.BONUS_MAX_SHARE ?? 0.2), referral: Number(env.BONUS_REFERRAL ?? 30000), welcome: Number(env.BONUS_WELCOME ?? 30000), maxCashback: Number(env.BONUS_MAX_CASHBACK ?? 200000), maxInvites: Number(env.BONUS_MAX_INVITES ?? 20), monthlyBudget: Math.max(0, Number(env.BONUS_MONTHLY_BUDGET ?? 0) || 0) },

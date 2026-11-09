@@ -377,6 +377,8 @@ test("Web push: subscription gets an encrypted, VAPID-signed message", async () 
   const ua = createECDH("prime256v1"); ua.generateKeys();
   const auth = Buffer.from("0123456789abcdef");
   assert.equal((await call("POST", "/api/push/subscribe", { endpoint: fakeBase.replace("http:", "https:") + "/x", keys: {} }, u)).data.error, "bad_subscription");
+  assert.equal((await call("POST", "/api/push/subscribe", { endpoint: "https://internal.example/hook", keys: { p256dh: "BAAA", auth: "AAAA" } }, u)).data.error, "bad_subscription", "only browsers' push services are accepted");
+  assert.equal((await call("POST", "/api/push/subscribe", { endpoint: "https://fcm.googleapis.com.evil.example/x", keys: { p256dh: "BAAA", auth: "AAAA" } }, u)).data.error, "bad_subscription");
   app.db.run("INSERT INTO push_subs(endpoint,user_id,p256dh,auth,created_at) VALUES(?,?,?,?,?)", fakeBase + "/push/ep1", (await call("GET", "/api/me", null, u)).data.user.id, ua.getPublicKey().toString("base64url"), auth.toString("base64url"), Date.now());
   const r = await call("POST", "/api/push/test", null, u);
   assert.equal(r.data.sent, 1);
@@ -1189,7 +1191,9 @@ test("Card only: no cash, the full address reaches the courier, the buyer watche
     const cr = (await c("GET", `/api/orders/${simOrder}/courier`, null, t)).data.courier;
     assert.ok(cr.simulated && cr.pos && cr.pos.la > 41 && cr.eta_min >= 1, "a simulated courier is on the way to the store");
   });
-  assert.throws(() => loadConfig({ JWT_SECRET: "x", NODE_ENV: "production", ESKIZ_EMAIL: "a", ESKIZ_PASSWORD: "b", COURIER_SIMULATION: "1" }), /test servers only/, "no simulation on a production server");
+  assert.throws(() => loadConfig({ JWT_SECRET: "x".repeat(40), NODE_ENV: "production", ESKIZ_EMAIL: "a", ESKIZ_PASSWORD: "b", COURIER_SIMULATION: "1" }), /test servers only/, "no simulation on a production server");
+  assert.throws(() => loadConfig({ JWT_SECRET: "short-secret", NODE_ENV: "production", ESKIZ_EMAIL: "a", ESKIZ_PASSWORD: "b" }), /at least 32/, "a short JWT secret is refused in production");
+  assert.throws(() => loadConfig({ JWT_SECRET: "x".repeat(40), NODE_ENV: "production", ESKIZ_EMAIL: "a", ESKIZ_PASSWORD: "b", PAYME_TEST_KEY: "t" }), /PAYME_TEST_KEY/, "the Payme sandbox key is refused in production");
   // 3) with a Yandex token: the claim is created with porch/floor/flat/door code, statuses follow Yandex, position is live
   await run(mk({ PAYME_MERCHANT_ID: "5e730e8e0b852a417aa49ceb", PAYME_KEY: "PK", YANDEX_DELIVERY_TOKEN: "y", YANDEX_DELIVERY_URL: fakeBase + "/ya" }), async (c, lg, a) => {
     const t = await lg("998901234567"), admin = await lg("998901111111");
@@ -1328,8 +1332,8 @@ test("SMS_MODE=telegram: production start without an SMS contract, sign-in only 
     assert.equal(one.acquiringOf("click"), 0.015); assert.equal(per.acquiringOf("click"), 0.018); assert.equal(per.acquiringOf("payme"), 0.02); assert.equal(per.acquiring, 0.02); assert.deepEqual(per.acquiringBy, { payme: 0.02, click: 0.018 });
     assert.equal(def.acquiringOf("payme"), 0.02); assert.deepEqual(def.acquiringBy, {});
   }
-  assert.throws(() => loadConfig({ JWT_SECRET: "x", DB_PATH: join(d5, "a.db"), UPLOADS_DIR: join(d5, "up"), ADMIN_PHONES: "998901111111", NODE_ENV: "production", API_DOMAIN: "api.test", PUBLIC_URL: "https://api.test", ALLOWED_ORIGINS: "https://x.test" }), /SMS is in dev mode/, "dev codes never reach production");
-  const cfg5 = loadConfig({ JWT_SECRET: "x", DB_PATH: join(d5, "b.db"), UPLOADS_DIR: join(d5, "up"), ADMIN_PHONES: "998901111111", NODE_ENV: "production", API_DOMAIN: "api.test", PUBLIC_URL: "https://api.test", ALLOWED_ORIGINS: "https://x.test",
+  assert.throws(() => loadConfig({ JWT_SECRET: "x".repeat(40), DB_PATH: join(d5, "a.db"), UPLOADS_DIR: join(d5, "up"), ADMIN_PHONES: "998901111111", NODE_ENV: "production", API_DOMAIN: "api.test", PUBLIC_URL: "https://api.test", ALLOWED_ORIGINS: "https://x.test" }), /SMS is in dev mode/, "dev codes never reach production");
+  const cfg5 = loadConfig({ JWT_SECRET: "x".repeat(40), DB_PATH: join(d5, "b.db"), UPLOADS_DIR: join(d5, "up"), ADMIN_PHONES: "998901111111", NODE_ENV: "production", API_DOMAIN: "api.test", PUBLIC_URL: "https://api.test", ALLOWED_ORIGINS: "https://x.test",
     SMS_MODE: "telegram", TELEGRAM_BOT_TOKEN: "TGTOKEN", TELEGRAM_API_URL: fakeBase + "/tg", TELEGRAM_POLL_TIMEOUT: "0" });
   assert.equal(cfg5.sms.mode, "telegram");
   const a5 = createApp(cfg5, { info() {}, warn() {}, error: console.error });
@@ -1890,6 +1894,11 @@ test("Phone + password: set after the SMS code, sign in, reset by SMS; a store o
   // no password yet: the password sign-in answers the same as for a wrong one
   assert.equal((await call("POST", "/api/auth/login", { phone, password: "whatever-1" })).data.error, "bad_login");
   assert.equal((await call("POST", "/api/auth/password", { password: "short" }, tok)).data.error, "weak_password");
+  // easy-to-guess passwords are refused with a reason the form can show
+  for (const [pw, why] of [["11111111", "same"], ["12345678", "run"], ["qwerty12", "run"], ["abcdefgh", "run"], ["Kitobxona", "mix"], ["parol2024", "common"], ["Toshkent2024", "common"], ["ab12ab12ab12", "same"], ["x9077700111", "personal"]]) {
+    const r = await call("POST", "/api/auth/password", { password: pw, ticket: v.data.pw_ticket }, tok);
+    assert.equal(r.data.error, "weak_password", pw); assert.equal(r.data.reason, why, pw);
+  }
   const set = await call("POST", "/api/auth/password", { password: "my-pass-123", ticket: v.data.pw_ticket }, tok);
   assert.equal(set.status, 200, JSON.stringify(set.data)); assert.equal(set.data.user.has_password, true);
   const ok = await call("POST", "/api/auth/login", { phone: "+998 90 777 00 11", password: "my-pass-123" });
@@ -1903,7 +1912,8 @@ test("Phone + password: set after the SMS code, sign in, reset by SMS; a store o
   assert.equal((await call("GET", "/api/me", null, ok.data.token)).status, 401, "the old session ends after the change");
   const v2 = await login(phone); // "forgot password": SMS code → new password with the ticket
   assert.equal(v2.data.has_password, true);
-  assert.equal((await call("POST", "/api/auth/password", { password: "reset-pass-789", ticket: v2.data.pw_ticket }, v2.data.token)).status, 200);
+  const rs = await call("POST", "/api/auth/password", { password: "reset-pass-789", ticket: v2.data.pw_ticket }, v2.data.token); assert.equal(rs.status, 200);
+  assert.equal((await call("POST", "/api/auth/password", { password: "again-pass-246", ticket: v2.data.pw_ticket }, rs.data.token)).data.error, "bad_current", "a reset ticket works once");
   assert.equal((await call("POST", "/api/auth/login", { phone, password: "reset-pass-789" })).status, 200);
   // wrong passwords are limited per number and address
   let last; for (let i = 0; i < 10; i++) last = await call("POST", "/api/auth/login", { phone, password: "nope-nope-" + i });
@@ -1956,4 +1966,21 @@ test("Owner watches every store on its own: list and one store's page", async ()
   assert.equal((await call("GET", "/api/admin/stores-overview/nope", null, A)).status, 404);
   const buyer = (await login("907770099")).data.token;
   assert.equal((await call("GET", "/api/admin/stores-overview", null, buyer)).status, 403);
+});
+
+test("Payout details: a new card needs the account password and the owner is told; store texts keep no markup", async () => {
+  const phone = "907771122", v = await login(phone), tok = v.data.token;
+  const st = await call("POST", "/api/seller/store", { name: "Payout Test", descr: "Магазин для проверки реквизитов выплат", cats: ["build"], phone: "712004477", addr: "ул. Карточная, 2", hours: "09:00–18:00", district: "chil" }, tok);
+  assert.equal(st.status, 200, JSON.stringify(st.data));
+  // the first card needs nothing more; replacing it without a password on the account is refused
+  assert.equal((await call("PATCH", "/api/seller/store", { payout_to: "8600 1111 2222 3333" }, tok)).status, 200);
+  assert.equal((await call("PATCH", "/api/seller/store", { payout_to: "9860 0000 1111 2222" }, tok)).data.error, "need_password", "a stolen session alone cannot redirect the money");
+  assert.equal((await call("POST", "/api/auth/password", { password: "Shop-Owner-7319", ticket: v.data.pw_ticket }, tok)).status, 200);
+  assert.equal((await call("PATCH", "/api/seller/store", { payout_to: "9860 0000 1111 2222", current: "wrong-pass-1" }, tok)).data.error, "bad_current");
+  const ok = await call("PATCH", "/api/seller/store", { payout_to: "9860 0000 1111 2222", current: "Shop-Owner-7319" }, tok);
+  assert.equal(ok.status, 200); assert.equal(ok.data.store.payout_to, "9860 0000 1111 2222");
+  const log = (await call("GET", "/api/admin/audit", null, globalThis.ADMIN)).data;
+  assert.ok(JSON.stringify(log).includes("payout.change"), "the change is in the audit log");
+  const d = await call("PATCH", "/api/seller/store", { descr: "Лучший магазин <img src=x onerror=alert(1)> района" }, tok);
+  assert.equal(d.status, 200); assert.equal(d.data.store.descr.includes("<"), false, "no markup is kept in what buyers read");
 });

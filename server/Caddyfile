@@ -3,6 +3,10 @@
 
 {$API_DOMAIN} {
 	encode zstd gzip
+	# HTTPS only from now on (a year), the API is never framed and types are not guessed
+	header Strict-Transport-Security "max-age=31536000; includeSubDomains"
+	header X-Frame-Options DENY
+	header X-Content-Type-Options nosniff
 	reverse_proxy api:8787
 }
 
@@ -32,6 +36,11 @@
 	header @static Cache-Control "public, max-age=604800"
 	header X-Content-Type-Options nosniff
 	header Referrer-Policy strict-origin-when-cross-origin
+	# the page's own <meta> Content-Security-Policy lists the scripts it may run; framing can only be refused by a header
+	header Strict-Transport-Security "max-age=31536000; includeSubDomains"
+	header Content-Security-Policy "frame-ancestors 'none'"
+	header X-Frame-Options DENY
+	header Permissions-Policy "camera=(self), microphone=(self), geolocation=(self), payment=()"
 
 	handle {
 		try_files {path} {path}/ {path}.html

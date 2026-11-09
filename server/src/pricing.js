@@ -22,7 +22,7 @@ export function loadLines(db, ref, rawLines, user, { tiers = true } = {}) {
   if (rawLines.length > 150) throw bad("cart_too_big", "Too many lines in the cart");
   const merged = new Map();
   for (const l of rawLines) {
-    const id = int(l?.id, 1, 1e9), q = int(l?.q, 1, 100000), store = String(l?.store || "");
+    const id = int(l?.id, 1, 1e9), q = int(l?.q, 1, 20000), store = String(l?.store || "");
     if (!id || !q || !store) throw bad("bad_line", "Each cart line needs id, store and q");
     const k = id + "|" + store; merged.set(k, (merged.get(k) || 0) + q);
   }

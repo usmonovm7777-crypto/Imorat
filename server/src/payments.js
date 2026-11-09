@@ -3,7 +3,7 @@
    - Payme (Merchant API, JSON-RPC callbacks)  https://developer.help.paycom.uz/
    - Click  (SHOP API, prepare/complete callbacks) https://docs.click.uz/
    An online order is held as "unpaid": the store does not see it until the money arrives; unpaid orders expire. */
-import { createHash } from "node:crypto";
+import { createHash, timingSafeEqual } from "node:crypto";
 import { readBody } from "./http.js";
 
 const PAYME_ERR = {
@@ -67,7 +67,8 @@ export function createPayments({ db, cfg, log = console, onPaid, cancelOrder }) 
     const h = String(req.headers.authorization || "");
     if (!h.startsWith("Basic ")) return false;
     const [user, ...rest] = Buffer.from(h.slice(6), "base64").toString("utf8").split(":"), key = rest.join(":");
-    return user === "Paycom" && key && (key === payme.key || (payme.testKey && key === payme.testKey));
+    const same = (x, y) => { const a = Buffer.from(String(x)), b = Buffer.from(String(y)); return a.length === b.length && timingSafeEqual(a, b); }; // constant-time comparison
+    return user === "Paycom" && !!key && ((!!payme.key && same(key, payme.key)) || (!!payme.testKey && same(key, payme.testKey)));
   }
   function paymeCheck(params) {
     const o = orderByNum(params?.account?.order);

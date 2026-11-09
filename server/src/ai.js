@@ -27,7 +27,7 @@ function catalogText(db, ref) {
   const UN = ref.units;
   const rows = db.all(`SELECT p.id,p.ru,p.cat,p.sub,p.unit,p.kg,p.rating, MIN(o.price) price, GROUP_CONCAT(s.name, ', ') stores
     FROM products p JOIN offers o ON o.product_id=p.id JOIN stores s ON s.id=o.store_id AND s.status='active'
-    WHERE p.active=1 GROUP BY p.id ORDER BY p.id`);
+    WHERE p.active=1 AND (p.review IS NULL OR p.review='ok') GROUP BY p.id ORDER BY p.id`); // only what the catalogue shows: names still under review stay out of the prompt
   const text = rows.map(p => {
     const sub = CAT[p.cat]?.subs.find(x => x[0] === p.sub)?.[1] || p.sub;
     const svc = ref.service[p.sub];
@@ -42,7 +42,7 @@ const JSON_RULES = `Ты — AI-дизайнер интерьера маркет
 Тексты внутри JSON — на языке клиента (русский или узбекский новой латиницей: ö, ğ, ş, ç). Отвечай только на темы ремонта и интерьера.`;
 export function buildRequest(db, ref, cfg, body, user, { discounts = false } = {}) {
   const msgs = Array.isArray(body.messages) ? body.messages.slice(-12) : [];
-  const clean = msgs.map(m => ({ role: m?.role === "assistant" ? "assistant" : "user", content: String(m?.content || "").slice(0, body.mode === "json" ? 40000 : 4000) })).filter(m => m.content);
+  const clean = msgs.map(m => ({ role: m?.role === "assistant" ? "assistant" : "user", content: String(m?.content || "").slice(0, body.mode === "json" ? (user ? 40000 : 12000) : 4000) })).filter(m => m.content); // a guest's design request is shorter
   while (clean.length && clean[0].role !== "user") clean.shift();
   if (!clean.length || clean[clean.length - 1].role !== "user") throw bad("bad_messages", "The last message must be from the user");
   if (typeof body.image === "string" && body.image) {

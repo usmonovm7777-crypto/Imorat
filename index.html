@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-R4ItMsIASqWkkLy9t0UU6Kzqs8N7Zk677YEiE64meFU=' 'sha256-affE8UrxtYa5/TjC4C9Ipiwpe2yXsKr+KD1jk7KH/Ec=' 'unsafe-eval' https://api-maps.yandex.ru https://*.api-maps.yandex.ru https://yandex.ru https://*.yandex.ru https://*.yandex.net https://yastatic.net https://accounts.google.com https://appleid.cdn-apple.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com https://*.yandex.ru https://yastatic.net; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https: http://127.0.0.1:* http://localhost:*; media-src 'self' data: blob: https:; connect-src 'self' data: blob: https: wss: http://127.0.0.1:* http://localhost:*; frame-src https:; worker-src 'self' blob: https://*.api-maps.yandex.ru https://yastatic.net; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self' https:">
 <meta name="description" content="Quriliş Go — маркетплейс строительных магазинов Ташкента: сравнение цен, Usta AI, калькуляторы ремонта и доставка Яндекс.">
 <style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.5 system-ui,-apple-system,'Segoe UI',Roboto,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
 <script src="config.js"></script>
@@ -1049,6 +1050,17 @@ td .stk { width: 72px; border: 1.5px solid var(--line); background: var(--raised
 td .btn { padding: 6px 12px; font-size: 13px; border-radius: 9px; white-space: nowrap; }
 .pcell { display: flex; gap: 10px; align-items: center; min-width: 220px; }
 .pcell .mini { width: 44px; height: 44px; border-radius: 9px; }
+.pw-meter { display: flex; align-items: center; gap: 4px; margin: -2px 0 2px; }
+.pw-meter i { flex: 1; height: 4px; border-radius: 2px; background: var(--line); transition: background .2s; }
+.pw-meter span { flex: none; min-width: 6.5em; text-align: right; font-size: 12px; color: var(--muted); }
+.pw-meter[data-s="1"] i:nth-child(-n+1) { background: var(--signal); }
+.pw-meter[data-s="2"] i:nth-child(-n+2) { background: #E0A100; }
+.pw-meter[data-s="3"] i:nth-child(-n+3) { background: var(--ok); } .pw-meter[data-s="4"] i { background: var(--ok); }
+.pw-rules { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; font-size: 12.5px; color: var(--muted); }
+.pw-rules li { position: relative; padding-left: 20px; line-height: 1.35; }
+.pw-rules li::before { content: ""; position: absolute; left: 3px; top: .35em; width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid currentColor; opacity: .6; }
+.pw-rules li.ok { color: var(--ok); } .pw-rules li.ok::before { border: 0; opacity: 1; width: 11px; height: 6px; top: .3em; border-left: 2px solid currentColor; border-bottom: 2px solid currentColor; border-radius: 0; rotate: -45deg; }
+.pw-rules li.no { color: var(--signal); }
 .dup-hint { display: block; margin-top: 6px; padding: 8px 10px; border-radius: 10px; font-size: 12.5px; line-height: 1.45; background: color-mix(in srgb, var(--accent) 9%, var(--surface)); color: var(--ink); }
 .dup-hint svg { vertical-align: -2px; } .dup-hint .lnk { font-size: 12.5px; font-weight: 700; }
 .ph-btn { font-size: 12px; color: var(--accent); font-weight: 600; display: inline-flex; gap: 4px; align-items: center; }
@@ -2329,7 +2341,7 @@ function apiErr(e) {
     owner_only: L("Это может только владелец Quriliş Go", "Buni faqat Quriliş Go egasi qila oladi", "Only the owner of Quriliş Go can do this"),
     staff_account: L("Служебный аккаунт не покупает и не открывает магазин — для этого войдите по номеру телефона", "Xizmat akkaunti xarid qilmaydi va do‘kon ochmaydi — buning uchun telefon raqami bilan kiring", "A staff account does not shop or own a store — sign in by phone for that"),
     password_change_required: L("Сначала смените временный пароль", "Avval vaqtinchalik parolni almashtiring", "Change the temporary password first"),
-    weak_password: L("Пароль: от 10 символов, и не тот, что был", "Parol: kamida 10 belgi va avvalgisi emas", "Password: 10+ characters and not the previous one"),
+    weak_password: pwWhy(e.data?.reason, e.data?.reason === "short" && /10/.test(e.message || "") ? 10 : PW_MIN) || L("Пароль слишком простой — придумайте другой", "Parol juda oddiy — boshqasini o‘ylab toping", "The password is too simple — choose another"),
     not_store_delivery: L("Цену доставки называет магазин, только когда везёт сам", "Yetkazish narxini do‘kon o‘zi yetkazgandagina aytadi", "The store names a delivery price only when it delivers itself"),
     bad_price: L("Цена доставки: от 0 до 5 000 000 сум", "Yetkazish narxi: 0 dan 5 000 000 so‘mgacha", "Delivery price: 0 to 5 000 000 so'm"),
     payment_unavailable: L("Этот способ оплаты сейчас недоступен — выберите другой", "Bu to‘lov usuli hozir mavjud emas — boshqasini tanlang", "This payment method is unavailable — choose another"),
@@ -2390,6 +2402,9 @@ function apiErr(e) {
     too_early: L("Эта часть заказа ещё не в работе", "Buyurtmaning bu qismi hali ishda emas", "This part of the order is not in progress"),
     too_many_photos: L("Не больше 3 фото", "3 tadan ko‘p bo‘lmagan rasm", "Up to 3 photos"),
     not_found: L("Не найдено", "Topilmadi", "Not found"),
+    too_many_open: L("У вас уже есть неоплаченные заказы — оплатите или отмените их в «Мои заказы»", "Sizda to‘lanmagan buyurtmalar bor — ularni «Buyurtmalarim»da to‘lang yoki bekor qiling", "You have unpaid orders — pay for or cancel them in «My orders»"),
+    bad_current: L("Неверный пароль аккаунта", "Akkaunt paroli noto‘g‘ri", "Wrong account password"),
+    need_password: L("Сначала задайте пароль в профиле — он нужен, чтобы менять реквизиты выплат", "Avval profilda parol o‘rnating — u to‘lov rekvizitlarini o‘zgartirish uchun kerak", "Set a password in your profile first — it is needed to change payout details"),
     meeting_past: L("Это время уже прошло — выберите будущую дату", "Bu vaqt o‘tib ketgan — kelgusi sanani tanlang", "That time has passed — pick a future date"),
     mfa_required: L("Нужен код из приложения-аутентификатора", "Autentifikator ilovasidan kod kerak", "A code from the authenticator app is needed"),
     mfa_setup_required: L("Сначала настройте защиту входа модератора", "Avval moderator kirishini himoyalashni sozlang", "Set up moderator sign-in protection first")
@@ -3633,7 +3648,7 @@ function renderHome() {
 
     <section class="sec" id="stores" data-w="stores">
       <div class="sec-head"><div><h2 class="h-l">${L("Магазины-партнёры", "Hamkor do‘konlar")}</h2><p>${storeDelivers() ? L("Магазин собирает заказ и привозит его своим курьером", "Do‘kon buyurtmani yig‘adi va o‘z kuryeri bilan olib keladi", "The store packs the order and brings it with its own courier") : L("Курьер забирает заказ прямо со склада магазина", "Kuryer buyurtmani do‘kon omboridan oladi")}</p></div></div>
-      <div class="stores rv">${STORES.map(s => { const n = PRODUCTS.filter(p => p.offers.some(o => o.store === s.id)).length; if (!n) return ""; return `<div class="store"><span class="av">${esc(s.name.slice(0, 1))}</span><div><button type="button" class="slink" data-go="store-${s.id}"><b>${esc(s.name)}${isVerified(s) ? ` <span class="vmini">${ui("shield", 12)}</span>` : ""}</b></button><span class="m">${dName(s.d)}, ${esc(L(s.addr, s.addrUz))}</span><br><span class="m">${L(s.ru, s.uz)}</span>${ratingHTML(s, true)}<div class="r"><span class="pill ${openState(s).open ? "ok" : "closed"}">${openState(s).text}</span><button class="link" type="button" data-store="${s.id}">${n} ${L(plural(n, ["товар", "товара", "товаров"]), "mahsulot", n === 1 ? "product" : "products")} ${ui("chev", 14)}</button></div></div></div>`; }).join("")}</div>
+      <div class="stores rv">${STORES.map(s => { const n = PRODUCTS.filter(p => p.offers.some(o => o.store === s.id)).length; if (!n) return ""; return `<div class="store"><span class="av">${esc(s.name.slice(0, 1))}</span><div><button type="button" class="slink" data-go="store-${s.id}"><b>${esc(s.name)}${isVerified(s) ? ` <span class="vmini">${ui("shield", 12)}</span>` : ""}</b></button><span class="m">${dName(s.d)}, ${esc(L(s.addr, s.addrUz))}</span><br><span class="m">${esc(L(s.ru, s.uz))}</span>${ratingHTML(s, true)}<div class="r"><span class="pill ${openState(s).open ? "ok" : "closed"}">${openState(s).text}</span><button class="link" type="button" data-store="${s.id}">${n} ${L(plural(n, ["товар", "товара", "товаров"]), "mahsulot", n === 1 ? "product" : "products")} ${ui("chev", 14)}</button></div></div></div>`; }).join("")}</div>
       ${STORES.length > 5 ? `<div class="stores-more"><button class="btn btn-line" type="button" data-act="stores-all">${L(`Все ${STORES.length} магазинов`, `Barcha ${STORES.length} do‘kon`, `All ${STORES.length} stores`)}</button></div>` : ""}
     </section>
 
@@ -4432,7 +4447,7 @@ function cancelAsk(num) {
   if ($("#cancelForm")) return $("#cancelForm").scrollIntoView({ block: "nearest" });
   const R = [["changed", L("Передумал", "Fikrimni o‘zgartirdim", "Changed my mind")], ["cheaper", L("Нашёл дешевле", "Arzonrog‘ini topdim", "Found it cheaper")], ["wrong", L("Ошибся в заказе", "Buyurtmada xato qildim", "Ordered the wrong thing")], ["long", L("Долго ждать", "Uzoq kutish", "Takes too long")], ["delivery", L("Не устраивает доставка", "Yetkazish to‘g‘ri kelmaydi", "Delivery does not suit me")], ["other", L("Другое", "Boshqa", "Other")]];
   const b = document.querySelector('[data-act="order-cancel"]'); if (b) b.hidden = true;
-  $("#dBody").insertAdjacentHTML("beforeend", `<form class="cancel-f" id="cancelForm" onsubmit="return false"><b>${L("Почему отменяете заказ", "Nega bekor qilyapsiz", "Why are you cancelling")} ${esc(num)}?</b>
+  $("#dBody").insertAdjacentHTML("beforeend", `<form class="cancel-f" id="cancelForm" data-nosubmit><b>${L("Почему отменяете заказ", "Nega bekor qilyapsiz", "Why are you cancelling")} ${esc(num)}?</b>
     <div class="cancel-r">${R.map(([v, t]) => `<label class="chip-r"><input type="radio" name="why" value="${v}"><span>${t}</span></label>`).join("")}</div>
     <label class="visually-hidden" for="cancelNote">${L("Комментарий", "Izoh", "Comment")}</label><textarea id="cancelNote" rows="2" maxlength="500" placeholder="${L("Комментарий для магазина (необязательно, для «Другое» — обязательно)", "Do‘kon uchun izoh (ixtiyoriy, «Boshqa» uchun — majburiy)", "A note for the store (optional; required for “Other”)")}"></textarea>
     <span class="err" id="cancelErr" role="alert" hidden></span>
@@ -5141,6 +5156,50 @@ const rolesHTML = (role, name = "role", rich) => { const ri = icon => rich ? `<s
 const UZ_FLAG = `<svg class="uzf" viewBox="0 0 30 20" aria-hidden="true"><rect width="30" height="20" fill="#1EB53A"/><rect width="30" height="13.4" fill="#fff"/><rect width="30" height="6.6" fill="#0099B5"/><rect y="6.6" width="30" height=".7" fill="#CE1126"/><rect y="12.7" width="30" height=".7" fill="#CE1126"/><circle cx="5.2" cy="3.3" r="2.3" fill="#fff"/><circle cx="6.1" cy="3.3" r="2.05" fill="#0099B5"/></svg>`;
 const phoneField = (id, label, auto = "tel-national") => `<div class="af"><label for="${id}">${label}</label><div class="phone-in au"><span>${UZ_FLAG}+998</span><input id="${id}" inputmode="tel" autocomplete="${auto}" placeholder="90 123 45 67" value="${esc(fmtPhone(auth.phone))}"></div></div>`;
 const pwField = (id, label, auto, extra = "") => `<div class="af"><div class="af-l"><label for="${id}">${label}</label>${extra}</div><div class="pw-in"><input id="${id}" type="password" autocomplete="${auto}" autocapitalize="off" spellcheck="false"><button type="button" class="pw-eye" data-pweye="${id}" aria-label="${L("Показать пароль", "Parolni ko‘rsatish", "Show the password")}" aria-pressed="false">${ui("eye", 20)}</button></div></div>`;
+/* a new password: typed twice, checked by the same rules as the server (server/src/auth.js passwordProblem), with a live checklist */
+const PW_ROWS = ["abcdefghijklmnopqrstuvwxyz", "0123456789", "qwertyuiop", "asdfghjkl", "zxcvbnm", "йцукенгшщзхъ", "фывапролджэ", "ячсмитьбю", "абвгдеёжзийклмнопрстуфхцчшщъыьэюя", "1qaz2wsx3edc", "qazwsxedc"];
+const PW_WORDS = ["password", "passw0rd", "parol", "parol1", "qwerty", "qwertyui", "admin", "administrator", "iloveyou", "letmein", "welcome", "monkey", "dragon", "master", "sunshine", "football", "baseball", "superman", "batman", "princess", "starwars", "secret", "login", "user", "test", "guest", "uzbekistan", "ozbekiston", "o‘zbekiston", "tashkent", "toshkent", "samarkand", "samarqand", "qurilish", "quriliş", "qurilishgo", "imorat", "imoratgo", "usta", "sevgi", "lyubov", "parolparol", "пароль", "любовь", "привет", "йцукен", "qwertyuiop", "zaq12wsx", "1q2w3e4r", "1q2w3e", "q1w2e3r4", "123qwe", "qwe123", "asdf", "asdfgh", "zxcvbn"];
+const PW_TR = { а: "a", б: "b", в: "v", г: "g", д: "d", е: "e", ё: "yo", ж: "j", з: "z", и: "i", й: "y", к: "k", л: "l", м: "m", н: "n", о: "o", п: "p", р: "r", с: "s", т: "t", у: "u", ф: "f", х: "x", ц: "ts", ч: "ch", ш: "sh", щ: "sh", ъ: "", ы: "i", ь: "", э: "e", ю: "yu", я: "ya", ў: "o", қ: "q", ғ: "g", ҳ: "h" };
+const pwNameForms = name => { const out = new Set(); for (const w of String(name || "").normalize("NFKC").toLowerCase().split(/[\s.-]+/)) { if (w.length < 3) continue; out.add(w); const t = [...w].map(c => PW_TR[c] ?? c).join(""); out.add(t); out.add(t.replace(/x/g, "h")); out.add(t.replace(/j/g, "zh")); } return [...out].filter(w => w.length >= 3); }; // Азиз → aziz, Шерзод → sherzod, Хуршид → xurshid / hurshid
+function pwFlags(pw, { min = PW_MIN, phone = "", name = "" } = {}) {
+  const s = String(pw || "").normalize("NFKC").toLowerCase(), uniq = new Set(s).size;
+  const same = !!s && (uniq < 4 || uniq * 3 < s.length || /^(.+?)\1{2,}$/u.test(s));
+  let run = /(.)\1{3}/u.test(s);
+  if (!run) outer: for (const row of PW_ROWS) for (const r of [row, [...row].reverse().join("")]) for (let i = 0; i + 5 <= r.length; i++) if (s.includes(r.slice(i, i + 5))) { run = true; break outer; }
+  const core = s.replace(/[^\p{L}]+/gu, ""), common = PW_WORDS.includes(s) || (core.length >= 4 && PW_WORDS.includes(core));
+  const dg = String(phone || "").replace(/\D/g, ""), nm = pwNameForms(name);
+  const personal = (dg.length >= 7 && s.replace(/\D/g, "").includes(dg.slice(-7))) || nm.some(w => s.includes(w));
+  return { len: s.length >= min && s.length <= 256, mix: /\p{L}/u.test(s) && /\p{N}/u.test(s), simple: !!s && !same && !run, guess: !!s && !common && !personal, why: s.length < min ? "short" : same ? "same" : run ? "run" : !/\p{L}/u.test(s) || !/\p{N}/u.test(s) ? "mix" : common ? "common" : personal ? "personal" : "" };
+}
+const pwWhy = (why, min = PW_MIN) => ({ short: L(`Пароль — не короче ${min} символов`, `Parol — kamida ${min} ta belgi`, `The password needs at least ${min} characters`), long: L("Пароль — не длиннее 256 символов", "Parol — 256 belgidan oshmasin", "At most 256 characters"), mix: L("В пароле нужны и буквы, и цифры", "Parolda harflar ham, raqamlar ham bo‘lsin", "Use both letters and digits"), same: L("Слишком много одинаковых символов — так пароль легко подобрать", "Bir xil belgilar juda ko‘p — bunday parolni topish oson", "Too many repeated characters — easy to guess"), run: L("Без рядов подряд: 12345, abcde, qwerty, 1111", "Ketma-ket qatorlarsiz: 12345, abcde, qwerty, 1111", "No runs like 12345, abcde, qwerty, 1111"), common: L("Это слишком популярный пароль — придумайте свой", "Bu juda keng tarqalgan parol — o‘zingiznikini o‘ylab toping", "That password is too common — make up your own"), personal: L("Не используйте в пароле номер телефона или имя", "Parolda telefon raqami yoki ismni ishlatmang", "Do not use your phone number or name"), same_as_old: L("Новый пароль совпадает с прежним", "Yangi parol avvalgisi bilan bir xil", "The new password is the same as the old one"), match: L("Пароли не совпадают", "Parollar mos emas", "The passwords do not match") }[why] || "");
+const pwNewHTML = (id, label, min = PW_MIN) => `${pwField(id, label, "new-password")}
+  <div class="pw-meter" aria-hidden="true"><i></i><i></i><i></i><i></i><span id="${id}Lvl"></span></div>
+  ${pwField(id + "2", L("Повторите пароль", "Parolni takrorlang", "Repeat the password"), "new-password")}
+  <ul class="pw-rules" id="${id}Rules" data-min="${min}" aria-live="polite">
+    <li data-r="len">${L(`Не короче ${min} символов`, `Kamida ${min} ta belgi`, `At least ${min} characters`)}</li>
+    <li data-r="mix">${L("Буквы и цифры", "Harflar va raqamlar", "Letters and digits")}</li>
+    <li data-r="simple">${L("Без повторов и рядов: 1111, 12345, abcde, qwerty", "Takror va qatorlarsiz: 1111, 12345, abcde, qwerty", "No repeats or runs: 1111, 12345, abcde, qwerty")}</li>
+    <li data-r="guess">${L("Не номер телефона, не имя и не «parol123»", "Telefon raqami, ism yoki «parol123» emas", "Not your phone, your name or «password1»")}</li>
+    <li data-r="match">${L("Пароли совпадают", "Parollar mos", "The passwords match")}</li>
+  </ul>`;
+let pwCtx = () => ({}); // who is choosing the password (phone and name), set by the form that shows pwNewHTML
+function pwPaint(id) {
+  const box = document.getElementById(id + "Rules"); if (!box) return;
+  const a = document.getElementById(id)?.value || "", b = document.getElementById(id + "2")?.value || "", min = +box.dataset.min || PW_MIN, f = pwFlags(a, { min, ...pwCtx() });
+  const st = { len: f.len, mix: f.mix, simple: f.simple, guess: f.guess, match: !!a && a === b };
+  box.querySelectorAll("li").forEach(li => { li.classList.toggle("ok", st[li.dataset.r]); li.classList.toggle("no", !st[li.dataset.r] && (li.dataset.r !== "match" ? !!a : !!b)); });
+  const score = !a ? 0 : f.why ? 1 : a.length >= min + 4 && /[^\p{L}\p{N}]/u.test(a) ? 4 : a.length >= min + 2 ? 3 : 2;
+  const m = box.parentElement.querySelector(".pw-meter"); if (m) { m.dataset.s = score; const t = document.getElementById(id + "Lvl"); if (t) t.textContent = ["", L("слабый", "zaif", "weak"), L("нормальный", "o‘rtacha", "fair"), L("хороший", "yaxshi", "good"), L("надёжный", "ishonchli", "strong")][score]; }
+}
+/* the message for a password that cannot be saved, or "" when it can */
+function pwCheck(id, min = PW_MIN) {
+  const a = document.getElementById(id)?.value || "", b = document.getElementById(id + "2")?.value || "", f = pwFlags(a, { min, ...pwCtx() });
+  if (a.length > 256) return pwWhy("long");
+  if (f.why) return pwWhy(f.why, min);
+  if (a !== b) return pwWhy("match");
+  return "";
+}
+document.addEventListener("input", e => { const id = e.target.id?.replace(/2$/, ""); if (id && document.getElementById(id + "Rules")) { pwPaint(id); const er = e.target.form?.querySelector('.err[role="alert"]'); if (er) er.hidden = true; } }); // a fixed password clears the old message
 const authSwitch = (txt, link, step) => `<p class="au-sw">${txt} <button class="lnk" type="button" data-authstep="${step}">${link}</button></p>`;
 /* demo only (no server): passwords of this browser's demo accounts are kept as a salted PBKDF2 hash, never as text */
 async function demoHash(pw, salt) {
@@ -5200,10 +5259,10 @@ function renderAuth() {
   } else if (st === "newpw") {
     const reset = auth.flow === "forgot";
     h = `<h2>${reset ? L("Новый пароль", "Yangi parol", "New password") : L("Задайте пароль", "Parol o‘rnating", "Set a password")}</h2>
-      <p>${reset ? L("Номер подтверждён. Придумайте новый пароль — не короче 8 символов.", "Raqam tasdiqlandi. Yangi parol o‘ylab toping — kamida 8 ta belgi.", "The number is confirmed. Choose a new password, at least 8 characters.") : L("Теперь вы сможете входить по номеру и паролю, без SMS. Не короче 8 символов.", "Endi raqam va parol bilan, SMSsiz kira olasiz. Kamida 8 ta belgi.", "From now on you sign in with the number and the password, no SMS. At least 8 characters.")}</p>
+      <p>${reset ? L("Номер подтверждён. Придумайте новый пароль и повторите его.", "Raqam tasdiqlandi. Yangi parol o‘ylab toping va uni takrorlang.", "The number is confirmed. Choose a new password and repeat it.") : L("Теперь вы сможете входить по номеру и паролю, без SMS. Не короче 8 символов.", "Endi raqam va parol bilan, SMSsiz kira olasiz. Kamida 8 ta belgi.", "From now on you sign in with the number and the password, no SMS. At least 8 characters.")}</p>
       <form id="authNewPw" class="au-form" novalidate>
         <input type="text" name="username" autocomplete="username" value="${esc(fullPhone(auth.phone))}" hidden>
-        ${pwField("nPw", L("Пароль", "Parol", "Password"), "new-password")}
+        ${pwNewHTML("nPw", L("Пароль", "Parol", "Password"))}
         <span class="err" id="nErr" role="alert" hidden></span>
         <button class="btn btn-primary au-go" type="submit">${L("Сохранить и войти", "Saqlash va kirish", "Save and continue")}</button>
         ${reset ? "" : `<button class="lnk" type="button" data-act="auth-skip-pw" style="justify-self:center">${L("Позже", "Keyinroq", "Later")}</button>`}
@@ -5222,8 +5281,7 @@ function renderAuth() {
       <p>${auth.pwForced ? L("Пароль, который вам передали, одноразовый. Придумайте свой — не короче 10 символов.", "Sizga berilgan parol bir martalik. O‘zingiznikini o‘ylab toping — kamida 10 ta belgi.", "The password you were given is temporary. Choose your own, at least 10 characters.") : L("Не короче 10 символов. После смены другие ваши сессии завершатся.", "Kamida 10 ta belgi. Almashtirilgach boshqa sessiyalaringiz tugaydi.", "At least 10 characters. Your other sessions end after the change.")}</p>
       <form id="authPw" novalidate style="display:grid;gap:10px">
         <div class="f"><label for="aPwOld">${L("Текущий пароль", "Joriy parol", "Current password")}</label><input id="aPwOld" type="password" autocomplete="current-password"></div>
-        <div class="f"><label for="aPwNew">${L("Новый пароль", "Yangi parol", "New password")}</label><input id="aPwNew" type="password" autocomplete="new-password" minlength="10"></div>
-        <div class="f"><label for="aPwNew2">${L("Ещё раз", "Yana bir bor", "Once more")}</label><input id="aPwNew2" type="password" autocomplete="new-password"></div>
+        ${pwNewHTML("aPwNew", L("Новый пароль", "Yangi parol", "New password"), 10)}
         <span class="err" id="aPwErr" role="alert" hidden></span>
         <button class="btn btn-primary" type="submit">${L("Сохранить пароль", "Parolni saqlash", "Save the password")}</button>
         ${auth.pwForced ? "" : `<button class="lnk" type="button" data-act="close-auth" style="justify-self:start">${L("Отмена", "Bekor qilish", "Cancel")}</button>`}
@@ -5276,7 +5334,7 @@ function renderAuth() {
       <form id="authProfile" class="au-form" novalidate>
         <div class="af"><label for="pName">${L("Как к вам обращаться", "Sizga qanday murojaat qilaylik", "Your name")}</label><input class="au-in" id="pName" autocomplete="name" value="${esc(auth.name)}" placeholder="${L("Азиз", "Aziz")}"></div>
         <input type="text" name="username" autocomplete="username" value="${esc(fullPhone(auth.phone))}" hidden>
-        ${pwField("pPw", L("Придумайте пароль", "Parol o‘ylab toping", "Create a password"), "new-password")}<small class="au-hint">${L("Не короче 8 символов. Дальше входите по номеру и паролю.", "Kamida 8 ta belgi. Keyin raqam va parol bilan kirasiz.", "At least 8 characters. From now on you sign in with the number and the password.")}</small>
+        ${pwNewHTML("pPw", L("Придумайте пароль", "Parol o‘ylab toping", "Create a password"))}<small class="au-hint">${L("Дальше входите по номеру и паролю.", "Keyin raqam va parol bilan kirasiz.", "From now on you sign in with the number and the password.")}</small>
         ${auth.roleSet ? (role === "pro" ? `<fieldset><legend>${L("Как вы будете работать", "Qanday ishlaysiz", "How you will work")}</legend><div class="opts">
             <label class="opt"><input type="radio" name="mkind" value="show" ${mk === "show" ? "checked" : ""}><span><b>${L("Показывать свои работы бесплатно", "Ishlarimni bepul ko‘rsatish", "Show my work for free")}</b><small>${L("Анкета и фото готовых работ на сайте — клиенты найдут вас и позовут. После проверки модератором.", "Saytda anketa va tayyor ishlar rasmlari — mijozlar sizni topib chaqiradi. Moderator tekshiruvidan keyin.", "A profile and photos of finished jobs on the site — clients find you and call. After a moderator's check.")}</small></span><span></span></label>
             <label class="opt"><input type="radio" name="mkind" value="prorab" ${mk === "prorab" ? "checked" : ""}><span><b>${L("Я прораб", "Men prorabman", "I am a foreman")}</b><small>${L("Сметы, списки материалов и заказы для объектов — без публичной анкеты.", "Obyektlar uchun smeta, materiallar ro‘yxati va buyurtmalar — ochiq anketasiz.", "Estimates, material lists and orders for your sites — no public profile.")}</small></span><span></span></label></div></fieldset>` : "")
@@ -5320,14 +5378,15 @@ function renderAuth() {
     rf.addEventListener("submit", e => { e.preventDefault(); if (!auth.roleSet) return; auth.flow = "reg"; auth.step = "regphone"; auth.err = ""; renderAuth(); });
   }
   if (st === "newpw") {
+    pwCtx = () => ({ phone: auth.phone, name: user?.name || auth.name || "" });
     $("#authNewPw").addEventListener("submit", async e => {
       e.preventDefault(); const er = $("#nErr"), pw = $("#nPw").value, btn = e.target.querySelector("button[type=submit]");
-      if (pw.length < PW_MIN) { er.textContent = L("Не короче 8 символов", "Kamida 8 ta belgi", "At least 8 characters"); er.hidden = false; return $("#nPw").focus(); }
+      { const why = pwCheck("nPw"); if (why) { er.textContent = why; er.hidden = false; return $(why === pwWhy("match") ? "#nPw2" : "#nPw").focus(); } }
       btn.disabled = true; er.hidden = true;
       const u = auth.pending || user;
       if (!API) { const k = digitsOf(u.phone).slice(-9), hp = await demoHash(pw); accounts[k] = { ...(accounts[k] || u), pwh: hp.hash, pwSalt: hp.salt }; LS.set("imorat.accounts", accounts); toast(L("Пароль сохранён", "Parol saqlandi", "Password saved")); return finishAuth({ ...accounts[k], via: "phone" }); }
       try { const r = await api("POST", "/api/auth/password", { password: pw, ticket: auth.pwTicket || undefined }); toast(L("Пароль сохранён", "Parol saqlandi", "Password saved")); finishAuth(fromApiUser(r.user), r.token); }
-      catch (ex) { er.textContent = ex.code === "weak_password" ? L("Не короче 8 символов", "Kamida 8 ta belgi", "At least 8 characters") : apiErr(ex); er.hidden = false; btn.disabled = false; }
+      catch (ex) { er.textContent = ex.code === "weak_password" ? pwWhy(ex.data?.reason) || pwWhy("short") : apiErr(ex); er.hidden = false; btn.disabled = false; }
     });
     setTimeout(() => $("#nPw").focus(), 60);
   }
@@ -5358,11 +5417,12 @@ function renderAuth() {
     setTimeout(() => $("#aLogin").focus(), 60);
   }
   if (st === "pw") {
+    pwCtx = () => ({ phone: user?.phone || "", name: user?.name || "" });
     $("#authPw").addEventListener("submit", async e => {
       e.preventDefault(); const er = $("#aPwErr"), o = $("#aPwOld").value, n1 = $("#aPwNew").value, n2 = $("#aPwNew2").value, btn = e.target.querySelector("button[type=submit]");
       const fail = m => { er.textContent = m; er.hidden = false; };
-      if (n1.length < 10) return fail(L("Не короче 10 символов", "Kamida 10 ta belgi", "At least 10 characters"));
-      if (n1 !== n2) return fail(L("Пароли не совпадают", "Parollar mos emas", "The passwords differ"));
+      { const why = pwFlags(n1, { min: 10, ...pwCtx() }).why; if (why) return fail(pwWhy(why, 10)); } // the same rules as everyone, 10+ characters for the panel
+      if (n1 !== n2) return fail(pwWhy("match"));
       if (n1 === o) return fail(L("Новый пароль совпадает с текущим", "Yangi parol joriysi bilan bir xil", "The new password is the same as the current one"));
       btn.disabled = true; er.hidden = true;
       try { const r = await api("POST", "/api/me/password", { old: o, password: n1 }); auth.pwForced = false; toast(L("Пароль изменён", "Parol o‘zgartirildi", "Password changed")); afterLogin(r); }
@@ -5437,13 +5497,14 @@ function renderAuth() {
   }
   if (st === "profile") {
     const pf = $("#authProfile");
+    pwCtx = () => ({ phone: auth.phone, name: $("#pName")?.value || "" }); $("#pName")?.addEventListener("input", () => pwPaint("pPw")); // the name counts as personal
     const label = () => { const r = auth.roleSet ? auth.role : pf.querySelector("[name=role]:checked")?.value || "buyer", mk = pf.querySelector("[name=mkind]:checked")?.value || "show";
       return r === "store" ? L("Дальше: анкета магазина", "Keyingisi: do‘kon anketasi", "Next: the store application") : r === "pro" && auth.roleSet && mk === "show" ? L("Дальше: анкета и фото работ", "Keyingisi: anketa va ish rasmlari", "Next: profile and photos of work") : L("Готово", "Tayyor", "Done"); };
     pf.addEventListener("change", e => { if (e.target.name === "role") auth.role = e.target.value; if (e.target.name === "mkind") auth.mkind = e.target.value; $("#pGo").textContent = label(); });
     pf.addEventListener("submit", async e => {
       e.preventDefault(); const er = $("#pErr"), fail = m => { er.textContent = m; er.hidden = false; };
       const nm = $("#pName").value.trim(); if (nm.length < 2) { fail(L("Укажите имя", "Ismni kiriting", "Enter your name")); return $("#pName").focus(); }
-      const pw = $("#pPw").value; if (pw.length < PW_MIN) { fail(L("Пароль — не короче 8 символов", "Parol — kamida 8 ta belgi", "The password needs at least 8 characters")); return $("#pPw").focus(); }
+      const pw = $("#pPw").value; { const why = pwCheck("pPw"); if (why) { fail(why); return $(why === pwWhy("match") ? "#pPw2" : "#pPw").focus(); } }
       const role = auth.roleSet ? auth.role : pf.querySelector("[name=role]:checked").value, mk = pf.querySelector("[name=mkind]:checked")?.value || "show";
       const dist = auth.dist || auth.pending?.district || district; // the district is asked at checkout
       auth.name = nm; auth.dist = dist; auth.role = role; auth.mkind = mk;
@@ -5458,7 +5519,7 @@ function renderAuth() {
           if (r.token) { apiToken = r.token; LS.set("imorat.token", r.token); }
           if (role === "store") { auth.pending = u; auth.st = { ...auth.st, district: auth.st?.district || dist, phone: auth.st?.phone || auth.phone }; auth.fromProfile = false; auth.step = "store"; return renderAuth(); }
           auth.then = next; finishAuth(u, r.token);
-        } catch (e2) { auth.busy = false; renderAuth(); const er2 = $("#pErr"); er2.textContent = e2.code === "weak_password" ? L("Пароль — не короче 8 символов", "Parol — kamida 8 ta belgi", "The password needs at least 8 characters") : apiErr(e2); er2.hidden = false; }
+        } catch (e2) { auth.busy = false; renderAuth(); const er2 = $("#pErr"); er2.textContent = e2.code === "weak_password" ? pwWhy(e2.data?.reason) || pwWhy("short") : apiErr(e2); er2.hidden = false; }
         return;
       }
       const hp = await demoHash(pw), k = digitsOf(fullPhone(auth.phone)).slice(-9);
@@ -5843,7 +5904,7 @@ function renderApiBar() {
     el.innerHTML = `<span><b>${window.IMORAT_APP ? L("Обновите приложение Quriliş Go", "Quriliş Go ilovasini yangilang", "Update the Quriliş Go app") : L("Обновите страницу", "Sahifani yangilang", "Reload the page")}</b><small>${need
       ? L("Эта версия больше не поддерживается сервером — заказы и оплата отключены, пока вы не обновитесь.", "Bu versiyani server endi qo‘llab-quvvatlamaydi — yangilamaguningizcha buyurtma va to‘lov o‘chirilgan.", "The server no longer supports this version — orders and payment are off until you update.")
       : L("Сервер ещё не обновлён до этой версии — заказы и оплата временно отключены.", "Server hali bu versiyaga yangilanmagan — buyurtma va to‘lov vaqtincha o‘chirilgan.", "The server has not been updated to this version yet — orders and payment are temporarily off.")}</small></span>
-      ${window.IMORAT_APP ? "" : `<button class="btn btn-line" type="button" onclick="location.reload()">${L("Обновить", "Yangilash", "Reload")}</button>`}`;
+      ${window.IMORAT_APP ? "" : `<button class="btn btn-line" type="button" data-act="reload-page">${L("Обновить", "Yangilash", "Reload")}</button>`}`;
     return;
   }
   el.innerHTML = `<span><b>${L("Нет связи с сервером Quriliş Go", "Quriliş Go serveri bilan aloqa yo‘q", "No connection to the Quriliş Go server")}</b><small>${apiCat?.empty
@@ -6341,7 +6402,7 @@ document.addEventListener("click", async e => {
   if (ds.shipst) {
     const [id, st] = ds.shipst.split("|");
     if (st === "cancelled" && !t.dataset.sure) { // out of stock: a short note for the buyer, then a second press confirms
-      if (!document.getElementById("oos" + id)) t.insertAdjacentHTML("afterend", `<form class="oos-f" id="oos${id}" onsubmit="return false"><label class="visually-hidden" for="oosN${id}">${L("Чего нет", "Nima yo‘q", "What is missing")}</label><input id="oosN${id}" maxlength="300" placeholder="${L("Чего нет и чем можно заменить (необязательно)", "Nima yo‘q va nima bilan almashtirish mumkin (ixtiyoriy)", "What is missing, what can replace it (optional)")}"><button class="btn btn-danger" type="button" data-shipst="${id}|cancelled" data-sure="1">${L("Отменить заказ", "Buyurtmani bekor qilish", "Cancel the order")}</button></form>`);
+      if (!document.getElementById("oos" + id)) t.insertAdjacentHTML("afterend", `<form class="oos-f" id="oos${id}" data-nosubmit><label class="visually-hidden" for="oosN${id}">${L("Чего нет", "Nima yo‘q", "What is missing")}</label><input id="oosN${id}" maxlength="300" placeholder="${L("Чего нет и чем можно заменить (необязательно)", "Nima yo‘q va nima bilan almashtirish mumkin (ixtiyoriy)", "What is missing, what can replace it (optional)")}"><button class="btn btn-danger" type="button" data-shipst="${id}|cancelled" data-sure="1">${L("Отменить заказ", "Buyurtmani bekor qilish", "Cancel the order")}</button></form>`);
       document.getElementById("oosN" + id)?.focus(); return;
     }
     const note = st === "cancelled" ? (document.getElementById("oosN" + id)?.value || "").trim() : undefined;
@@ -6414,7 +6475,7 @@ const liveCache = {}; let liveTimer = 0;
 /* the checkout's address preview: OpenStreetMap tiles around the pin (no script map, nothing to load but three images in view) */
 function ckMapInner(la, lo) {
   const z = 16, P = lmProj(z), c = P(la, lo), x0 = Math.floor(c.x) - 1, y0 = Math.floor(c.y) - 1;
-  let tiles = ""; for (let j = 0; j < 3; j++) for (let i = 0; i < 3; i++) tiles += `<img src="https://tile.openstreetmap.org/${z}/${x0 + i}/${y0 + j}.png" alt="" loading="lazy" decoding="async" onerror="this.style.visibility='hidden'">`;
+  let tiles = ""; for (let j = 0; j < 3; j++) for (let i = 0; i < 3; i++) tiles += `<img src="https://tile.openstreetmap.org/${z}/${x0 + i}/${y0 + j}.png" alt="" loading="lazy" decoding="async" data-hideerr>`;
   return `<div class="ckm-t" style="left:calc(50% - ${((c.x - x0) * 256).toFixed(1)}px);top:calc(50% - ${((c.y - y0) * 256).toFixed(1)}px)">${tiles}</div>${PIN}<span class="attr">© OpenStreetMap</span>`;
 }
 function lmProj(z) { const n = 2 ** z; return (la, lo) => { const r = la * Math.PI / 180; return { x: (lo + 180) / 360 * n, y: (1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2 * n }; }; }
@@ -6425,7 +6486,7 @@ function liveMapHTML(o, s, st, t, big) {
   let z = 15, P, a, b, c0;
   for (; z > 10; z--) { P = lmProj(z); a = P(from.la, from.lo); b = P(home.la, home.lo); const xs = pts.map(q => P(q.la, q.lo)); const w = Math.max(...xs.map(q => q.x)) - Math.min(...xs.map(q => q.x)), h = Math.max(...xs.map(q => q.y)) - Math.min(...xs.map(q => q.y)); c0 = { x: (Math.max(...xs.map(q => q.x)) + Math.min(...xs.map(q => q.x))) / 2, y: (Math.max(...xs.map(q => q.y)) + Math.min(...xs.map(q => q.y))) / 2 }; if (big ? w < 1.25 && h < 1.2 : w < 1.25 && h < .9) break; } // store, home and the courier inside a ~400×300 px window (the order screen: ~400×380)
   const cx = c0.x, cy = c0.y, x0 = Math.floor(cx) - 1, y0 = Math.floor(cy) - 1;
-  let tiles = ""; for (let j = 0; j < 3; j++) for (let i = 0; i < 3; i++) tiles += `<img src="https://tile.openstreetmap.org/${z}/${x0 + i}/${y0 + j}.png" alt="" loading="lazy" decoding="async" onerror="this.style.visibility='hidden'">`;
+  let tiles = ""; for (let j = 0; j < 3; j++) for (let i = 0; i < 3; i++) tiles += `<img src="https://tile.openstreetmap.org/${z}/${x0 + i}/${y0 + j}.png" alt="" loading="lazy" decoding="async" data-hideerr>`;
   const px = p => ({ l: ((p.x - x0) * 256).toFixed(1), t: ((p.y - y0) * 256).toFixed(1) });
   const A = px(a), B = px(b), car = liveCache[s.id]?.pos ? px(P(liveCache[s.id].pos.la, liveCache[s.id].pos.lo)) : null;
   const icon = ui(t?.icon || "car", big ? 20 : 18);
@@ -6619,7 +6680,7 @@ function sellerExtraHTML(d, part) {
     ${f.delivery_due || f.payout_due ? `<div class="mini-kpis" style="margin-top:8px">${f.payout_due ? `<div><b>${fmt(f.payout_due)}</b><small>${L("оплачено картой — ваша доля за вычетом комиссии и эквайринга", "karta bilan to‘langan — komissiya va ekvayringsiz sizning ulushingiz", "paid by card — your share after commission and acquiring")}</small></div>` : ""}${f.delivery_due ? `<div><b>${fmt(f.delivery_due)}</b><small>${L("доставка, полученная от покупателей (платит Quriliş Go Яндексу)", "xaridorlardan olingan yetkazish haqi (Quriliş Go Yandexga to‘laydi)", "delivery fees collected from buyers (Quriliş Go pays Yandex)")}</small></div>` : ""}</div>` : ""}
     <div class="payout-box" id="payoutBox">
       <div class="mini-kpis"><div><b>${fmt(f.payout_available || 0)}</b><small>${L("доступно к выводу", "yechib olish mumkin", "available to withdraw")}</small></div>${f.payout_pending ? `<div><b>${fmt(f.payout_pending)}</b><small>${L("в обработке", "qayta ishlanmoqda", "being processed")}</small></div>` : ""}${f.payout_paid ? `<div><b>${fmt(f.payout_paid)}</b><small>${L("уже выплачено", "to‘langan", "paid out so far")}</small></div>` : ""}</div>
-      <form class="settle-f" id="payoutForm" style="margin-top:8px"><label class="visually-hidden" for="payoutTo">${L("Карта или счёт", "Karta yoki hisob", "Card or account")}</label><input id="payoutTo" value="${esc(d.store?.payout_to || "")}" placeholder="${L("Номер карты или расчётный счёт", "Karta raqami yoki hisob raqami", "Card number or bank account")}" autocomplete="off" style="flex:2;min-width:200px"><label class="visually-hidden" for="payoutAmt">${L("Сумма", "Summa")}</label><input id="payoutAmt" type="number" min="1" inputmode="numeric" placeholder="${L("Вся сумма", "Butun summa", "Everything")}"><button class="btn btn-primary" type="submit" ${(f.payout_available || 0) > 0 && !f.payout_pending ? "" : "disabled"}>${L("Вывести", "Yechib olish", "Withdraw")}</button></form>
+      <form class="settle-f" id="payoutForm" style="margin-top:8px"><label class="visually-hidden" for="payoutTo">${L("Карта или счёт", "Karta yoki hisob", "Card or account")}</label><input id="payoutTo" value="${esc(d.store?.payout_to || "")}" placeholder="${L("Номер карты или расчётный счёт", "Karta raqami yoki hisob raqami", "Card number or bank account")}" autocomplete="off" style="flex:2;min-width:200px"><label class="visually-hidden" for="payoutAmt">${L("Сумма", "Summa")}</label><input id="payoutAmt" type="number" min="1" inputmode="numeric" placeholder="${L("Вся сумма", "Butun summa", "Everything")}"><label class="visually-hidden" for="payoutPw">${L("Пароль аккаунта", "Akkaunt paroli", "Account password")}</label><input id="payoutPw" type="password" autocomplete="current-password" placeholder="${L("Пароль — для новых реквизитов", "Parol — yangi rekvizitlar uchun", "Password — for new details")}" data-was="${esc(d.store?.payout_to || "")}" hidden><button class="btn btn-primary" type="submit" ${(f.payout_available || 0) > 0 && !f.payout_pending ? "" : "disabled"}>${L("Вывести", "Yechib olish", "Withdraw")}</button></form>
       <small style="color:var(--muted)">${L("Деньги за заказы, оплаченные картой, доступны сразу после того, как покупатель получил заказ. Нажмите «Вывести» — переведём на карту или счёт в тот же рабочий день. Комиссия Quriliş Go и эквайринг уже вычтены.", "Karta bilan to‘langan buyurtmalar puli xaridor buyurtmani olgan zahoti mavjud bo‘ladi. «Yechib olish»ni bosing — o‘sha ish kunida kartaga yoki hisobga o‘tkazamiz. Quriliş Go komissiyasi va ekvayring allaqachon ayirilgan.", "Money for card-paid orders is available as soon as the buyer has received the order. Tap “Withdraw” and we transfer it to your card or account the same working day. The Quriliş Go commission and the acquiring fee are already deducted.")}</small>
     </div></div>`}
   ${statementHTML()}`
@@ -6707,11 +6768,17 @@ document.addEventListener("click", e => {
   const b = e.target.closest("[data-look],[data-theme-set]"); if (!b) return;
   setLook(b.dataset.look, b.dataset.themeSet);
 });
+document.addEventListener("input", e => { if (e.target.id === "payoutTo") { const pw = $("#payoutPw"); if (pw && pw.dataset.was) pw.hidden = e.target.value.trim() === pw.dataset.was; } }); // a new card asks for the password (the server checks it and tells the owner)
+/* behaviour that used to be inline attributes (onsubmit/onerror/onclick): the Content-Security-Policy of the site forbids inline handlers */
+document.addEventListener("submit", e => { if (e.target.matches?.("form[data-nosubmit]")) e.preventDefault(); }, true);
+document.addEventListener("error", e => { if (e.target.matches?.("img[data-hideerr]")) e.target.style.visibility = "hidden"; }, true);
+document.addEventListener("click", e => { if (e.target.closest?.('[data-act="reload-page"]')) location.reload(); });
 document.addEventListener("submit", async e => {
   if (e.target.id === "payoutForm") {
-    e.preventDefault(); const to = $("#payoutTo").value.trim(), amt = $("#payoutAmt").value.trim();
+    e.preventDefault(); const to = $("#payoutTo").value.trim(), amt = $("#payoutAmt").value.trim(), pw = $("#payoutPw"), changed = !!pw && pw.dataset.was && to !== pw.dataset.was;
     if (to.length < 8) return toast(L("Укажите номер карты или счёта", "Karta yoki hisob raqamini kiriting", "Enter a card number or an account"));
-    try { await api("POST", "/api/seller/payout", { payout_to: to, ...(amt ? { amount: +amt } : {}) }); toast(L("Запрос принят — переведём в тот же рабочий день", "So‘rov qabul qilindi — o‘sha ish kunida o‘tkazamiz", "Request received — we transfer it the same working day")); sellerData = null; renderSeller(); }
+    if (changed && !pw.value) { pw.hidden = false; pw.focus(); return toast(L("Новые реквизиты: введите пароль аккаунта", "Yangi rekvizitlar: akkaunt parolini kiriting", "New payout details: enter your account password")); }
+    try { await api("POST", "/api/seller/payout", { payout_to: to, ...(amt ? { amount: +amt } : {}), ...(changed ? { current: pw.value } : {}) }); toast(L("Запрос принят — переведём в тот же рабочий день", "So‘rov qabul qilindi — o‘sha ish kunida o‘tkazamiz", "Request received — we transfer it the same working day")); sellerData = null; renderSeller(); }
     catch (er) { toast(apiErr(er)); }
     return;
   }
@@ -9075,7 +9142,7 @@ function storeMapHTML(s) {
   const pt = storePt(s); if (!pt) return "";
   const z = 15, n = 2 ** z, xt = (pt.lo + 180) / 360 * n, r = pt.la * Math.PI / 180, yt = (1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2 * n;
   const x0 = Math.floor(xt) - 1, y0 = Math.floor(yt) - 1, ox = (xt - x0) * 256, oy = (yt - y0) * 256;
-  let t = ""; for (let j = 0; j < 3; j++) for (let i = 0; i < 3; i++) t += `<img src="https://tile.openstreetmap.org/${z}/${x0 + i}/${y0 + j}.png" alt="" loading="lazy" decoding="async" onerror="this.style.visibility='hidden'">`;
+  let t = ""; for (let j = 0; j < 3; j++) for (let i = 0; i < 3; i++) t += `<img src="https://tile.openstreetmap.org/${z}/${x0 + i}/${y0 + j}.png" alt="" loading="lazy" decoding="async" data-hideerr>`;
   return `<a class="smap" href="${yaLink(pt.la, pt.lo)}" target="_blank" rel="noopener" aria-label="${L("Открыть магазин на карте", "Do‘konni xaritada ochish")}"><span class="smap-t" style="transform:translate(calc(50% - ${ox.toFixed(0)}px), calc(50% - ${oy.toFixed(0)}px))">${t}</span>${PIN}<span class="attr">© OpenStreetMap · ${L("открыть в Яндекс Картах", "Yandex Xaritada ochish")}</span></a>`;
 }
 function renderStore(id) {
@@ -9773,7 +9840,7 @@ function dSupport() {
   else supDraw();
   const md = supMode(), known = md === "user" || (md === "guest" && (sup.msgs || []).length) || (md === "demo" && supDemo.get().name);
   const who = known ? "" : `<div class="sup-who"><label class="visually-hidden" for="supName">${L("Ваше имя", "Ismingiz", "Your name")}</label><input id="supName" maxlength="60" autocomplete="name" placeholder="${L("Ваше имя", "Ismingiz", "Your name")}" value="${esc(form.name || "")}"><label class="visually-hidden" for="supPhone">${L("Телефон", "Telefon", "Phone")}</label><input id="supPhone" type="tel" inputmode="tel" autocomplete="tel" maxlength="20" placeholder="${L("Телефон для ответа", "Javob uchun telefon", "Phone for the answer")}" value="${esc(digitsOf(form.phone || "").length > 4 ? form.phone : "")}"></div>`;
-  $("#dFoot").innerHTML = `<form class="sup-f" id="supForm" onsubmit="return false">${who}${sup.order ? `<span class="pill acc">${L("Заказ", "Buyurtma", "Order")} ${esc(sup.order)} <button type="button" class="lnk" data-act="sup-unorder" aria-label="${L("Убрать", "Olib tashlash", "Remove")}">×</button></span>` : ""}<div class="sup-row"><label class="visually-hidden" for="supText">${L("Сообщение", "Xabar", "Message")}</label><textarea id="supText" rows="1" maxlength="1000" placeholder="${L("Сообщение…", "Xabar…", "Message…")}"></textarea><button class="btn btn-primary" type="button" data-act="sup-send" aria-label="${L("Отправить", "Yuborish", "Send")}">${ui("send", 18)}</button></div><span class="err" id="supErr" role="alert" hidden></span></form>`;
+  $("#dFoot").innerHTML = `<form class="sup-f" id="supForm" data-nosubmit>${who}${sup.order ? `<span class="pill acc">${L("Заказ", "Buyurtma", "Order")} ${esc(sup.order)} <button type="button" class="lnk" data-act="sup-unorder" aria-label="${L("Убрать", "Olib tashlash", "Remove")}">×</button></span>` : ""}<div class="sup-row"><label class="visually-hidden" for="supText">${L("Сообщение", "Xabar", "Message")}</label><textarea id="supText" rows="1" maxlength="1000" placeholder="${L("Сообщение…", "Xabar…", "Message…")}"></textarea><button class="btn btn-primary" type="button" data-act="sup-send" aria-label="${L("Отправить", "Yuborish", "Send")}">${ui("send", 18)}</button></div><span class="err" id="supErr" role="alert" hidden></span></form>`;
   const ta = $("#supText"); ta.addEventListener("input", () => { ta.style.height = "auto"; ta.style.height = Math.min(140, ta.scrollHeight) + "px"; });
   ta.addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey && !isPhone()) { e.preventDefault(); supSend(); } });
   clearInterval(sup.poll); sup.poll = setInterval(() => { if (drawerView !== "support") { clearInterval(sup.poll); return; } if (!document.hidden) supLoad(); }, 8000);
@@ -9842,7 +9909,7 @@ function asupInner() {
       <div class="asup-list">${list.map(x => `<button type="button" class="asup-t ${asup.sel === x.user ? "on" : ""}" data-asup="${esc(x.user)}"><b>${esc(x.name || L("Без имени", "Ismsiz", "No name"))}${x.guest ? ` <span class="pill mute">${L("без входа", "kirmasdan", "no account")}</span>` : ""}${x.unread ? ` <span class="pill warn">${x.unread}</span>` : ""}</b><small>${x.phone ? "+" + esc(x.phone) + " · " : ""}${supTime(x.last.at)}</small><span class="mu">${x.last.from === "staff" ? "↩ " : ""}${esc(x.last.text)}</span></button>`).join("")}</div>
       <div class="asup-chat">${!asup.sel ? `<p class="mu">${L("Выберите обращение слева", "Chapdan murojaatni tanlang", "Pick a conversation")}</p>` : !d ? `<p class="mu">${L("Загружаем…", "Yuklanmoqda…", "Loading…")}</p>` : `<div class="asup-h"><b>${esc(d.user.name || "—")}</b> <span class="mu">${d.user.phone ? "+" + esc(d.user.phone) : ""}</span>${d.orders.length ? `<small class="mu">${L("Заказы", "Buyurtmalar", "Orders")}: ${d.orders.map(o => `${esc(o.num)} (${({ active: L("в работе", "jarayonda", "active"), done: L("выполнен", "bajarildi", "done"), cancelled: L("отменён", "bekor", "cancelled") })[o.status] || esc(o.status)})`).join(", ")}</small>` : ""}</div>
         <div class="asup-log" id="asupLog">${supBubbles(d.messages, "staff")}</div>
-        <form class="sup-f" onsubmit="return false"><div class="sup-row"><label class="visually-hidden" for="asupText">${L("Ответ", "Javob", "Answer")}</label><textarea id="asupText" rows="2" maxlength="1000" placeholder="${L("Ответ покупателю — придёт ему на сайт и уведомлением", "Xaridorga javob — saytga va bildirishnoma bilan keladi", "Answer — it reaches the site and a notification")}"></textarea><button class="btn btn-primary" type="button" data-asupsend="1">${ui("send", 18)}</button></div></form>`}</div></div>`}</div>`;
+        <form class="sup-f" data-nosubmit><div class="sup-row"><label class="visually-hidden" for="asupText">${L("Ответ", "Javob", "Answer")}</label><textarea id="asupText" rows="2" maxlength="1000" placeholder="${L("Ответ покупателю — придёт ему на сайт и уведомлением", "Xaridorga javob — saytga va bildirishnoma bilan keladi", "Answer — it reaches the site and a notification")}"></textarea><button class="btn btn-primary" type="button" data-asupsend="1">${ui("send", 18)}</button></div></form>`}</div></div>`}</div>`;
 }
 document.addEventListener("click", async e => {
   const t = e.target.closest("[data-asup],[data-asupsend]"); if (!t) return;
@@ -9860,7 +9927,7 @@ function demoSupportHTML() {
   const unread = d.msgs.filter(x => x.from === "user" && !x.seenStaff).length; d.msgs.forEach(x => { if (x.from === "user") x.seenStaff = true; }); supDemo.set(d);
   return `<div class="panel" style="margin-top:12px;display:grid;gap:10px"><div class="panel-h"><h2 class="h-m">${ui("chat", 18)} ${L("Поддержка", "Yordam", "Support")}</h2><span class="pill ${unread ? "warn" : "ok"}">${unread ? unread + " " + L("новых", "yangi", "new") : L("демо", "demo", "demo")}</span></div>
     <div class="asup-h"><b>${esc(d.name || "—")}</b> <span class="mu">${esc(d.phone || "")}</span></div><div class="asup-log">${supBubbles(d.msgs, "staff")}</div>
-    <form class="sup-f" onsubmit="return false"><div class="sup-row"><textarea id="dsupText" rows="2" maxlength="1000" placeholder="${L("Ответ покупателю", "Xaridorga javob", "Answer")}" aria-label="${L("Ответ", "Javob", "Answer")}"></textarea><button class="btn btn-primary" type="button" data-dsupsend="1">${ui("send", 18)}</button></div></form></div>`;
+    <form class="sup-f" data-nosubmit><div class="sup-row"><textarea id="dsupText" rows="2" maxlength="1000" placeholder="${L("Ответ покупателю", "Xaridorga javob", "Answer")}" aria-label="${L("Ответ", "Javob", "Answer")}"></textarea><button class="btn btn-primary" type="button" data-dsupsend="1">${ui("send", 18)}</button></div></form></div>`;
 }
 document.addEventListener("click", e => { const t = e.target.closest("[data-dsupsend]"); if (!t) return; const v = ($("#dsupText")?.value || "").trim(); if (v.length < 2) return; const d = supDemo.get(); d.msgs.push({ id: Date.now(), from: "staff", staff_name: L("Владелец Quriliş Go", "Quriliş Go egasi", "Quriliş Go owner"), text: v, at: Date.now() }); supDemo.set(d); toast(L("Ответ отправлен — покупатель увидит его в чате", "Javob yuborildi — xaridor chatda ko‘radi", "Sent — the buyer sees it in the chat")); renderMain(); });
 /* ---- Moderation queue: new store products and review texts wait for the owner or a helper ---- */
@@ -9884,7 +9951,7 @@ document.addEventListener("click", async e => {
   const t = e.target.closest("[data-amodp],[data-amodr],[data-amodpno]"); if (!t) return;
   if (t.dataset.amodp) {
     const [id, act] = t.dataset.amodp.split("|");
-    if (act === "no" && !document.getElementById("amodN" + id)) { t.closest(".mod-a").insertAdjacentHTML("afterend", `<form class="oos-f" onsubmit="return false"><label class="visually-hidden" for="amodN${id}">${L("Что исправить", "Nimani tuzatish", "What to fix")}</label><input id="amodN${id}" maxlength="300" placeholder="${L("Что исправить: фото, название, категория…", "Nimani tuzatish: rasm, nom, toifa…", "What to fix: photo, name, category…")}"><button class="btn btn-danger" type="button" data-amodpno="${id}">${L("Отклонить с причиной", "Sabab bilan rad etish", "Reject with this reason")}</button></form>`); document.getElementById("amodN" + id).focus(); return; }
+    if (act === "no" && !document.getElementById("amodN" + id)) { t.closest(".mod-a").insertAdjacentHTML("afterend", `<form class="oos-f" data-nosubmit><label class="visually-hidden" for="amodN${id}">${L("Что исправить", "Nimani tuzatish", "What to fix")}</label><input id="amodN${id}" maxlength="300" placeholder="${L("Что исправить: фото, название, категория…", "Nimani tuzatish: rasm, nom, toifa…", "What to fix: photo, name, category…")}"><button class="btn btn-danger" type="button" data-amodpno="${id}">${L("Отклонить с причиной", "Sabab bilan rad etish", "Reject with this reason")}</button></form>`); document.getElementById("amodN" + id).focus(); return; }
     t.disabled = true;
     try { await adminApi("POST", `/api/admin/products/${id}/review`, { ok: true }); toast(L("Товар одобрен и виден покупателям", "Mahsulot tasdiqlandi va xaridorlarga ko‘rinadi", "Approved — buyers see it now")); amod.data.products = amod.data.products.filter(x => String(x.id) !== id); amodRedraw(); syncCatalog(); }
     catch (er) { t.disabled = false; toast(apiErr(er)); }

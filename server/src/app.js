@@ -5,7 +5,7 @@ import { randomBytes, createHash } from "node:crypto";
 import { gzipSync } from "node:zlib";
 import { openDb } from "./db.js";
 import { Router, HttpError, bad, readJson, readBody, send, cors, Limiter, clientIp, int, str } from "./http.js";
-import { signJwt, verifyJwt, parsePhone, issueOtp, checkOtp, verifyIdToken, newUserId, publicUser, hashPassword, verifyPassword, tempPassword } from "./auth.js";
+import { signJwt, verifyJwt, parsePhone, issueOtp, checkOtp, verifyIdToken, newUserId, publicUser, hashPassword, verifyPassword, tempPassword, assertStrongPassword } from "./auth.js";
 import { createSms } from "./sms.js";
 import { loadLines, quote, assertNoProblems, dimsOf } from "./pricing.js";
 import { yandexPrices } from "./delivery.js";
@@ -220,6 +220,7 @@ export function createApp(cfg, log = console) {
     if (cfg.reviewAccounts[phone]) { lim.hit("otp-ip:" + req.ip, cfg.otpPerIpHour, 3600_000); issueOtp(db, cfg.jwtSecret, phone, cfg.reviewAccounts[phone]); return { sent: true, retry_in: 60 }; }
     if (sms.mode === "telegram") throw new HttpError(503, "sms_off", "Sign in through the Telegram bot — SMS codes are not connected yet");
     lim.hit("otp-ip:" + req.ip, cfg.otpPerIpHour, 3600_000);
+    lim.hit("sms-all-h", cfg.smsPerHour, 3600_000); lim.hit("sms-all-d", cfg.smsPerDay, 86400_000); // an SMS flood to many numbers stops at the budget
     const code = issueOtp(db, cfg.jwtSecret, phone);
     const out = await sms.sendCode(phone, code);
     return { sent: true, retry_in: 60, ...(out.dev ? { dev_code: code } : {}) };
@@ -248,7 +249,7 @@ export function createApp(cfg, log = console) {
         u = db.get("SELECT * FROM users WHERE id=?", u.id);
       }
       // a short ticket that lets this person set (or reset) the password right after confirming the phone by SMS
-      return { ...session(u), is_new: isNew || !u.name, has_password: !!u.pw_hash, pw_ticket: signJwt({ typ: "pwset", sub: u.id }, cfg.jwtSecret, 900) };
+      return { ...session(u), is_new: isNew || !u.name, has_password: !!u.pw_hash, pw_ticket: signJwt({ typ: "pwset", sub: u.id, pa: u.pw_at || 0 }, cfg.jwtSecret, 900) }; // pa: the ticket works until the password changes — once
     });
   });
   /* ---------- sign in by phone + password (buyers, masters, sellers). The password is set after the phone is confirmed by an SMS code
@@ -275,10 +276,12 @@ export function createApp(cfg, log = console) {
   r.post("/api/auth/password", async req => {
     const u = need(req), b = await readJson(req);
     if (staffOf(u)) throw new HttpError(403, "staff_account", "Staff change their password in the staff panel");
+    assertStrongPassword(b.password, { min: 8, phone: u.phone, name: u.name }); // the same rules as the sign-up form; cheap, so before the attempt limit
     lim.hit("pwset:" + u.id, 10, 3600_000);
     const t = b.ticket ? verifyJwt(b.ticket, cfg.jwtSecret) : null;
-    const byTicket = !!t && t.typ === "pwset" && t.sub === u.id;
+    const byTicket = !!t && t.typ === "pwset" && t.sub === u.id && (t.pa || 0) === (u.pw_at || 0); // single use: a password set with it changes pw_at
     if (u.pw_hash && !byTicket && !verifyPassword(typeof b.current === "string" ? b.current : "", u.pw_hash)) throw new HttpError(403, "bad_current", "Enter your current password or confirm the phone by SMS");
+    if (u.pw_hash && typeof b.password === "string" && verifyPassword(b.password, u.pw_hash)) throw bad("weak_password", "Choose a password you have not used here", { reason: "same_as_old" });
     const hash = hashPassword(b.password, 8);
     const had = !!u.pw_hash;
     db.run("UPDATE users SET pw_hash=?, pw_at=?, token_ver=token_ver+? WHERE id=?", hash, Date.now(), had ? 1 : 0, u.id);
@@ -349,8 +352,9 @@ export function createApp(cfg, log = console) {
     if (st.from_env) throw new HttpError(409, "owner_env", "The owner's password is set on the server with `imorat owner`");
     lim.hit("pwchange:" + u.id, 10, 3600_000);
     if (typeof b.old !== "string" || !verifyPassword(b.old, st.pass_hash)) throw bad("bad_login", "The current password is wrong");
-    if (b.password === b.old) throw bad("weak_password", "Choose a password you have not used here");
-    const hash = hashPassword(b.password); // throws weak_password when not a string of 10–256 characters
+    if (b.password === b.old) throw bad("weak_password", "Choose a password you have not used here", { reason: "same_as_old" });
+    assertStrongPassword(b.password, { min: 10, phone: u.phone, name: u.name }); // staff: 10+ characters and the same rules as everyone
+    const hash = hashPassword(b.password);
     db.run("UPDATE staff SET pass_hash=?, must_change=0 WHERE user_id=?", hash, u.id);
     db.run("UPDATE users SET token_ver=token_ver+1 WHERE id=?", u.id); // every other session of this helper ends
     audit(req, "staff.password", u.id);
@@ -474,6 +478,8 @@ export function createApp(cfg, log = console) {
   r.post("/api/orders", async req => {
     const u = need(req), b = await readJson(req);
     lim.hit("order:" + u.id, 30, 3600_000);
+    // goods are held for an unpaid order: one account keeps at most 3 such orders open (no buying up a product's whole stock)
+    if (db.get("SELECT COUNT(*) n FROM orders WHERE user_id=? AND status='active' AND pay_status='pending' AND created_at>?", u.id, Date.now() - 90 * 60000).n >= 3) throw new HttpError(429, "too_many_open", "Pay for or cancel your open orders first");
     const { q, form, lines, problems } = await computeQuote(req, b);
     assertNoProblems(problems);
     if (q.unknown) throw new HttpError(503, "delivery_price_unavailable", "The carrier did not return a delivery price for this address — try again in a minute or choose pickup", { quote: q });
@@ -628,11 +634,12 @@ export function createApp(cfg, log = console) {
 
   /* ---------- AI ---------- */
   r.post("/api/ai/chat", async (req, res) => {
-    const b = await readJson(req, 7 * 1024 * 1024);
     const u = req.user;
     const day = new Date().toISOString().slice(0, 10);
+    // the limits come first, then the body is read (a guest's body is smaller: one compressed photo, shorter texts)
     if (u) lim.hit(`ai:${u.id}:${day}`, cfg.ai.dailyUser, 86400_000); else lim.hit(`ai-ip:${req.ip}:${day}`, cfg.ai.dailyGuest, 86400_000);
     lim.hit("ai-min:" + (u?.id || req.ip), 8, 60_000);
+    const b = await readJson(req, (u ? 7 : 2) * 1024 * 1024);
     await streamChat(cfg.ai, buildRequest(db, ref, cfg.ai, b, u, { discounts: cfg.discounts }), res, log);
   });
 
@@ -669,7 +676,7 @@ export function createApp(cfg, log = console) {
       out.district = d;
     }
     if (out.la === null && out.district) { out.la = D[out.district].la; out.lo = D[out.district].lo; }
-    for (const k of ["name", "addr", "hours", "landmark", "telegram"]) if (typeof out[k] === "string") out[k] = out[k].replace(/[<>]/g, ""); // shown in every buyer's browser and in Telegram
+    for (const k of ["name", "descr", "addr", "hours", "landmark", "telegram", "payout_to"]) if (typeof out[k] === "string") out[k] = out[k].replace(/[<>]/g, ""); // shown in every buyer's browser, the panel and Telegram: no markup at all (the client escapes too)
     return out;
   }
 
@@ -693,14 +700,35 @@ export function createApp(cfg, log = console) {
     notify.admins(`🏪 Новый магазин на проверке: <b>${s.name.replace(/[<>&]/g, "")}</b>\n${s.descr.slice(0, 200).replace(/[<>&]/g, "")}\nТел.: +${s.phone}\nОдобрить: ${cfg.siteUrl}#seller`);
     return { store: publicStore(db.get("SELECT * FROM stores WHERE id=?", id)), user: publicUser(db.get("SELECT * FROM users WHERE id=?", u.id), cfg.admins) };
   });
+  /* the card or account for payouts: a changed one needs the account password (a stolen session alone cannot redirect the money),
+     and the store owner is told by Telegram and SMS, the owners of the platform by Telegram; the audit log keeps both ends masked */
+  const maskTo = t => { const d = String(t || "").replace(/\s+/g, ""); return d ? "…" + d.slice(-4) : "—"; };
+  async function payoutChange(req, u, s, to, b) {
+    if ((to || "") === (s.payout_to || "")) return;
+    lim.hit("payoutchg:" + u.id, 5, 3600_000);
+    if (u.pw_hash) { if (!verifyPassword(typeof b.current === "string" ? b.current : "", u.pw_hash)) throw new HttpError(403, "bad_current", "Enter your account password to change the payout details"); }
+    else if (s.payout_to) throw new HttpError(403, "need_password", "Set a password in your profile first — it is needed to change the payout details");
+    audit(req, "payout.change", s.id, { from: maskTo(s.payout_to), to: maskTo(to) });
+    const msg = `Quriliş Go: реквизиты для выплат магазина «${String(s.name).replace(/[<>&]/g, "")}» изменены на ${maskTo(to)}. Если это были не вы — сразу напишите в поддержку.`;
+    const ow = db.get("SELECT tg_chat FROM users WHERE id=?", s.owner_id); if (ow?.tg_chat) tg.send(ow.tg_chat, msg);
+    if (s.phone) sms.sendText(s.phone, msg).catch(() => {});
+    notify.owners(`🔐 Реквизиты выплат изменены: ${String(s.name).replace(/[<>&]/g, "")} ${maskTo(s.payout_to)} → ${maskTo(to)}.`);
+  }
   r.patch("/api/seller/store", async req => {
-    const { s } = needSeller(req), b = await readJson(req);
+    const { s, u } = needSeller(req), b = await readJson(req);
     const x = storeInput(b, true);
+    if (x.payout_to !== undefined) await payoutChange(req, u, s, x.payout_to, b);
     const cols = Object.keys(x); if (!cols.length) return { store: publicStore(s) };
     const vals = cols.map(k => (k === "cats" ? JSON.stringify(x[k]) : x[k]));
     db.run(`UPDATE stores SET ${cols.map(c => c + "=?").join(",")} WHERE id=?`, ...vals, s.id);
     if (x.descr) db.run("UPDATE stores SET ru=?, uz=? WHERE id=?", x.descr.slice(0, 80), x.descr.slice(0, 80), s.id);
     if (x.addr) db.run("UPDATE stores SET addr_uz=? WHERE id=?", x.addr, s.id);
+    // an open store changed what buyers read about it: logged and sent to the moderators to look at (post-moderation)
+    const shown = ["name", "descr", "addr", "phone", "telegram"].filter(k => x[k] !== undefined && String(x[k]) !== String(s[k] ?? ""));
+    if (s.status === "active" && shown.length) {
+      audit(req, "store.edit", s.id, Object.fromEntries(shown.map(k => [k, String(x[k]).slice(0, 120)])));
+      notify.owners(`✏️ Магазин «${String(s.name).replace(/[<>&]/g, "")}» изменил: ${shown.join(", ")}${x.name ? ` → «${x.name.replace(/[<>&]/g, "")}»` : ""}. Проверьте в админке.`);
+    }
     bumpCatalog();
     return { store: ownerStore(db.get("SELECT * FROM stores WHERE id=?", s.id)) };
   });
@@ -968,7 +996,10 @@ export function createApp(cfg, log = console) {
   r.post("/api/push/subscribe", async req => {
     const u = need(req), b = await readJson(req);
     const ep = str(b.endpoint, 1000), p256 = str(b.keys?.p256dh, 200), au = str(b.keys?.auth, 100);
-    if (!/^https:\/\//.test(ep) || !p256 || !au) throw bad("bad_subscription", "Invalid push subscription");
+    // only the browsers' own push services: the server POSTs to this address, so anything else would let it be aimed at other hosts
+    let host = ""; try { const x = new URL(ep); host = x.protocol === "https:" && !x.port ? x.hostname.toLowerCase() : ""; } catch {}
+    const PUSH_HOSTS = /(^|\.)(fcm\.googleapis\.com|android\.googleapis\.com|push\.services\.mozilla\.com|push\.apple\.com|notify\.windows\.com|push\.yandex\.(ru|net))$/;
+    if (!host || !PUSH_HOSTS.test(host) || !p256 || !au) throw bad("bad_subscription", "Invalid push subscription");
     db.run("INSERT INTO push_subs(endpoint,user_id,p256dh,auth,created_at) VALUES(?,?,?,?,?) ON CONFLICT(endpoint) DO UPDATE SET user_id=excluded.user_id, p256dh=excluded.p256dh, auth=excluded.auth", ep, u.id, p256, au, Date.now());
     return { ok: true };
   });
@@ -1037,9 +1068,14 @@ export function createApp(cfg, log = console) {
   });
   r.post("/api/admin/mfa/verify", async req => {
     const u = needAdmin(req, { mfa: false }), b = await readJson(req);
-    lim.hit("mfa:" + u.id, 10, 15 * 60000);
+    lim.hit("mfa:" + u.id, 10, 15 * 60000); lim.hit("mfa-d:" + u.id, 30, 86400_000); // and at most 30 tries a day: guessing a 6-digit code stays hopeless
     const counter = u.totp_secret ? checkTotp(u.totp_secret, b.code) : false;
-    if (counter === false) { audit(req, "mfa.fail", u.id); throw bad("mfa_wrong", "Wrong code"); }
+    if (counter === false) {
+      audit(req, "mfa.fail", u.id);
+      const fails = db.get("SELECT COUNT(*) n FROM audit WHERE action='mfa.fail' AND user_id=? AND created_at>?", u.id, Date.now() - 3600_000).n;
+      if (fails === 5) notify.owners(`⚠️ 5 неверных кодов входа в панель за час для ${String(u.name || u.phone || u.id).replace(/[<>&]/g, "")}. Если это не вы — смените пароль.`); // the password or SMS step was passed by someone
+      throw bad("mfa_wrong", "Wrong code");
+    }
     // each code counts once: the counter it belongs to is remembered, and anything up to it is refused (no replay in the ±30 s tolerance)
     if (!db.run("UPDATE users SET totp_last=? WHERE id=? AND (totp_last IS NULL OR CAST(totp_last AS INTEGER)<?)", String(counter), u.id, counter).changes) throw bad("mfa_reused", "This code was already used, wait for the next one");
     if (!u.totp_on) { db.run("UPDATE users SET totp_on=1 WHERE id=?", u.id); audit(req, "mfa.enabled", u.id); }
@@ -1058,8 +1094,8 @@ export function createApp(cfg, log = console) {
     const { s, u } = needSeller(req), b = await readJson(req);
     const f = storeFinance(s.id), amount = b.amount == null || b.amount === "" ? f.payout_available : int(b.amount, 1, 1e12);
     if (!amount || amount > f.payout_available) throw bad("bad_amount", "Nothing to pay out yet");
-    const to = str(b.payout_to, 120) || s.payout_to || ""; if (to.length < 8) throw bad("payout_to", "Add a card number or bank account for the transfer");
-    if (to !== s.payout_to) db.run("UPDATE stores SET payout_to=? WHERE id=?", to, s.id);
+    const to = str(b.payout_to, 120).replace(/[<>]/g, "") || s.payout_to || ""; if (to.length < 8) throw bad("payout_to", "Add a card number or bank account for the transfer");
+    if (to !== s.payout_to) { await payoutChange(req, u, s, to, b); db.run("UPDATE stores SET payout_to=? WHERE id=?", to, s.id); }
     if (db.get("SELECT 1 FROM payouts WHERE store_id=? AND status='requested'", s.id)) throw new HttpError(409, "payout_pending", "The previous request is still being processed");
     const id = Number(db.run("INSERT INTO payouts(store_id,amount,payout_to,requested_at) VALUES(?,?,?,?)", s.id, amount, to, Date.now()).lastInsertRowid);
     audit(req, "payout.request", s.id, { amount });
