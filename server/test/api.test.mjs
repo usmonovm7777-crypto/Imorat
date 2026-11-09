@@ -1916,10 +1916,12 @@ test("Phone + password: set after the SMS code, sign in, reset by SMS; a store o
   const A = globalThis.ADMIN;
   assert.equal((await call("PATCH", `/api/admin/stores/${sid}`, { status: "active" }, A)).data.error, "contract_required");
   assert.equal((await call("PATCH", `/api/admin/stores/${sid}`, { status: "meeting" }, A)).data.error, "meeting_required");
-  const meet = await call("PATCH", `/api/admin/stores/${sid}`, { status: "meeting", meet_at: "2026-11-20T11:00:00+05:00", meet_place: "Офис, Чиланзар" }, A);
+  assert.equal((await call("PATCH", `/api/admin/stores/${sid}`, { status: "meeting", meet_at: "2020-01-01T10:00:00+05:00", meet_place: "Офис" }, A)).data.error, "meeting_past"); // a meeting in the past is refused
+  const meetAt = new Date(Date.now() + 12 * 86400000).toISOString().slice(0, 10) + "T11:00:00+05:00";
+  const meet = await call("PATCH", `/api/admin/stores/${sid}`, { status: "meeting", meet_at: meetAt, meet_place: "Офис, Чиланзар" }, A);
   assert.equal(meet.status, 200, JSON.stringify(meet.data));
   const mine = await call("GET", "/api/seller/summary", null, st);
-  assert.equal(mine.data.store.status, "meeting"); assert.equal(mine.data.store.meet_place, "Офис, Чиланзар"); assert.equal(mine.data.store.meet_at, Date.parse("2026-11-20T11:00:00+05:00"));
+  assert.equal(mine.data.store.status, "meeting"); assert.equal(mine.data.store.meet_place, "Офис, Чиланзар"); assert.equal(mine.data.store.meet_at, Date.parse(meetAt));
   const open = await call("PATCH", `/api/admin/stores/${sid}`, { status: "active", contract_no: "QG-2026/015" }, A);
   assert.equal(open.status, 200);
   const after = await call("GET", "/api/seller/summary", null, st);

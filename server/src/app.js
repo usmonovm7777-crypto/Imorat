@@ -1118,7 +1118,7 @@ export function createApp(cfg, log = console) {
     // access opens only after the contract is signed on paper: the admin records its number (once; a blocked store comes back without it)
     const contractNo = b.contract_no != null ? str(b.contract_no, 40) : "";
     if (b.status === "active" && s.status !== "active" && !s.contract_no && !contractNo && process.env.STORE_AUTO_APPROVE !== "1") throw bad("contract_required", "Record the signed contract number before opening access");
-    let meetAt; if (b.meet_at !== undefined) { meetAt = b.meet_at ? new Date(b.meet_at).getTime() : null; if (b.meet_at && !Number.isFinite(meetAt)) throw bad("bad_date", "meet_at must be a date"); }
+    let meetAt; if (b.meet_at !== undefined) { meetAt = b.meet_at ? new Date(b.meet_at).getTime() : null; if (b.meet_at && !Number.isFinite(meetAt)) throw bad("bad_date", "meet_at must be a date"); if (meetAt && (meetAt < Date.now() - 5 * 60000 || meetAt > Date.now() + 366 * 86400000)) throw bad("meeting_past", "The meeting must be within the coming year"); }
     if (b.status === "meeting" && !meetAt && !s.meet_at) throw bad("meeting_required", "Set the date and place of the meeting");
     if ((b.owner_phone !== undefined || b.free_until !== undefined) && !isOwner(adm)) throw new HttpError(403, "owner_only", "Only the owner of Quriliş Go moves a store to another person or changes its free months");
     // validate everything before the first write, so a bad owner phone does not leave a half-applied change
