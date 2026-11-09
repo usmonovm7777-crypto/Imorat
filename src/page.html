@@ -205,29 +205,30 @@ html.pg-anim, html.pg-anim body { overflow-x: clip; }
 html.intro-on, html.intro-on body { background: #171412 !important; color-scheme: dark; } /* the strip under the status bar is dark while the intro runs */
 html.intro-on body::before { content: ""; position: fixed; inset: 0; z-index: 9998; background: #171412; animation: inCover 0s linear 4s forwards; } /* covers the page until the intro is drawn (and lets go after 4 s whatever happens) */
 @keyframes inCover { to { visibility: hidden; } }
-#intro { position: fixed; inset: 0; z-index: 9999; overflow: hidden; background: #171412; --t: min(22vw, 96px); animation: inOut .42s cubic-bezier(.4, 0, .2, 1) 2.25s both; }
+#intro { position: fixed; inset: 0; z-index: 9999; overflow: hidden; background: #171412; --t: min(22vw, 96px); animation: inOut .36s cubic-bezier(.4, 0, .2, 1) 2.32s both; }
+/* dark from the first frame: a warm glow opens behind the mark instead of light diamonds (they flashed grey on the dark page) */
+#intro::before { content: ""; position: absolute; left: 50%; top: 50%; width: 150vmax; height: 150vmax; margin: -75vmax 0 0 -75vmax; background: radial-gradient(closest-side, rgb(255 122 40 / .2), rgb(255 122 40 / .07) 38%, transparent 70%); animation: iGlow 1.4s cubic-bezier(.2, .8, .2, 1) .2s both, ioFade .22s ease 2.12s forwards; }
 #intro.skip { animation: inSkip .3s ease both; }
-#intro .idm, #intro .idf { position: absolute; left: 50%; top: 50%; width: 60vmax; height: 60vmax; margin: -30vmax 0 0 -30vmax; rotate: 45deg; transform: scale(0); }
-#intro .idm { animation: idmGrow .72s cubic-bezier(.7, 0, .2, 1) var(--d) both; }
-#intro .d1 { background: #3A332D; --d: .55s; } #intro .d2 { background: #27221E; --d: .65s; } #intro .d3 { background: #171412; --d: .75s; }
+#intro .idf { position: absolute; left: 50%; top: 50%; width: 60vmax; height: 60vmax; margin: -30vmax 0 0 -30vmax; rotate: 45deg; transform: scale(0); }
 #intro .idf { border: 2px solid rgb(255 255 255 / .2); animation: idfGrow 1.1s cubic-bezier(.3, 0, .2, 1) var(--d) both; }
-#intro .f1 { --d: .95s; } #intro .f2 { --d: 1.15s; }
+#intro .f1 { --d: .35s; } #intro .f2 { --d: .6s; }
 #intro .ilines { position: absolute; inset: 0; width: 100%; height: 100%; }
-#intro .ilines path { fill: none; stroke: rgb(255 255 255 / .16); stroke-width: 1; stroke-dasharray: 1; stroke-dashoffset: 1; animation: ilDraw .8s ease-out 1s forwards; }
-#intro .ilogo { position: absolute; left: 50%; top: 50%; width: var(--t); height: var(--t); margin: calc(var(--t) / -2) 0 0 calc(var(--t) / -2); animation: ilogoUp .5s cubic-bezier(.2, .8, .2, 1) 1.15s both; }
-#intro .ilogo::before { content: ""; position: absolute; inset: -22%; rotate: 45deg; border-radius: 16%; background: #E2DBD1; animation: igIn .5s ease .05s both, igDark .45s ease .8s both; }
+#intro .ilines { animation: ioFade .22s ease 2.12s forwards; }
+#intro .ilines path { fill: none; stroke: rgb(255 255 255 / .16); stroke-width: 1; stroke-dasharray: 1; stroke-dashoffset: 1; animation: ilDraw .8s ease-out .7s forwards; }
+#intro .ilogo { position: absolute; left: 50%; top: 50%; width: var(--t); height: var(--t); margin: calc(var(--t) / -2) 0 0 calc(var(--t) / -2); animation: ilogoUp .5s cubic-bezier(.2, .8, .2, 1) 1.15s both, ioFade .22s ease 2.12s forwards; }
+#intro .ilogo::before { content: ""; position: absolute; inset: -22%; rotate: 45deg; border-radius: 16%; background: rgb(255 255 255 / .06); box-shadow: inset 0 0 0 1px rgb(255 255 255 / .2); animation: igIn .5s ease .05s both; }
 #intro .ilogo svg { position: relative; width: 100%; height: 100%; display: block; animation: ilmIn .55s cubic-bezier(.34, 1.4, .64, 1) .1s both; }
-#intro .itx { position: absolute; left: 16px; right: 16px; top: calc(50% + var(--t) * .5); display: grid; justify-items: center; gap: 10px; text-align: center; }
+#intro .itx { position: absolute; left: 16px; right: 16px; top: calc(50% + var(--t) * .5); display: grid; justify-items: center; gap: 10px; text-align: center; animation: ioFade .22s ease 2.12s forwards; } /* the mark and the name leave first, then the dark page lifts — no ghost over the shop */
 #intro .itx i { display: block; width: 72px; height: 1px; background: rgb(255 255 255 / .5); animation: itlIn .5s cubic-bezier(.2, .8, .2, 1) 1.45s both; }
 #intro .itx b { font-family: var(--f-display); font-weight: 700; font-size: calc(var(--t) * .44); line-height: 1.1; letter-spacing: -.03em; color: #fff; white-space: nowrap; animation: itxIn .65s cubic-bezier(.2, .8, .2, 1) 1.3s both; }
 #intro .itx b em { font-style: normal; color: #FF8A3D; margin-left: .2em; }
 #intro .itx small { font-size: 12.5px; letter-spacing: .14em; text-transform: uppercase; color: rgb(255 255 255 / .62); animation: itsIn .5s ease-out 1.6s both; }
-@keyframes idmGrow { to { transform: scale(3.4); } }
 @keyframes idfGrow { 0% { transform: scale(.25); opacity: 0; } 20% { opacity: 1; } 100% { transform: scale(2.7); opacity: 0; } }
 @keyframes ilDraw { to { stroke-dashoffset: 0; } }
 @keyframes ilmIn { from { opacity: 0; transform: scale(.4) rotate(-10deg); } }
 @keyframes igIn { from { opacity: 0; transform: scale(.6); } }
-@keyframes igDark { to { background: rgb(255 255 255 / .06); box-shadow: inset 0 0 0 1px rgb(255 255 255 / .2); } }
+@keyframes iGlow { from { opacity: 0; transform: scale(.3); } }
+@keyframes ioFade { to { opacity: 0; } }
 @keyframes ilogoUp { to { transform: translateY(calc(var(--t) * -.6)); } }
 @keyframes itlIn { from { transform: scaleX(0); } }
 @keyframes itxIn { from { opacity: 0; filter: blur(10px); letter-spacing: .16em; transform: scale(1.06); } }
@@ -2963,7 +2964,7 @@ function showIntro() {
   if (!force && (mqReduce.matches || navigator.webdriver || (!APP_MODE && seen))) return light();
   nativeBar(true);
   const el = document.createElement("div"); el.id = "intro"; el.setAttribute("aria-hidden", "true");
-  el.innerHTML = `<i class="idm d1"></i><i class="idm d2"></i><i class="idm d3"></i><i class="idf f1"></i><i class="idf f2"></i>
+  el.innerHTML = `<i class="idf f1"></i><i class="idf f2"></i>
     <svg class="ilines" viewBox="0 0 100 100" preserveAspectRatio="none"><path d="M0 0L100 100" pathLength="1" vector-effect="non-scaling-stroke"/><path d="M100 0L0 100" pathLength="1" vector-effect="non-scaling-stroke"/></svg>
     <div class="ilogo"><svg viewBox="0 0 100 100">${MARK_TILES.join("")}</svg></div>
     <div class="itx"><i></i><b>Quriliş<em>go</em></b><small>${L("Строительные магазины Ташкента", "Toshkent qurilish do‘konlari", "Tashkent building stores")}</small></div>`;
