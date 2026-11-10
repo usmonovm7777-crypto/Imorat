@@ -3253,6 +3253,9 @@ const panelFocus = new WeakMap();
    A panel closed by its own button leaves its entry marked as spent (never history.back() at that moment — it would race
    with a page change started right after); the next Back skips the twin entry, so one press always does something. */
 const HIST_PANELS = ["modal", "drawer", "wid", "ai", "authM"];
+/* the app keeps each screen's scroll position itself (navStack); the browser's own restoring put the home back where a sheet had
+   been opened long before, when Back skipped that sheet's spent entry */
+try { history.scrollRestoration = "manual"; } catch (e) {}
 let histSpent = null; // the address of the current entry when it is a spent panel entry
 const histPanelOn = () => HIST_PANELS.some(id => document.getElementById(id)?.classList.contains("on"));
 function histPanel(el, on, was) {
