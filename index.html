@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-R4ItMsIASqWkkLy9t0UU6Kzqs8N7Zk677YEiE64meFU=' 'sha256-YM0DSMI5Uvub0nibWX2KcdGwRoAqhI1kF1UFtIs8A9Y=' 'unsafe-eval' https://api-maps.yandex.ru https://*.api-maps.yandex.ru https://yandex.ru https://*.yandex.ru https://*.yandex.net https://yastatic.net https://accounts.google.com https://appleid.cdn-apple.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com https://*.yandex.ru https://yastatic.net; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https: http://127.0.0.1:* http://localhost:*; media-src 'self' data: blob: https:; connect-src 'self' data: blob: https: wss: http://127.0.0.1:* http://localhost:*; frame-src https:; worker-src 'self' blob: https://*.api-maps.yandex.ru https://yastatic.net; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self' https:">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-R4ItMsIASqWkkLy9t0UU6Kzqs8N7Zk677YEiE64meFU=' 'sha256-gDFKTHuKVLFnwU3FcrMF9XREAwac/aMKOGgMF/Emajc=' 'unsafe-eval' https://api-maps.yandex.ru https://*.api-maps.yandex.ru https://yandex.ru https://*.yandex.ru https://*.yandex.net https://yastatic.net https://accounts.google.com https://appleid.cdn-apple.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com https://*.yandex.ru https://yastatic.net; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https: http://127.0.0.1:* http://localhost:*; media-src 'self' data: blob: https:; connect-src 'self' data: blob: https: wss: http://127.0.0.1:* http://localhost:*; frame-src https:; worker-src 'self' blob: https://*.api-maps.yandex.ru https://yastatic.net; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self' https:">
 <meta name="description" content="Quriliş Go — маркетплейс строительных магазинов Ташкента: сравнение цен, Usta AI, калькуляторы ремонта и доставка Яндекс.">
 <style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.5 system-ui,-apple-system,'Segoe UI',Roboto,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
 <script src="config.js"></script>
@@ -1642,6 +1642,63 @@ html.fx .fx-btn.th-btn, .fx-btn.th-btn { background: var(--surface); color: var(
 .ds-teaser { padding: 16px; gap: 12px; }
 .ds-teaser-v svg { max-height: 200px; }
 }
+.ab-top, .ab-back { display: none; }
+@media (max-width: 760px) {
+html:not(.workm):not(.loginm) { --abt: 0px; }
+html.r-home:not(.workm):not(.loginm) { --abt: 50px; }
+html:not(.workm):not(.loginm) .hdr { position: sticky; top: calc(env(safe-area-inset-top, 0px) - var(--abt)); }
+html:not(.workm):not(.loginm) .hdr-row > :is(.menu-btn, .logo, .demo-badge, .th-btn, .lang-pick) { display: none; }
+html.r-home:not(.workm):not(.loginm) .ab-top { display: flex; }
+html:not(.r-home):not(.workm):not(.loginm) .ab-back { display: grid; }
+html:not(.workm):not(.loginm) .search { flex: 1 1 0%; min-width: 0; }
+html:not(.workm):not(.loginm) nav.crumbs { display: none; }
+#foot, .home-setup, #supBtn { display: none !important; }
+.ab-top { order: 0; flex: 1 0 100%; align-items: center; gap: 0; height: 40px; min-width: 0; }
+.ab-where { position: relative; flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; height: 40px; padding-right: 4px; color: var(--ink); }
+.ab-where > svg:first-child { color: var(--accent); flex: none; }
+.ab-where > svg:last-of-type { transform: rotate(90deg); color: var(--muted); flex: none; width: 14px; height: 14px; }
+.ab-wt { display: grid; min-width: 0; line-height: 1.15; }
+.ab-wt small { font-size: 11px; color: var(--muted); }
+.ab-wt b { font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ab-where select { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; font-size: 16px; cursor: pointer; }
+.ab-where:has(select:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 10px; }
+.ab-top .demo-badge { display: inline-block; flex: none; margin: 0 4px; }
+.ab-top .ab-lang { height: 32px; margin: 0 2px; padding: 0 6px 0 9px; border-radius: 999px; font-size: 12px; }
+@media (max-width: 380px) { .ab-top .demo-badge { margin: 0 2px; } .ab-top .ab-lang { padding: 0 8px; } .ab-top .ab-lang svg { display: none; } .ab-ic { width: 34px; } }
+.ab-ic { position: relative; width: 38px; height: 40px; border-radius: 50%; display: grid; place-items: center; color: var(--ink); flex: none; }
+.ab-ic .dot { position: absolute; top: 1px; right: -1px; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 9px; background: var(--signal); color: var(--signal-ink); font-size: 10px; font-weight: 700; display: grid; place-items: center; border: 2px solid var(--surface); }
+.ab-ic .dot[hidden] { display: none; }
+.ab-back { order: 4; width: 42px; height: 42px; border-radius: 50%; place-items: center; flex: none; background: var(--raised); border: 1px solid var(--line); color: var(--ink); }
+.ab-back svg { width: 22px; height: 22px; }
+#drawer.tabroot #dClose, #wid.tabroot #wHead [data-act="close-wid"] { display: none; }
+#drawer.tabroot .d-head, #wid.tabroot .d-head { border-bottom-color: transparent; }
+#drawer.tabroot #dTitle, #wid.tabroot #wHead h2 { font-size: 24px; letter-spacing: -.02em; }
+.abn-w { margin: 4px 0 2px; }
+.abn { display: grid; grid-auto-flow: column; grid-auto-columns: 100%; gap: 10px; overflow-x: auto; scrollbar-width: none; margin-inline: -16px; padding: 2px 16px; scroll-snap-type: x mandatory; scroll-padding-inline: 16px; overscroll-behavior-x: contain; }
+.abn::-webkit-scrollbar { display: none; }
+.abn-s { scroll-snap-align: start; scroll-snap-stop: always; display: grid; grid-template-columns: minmax(0, 1fr) 108px; align-items: center; gap: 10px; min-height: 150px; padding: 16px 14px 16px 18px; border-radius: 22px; text-align: left; overflow: hidden; color: #fff; background: linear-gradient(135deg, #F2661C, #B8480A); }
+.abn-ds { background: linear-gradient(135deg, #3A302A, #171412); }
+.abn-ls { background: linear-gradient(135deg, #C2551A, #7E3410); }
+.abn-ms { background: linear-gradient(135deg, #5A3E2B, #2A1D15); }
+.abn-t { display: grid; gap: 8px; align-content: center; min-width: 0; }
+.abn-t small { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 700; letter-spacing: .01em; color: rgb(255 255 255 / .9); }
+.abn-t b { font-family: var(--f-display); font-size: 17px; line-height: 1.22; font-weight: 600; letter-spacing: -.01em; }
+.abn-cta { display: inline-flex; align-items: center; gap: 2px; justify-self: start; padding: 7px 10px 7px 14px; border-radius: 999px; background: rgb(255 255 255 / .2); font-size: 13px; font-weight: 700; }
+.abn-cta svg { width: 14px; height: 14px; }
+.abn-art { width: 108px; height: 108px; border-radius: 18px; overflow: hidden; display: block; justify-self: end; box-shadow: 0 10px 22px rgb(0 0 0 / .25); rotate: 4deg; }
+.abn-art > * { width: 100%; height: 100%; object-fit: cover; display: block; }
+.abn-dots { display: flex; justify-content: center; gap: 6px; margin-top: 8px; }
+.abn-dots i { width: 6px; height: 6px; border-radius: 3px; background: var(--line-strong); transition: width .25s, background-color .25s; }
+.abn-dots i.on { width: 18px; background: var(--accent); }
+.stores { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 84%; gap: 10px; overflow-x: auto; scrollbar-width: none; margin-inline: -16px; padding: 2px 16px 6px; scroll-snap-type: x mandatory; scroll-padding-inline: 16px; }
+.stores::-webkit-scrollbar { display: none; }
+.stores > .store { scroll-snap-align: start; }
+.stores:not(.all) .store:nth-child(n+6) { display: grid; }
+.stores-more { display: none; }
+#sortSel, #mfD, #mfS { -webkit-appearance: none; appearance: none; width: auto; max-width: 100%; border-radius: 999px; padding: 8px 34px 8px 14px; border: 1px solid var(--line); color: var(--ink); font-weight: 600; background: var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23948a80' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 12px center / 14px 14px; }
+.hdr, .tabbar, .abn, .tools-row, .cat-tile, .card .thumb, .chip, .btn, .ab-ic, .pf-row, .mk-row { -webkit-user-select: none; user-select: none; }
+img, .thumb, .abn-s, .cat-tile { -webkit-touch-callout: none; }
+}
 .livemap { position: relative; aspect-ratio: 4 / 3; max-height: 320px; border-radius: 14px; overflow: hidden; border: 1px solid var(--line); background: var(--raised); }
 .livemap .lm-t { position: absolute; display: grid; grid-template-columns: repeat(3, 256px); width: 768px; height: 768px; }
 .livemap .lm-t img { width: 256px; height: 256px; display: block; }
@@ -1751,7 +1808,7 @@ html.fx .fx-btn.th-btn, .fx-btn.th-btn { background: var(--surface); color: var(
 .mprof-grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 12px; align-items: start; margin-top: 10px; }
 .mp-info, .mp-req { display: grid; gap: 12px; }
 .mp-req { position: sticky; top: calc(var(--hdr-h, 120px) + 8px); }
-@media (max-width: 760px) { .stabs { top: env(safe-area-inset-top, 0px); } .mp-req { top: calc(env(safe-area-inset-top, 0px) + 8px); } }
+@media (max-width: 760px) { :is(html.workm, html.loginm) .stabs { top: env(safe-area-inset-top, 0px); } :is(html.workm, html.loginm) .mp-req { top: calc(env(safe-area-inset-top, 0px) + 8px); } }
 .mp-req textarea, #mForm textarea { width: 100%; font: inherit; font-size: 14px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); resize: vertical; }
 .mrev { border-top: 1px solid var(--line); padding-top: 10px; } .mrev p { margin: 4px 0 0; }
 .mreqs { display: grid; gap: 10px; }
@@ -3007,6 +3064,8 @@ function setLook(fx, theme) {
    Phones start with a short home (the heavy blocks are off), computers show everything; each keeps its own setting. ---- */
 const HOME_W = [
   ["hero", "Главный экран и Usta AI", "Bosh ekran va Usta AI", "Hero and Usta AI", true],
+  ["promo", "Баннеры: Usta AI, 3D, мастера", "Bannerlar: Usta AI, 3D, ustalar", "Banners: Usta AI, 3D, pros", true],
+  ["popular", "Популярные товары", "Ommabop mahsulotlar", "Popular products"],
   ["cats", "Категории", "Toifalar", "Categories"],
   ["tools", "Инструменты: калькуляторы, AI, дизайнер", "Asboblar: kalkulyatorlar, AI, dizayner", "Tools: calculators, AI, designer"],
   ["bundles", "Акции и комплекты", "Aksiyalar va to‘plamlar", "Deals and kits"],
@@ -3025,18 +3084,23 @@ const HOME_W = [
   ["seller", "Для магазинов", "Do‘konlar uchun", "For stores"]
 ];
 const DESK_ORDER = ["hero", "cats", "tools", "bundles", "trust", "marquee", "bought", "designer", "masters", "recent", "hits", "delivery", "fresh", "winter", "calc", "stores", "seller"];
-const PHONE_OFF = ["trust", "marquee", "delivery", "fresh", "winter"];
+const PHONE_OFF = ["fresh", "winter", "calc"];
+/* phones are an app: banners and a feed of goods instead of the site's landing blocks (big hero, benefits, ticker, how delivery
+   works, the stores' pitch — those stay on computers; the same tools are in the bottom bar and the profile) */
+const PHONE_ONLY = ["promo", "popular"], DESK_ONLY = ["hero", "trust", "marquee", "delivery", "seller", "designer"];
+const PHONE_ORDER = ["promo", "tools", "cats", "bought", "recent", "hits", "bundles", "masters", "fresh", "winter", "calc", "stores", "popular"];
+const homeIds = () => HOME_W.map(w => w[0]).filter(id => !(isPhone() ? DESK_ONLY : PHONE_ONLY).includes(id));
 const DESK_OFF = ["tools"]; // computers have the header rail and the ☰ panel; phones get the row of tools under the hero
 const mqPhone = matchMedia("(max-width: 760px)");
 const isPhone = () => mqPhone.matches;
 const homeKey = () => isPhone() ? "imorat.home.m" : "imorat.home";
 const homeName = id => { const w = HOME_W.find(x => x[0] === id); return w ? L(w[1], w[2], w[3]) : id; };
 function homeLayout() {
-  const ids = HOME_W.map(w => w[0]), pref = LS.get(homeKey(), null);
-  const order = (pref?.order || (isPhone() ? ids : DESK_ORDER)).filter(id => ids.includes(id));
-  for (const id of ids) if (!order.includes(id)) order.push(id);
+  const ids = homeIds(), pref = LS.get(homeKey(), null);
+  const order = (pref?.order || (isPhone() ? PHONE_ORDER : DESK_ORDER)).filter(id => ids.includes(id));
+  for (const id of ids) if (!order.includes(id)) { if (id === "promo") order.unshift(id); else order.push(id); } // a block added later: the banners on top, others at the end
   let off = (pref ? pref.off || [] : isPhone() ? PHONE_OFF : DESK_OFF).filter(id => ids.includes(id) && !HOME_W.find(w => w[0] === id)[4]);
-  if (pref && !pref.c2) { order.splice(order.indexOf("cats"), 1); order.splice(order.indexOf("hero") + 1, 0, "cats"); off = off.filter(id => id !== "cats"); }
+  if (pref && !pref.c2) { order.splice(order.indexOf("cats"), 1); order.splice(order.indexOf(isPhone() ? "tools" : "hero") + 1, 0, "cats"); off = off.filter(id => id !== "cats"); }
   return { order, off, custom: !!pref };
 }
 function saveHome(order, off) { LS.set(homeKey(), { order, off, c2: 1 }); applyHome(); }
@@ -3045,7 +3109,7 @@ function resetHome() { try { localStorage.removeItem(homeKey()); } catch {} appl
 function applyHome() {
   const wrap = $("#app > .wrap"); if (!wrap || route.view !== "home") return;
   const { order, off } = homeLayout(), nodes = {};
-  wrap.querySelectorAll(":scope > [data-w]").forEach(n => { (nodes[n.dataset.w] ||= []).push(n); });
+  wrap.querySelectorAll(":scope > [data-w]").forEach(n => { (nodes[n.dataset.w] ||= []).push(n); if (!order.includes(n.dataset.w)) n.hidden = true; }); // a block of the other kind of screen
   let anchor = wrap.querySelector(":scope > .qcats");
   for (const id of order) for (const n of nodes[id] || []) { n.hidden = off.includes(id); if (anchor) anchor.after(n); else wrap.prepend(n); anchor = n; }
   const q = wrap.querySelector(":scope > .qcats"); if (q) q.hidden = !off.includes("cats"); // the quick category row only when the category grid is off
@@ -3189,8 +3253,15 @@ function renderHeader() {
   for (const [sel, ru, uz, en] of [["#dBack", "Назад", "Orqaga", "Back"], ["#wid", "Виджеты", "Vidjetlar", "Widgets"], ["#authM", "Вход", "Kirish", "Sign in"], ["#aiInputL", "Сообщение", "Xabar", "Message"]]) { const el = $(sel); if (el) { if (sel === "#aiInputL") el.textContent = L(ru, uz, en); else el.setAttribute("aria-label", L(ru, uz, en)); } }
   document.querySelectorAll('[aria-label="Закрыть"],[aria-label="Yopish"],[aria-label="Close"]').forEach(el => el.setAttribute("aria-label", L("Закрыть", "Yopish", "Close")));
   const quick = ["build", "tools", "plumb", "heat", "elec", "light", "paint", "tile", "floor", "doors", "kitchen", "furn", "garden"];
+  const abTop = `<div class="ab-top">
+      <label class="ab-where">${ui("pin", 18)}<span class="ab-wt"><small>${L("Доставка", "Yetkazish", "Delivery")}</small><b>${esc(dName(district).replace(/\s*(р-н|tumani|district)$/i, ""))}</b></span>${ui("chev", 14)}<select data-distsel aria-label="${L("Район доставки", "Yetkazish tumani", "Delivery district")}">${DISTRICTS.map(d => `<option value="${d.id}" ${d.id === district ? "selected" : ""}>${L(d.ru, d.uz)}</option>`).join("")}</select></label>
+      ${API ? "" : `<span class="demo-badge">${L("демо", "demo", "demo")}</span>`}
+      <label class="lang-pick ab-lang"><span>${lang.toUpperCase()}</span>${ui("chev", 12)}<select data-langsel aria-label="Язык / Til / Language">${[["ru", "Русский"], ["uz", "Özbekça"], ["en", "English"]].map(([v, n]) => `<option value="${v}" ${lang === v ? "selected" : ""}>${n}</option>`).join("")}</select></label>
+      <button class="ab-ic" type="button" data-act="support" aria-label="${L("Поддержка", "Yordam", "Support")}">${ui("headset", 21)}<span class="dot" id="abSupDot" hidden></span></button>
+      <button class="ab-ic" type="button" data-act="favs" aria-label="${L("Избранное", "Saralanganlar")}">${ui("heart", 21)}<span class="dot" id="abFavDot" hidden></span></button>
+    </div><button class="ab-back" type="button" data-act="app-back" aria-label="${L("Назад", "Orqaga", "Back")}">${ui("back", 22)}</button>`;
   $("#hdr").innerHTML = `
-  <div class="wrap hdr-row">
+  <div class="wrap hdr-row">${abTop}
     <button class="menu-btn" type="button" data-act="widgets" aria-label="${L("Инструменты: калькуляторы, Usta AI, дизайнер, доставка", "Asboblar: kalkulyatorlar, Usta AI, dizayner, yetkazish", "Tools: calculators, Usta AI, designer, delivery")}" title="${L("Инструменты", "Asboblar", "Tools")}">${ui("menu", 22)}<span class="dot" aria-hidden="true" hidden></span></button>
     <button class="logo" type="button" data-go="home" aria-label="Quriliş Go">${markSVG()}<b>Quriliş<em>go</em></b></button>${workChipHTML()}${API ? "" : `<span class="demo-badge" title="${L("Демо-режим: данные хранятся только в этом браузере, заказы и оплата не настоящие", "Demo rejim: ma’lumotlar faqat shu brauzerda, buyurtma va to‘lov haqiqiy emas", "Demo mode: data stays in this browser, orders and payments are not real")}">${L("демо", "demo", "demo")}</span>`}
     <button class="cat-btn" type="button" data-act="mega">${ui("grid", 18)}${L("Каталог", "Katalog")}</button>
@@ -3215,6 +3286,8 @@ function renderHeader() {
   $("#q").addEventListener("input", e => { f.q = e.target.value; f.photo = null; if (route.view === "catalog") renderList(); suggInput(); });
   $("#q").addEventListener("keydown", suggKey);
   $("#distSel").addEventListener("change", e => setDistrict(e.target.value));
+  $("#hdr [data-distsel]")?.addEventListener("change", e => { setDistrict(e.target.value); renderHeader(); });
+  counts(); supBadge();
   $("#fab").innerHTML = `${ui("spark", 22)}<span class="lbl">Usta AI</span><span class="pulse"></span>`;
   $("#fab").setAttribute("aria-label", L("Открыть AI-помощника", "AI yordamchini ochish"));
   syncOrdDot();
@@ -3386,7 +3459,8 @@ function renderTabbar0() {
     $("#tabbar").innerHTML = `<div class="tb-row">${items.map(([id, icn, lbl]) => `<button type="button" ${id === "profile" ? `data-act="${user ? "profile" : "login"}"` : `data-stab="${id}"`} aria-current="${cur === id}">${ui(icn, 22)}<span>${lbl}</span></button>`).join("")}</div>`;
     return;
   }
-  const cur = (typeof widOpen !== "undefined" && widOpen) ? "tools" : drawerView === "profile" || drawerView === "orders" ? "profile" : drawerView ? "cart" : $("#mega")?.classList.contains("on") || route.view === "catalog" ? "catalog" : "home";
+  const dvTab = { cart: "cart", checkout: "cart", repeat: "cart", profile: "profile", orders: "profile", track: "profile", watch: "profile", projects: "profile", homeSetup: "profile" }; // support, saved goods and the comparison belong to no tab
+  const cur = (typeof widOpen !== "undefined" && widOpen) ? "tools" : drawerView ? (dvTab[drawerView] || "") : $("#mega")?.classList.contains("on") || route.view === "catalog" ? "catalog" : "home";
   const items = [["home", "home", L("Главная", "Asosiy"), "go"], ["catalog", "grid", L("Каталог", "Katalog"), "mega"], ["tools", "calc", L("Инструменты", "Asboblar", "Tools"), "widgets"], ["cart", "cart", L("Корзина", "Savat"), "cart"], ["profile", "user", L("Профиль", "Profil"), "profile"]];
   $("#tabbar").innerHTML = `<div class="tb-row">${items.map(([id, icn, lbl, act]) => `<button type="button" ${act === "go" ? 'data-go="home"' : `data-act="${act}"`} aria-current="${cur === id}">${ui(icn, 22)}<span>${lbl}</span>${id === "cart" ? `<span class="dot" id="tabCart" ${cartCount() ? "" : "hidden"}>${cartCount()}</span>` : ""}</button>`).join("")}</div>`;
 }
@@ -3395,6 +3469,7 @@ function counts() {
   const cd = $("#cartDot"); if (cd) { cd.textContent = n; cd.hidden = !n; }
   const tc = $("#tabCart"); if (tc) { tc.textContent = n; tc.hidden = !n; }
   const fd = $("#favDot"); if (fd) { fd.textContent = favs.length; fd.hidden = !favs.length; }
+  const af = $("#abFavDot"); if (af) { af.textContent = favs.length; af.hidden = !favs.length; }
 }
 
 /* ================= Mega menu ================= */
@@ -3670,6 +3745,7 @@ function renderHome() {
       </div>
       <div class="collage" aria-hidden="false">${collage.map(p => `<button class="tile studio" type="button" data-open="${p.id}" style="--h:${hueOf(p)}">${art(p, "", true)}<span>${esc(pName(p))}</span></button>`).join("")}</div>
     </section>
+    ${isPhone() ? promoHTML() : ""}
     <nav class="tools-row" data-w="tools" aria-label="${L("Инструменты", "Asboblar", "Tools")}">
       <button type="button" data-act="w-calc"><span class="tr-i">${ui("calc", 24)}</span><span>${L("Калькуляторы", "Kalkulyatorlar", "Calculators")}</span></button>
       <button type="button" data-act="ai"><span class="tr-i tr-ai">${ui("spark", 24)}</span><span>Usta AI</span></button>
@@ -3756,15 +3832,53 @@ function renderHome() {
       <div class="seller-band"><div><h2 class="h-l">${L("У вас строительный магазин?", "Qurilish do‘koningiz bormi?")}</h2><p>${stage0() ? L("Загружайте товары с фото и остатки, принимайте заказы в кабинете. Покупатель платит вам напрямую при получении — Quriliş Go сейчас не берёт комиссию вовсе. Когда подключим оплату картой, условия объявим заранее.", "Mahsulotlarni rasm va qoldiqlar bilan yuklang, buyurtmalarni kabinetda qabul qiling. Xaridor sizga olganda to‘g‘ridan-to‘g‘ri to‘laydi — Quriliş Go hozir umuman komissiya olmaydi. Karta to‘lovini ulaganimizda shartlarni oldindan e’lon qilamiz.", "Upload products with photos and stock, take orders in your dashboard. The buyer pays you directly on receipt — Quriliş Go takes no commission at all for now. When card payment is connected, the terms will be announced in advance.") : L(`Загружайте товары с фото и остатки, принимайте заказы в кабинете, а доставку до клиента возьмёт на себя Яндекс. Комиссия только с проданных товаров: первые ${feeInfo().months} месяца 0%, дальше ${pct(feeInfo().ours)} Quriliş Go.`, `Mahsulotlarni rasm va qoldiqlar bilan yuklang, buyurtmalarni kabinetda qabul qiling, mijozga yetkazishni Yandex o‘z zimmasiga oladi. Komissiya faqat sotilgan mahsulotdan: birinchi ${feeInfo().months} oy 0%, keyin Quriliş Go ${pct(feeInfo().ours)}.`, `Upload products with photos and stock, accept orders in your dashboard, and Yandex handles delivery to the customer. Commission only on what you sell: the first ${feeInfo().months} months 0%, then ${pct(feeInfo().ours)} Quriliş Go.`)}</p></div>
       <button class="btn" type="button" data-go="seller">${ui("store", 18)} ${L("Открыть кабинет продавца", "Sotuvchi kabinetini ochish")}</button></div>
     </section>
+    ${isPhone() ? popularHTML() : ""}
     <div class="home-setup"><button type="button" class="btn btn-line" data-act="home-setup">${ui("grid", 16)} ${L("Настроить главную", "Bosh sahifani sozlash", "Customize home")}</button><small>${L("Выберите, какие блоки показывать и в каком порядке", "Qaysi bloklar va qanday tartibda ko‘rinishini tanlang", "Choose which blocks to show and in what order")}</small></div>
   </div>`;
-  applyHome();
+  applyHome(); promoRun();
   $("#estRange").addEventListener("input", () => updateEstimator());
   $("#heroAsk").addEventListener("submit", e => { e.preventDefault(); const v = $("#heroQ").value.trim(); if (v) { openAI(v); $("#heroQ").value = ""; } else $("#heroQ").focus(); });
   updateEstimator();
   if (!isPhone()) bindCalcs("h");
   // the strip moves at a calm reading speed (px per second), whatever its length or the screen
   requestAnimationFrame(() => { const t = $(".mq-track"); if (t) t.style.setProperty("--mq-dur", Math.round(t.scrollWidth / 2 / (innerWidth < 761 ? 28 : 38)) + "s"); });
+}
+/* phones: banners for what the app can do (all of it works today — nothing here is a sale or a promise), swiped sideways with
+   dots under them; they turn by themselves every 5 s while on screen and untouched (never with reduced motion) */
+function promoHTML() {
+  const pic = k => { const p = byKey(k); return p ? `<span class="abn-art studio" style="--h:${hueOf(p)}" aria-hidden="true">${art(p, "", true)}</span>` : ""; };
+  const S = [
+    ["ai", 'data-act="ai"', "spark", "Usta AI", L("Опишите ремонт своими словами — посчитаем материалы и соберём корзину", "Ta’mirni o‘z so‘zingiz bilan yozing — materiallarni hisoblab, savatni yig‘amiz", "Describe the job in your own words — we count the materials and fill the cart"), L("Спросить", "So‘rash", "Ask"), "cement"],
+    ["ds", 'data-go="design"', "home", L("AI-дизайнер комнаты", "AI xona dizayneri", "AI room designer"), L("Фото и размеры — комната в 3D с мебелью и сметой", "Rasm va o‘lchamlar — mebel va smeta bilan 3D xona", "A photo and the sizes — the room in 3D with furniture and an estimate"), L("Открыть", "Ochish", "Open"), "paint"],
+    ["ls", 'data-go="list"', "camera", L("Список по фото", "Rasmdagi ro‘yxat", "List from a photo"), L("Сфотографируйте список прораба — товары сразу в корзине", "Prorab ro‘yxatini suratga oling — mahsulotlar darhol savatda", "Photograph the foreman’s list — the goods go straight to the cart"), L("Сфотографировать", "Suratga olish", "Take a photo"), "mixer"],
+    ["ms", 'data-go="masters"', "wrench", L("Мастера и спецтехника", "Ustalar va maxsus texnika", "Pros and machinery"), L("Плиточники, электрики, сантехники, экскаваторы — с отзывами", "Kafelchi, elektrik, santexnik, ekskavator — sharhlar bilan", "Tilers, electricians, plumbers, diggers — with reviews"), L("Найти", "Topish", "Find"), "porcel"]
+  ];
+  return `<section class="abn-w" data-w="promo" aria-roledescription="${L("карусель", "karusel", "carousel")}" aria-label="${L("Возможности Quriliş Go", "Quriliş Go imkoniyatlari", "What Quriliş Go can do")}">
+    <div class="abn" id="abn">${S.map(([k, act, icon, t, sub, cta, pk], i) => `<button type="button" class="abn-s abn-${k}" ${act} aria-label="${esc(t)}. ${esc(sub)}" aria-roledescription="${L("слайд", "slayd", "slide")}" data-abn="${i}">
+      <span class="abn-t"><small>${ui(icon, 15)} ${esc(t)}</small><b>${esc(sub)}</b><span class="abn-cta">${esc(cta)} ${ui("chev", 14)}</span></span>${pic(pk)}</button>`).join("")}</div>
+    <div class="abn-dots" aria-hidden="true">${S.map((_, i) => `<i${i ? "" : ' class="on"'}></i>`).join("")}</div></section>`;
+}
+function promoRun() {
+  clearInterval(promoRun.t); const el = $("#abn"); if (!el) return;
+  const dots = [...el.parentElement.querySelectorAll(".abn-dots i")], slides = [...el.children];
+  const idx = () => Math.round(el.scrollLeft / Math.max(1, (slides[1]?.offsetLeft || el.clientWidth) - (slides[0]?.offsetLeft || 0)));
+  let touched = 0;
+  el.addEventListener("scroll", () => { const i = Math.min(slides.length - 1, idx()); dots.forEach((d, k) => d.classList.toggle("on", k === i)); }, { passive: true });
+  for (const t of ["pointerdown", "touchstart", "wheel", "focusin"]) el.addEventListener(t, () => { touched = Date.now(); }, { passive: true });
+  if (mqReduce.matches) return;
+  promoRun.t = setInterval(() => {
+    if (!el.isConnected) return clearInterval(promoRun.t);
+    if (document.hidden || Date.now() - touched < 8000 || drawerView || widOpen || aiOpen || $("#modal").classList.contains("on")) return;
+    const r = el.getBoundingClientRect(); if (r.bottom < 0 || r.top > innerHeight) return;
+    const i = (idx() + 1) % slides.length; el.scrollTo({ left: slides[i].offsetLeft - slides[0].offsetLeft, behavior: "smooth" });
+  }, 5000);
+}
+/* phones: the home ends in a feed of goods, the most reviewed first (as a shop app does) */
+function popularHTML() {
+  const pop = [...PRODUCTS].sort((a, b) => (b.reviews || 0) - (a.reviews || 0) || (b.rating || 0) - (a.rating || 0)).slice(0, 20);
+  if (!pop.length) return "";
+  return `<section class="sec" data-w="popular"><div class="sec-head"><div><h2 class="h-l">${L("Популярные товары", "Ommabop mahsulotlar", "Popular products")}</h2><p>${L("Больше всего отзывов", "Eng ko‘p sharhlar", "Most reviewed")}</p></div><button class="link" type="button" data-go="catalog">${L("Все", "Hammasi", "All")} ${ui("chev", 16)}</button></div>
+    <div class="grid">${pop.map(card).join("")}</div></section>`;
 }
 function bundleCard(b) {
   const items = bundleItems(b), sum = bundleSum(b), on = bundlesOn.includes(b.id) && items.every(([p, q]) => qtyOf(p.id) >= q);
@@ -4111,6 +4225,7 @@ function renderDrawer() {
   if (drawerView === "profile" && !user) { closeDrawer(); openAuth("profile"); return; } // the profile exists only after signing in
   $("#drawer").classList.toggle("trk", drawerView === "track" && orders.some(x => x.num === drawerOrder)); // the order screen: map + sheet, no panel header
   $("#drawer").classList.toggle("prof", drawerView === "profile"); // the profile: no footer bar, the list runs under the tab bar
+  $("#drawer").classList.toggle("tabroot", drawerView === "cart" || drawerView === "profile"); // phones: a tab of the bottom bar — no ✕, the bar switches away
   $("#dBack").innerHTML = ui("back", 16); $("#dClose").innerHTML = ui("close", 16);
   $("#dBack").hidden = !["checkout", "track", "orders", "watch", "projects"].includes(drawerView);
   ({ cart: dCart, checkout: dCheckout, track: dTrack, profile: dProfile, favs: dFavs, orders: dOrders, compare: dCompare, watch: dWatch, projects: dProjects, homeSetup: dHomeSetup, repeat: dRepeat, support: dSupport })[drawerView]?.();
@@ -4677,7 +4792,8 @@ function dProfile() {
       ${API || wk ? "" : row('data-go="seller"', "idcard", L("Кабинет продавца", "Sotuvchi kabineti"), L("Для магазинов-партнёров", "Hamkor do‘konlar uchun"))}
       ${user?.staff && !user.staff.env ? row('data-act="pw-change"', "lock", L("Сменить пароль", "Parolni almashtirish", "Change password"), L("Другие ваши сессии завершатся", "Boshqa sessiyalaringiz tugaydi", "Your other sessions will end")) : ""}
     </div></section>
-    ${APP_MODE ? `<section class="pf-sec"><h3 class="pf-h">${L("Документы", "Hujjatlar", "Documents")}</h3><div class="pf-group">${[["privacy", "shield", L("Политика конфиденциальности", "Maxfiylik siyosati", "Privacy policy")], ["terms", "idcard", L("Пользовательское соглашение", "Foydalanuvchi kelishuvi", "Terms of use")], ["delete-account", "trash", L("Удаление аккаунта", "Akkauntni o‘chirish", "Delete your account")]].map(([k, icon, t]) => `<a class="pf-row" href="${legalUrl(k)}" target="_blank" rel="noopener"><span class="pf-ic">${ui(icon, 18)}</span><span class="pf-t"><b>${t}</b></span><span class="pf-chev">${ui("chev", 16)}</span></a>`).join("")}</div></section>` : ""}
+    ${wk ? "" : `<section class="pf-sec"><h3 class="pf-h">${L("Помощь", "Yordam", "Help")}</h3><div class="pf-group">${row('data-act="support"', "headset", L("Поддержка", "Yordam", "Support"), L("Чат с командой Quriliş Go", "Quriliş Go jamoasi bilan chat", "Chat with the Quriliş Go team"), sup?.unread ? `<span class="pill">${sup.unread}</span>` : "")}</div></section>`}
+    ${APP_MODE || isPhone() ? `<section class="pf-sec"><h3 class="pf-h">${L("Документы", "Hujjatlar", "Documents")}</h3><div class="pf-group">${[["privacy", "shield", L("Политика конфиденциальности", "Maxfiylik siyosati", "Privacy policy")], ["terms", "idcard", L("Пользовательское соглашение", "Foydalanuvchi kelishuvi", "Terms of use")], ["delete-account", "trash", L("Удаление аккаунта", "Akkauntni o‘chirish", "Delete your account")]].map(([k, icon, t]) => `<a class="pf-row" href="${legalUrl(k)}" target="_blank" rel="noopener"><span class="pf-ic">${ui(icon, 18)}</span><span class="pf-t"><b>${t}</b></span><span class="pf-chev">${ui("chev", 16)}</span></a>`).join("")}</div></section>` : ""}
     ${user ? `<div class="pf-group">${row('data-act="logout"', "logout", L("Выйти", "Chiqish", "Sign out"), "", "", " pf-out")}${API ? row('data-act="logout-all"', "lock", L("Выйти на всех устройствах", "Barcha qurilmalardan chiqish"), "", "", " pf-out") + row('data-act="del-account"', "trash", L("Удалить аккаунт", "Akkauntni o‘chirish", "Delete account"), "", "", " pf-out") : ""}</div>` : ""}
     <p class="pf-note">${API ? L("Аккаунт, заказы и магазин хранятся на сервере Quriliş Go.", "Akkaunt, buyurtmalar va do‘kon Quriliş Go serverida saqlanadi.") : L("Данные этого прототипа хранятся только в вашем браузере.", "Prototip ma’lumotlari faqat brauzeringizda saqlanadi.")}</p>
   </div>`;
@@ -4701,6 +4817,7 @@ function closeWidgets() { widOpen = false; setPanel($("#wid"), false); showScrim
 function renderWidgets() {
   const back = wView !== "menu" ? `<button class="ib" type="button" data-wview="menu" aria-label="${L("Назад", "Orqaga")}">${ui("back", 16)}</button>` : "";
   const title = { menu: L("Инструменты", "Asboblar", "Tools"), calc: L("Калькуляторы ремонта", "Ta’mir kalkulyatorlari"), deliv: L("Калькулятор доставки", "Yetkazish kalkulyatori") }[wView];
+  $("#wid").classList.toggle("tabroot", wView === "menu");
   $("#wHead").innerHTML = `${back}<h2>${title}</h2><button class="ib" type="button" data-act="close-wid" aria-label="${L("Закрыть", "Yopish")}">${ui("close", 16)}</button>`;
   const body = $("#wBody");
   if (wView === "menu") {
@@ -9929,7 +10046,7 @@ async function supLoad(peek) {
   catch (e) { if (!peek) sup.msgs = sup.msgs || []; }
   supBadge(); if (drawerView === "support" && !peek) supDraw();
 }
-function supBadge() { const b = $("#supBtn"); if (!b) return; const d = b.querySelector(".dot"); d.hidden = !sup.unread; d.textContent = sup.unread; b.hidden = !!drawerView || route.view === "admin" || !!user?.staff; staffSupBadge(); }
+function supBadge() { if (!sup) return; const ad = $("#abSupDot"); if (ad) { ad.hidden = !sup.unread; ad.textContent = sup.unread || ""; } const b = $("#supBtn"); if (!b) return; const d = b.querySelector(".dot"); d.hidden = !sup.unread; d.textContent = sup.unread; b.hidden = !!drawerView || route.view === "admin" || !!user?.staff; staffSupBadge(); }
 function supTime(t) { const d = new Date(t), today = new Date().toDateString() === d.toDateString(); return d.toLocaleString(LOCALE, today ? { hour: "2-digit", minute: "2-digit" } : { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }); }
 function supBubbles(list, mine) { return list.map(m => `<div class="sup-m ${m.from === mine ? "me" : "them"}"><div>${esc(m.text).replace(/\n/g, "<br>")}</div><small>${m.from === "staff" ? esc(m.staff_name || "Quriliş Go") + " · " : ""}${m.order ? esc(m.order) + " · " : ""}${supTime(m.at)}</small></div>`).join(""); }
 function dSupport() {
@@ -10264,6 +10381,7 @@ function renderMain() {
   if (LS.get("imorat.shopperView", false) && location.hash.slice(1) === route.view && ((route.view === "admin" && user?.admin) || (route.view === "seller" && myStore && user && !user.staff))) { LS.set("imorat.shopperView", false); renderHeader(); } // opening one's own panel or cabinet leaves the buyer view
   const wm = workMode(), H = document.documentElement;
   const to = h => { history.replaceState(null, "", "#" + h); route = parseHash(); };
+  H.classList.toggle("r-home", !["catalog", "seller", "design", "masters", "admin", "flat", "shop", "store", "partner", "staff"].includes(route.view));
   if (user && ["partner", "staff"].includes(route.view)) to(wm === "admin" ? "admin" : wm === "seller" ? "seller" : wm === "master" ? "masters" : "");
   else if (wm === "seller" && !["seller", "admin", "owner"].includes(route.view)) to("seller");
   else if (wm === "admin" && !["admin", "store"].includes(route.view)) to("admin");
@@ -10344,7 +10462,7 @@ window.addEventListener("hashchange", () => {
   if (document.startViewTransition && motionOK() && !SAFARI) document.startViewTransition(routeTo); else routeTo();
 });
 /* how much of the screen the header covers while scrolling: the phone header scrolls away, the desktop one sticks */
-const hdrStuck = () => { const h = $("#hdr"); return h && getComputedStyle(h).position === "sticky" ? h.offsetHeight : 0; };
+const hdrStuck = () => { const h = $("#hdr"); if (!h) return 0; const cs = getComputedStyle(h); return cs.position === "sticky" ? h.offsetHeight + Math.min(0, parseFloat(cs.top) || 0) : 0; }; // a phone header partly slides away (its top row)
 function scrollToSec(id) {
   closeMega(); if (drawerView) closeDrawer(); if (aiOpen) closeAI(); if (widOpen) closeWidgets();
   const doIt = () => { document.documentElement.classList.add("cv-all"); const el = document.getElementById(id); if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - (hdrStuck() + 12), behavior: "smooth" }); };
@@ -10411,6 +10529,7 @@ document.addEventListener("click", e => {
     case "cart": return openDrawer("cart");
     case "favs": return openDrawer("favs");
     case "profile": return user ? openDrawer("profile") : openAuth("profile"); // signed out: only the sign-in / registration, the profile opens after it
+    case "app-back": return navStack.length > 1 ? history.back() : go("home");
     case "orders": return openDrawer("orders");
     case "checkout": return user ? openDrawer("checkout") : openAuth("checkout");
     case "login": return openAuth();
