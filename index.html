@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-R4ItMsIASqWkkLy9t0UU6Kzqs8N7Zk677YEiE64meFU=' 'sha256-5zV0XOwppdK3EhiXYY48DBz8tPBB63U/JwPphVMgbwY=' 'unsafe-eval' https://api-maps.yandex.ru https://*.api-maps.yandex.ru https://yandex.ru https://*.yandex.ru https://*.yandex.net https://yastatic.net https://accounts.google.com https://appleid.cdn-apple.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com https://*.yandex.ru https://yastatic.net; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https: http://127.0.0.1:* http://localhost:*; media-src 'self' data: blob: https:; connect-src 'self' data: blob: https: wss: http://127.0.0.1:* http://localhost:*; frame-src https:; worker-src 'self' blob: https://*.api-maps.yandex.ru https://yastatic.net; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self' https:">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-R4ItMsIASqWkkLy9t0UU6Kzqs8N7Zk677YEiE64meFU=' 'sha256-IKFg1xck0dxXrwUc1oK5Dvuft5sCvu73GNrifWJD4Wc=' 'unsafe-eval' https://api-maps.yandex.ru https://*.api-maps.yandex.ru https://yandex.ru https://*.yandex.ru https://*.yandex.net https://yastatic.net https://accounts.google.com https://appleid.cdn-apple.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com https://*.yandex.ru https://yastatic.net; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https: http://127.0.0.1:* http://localhost:*; media-src 'self' data: blob: https:; connect-src 'self' data: blob: https: wss: http://127.0.0.1:* http://localhost:*; frame-src https:; worker-src 'self' blob: https://*.api-maps.yandex.ru https://yastatic.net; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self' https:">
 <meta name="description" content="Quriliş Go — маркетплейс строительных магазинов Ташкента: сравнение цен, Usta AI, калькуляторы ремонта и доставка Яндекс.">
 <style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.5 system-ui,-apple-system,'Segoe UI',Roboto,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
 <script src="config.js"></script>
@@ -1627,9 +1627,9 @@ html.fx .fx-btn.th-btn, .fx-btn.th-btn { background: var(--surface); color: var(
 .bundles::-webkit-scrollbar { display: none; }
 .bundles > * { scroll-snap-align: start; }
 .bundle .bimg { height: 110px; }
-.mgrid { display: grid; grid-auto-flow: column; grid-auto-columns: 82%; gap: 10px; overflow-x: auto; scrollbar-width: none; margin-inline: -16px; padding: 2px 16px 6px; scroll-snap-type: x mandatory; scroll-padding-inline: 16px; }
-.mgrid::-webkit-scrollbar { display: none; }
-.mgrid > * { scroll-snap-align: start; }
+[data-w="masters"] .mgrid { display: grid; grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 86%; gap: 10px; overflow-x: auto; scrollbar-width: none; margin-inline: -16px; padding: 2px 16px 6px; scroll-snap-type: x mandatory; scroll-padding-inline: 16px; overscroll-behavior-x: contain; }
+[data-w="masters"] .mgrid::-webkit-scrollbar { display: none; }
+[data-w="masters"] .mgrid > * { scroll-snap-align: start; scroll-snap-stop: always; }
 .stores { gap: 8px; }
 .store { padding: 12px; grid-template-columns: 40px 1fr; gap: 10px; }
 .store .av { width: 40px; height: 40px; font-size: 14px; }
@@ -1690,9 +1690,9 @@ html:not(.workm):not(.loginm) nav.crumbs { display: none; }
 .abn-dots { display: flex; justify-content: center; gap: 6px; margin-top: 8px; }
 .abn-dots i { width: 6px; height: 6px; border-radius: 3px; background: var(--line-strong); transition: width .25s, background-color .25s; }
 .abn-dots i.on { width: 18px; background: var(--accent); }
-.stores { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 84%; gap: 10px; overflow-x: auto; scrollbar-width: none; margin-inline: -16px; padding: 2px 16px 6px; scroll-snap-type: x mandatory; scroll-padding-inline: 16px; }
+.stores { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 86%; gap: 10px; overscroll-behavior-x: contain; overflow-x: auto; scrollbar-width: none; margin-inline: -16px; padding: 2px 16px 6px; scroll-snap-type: x mandatory; scroll-padding-inline: 16px; }
 .stores::-webkit-scrollbar { display: none; }
-.stores > .store { scroll-snap-align: start; }
+.stores > .store { scroll-snap-align: start; scroll-snap-stop: always; }
 .stores:not(.all) .store:nth-child(n+6) { display: grid; }
 .stores-more { display: none; }
 #sortSel, #mfD, #mfS { -webkit-appearance: none; appearance: none; width: auto; max-width: 100%; border-radius: 999px; padding: 8px 34px 8px 14px; border: 1px solid var(--line); color: var(--ink); font-weight: 600; background: var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23948a80' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 12px center / 14px 14px; }
@@ -1786,7 +1786,7 @@ img, .thumb, .abn-s, .cat-tile { -webkit-touch-callout: none; }
 @media print { body > *:not(#printArea) { display: none !important; } #printArea { display: block; color: #000; font: 12pt/1.4 system-ui, sans-serif; } #printArea table { width: 100%; border-collapse: collapse; margin-bottom: 14pt; } #printArea th, #printArea td { border: 1px solid #999; padding: 4pt 6pt; text-align: left; font-size: 10pt; } #printArea h1 { font-size: 18pt; } #printArea h2 { font-size: 13pt; margin: 12pt 0 6pt; } .pa-note { font-size: 9pt; color: #555; } }
 @media (max-width: 760px) { .flat-grid { grid-template-columns: 1fr; } }
 .mgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 12px; }
-.mcard { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 16px; display: grid; gap: 10px; align-content: start; }
+.mcard { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
 .mc-top { display: flex; gap: 12px; align-items: center; }
 .mc-top h3 { margin: 0; font-size: 16px; }
 .mav { flex: none; width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; color: #fff; background: hsl(var(--h) 45% 42%); }
@@ -1798,8 +1798,7 @@ img, .thumb, .abn-s, .cat-tile { -webkit-touch-callout: none; }
 .mc-meta { font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 4px; }
 .mc-buy { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: auto; }
 .mc-buy .price { font-weight: 700; } .mc-buy .price small { font-weight: 400; color: var(--muted); }
-.mc-demo { position: absolute; top: 10px; right: 12px; font-size: 11px; color: var(--faint); }
-.mcard:has(.mc-demo) > h3, .mcard:has(.mc-demo) .mc-head { padding-right: 96px; }
+.mc-demo { order: -1; align-self: flex-start; margin: -4px 0 -4px; font-size: 11px; font-weight: 600; letter-spacing: .02em; color: var(--faint); }
 .mtabs { margin: 4px 0 14px; flex-wrap: wrap; }
 .mfil { display: grid; gap: 10px; margin-bottom: 12px; }
 .mspec { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin; } .mspec + .mspec { margin-top: 6px; }
@@ -3349,26 +3348,34 @@ const PRESS_SKIP = '.mk-row, .order-row, .sup-row, .pf-row, .rail-nav button, .l
 let prs = null;
 const scaleNow = el => { const v = getComputedStyle(el).scale; return v && v !== "none" ? v.split(" ")[0] : "1"; };
 function pressStart(e) {
+  snapOn(); // a previous tap's rail
   if (e.button > 0 || e.isPrimary === false || mqReduce.matches || !document.body.animate) return;
   pressEnd(true);
   let el = e.target.closest?.(PRESS_SEL); if (!el || el.matches(PRESS_SKIP) || el.closest(".pg-ghost")) return;
   const box = el.closest(PRESS_BOX); if (box && box !== el && el.offsetWidth > box.offsetWidth * .6) el = box; // the picture or the name of a card: the whole card dips
   const r = el.getBoundingClientRect(), m = Math.max(r.width, r.height); if (!m || getComputedStyle(el).display === "inline") return;
   const s = Math.max(.94, 1 - 10 / m).toFixed(3); // about 5 px on each side: a small button dips more than a wide card
-  // a rail with snapping would re-snap to the smaller card and jerk sideways: its snapping rests until the card is back
+  // a rail with snapping would re-snap to the smaller card and jerk sideways: its snapping rests while the card is pressed
   let snap = el.parentElement; for (let k = 0; snap && k < 4 && getComputedStyle(snap).scrollSnapType === "none"; k++) snap = snap.parentElement;
   if (snap && (getComputedStyle(snap).scrollSnapType === "none" || snap === document.documentElement)) snap = null;
-  if (snap) { clearTimeout(snap._snapT); snap.style.scrollSnapType = "none"; }
-  try { prs = { el, snap, t: performance.now(), x: e.clientX, y: e.clientY, a: el.animate([{ scale: scaleNow(el) }, { scale: s }], { duration: 110, easing: "cubic-bezier(.3, .7, .4, 1)", fill: "forwards" }) }; } catch (er) { prs = null; if (snap) snap.style.scrollSnapType = ""; }
+  if (snap) { snapOff = snap; snap.style.scrollSnapType = "none"; }
+  try { prs = { el, snap, t: performance.now(), x: e.clientX, y: e.clientY, a: el.animate([{ scale: scaleNow(el) }, { scale: s }], { duration: 110, easing: "cubic-bezier(.3, .7, .4, 1)", fill: "forwards" }) }; } catch (er) { prs = null; snapOn(); }
 }
+/* the snapping must be back before any swipe: a rail swiped while it rests stops between two cards (iPhone does not re-snap
+   it afterwards) — so the next touch (pointerdown), a swipe that cancels the press, or a mouse wheel turns it back on at once */
+let snapOff = null;
+function snapOn() { const r = snapOff; if (!r) return; snapOff = null; clearTimeout(snapOn.t); r.style.scrollSnapType = ""; }
 function pressEnd(now) {
   const p = prs; if (!p) return; prs = null;
-  const back = () => { const from = scaleNow(p.el); p.a.cancel(); if (p.el.isConnected && from !== "1") p.el.animate([{ scale: from }, { scale: "1" }], { duration: 460, easing: "cubic-bezier(.34, 1.56, .64, 1)" }); if (p.snap) p.snap._snapT = setTimeout(() => { p.snap.style.scrollSnapType = ""; }, 480); };
+  if (now === true) snapOn(); // the finger started a swipe: the rail must snap at its end
+  const back = () => { const from = scaleNow(p.el); p.a.cancel(); if (p.el.isConnected && from !== "1") p.el.animate([{ scale: from }, { scale: "1" }], { duration: 460, easing: "cubic-bezier(.34, 1.56, .64, 1)" }); if (p.snap && snapOff === p.snap) { clearTimeout(snapOn.t); snapOn.t = setTimeout(snapOn, 480); } };
   const wait = now === true ? 0 : Math.max(0, 100 - (performance.now() - p.t)); // a quick tap still reaches the bottom of the dip
   if (wait) setTimeout(back, wait); else back();
 }
 document.addEventListener("pointerdown", pressStart, { capture: true, passive: true });
-for (const t of ["pointerup", "pointercancel", "dragstart"]) window.addEventListener(t, () => pressEnd(), { capture: true, passive: true });
+window.addEventListener("pointerup", () => pressEnd(), { capture: true, passive: true });
+for (const t of ["pointercancel", "dragstart"]) window.addEventListener(t, () => pressEnd(true), { capture: true, passive: true }); // a swipe or a drag took over
+window.addEventListener("wheel", snapOn, { capture: true, passive: true });
 window.addEventListener("pointermove", e => { if (prs && Math.hypot(e.clientX - prs.x, e.clientY - prs.y) > 10) pressEnd(true); }, { passive: true }); // the finger started a scroll
 /* the build-up: the blocks on screen rise into place one after another; a block taller than ~40 % of the screen is opened up
    and its parts come in instead (a hero: its headline, text, field and figures; a grid: its cards) */
