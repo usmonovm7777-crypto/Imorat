@@ -166,6 +166,10 @@ html.workm .hdr-row .logo { margin-right: 0; }
 .seller-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 #app.pg-in { animation: pgIn .34s cubic-bezier(.2, .8, .2, 1) both; } /* a new page comes in softly */
+/* a rolling number (see cuRun): the real text stays in the page, transparent, and the rolling one is drawn over it */
+.cu-run { position: relative; color: transparent !important; -webkit-text-fill-color: transparent; }
+.cu-run * { color: transparent !important; -webkit-text-fill-color: transparent; }
+.cu-run::after { content: attr(data-cu-t); position: absolute; inset: 0; color: var(--cu-c); -webkit-text-fill-color: var(--cu-c); white-space: nowrap; text-align: var(--cu-al, left); font-variant-numeric: tabular-nums; pointer-events: none; }
 /* phones: a screen slides in from the right over a frozen copy of the old one, and back the other way (see pageSlide) */
 html.pg-anim, html.pg-anim body { overflow-x: clip; }
 .pg-ghost { position: fixed; inset: 0; overflow: hidden; pointer-events: none; background: var(--bg); will-change: transform; }
@@ -359,19 +363,20 @@ html.intro-on body::before { content: ""; position: fixed; inset: 0; z-index: 99
 
 /* ---------- Bottom nav (mobile) ---------- */
 .tabbar { display: none; }
-/* A floating glass capsule with icons only (the names stay for screen readers); the current tab sits on a pill that
-   slides to the tapped icon, swelling into a clear lens on the way — like the iOS 26 tab bars (see tbPill) */
-:root { --tb-bg: color-mix(in srgb, var(--surface) 70%, transparent); --tb-line: color-mix(in srgb, var(--ink) 9%, transparent); --tb-pill: color-mix(in srgb, var(--ink) 10%, transparent); --tb-lens: rgb(255 255 255 / .6); }
-html[data-theme="dark"] { --tb-bg: rgb(52 46 41 / .62); --tb-line: rgb(255 255 255 / .1); --tb-pill: rgb(0 0 0 / .46); --tb-lens: rgb(255 255 255 / .16); }
-@media (prefers-color-scheme: dark) { html:not([data-theme="light"]) { --tb-bg: rgb(52 46 41 / .62); --tb-line: rgb(255 255 255 / .1); --tb-pill: rgb(0 0 0 / .46); --tb-lens: rgb(255 255 255 / .16); } }
+/* A dark floating capsule with icons only (the names stay for screen readers); the current tab sits on a white disc that
+   slides to the tapped icon, and that icon turns dark as the disc arrives (see tbPill) */
+:root { --tb-bg: #171412; --tb-line: rgb(255 255 255 / .06); --tb-pill: #FFFFFF; --tb-ink: rgb(255 255 255 / .66); --tb-on: #171412; }
+html[data-theme="dark"] { --tb-bg: #0D0B0A; --tb-line: rgb(255 255 255 / .13); }
+@media (prefers-color-scheme: dark) { html:not([data-theme="light"]) { --tb-bg: #0D0B0A; --tb-line: rgb(255 255 255 / .13); } }
 @media (max-width: 760px) {
-  .tabbar { display: block; position: fixed; left: max(12px, env(safe-area-inset-left, 0px)); right: max(12px, env(safe-area-inset-right, 0px)); bottom: var(--tb-gap); height: var(--tb-h); padding: 0 5px; z-index: 30; border-radius: 999px; background: var(--tb-bg); -webkit-backdrop-filter: blur(18px) saturate(1.8); backdrop-filter: blur(18px) saturate(1.8); border: 1px solid var(--tb-line); box-shadow: 0 10px 32px rgb(0 0 0 / .2), inset 0 1px 0 rgb(255 255 255 / .1); }
-  .tb-row { display: grid; grid-template-columns: repeat(5, 1fr); height: 100%; }
-  .tabbar button { position: relative; z-index: 1; display: grid; place-items: center; color: var(--ink); padding: 0; -webkit-tap-highlight-color: transparent; }
-  .tabbar button svg { width: 24px; height: 24px; }
+  .tabbar { display: block; position: fixed; left: 50%; right: auto; width: min(calc(100% - 24px), calc(var(--tb-n, 5) * 64px + 14px)); translate: -50% 0; bottom: var(--tb-gap); height: var(--tb-h); padding: 0 6px; z-index: 30; border-radius: 999px; background: var(--tb-bg); border: 1px solid var(--tb-line); box-shadow: 0 12px 30px rgb(0 0 0 / .26); }
+  .tb-row { display: grid; grid-template-columns: repeat(var(--tb-n, 5), minmax(0, 1fr)); height: 100%; } /* the master's three tabs and the panel's four or five fill the capsule, which is only as wide as they need */
+  .tabbar button { position: relative; z-index: 1; display: grid; place-items: center; color: var(--tb-ink); padding: 0; -webkit-tap-highlight-color: transparent; }
+  .tabbar button[aria-current="true"] { color: var(--tb-on); }
+  .tabbar button svg { width: 23px; height: 23px; }
   .tabbar button > span:not(.dot) { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-  .tabbar .dot { position: absolute; top: 8px; left: calc(50% + 4px); min-width: 17px; height: 17px; border-radius: 9px; background: var(--signal); color: var(--signal-ink); font-size: 10px; font-weight: 700; display: grid; place-items: center; padding: 0 4px; }
-  .tb-pill { position: absolute; z-index: 0; left: 0; top: calc(50% - 23px); height: 46px; border-radius: 999px; background: var(--tb-pill); pointer-events: none; will-change: transform; }
+  .tabbar .dot { position: absolute; top: 5px; left: calc(50% + 5px); min-width: 19px; height: 19px; border-radius: 10px; background: var(--signal); color: var(--signal-ink); font-size: 10px; font-weight: 700; display: grid; place-items: center; padding: 0 4px; border: 2px solid var(--tb-bg); }
+  .tb-pill { position: absolute; z-index: 0; left: 0; top: calc(50% - 23px); width: 46px; height: 46px; border-radius: 50%; background: var(--tb-pill); box-shadow: 0 3px 10px rgb(0 0 0 / .28); pointer-events: none; will-change: transform; }
   .tabbar { z-index: 53; } /* above the cart, profile, tools and Usta AI panels (50–52) and the catalogue menu, below product sheets and sign-in (55) */
   html .drawer, html .ai, html .wpanel { padding-bottom: var(--nav-h); } /* "html" outranks the panels' own rules further down */
   html .mega-panel { padding-bottom: var(--nav-h); }
@@ -418,7 +423,6 @@ html .mega-panel.mk-on { padding-bottom: 0; }
 .mk-bar { position: sticky; top: 0; z-index: 3; display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; gap: 8px; padding: 10px 16px; background: color-mix(in srgb, var(--bg) 90%, transparent); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
 .mk-bar h2 { margin: 0; text-align: center; font-family: var(--f-display); font-weight: 600; font-size: 17px; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mk-back { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: var(--surface); border: 1px solid var(--line); color: var(--ink); transition: transform .14s ease, background-color .2s; }
-.mk-back:active { transform: scale(.92); }
 .mk-back svg { width: 22px; height: 22px; }
 .mk-list { display: grid; }
 .mk-row { display: grid; grid-template-columns: 56px minmax(0, 1fr) auto 20px; align-items: center; gap: 14px; width: 100%; min-height: 80px; padding: 12px 16px; text-align: left; color: var(--ink); border-bottom: 1px solid var(--line); -webkit-tap-highlight-color: transparent; transition: background-color .15s ease; }
@@ -537,13 +541,10 @@ html.app ::-webkit-scrollbar { display: none; width: 0; height: 0; }
   .card:hover, .cat-tile:hover, .wtile:hover, .fab:hover, .sup-btn:hover { transform: none; box-shadow: none; }
   .card:hover .thumb .art, .card:hover .thumb img.photo, .cat-tile:hover .cat-img img, .th-btn:hover svg { transform: none; }
   .btn, .ib, .hb, .card, .cat-tile, .wtile, .chip, .ph-btn, .tools-row button, .tabbar button, .tabbar a, .menu-btn { transition: transform .14s ease, opacity .14s ease, background-color .2s, border-color .2s, color .2s; }
-  .btn:active, .ib:active, .hb:active, .chip:active, .ph-btn:active, .menu-btn:active, .tabbar button:active, .tabbar a:active { transform: scale(.94); }
-  .card:active:not(:has(:is(button, a):active)), .cat-tile:active, .wtile:active { transform: scale(.98); }
-  .tools-row button:active .tr-i { transform: scale(.92); }
+  /* the press itself (a dip and a spring back) is drawn by the script for every pointer, see pressStart */
   button, a, [role="button"], label, summary { -webkit-tap-highlight-color: transparent; touch-action: manipulation; } /* no grey flash, no double-tap delay */
   .order-row, .sup-row, .tile, .bundle, .mq-item, .p-docs a, .p-docs button { transition: transform .14s ease, background-color .15s ease; }
   .order-row:active, .sup-row:active, .p-docs a:active, .p-docs button:active { background: color-mix(in srgb, var(--ink) 6%, transparent); }
-  .tile:active, .bundle:active:not(:has(button:active)), .mq-item:active { transform: scale(.97); }
   .tr-i { transition: transform .14s ease; }
   .hdr, .stabs { backdrop-filter: none; -webkit-backdrop-filter: none; }
   .hdr { background: var(--surface); }
@@ -786,6 +787,14 @@ html .drawer, html .ai, html .wpanel { transition: transform .3s cubic-bezier(.2
 html .drawer.on, html .ai.on, html .wpanel.on { transition: transform .3s cubic-bezier(.2, .8, .2, 1), visibility 0s; }
 html .drawer.dragging, html .ai.dragging, html .wpanel.dragging { transition: none !important; }
 html .drawer.swiped:not(.on), html .ai.swiped:not(.on), html .wpanel.swiped:not(.on) { transform: translateX(var(--out)); }
+/* phones: the cart, the profile and the tools are tabs of the bottom bar, so they appear in place and build up (tabCascade)
+   instead of sliding in from the side; a swipe still drags one away sideways */
+@media (max-width: 760px) {
+  html .drawer:not(.swiped), html .wpanel:not(.swiped) { transform: none; opacity: 0; transition: opacity .18s ease, visibility 0s linear .18s; }
+  html .drawer.on:not(.swiped), html .wpanel.on:not(.swiped) { opacity: 1; transition: transform .3s cubic-bezier(.2, .8, .2, 1), visibility 0s; } /* opens at once: its blocks rise in (cascade) */
+  /* a tap on another tab: the old panel is gone at once, as in the reference — no cross-fade of two screens */
+  html.tb-swap .drawer:not(.on), html.tb-swap .wpanel:not(.on), html.tb-swap .mega:not(.on), html.tb-swap .mega:not(.on) .mega-panel, html.tb-swap .mega:not(.on) .scrim { transition: none !important; }
+}
 .scrim-g.dragging { transition: none; }
 .ai { z-index: 52; width: min(460px, 100%); }
 .d-head { display: flex; align-items: center; gap: 10px; padding: 14px 20px; border-bottom: 1px solid var(--line); }
@@ -853,7 +862,6 @@ html .drawer.swiped:not(.on), html .ai.swiped:not(.on), html .wpanel.swiped:not(
 #trk.up .trk-top::before { opacity: 1; }
 #trk.now .trk-top::before { transition: none; } /* the sheet has slid up under the buttons: they get a bar of their own */
 .trk-top button { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: var(--surface); color: var(--ink); box-shadow: 0 2px 10px rgb(0 0 0 / .18); transition: transform .14s ease; }
-.trk-top button:active { transform: scale(.92); }
 .trk-top button svg { width: 20px; height: 20px; }
 .trk-num { justify-self: center; padding: 9px 16px; border-radius: 999px; background: var(--surface); color: var(--ink); font-weight: 700; font-size: 14px; box-shadow: 0 2px 10px rgb(0 0 0 / .18); white-space: nowrap; }
 .trk-map { position: sticky; top: 0; z-index: 0; height: min(56vh, 520px); background: var(--raised); overflow: hidden; }
@@ -1493,7 +1501,7 @@ button.pf-row:hover, a.pf-row:hover { background: color-mix(in srgb, var(--ink) 
 label.pf-row { cursor: pointer; }
 .pf-note { margin: 2px 4px 0; font-size: 12px; color: var(--muted); text-align: center; }
 .prof .bonus-card { border-radius: 18px; }
-@media (hover: none) { .pf-row:active, .pf-stat:active { background: color-mix(in srgb, var(--ink) 7%, var(--surface)); } .pf-stat { transition: transform .14s ease, background-color .15s ease; } .pf-stat:active { transform: scale(.97); } }
+@media (hover: none) { .pf-row:active, .pf-stat:active { background: color-mix(in srgb, var(--ink) 7%, var(--surface)); } .pf-stat { transition: transform .14s ease, background-color .15s ease; } }
 /* who you are: tiles with an icon, the choice marked with a tick instead of a radio dot */
 .roles.rich { gap: 8px; }
 .roles.rich .opt { position: relative; grid-template-columns: 40px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 12px 48px 12px 12px; border-radius: 18px; background: var(--surface); transition: border-color .2s, background-color .2s; }
@@ -3340,39 +3348,136 @@ function labelTables(root = document) {
 /* tab strips: only the chosen tab is in the Tab order, the arrows move inside the strip (WAI-ARIA tabs) */
 function rovingTabs(root = document) { root.querySelectorAll('[role="tablist"]').forEach(l => { const tabs = [...l.querySelectorAll('[role="tab"]')]; if (!tabs.some(t => t.getAttribute("aria-selected") === "true")) return; tabs.forEach(t => { t.tabIndex = t.getAttribute("aria-selected") === "true" ? 0 : -1; }); }); }
 { let q = 0; new MutationObserver(() => { if (!q) q = requestAnimationFrame(() => { q = 0; labelTables($("#app")); rovingTabs($("#app")); }); }).observe($("#app"), { childList: true, subtree: true, attributes: true, attributeFilter: ["aria-selected"] }); }
-/* the current-tab pill: placed under the active icon after each render; on a change it travels from the last icon to the
-   new one, stretching and turning into a clear lens halfway, then settling dark again */
-let tbLastX = null, tbLastI = -1;
+/* the current-tab disc: placed under the active icon after each render; on a change it slides from the last icon to the new one,
+   the old icon fading back to light as the disc leaves and the new one turning dark as it arrives */
+let tbLastX = null, tbLastI = -1, tbTap = false; // tbTap: this click came from the bottom bar
 function tbPill(anim = true) {
   const bar = $("#tabbar"); if (!bar || !bar.offsetWidth) return;
-  const btns = [...bar.querySelectorAll("button")], i = btns.findIndex(b => b.getAttribute("aria-current") === "true");
+  const btns = [...bar.querySelectorAll(".tb-row > button")], i = btns.findIndex(b => b.getAttribute("aria-current") === "true");
   let pill = bar.querySelector(".tb-pill"); if (!pill) { pill = document.createElement("span"); pill.className = "tb-pill"; pill.setAttribute("aria-hidden", "true"); bar.append(pill); } // a sibling of the button row: the buttons keep their order (nth-child, last-child)
+  if (tbTap && tbLastX != null && tbLastI >= 0) { pill.style.opacity = "1"; pill.style.transform = `translateX(${tbLastX}px)`; return; } // mid-tap (panels closing and opening): the disc waits and then moves once
   if (i < 0) { pill.style.opacity = "0"; tbLastI = -1; return; }
-  const b = btns[i], w = Math.max(40, b.offsetWidth - 6), x = b.getBoundingClientRect().left - bar.getBoundingClientRect().left - bar.clientLeft + (b.offsetWidth - w) / 2;
-  pill.style.width = w + "px"; pill.style.opacity = "1"; pill.style.transform = `translateX(${x}px)`;
+  const b = btns[i], d = pill.offsetWidth || 46, x = b.getBoundingClientRect().left - bar.getBoundingClientRect().left - bar.clientLeft + (b.offsetWidth - d) / 2;
+  pill.style.opacity = "1"; pill.style.transform = `translateX(${x}px)`;
   if (anim && tbLastX != null && tbLastI >= 0 && tbLastI !== i && animOK() && pill.animate) {
-    const dark = getComputedStyle(pill).backgroundColor, lens = getComputedStyle(document.documentElement).getPropertyValue("--tb-lens").trim() || "rgb(255 255 255 / .3)";
-    const glass = "inset 0 0 0 1px rgb(255 255 255 / .5), inset 0 10px 16px rgb(255 255 255 / .14), 0 8px 22px rgb(0 0 0 / .22)";
-    pill.animate([
-      { transform: `translateX(${tbLastX}px) scale(1, 1)`, backgroundColor: dark, boxShadow: "none" },
-      { transform: `translateX(${tbLastX + (x - tbLastX) * .5}px) scale(${1.18 + Math.min(.3, Math.abs(x - tbLastX) / 900)}, 1.16)`, backgroundColor: lens, boxShadow: glass, offset: .45 },
-      { transform: `translateX(${x}px) scale(1.04, 1.02)`, backgroundColor: lens, boxShadow: glass, offset: .8 },
-      { transform: `translateX(${x}px) scale(1, 1)`, backgroundColor: dark, boxShadow: "none" }
-    ], { duration: 560, easing: "cubic-bezier(.3, .7, .2, 1)" });
+    const cs = getComputedStyle(bar), ink = cs.getPropertyValue("--tb-ink").trim() || "rgb(255 255 255 / .66)", on = cs.getPropertyValue("--tb-on").trim() || "#171412";
+    const dur = Math.round(Math.min(440, 280 + Math.abs(x - tbLastX) * .45));
+    pill.animate([{ transform: `translateX(${tbLastX}px)` }, { transform: `translateX(${x}px)` }], { duration: dur, easing: "cubic-bezier(.3, .8, .25, 1)" });
+    b.animate([{ color: ink }, { color: on }], { duration: 160, delay: Math.round(dur * .5), easing: "ease-out", fill: "backwards" });
+    const old = btns[tbLastI]; if (old && old !== b) old.animate([{ color: on }, { color: ink }], { duration: 160, delay: 40, easing: "ease-out", fill: "backwards" });
   }
   tbLastX = x; tbLastI = i;
 }
 window.addEventListener("resize", () => tbPill(false));
+/* ================= Motion like a native app (after the reference video the owner sent) =================
+   1) a press dips the control by a few pixels and lets it spring back with a small overshoot; even a quick tap shows;
+   2) a screen that appears builds up block by block from the top (cascade);
+   3) counts and sums roll to their value. The page holds the real text all the time (screen readers, copying, tests): the
+      rolling number is only drawn over it. A reduced-motion setting turns all three off. */
+const PRESS_SEL = 'button, a[href], [role="button"], [role="tab"], summary, label.chip, .card, .cat-tile, .wtile, .tile, .bundle, .mq-item, .pf-stat';
+const PRESS_BOX = ".card, .cat-tile, .wtile, .tile, .bundle, .mq-item, .pf-stat";
+const PRESS_SKIP = '.mk-row, .order-row, .sup-row, .pf-row, .rail-nav button, .link, [disabled], [aria-disabled="true"]'; // long rows only tint
+let prs = null;
+const scaleNow = el => { const v = getComputedStyle(el).scale; return v && v !== "none" ? v.split(" ")[0] : "1"; };
+function pressStart(e) {
+  if (e.button > 0 || e.isPrimary === false || mqReduce.matches || !document.body.animate) return;
+  pressEnd(true);
+  let el = e.target.closest?.(PRESS_SEL); if (!el || el.matches(PRESS_SKIP) || el.closest(".pg-ghost")) return;
+  const box = el.closest(PRESS_BOX); if (box && box !== el && el.offsetWidth > box.offsetWidth * .6) el = box; // the picture or the name of a card: the whole card dips
+  const r = el.getBoundingClientRect(), m = Math.max(r.width, r.height); if (!m || getComputedStyle(el).display === "inline") return;
+  const s = Math.max(.94, 1 - 10 / m).toFixed(3); // about 5 px on each side: a small button dips more than a wide card
+  // a rail with snapping would re-snap to the smaller card and jerk sideways: its snapping rests until the card is back
+  let snap = el.parentElement; for (let k = 0; snap && k < 4 && getComputedStyle(snap).scrollSnapType === "none"; k++) snap = snap.parentElement;
+  if (snap && (getComputedStyle(snap).scrollSnapType === "none" || snap === document.documentElement)) snap = null;
+  if (snap) { clearTimeout(snap._snapT); snap.style.scrollSnapType = "none"; }
+  try { prs = { el, snap, t: performance.now(), x: e.clientX, y: e.clientY, a: el.animate([{ scale: scaleNow(el) }, { scale: s }], { duration: 110, easing: "cubic-bezier(.3, .7, .4, 1)", fill: "forwards" }) }; } catch (er) { prs = null; if (snap) snap.style.scrollSnapType = ""; }
+}
+function pressEnd(now) {
+  const p = prs; if (!p) return; prs = null;
+  const back = () => { const from = scaleNow(p.el); p.a.cancel(); if (p.el.isConnected && from !== "1") p.el.animate([{ scale: from }, { scale: "1" }], { duration: 460, easing: "cubic-bezier(.34, 1.56, .64, 1)" }); if (p.snap) p.snap._snapT = setTimeout(() => { p.snap.style.scrollSnapType = ""; }, 480); };
+  const wait = now === true ? 0 : Math.max(0, 100 - (performance.now() - p.t)); // a quick tap still reaches the bottom of the dip
+  if (wait) setTimeout(back, wait); else back();
+}
+document.addEventListener("pointerdown", pressStart, { capture: true, passive: true });
+for (const t of ["pointerup", "pointercancel", "dragstart"]) window.addEventListener(t, () => pressEnd(), { capture: true, passive: true });
+window.addEventListener("pointermove", e => { if (prs && Math.hypot(e.clientX - prs.x, e.clientY - prs.y) > 10) pressEnd(true); }, { passive: true }); // the finger started a scroll
+/* the build-up: the blocks on screen rise into place one after another; a block taller than ~40 % of the screen is opened up
+   and its parts come in instead (a hero: its headline, text, field and figures; a grid: its cards) */
+let cuFresh = -1e9; // the first load does not count up (it is quick, and the app shows its intro meanwhile)
+function cascade(root) {
+  if (!root || mqReduce.matches || !root.animate) return false;
+  if (cascade.root === root && performance.now() - cascade.t < 300) return true; // already building
+  cascade.root = root; cascade.t = cuFresh = performance.now();
+  const vh = innerHeight, units = []; let seen = 0;
+  const walk = (el, depth) => {
+    for (const c of el.children) {
+      if (units.length >= 12 || ++seen > 500) return;
+      if (/^(SCRIPT|STYLE|TEMPLATE|LINK)$/.test(c.tagName)) continue;
+      const r = c.getBoundingClientRect(); if (!r.width || !r.height || r.bottom < 0 || r.top > vh) continue;
+      if (r.height > vh * .42 && c.children.length && depth < 6) walk(c, depth + 1); else units.push(c);
+    }
+  };
+  walk(root, 0);
+  units.forEach((u, i) => { try { u.animate([{ opacity: 0, translate: "0 16px" }, { opacity: 1, translate: "0 0" }], { duration: 380, delay: i * 38, easing: "cubic-bezier(.2, .8, .2, 1)", fill: "backwards" }); } catch (er) {} });
+  cuScan(root, true); // its figures count up from zero
+  return true;
+}
+/* rolling numbers: the figures of a screen count up from zero as it builds up; a sum that changes (the cart total after
+   a «+») rolls from the old value to the new one */
+const CU_SEL = ".stats .num, .kpi > b, .sumrow.total .num, [data-cu]";
+const CU_NUM = /\d[\d \u00a0\u202f]*(?:[.,]\d{1,2})?/;
+const cuLast = new Map(), cuSeen = new WeakMap();
+function cuParse(t) {
+  const m = t.match(CU_NUM); if (!m) return null;
+  const raw = m[0].replace(/[ \u00a0\u202f]+$/, ""), dm = raw.match(/([.,])(\d{1,2})$/), int = (dm ? raw.slice(0, -dm[0].length) : raw);
+  const grp = (int.match(/[ \u00a0\u202f]/) || [""])[0], v = +(int.replace(/[ \u00a0\u202f]/g, "") + (dm ? "." + dm[2] : ""));
+  return isFinite(v) ? { v, at: m.index, len: raw.length, grp, dc: dm ? dm[1] : "", dec: dm ? dm[2].length : 0 } : null;
+}
+function cuFmt(v, f) { let [i, d] = (f.dec ? v.toFixed(f.dec) : String(Math.round(v))).split("."); if (f.grp) i = i.replace(/\B(?=(\d{3})+(?!\d))/g, f.grp); return i + (d ? f.dc + d : ""); }
+function cuRun(el, from, f, text, ms) {
+  const pre = text.slice(0, f.at), post = text.slice(f.at + f.len), pr = el.parentElement?.getBoundingClientRect(), r = el.getBoundingClientRect();
+  el.style.setProperty("--cu-c", getComputedStyle(el).color); el.style.setProperty("--cu-al", pr && Math.abs(pr.right - r.right) < 24 && r.left - pr.left > 24 ? "right" : "left");
+  const t0 = performance.now(), stop = () => { el.classList.remove("cu-run"); el.removeAttribute("data-cu-t"); };
+  const step = now => {
+    if (!el.isConnected || el.textContent.trim() !== text) return stop();
+    const k = Math.min(1, (now - t0) / ms), e = 1 - Math.pow(1 - k, 3);
+    el.setAttribute("data-cu-t", pre + cuFmt(from + (f.v - from) * e, f) + post); el.classList.add("cu-run");
+    if (k < 1) requestAnimationFrame(step); else stop();
+  };
+  requestAnimationFrame(step);
+}
+function cuScan(root = document, fresh = performance.now() - cuFresh < 1500) { // fresh: the screen has just built up
+  root.querySelectorAll(CU_SEL).forEach(el => {
+    const text = el.textContent.trim(), had = cuSeen.has(el); if (cuSeen.get(el) === text && !(fresh === true && root !== document)) return; cuSeen.set(el, text);
+    const f = cuParse(text), key = (el.dataset.cu || (el.closest("[id]")?.id || "") + "|" + (el.closest(".kpi, .stats > div, .sumrow")?.querySelector(":scope > span")?.textContent || "").trim()), prev = cuLast.get(key);
+    cuLast.set(key, f ? f.v : null);
+    if (!f || mqReduce.matches || el.classList.contains("cu-run") || !el.getClientRects().length) return;
+    const r = el.getBoundingClientRect(); if (r.bottom < 0 || r.top > innerHeight) return;
+    const sum = el.matches(".sumrow.total .num, [data-cu-sum]"); // money: only a change rolls, a sum never counts up from zero
+    if (fresh && !sum && (!had || root !== document) && f.v > 0) cuRun(el, 0, f, text, 760);
+    else if (prev != null && prev !== f.v) cuRun(el, prev, f, text, 520);
+  });
+}
+new MutationObserver(() => { if (!cuScan.q) cuScan.q = requestAnimationFrame(() => { cuScan.q = 0; cuScan(); }); }).observe(document.body, { childList: true, subtree: true, characterData: true });
+/* phones: a tab (home, the cart, the profile, the tools, a panel's own tab) builds up after the disc has moved */
+function tabCascade() {
+  if (!isPhone()) return;
+  if ($("#drawer").classList.contains("on")) cascade($("#dBody"));
+  else if ($("#wid").classList.contains("on")) cascade($("#wid .wbody") || $("#wid"));
+  else if (!$("#mega").classList.contains("on")) cascade($("#app")); // the catalogue has its own build-up (megaIn)
+}
 $("#tabbar").addEventListener("click", e => {
   const b = e.target.closest("button"); if (!b) return;
+  const de = document.documentElement; de.classList.add("tb-swap"); tbTap = true; setTimeout(() => { tbTap = false; tbPill(); requestAnimationFrame(() => requestAnimationFrame(() => de.classList.remove("tb-swap"))); }, 0);
   const act = b.dataset.act, toDrawer = act === "cart" || act === "profile" || act === "login" || !!b.dataset.stab;
   if (b.dataset.go) navTab = true; // a tab is a fresh start, not a step forward
   if (drawerView && !toDrawer) closeDrawer();
   if (aiOpen) closeAI();
   if (typeof widOpen !== "undefined" && widOpen && act !== "widgets") closeWidgets();
   if (act !== "mega") closeMega();
+  if (!(b.dataset.go && (location.hash.slice(1) || "home") !== b.dataset.go) && animOK()) setTimeout(tabCascade, 0); // a new hash builds up in routeTo
 }, true);
-function renderTabbar() { renderTabbar0(); tbPill(); }
+function renderTabbar() { renderTabbar0(); const bar = $("#tabbar"); bar.style.setProperty("--tb-n", bar.querySelectorAll(".tb-row > button").length || 5); tbPill(); }
 function renderTabbar0() {
   const wm = workMode();
   if (wm === "admin" || wm === "master") { // the panel's and the master's own bottom bars
@@ -4107,7 +4212,7 @@ function addBundle(bid) {
 /* ================= Drawer ================= */
 function showScrim() { $("#scrim").classList.toggle("on", !!drawerView || aiOpen || (typeof widOpen !== "undefined" && widOpen)); }
 let dvSlide = false, dvBack = false;
-function openDrawer(vw, extra) { if (aiOpen) closeAI(); if (widOpen) closeWidgets(); closeModal(); dvSlide = $("#drawer").classList.contains("on") && drawerView !== vw; drawerView = vw; if (extra) drawerOrder = extra; setPanel($("#drawer"), true); showScrim(); renderDrawer(); renderTabbar(); syncLock(); }
+function openDrawer(vw, extra) { if (aiOpen) closeAI(); if (widOpen) closeWidgets(); closeModal(); const was = $("#drawer").classList.contains("on"); dvSlide = was && drawerView !== vw && !tbTap; drawerView = vw; if (extra) drawerOrder = extra; setPanel($("#drawer"), true); showScrim(); renderDrawer(); renderTabbar(); syncLock(); if (!was && isPhone() && animOK()) cascade($("#dBody")); } // a bottom-bar tab (tbTap) does not slide sideways inside the drawer, it builds up
 function closeDrawer() { dvBack = dvSlide = false; drawerView = null; setPanel($("#drawer"), false); showScrim(); renderTabbar(); syncLock(); setTimeout(refreshBoughtRail, 0); supBadge(); }
 function renderDrawer() {
   if (drawerView === "profile" && !user) { closeDrawer(); openAuth("profile"); return; } // the profile exists only after signing in
@@ -4358,7 +4463,7 @@ function updateQuote() {
     (!bonusOn() || API && !user || ["cash", "store"].includes(d.pay) ? "" : `<div class="sumrow cash"><span>${L("Начислим бонусов после получения", "Olgandan keyin bonus beriladi")}</span><span class="num">+${fmtN(Math.floor(qt.goods * bonusRate()))}</span></div>`) +
     (qt.cash ? `<div class="sumrow cash"><span>${L("Кешбэк баллами", "Keshbek ballari", "Cashback in points")}</span><span class="num">+${fmt(qt.cash)}</span></div>` : "") +
     `<div class="sumrow total"><span>${totalLabel(byStoreQ)}</span><span class="num">${fmt(qt.total)}</span></div>`;
-  const pb = $("#payBtn"); pb.innerHTML = d.pay === "cash" || d.pay === "store" ? L("Подтвердить заказ", "Buyurtmani tasdiqlash") : `${L("Оплатить картой", "Karta bilan to‘lash", "Pay by card")} <span style="white-space:nowrap">${fmt(qt.total)}</span>`; // the sum never splits across two lines
+  const pb = $("#payBtn"); pb.innerHTML = d.pay === "cash" || d.pay === "store" ? L("Подтвердить заказ", "Buyurtmani tasdiqlash") : `${L("Оплатить картой", "Karta bilan to‘lash", "Pay by card")} <span style="white-space:nowrap" data-cu="pay" data-cu-sum>${fmt(qt.total)}</span>`; // the sum never splits across two lines
   pb.disabled = paymentsOff(); if (pb.disabled) pb.textContent = L("Оплата скоро", "To‘lov tez orada", "Payment coming soon");
   if (API && !pb.disabled) requestServerQuote(d, qt); // the numbers above are the local estimate; the server's figures replace them before anyone can pay
   // no server = no order: the button says so instead of sending a form into the void (the banner at the top explains)
@@ -4698,7 +4803,7 @@ function dProfile() {
 
 /* ================= Widgets panel (left, opened by the ☰ button) ================= */
 let widOpen = false, wView = "menu", wCalc = "basement", wScrollCalc = false;
-function openWidgets(view = "menu", calc) { if (drawerView) closeDrawer(); if (aiOpen) closeAI(); closeModal(); closeMega(); wView = view; if (calc) wCalc = calc; widOpen = true; setPanel($("#wid"), true); renderWidgets(); showScrim(); syncLock(); renderTabbar(); }
+function openWidgets(view = "menu", calc) { if (drawerView) closeDrawer(); if (aiOpen) closeAI(); closeModal(); closeMega(); wView = view; if (calc) wCalc = calc; const was = widOpen; widOpen = true; setPanel($("#wid"), true); renderWidgets(); showScrim(); syncLock(); renderTabbar(); if (!was && isPhone() && animOK()) cascade($("#wid .wbody") || $("#wid")); }
 function closeWidgets() { widOpen = false; setPanel($("#wid"), false); showScrim(); syncLock(); renderTabbar(); }
 function renderWidgets() {
   const back = wView !== "menu" ? `<button class="ib" type="button" data-wview="menu" aria-label="${L("Назад", "Orqaga")}">${ui("back", 16)}</button>` : "";
@@ -6093,7 +6198,7 @@ function renderServerQuote(q, problems, d) {
   if (bad) { pb.disabled = true; pb.textContent = L("Проверьте корзину", "Savatni tekshiring", "Check the cart"); toast(L("Не хватает товара: ", "Mahsulot yetmaydi: ") + (problems.map(p => `${PROD[p.id] ? pName(PROD[p.id]) : "#" + p.id}${p.reason === "stock" ? ` — ${L("в наличии", "mavjud", "in stock")} ${p.stock}` : ""}`).join("; "))); expectTotal = null; return; }
   if (q.unknown) { pb.disabled = true; pb.textContent = L("Стоимость доставки недоступна", "Yetkazish narxi mavjud emas", "Delivery price unavailable"); const n = $("#delNote"); if (n) n.innerHTML = `${ui("clock", 14)} ${L("Перевозчик не вернул цену доставки по этому адресу. Попробуйте через минуту, уточните адрес на карте или выберите самовывоз.", "Tashuvchi bu manzil uchun yetkazish narxini qaytarmadi. Bir daqiqadan keyin urinib ko‘ring, manzilni xaritada aniqlang yoki olib ketishni tanlang.", "The carrier returned no delivery price for this address. Try again in a minute, refine the address on the map or choose pickup.")}`; expectTotal = null; return; }
   expectTotal = q.total;
-  pb.disabled = false; pb.innerHTML = d.pay === "cash" || d.pay === "store" ? L("Подтвердить заказ", "Buyurtmani tasdiqlash") : `${L("Оплатить картой", "Karta bilan to‘lash", "Pay by card")} <span style="white-space:nowrap">${fmt(q.total)}</span>`; // the sum never splits across two lines
+  pb.disabled = false; pb.innerHTML = d.pay === "cash" || d.pay === "store" ? L("Подтвердить заказ", "Buyurtmani tasdiqlash") : `${L("Оплатить картой", "Karta bilan to‘lash", "Pay by card")} <span style="white-space:nowrap" data-cu="pay" data-cu-sum>${fmt(q.total)}</span>`; // the sum never splits across two lines
 }
 function showServerTotals(q) {
   $("#totals").innerHTML = totalsHTML(q.goods, q.svc, q.disc, delRowHTML(q.del, q.delivery_by === "store")) +
@@ -10306,8 +10411,8 @@ function routeTo() {
   route = parseHash(); if (route.cat !== prevCat) { f.sub = null; f.max = 0; }
   const moved = route.view !== prevView || route.cat !== prevCat; if (moved) window.scrollTo(0, 0);
   renderMain();
-  if (moved && animOK() && !navSliding && !(document.startViewTransition && motionOK() && !SAFARI)) { const a = $("#app"); a.classList.remove("pg-in"); void a.offsetWidth; a.classList.add("pg-in"); }
   const qi = $("#q"); if (qi) qi.value = f.q; window.scrollTo(0, y); // back to a screen: where it was left; a new screen: its top
+  if (moved && animOK() && !navSliding && !(document.startViewTransition && motionOK() && !SAFARI)) { const a = $("#app"); if (!cascade(a)) { a.classList.remove("pg-in"); void a.offsetWidth; a.classList.add("pg-in"); } } // the new screen builds up block by block
 }
 /* Phones: moving between screens slides like a native app (Telegram). A new screen comes in from the right over the old one; going
    back slides the top screen away to the right and the previous one returns from under it, at the scroll position it was left at.
