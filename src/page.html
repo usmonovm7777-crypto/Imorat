@@ -201,44 +201,31 @@ html.pg-anim, html.pg-anim body { overflow-x: clip; }
 .actw-veh { position: absolute; left: var(--p); top: 50%; translate: -50% -50%; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: var(--accent); color: #fff; box-shadow: 0 4px 12px color-mix(in srgb, var(--accent) 40%, transparent); transition: left .8s cubic-bezier(.2, .8, .2, 1); }
 .actw-veh.go svg { animation: actVroom .45s ease-in-out infinite alternate; }
 @keyframes actVroom { to { transform: translateY(-1.5px); } }
-/* Launch animation (the app every start, the site once per visit), built like a presentation opening: the mark comes up in a pale
-   diamond, dark diamonds open out from the centre and turn the screen dark, two diagonals are drawn, the mark rises and the name
-   comes into focus under it, then everything fades into the app. Fixed colours: it looks the same in both themes. */
-/* iOS Safari paints the status bar with this layer's own background colour, so the colour follows the picture: light at the
-   start, dark once the dark diamonds cover the screen (~1.2 s), light again as the intro dissolves into the app */
-html.intro-on, html.intro-on body { background: #171412 !important; color-scheme: dark; } /* the strip under the status bar is dark while the intro runs */
-html.intro-on body::before { content: ""; position: fixed; inset: 0; z-index: 9998; background: #171412; animation: inCover 0s linear 4s forwards; } /* covers the page until the intro is drawn (and lets go after 4 s whatever happens) */
+/* Launch animation (the app every start, the site once per visit), after the owner's reference: the brand colour fills the screen,
+   the app icon and the name come up, leave, and the app opens through a circle growing from the centre (the home then builds up
+   block by block, see cascade). Fixed colours: the same in both themes. */
+/* iOS Safari paints the status bar strip with the page's own background, so the page is orange while the intro runs */
+html.intro-on, html.intro-on body { background: #F2661C !important; color-scheme: dark; }
+html.intro-on body::before { content: ""; position: fixed; inset: 0; z-index: 9998; background: #F2661C; animation: inCover 0s linear 4s forwards; } /* covers the page until the intro is drawn (and lets go after 4 s whatever happens) */
 @keyframes inCover { to { visibility: hidden; } }
-#intro { position: fixed; inset: 0; z-index: 9999; overflow: hidden; background: #171412; --t: min(22vw, 96px); animation: inOut .36s cubic-bezier(.4, 0, .2, 1) 2.32s both; }
-/* dark from the first frame: a warm glow opens behind the mark instead of light diamonds (they flashed grey on the dark page) */
-#intro::before { content: ""; position: absolute; left: 50%; top: 50%; width: 150vmax; height: 150vmax; margin: -75vmax 0 0 -75vmax; background: radial-gradient(closest-side, rgb(255 122 40 / .2), rgb(255 122 40 / .07) 38%, transparent 70%); animation: iGlow 1.4s cubic-bezier(.2, .8, .2, 1) .2s both, ioFade .22s ease 2.12s forwards; }
+@property --ir { syntax: "<length>"; inherits: false; initial-value: 0px; }
+#intro { position: fixed; inset: 0; z-index: 9999; overflow: hidden; background: radial-gradient(120% 85% at 50% 42%, #FF8A3D 0%, #F2661C 48%, #CF4A0E 100%); --t: min(24vw, 104px); }
+#intro .iapp { position: absolute; left: 50%; top: 50%; width: var(--t); height: var(--t); margin: calc(var(--t) * -.5 - 34px) 0 0 calc(var(--t) / -2); border-radius: 26%; background: #fff; box-shadow: 0 18px 40px rgb(120 40 0 / .35); display: grid; place-items: center; animation: iaIn .62s cubic-bezier(.34, 1.45, .64, 1) .08s both, ioFade .26s ease 1.55s forwards; }
+#intro .iapp svg { width: 68%; height: 68%; display: block; }
+#intro .itx { position: absolute; left: 16px; right: 16px; top: calc(50% + var(--t) * .5 - 10px); display: grid; justify-items: center; gap: 8px; text-align: center; animation: ioFade .26s ease 1.55s forwards; }
+#intro .itx b { font-family: var(--f-display); font-weight: 700; font-size: calc(var(--t) * .4); line-height: 1.1; letter-spacing: -.03em; color: #fff; white-space: nowrap; animation: itxIn .6s cubic-bezier(.2, .8, .2, 1) .32s both; }
+#intro .itx b em { font-style: normal; margin-left: .2em; opacity: .78; }
+#intro .itx small { font-size: 13px; color: rgb(255 255 255 / .86); animation: itsIn .5s ease-out .55s both; }
+/* the opening: a hole in the orange grows from the centre until the app fills the screen */
+#intro.open { -webkit-mask-image: radial-gradient(circle at 50% 50%, transparent var(--ir), #000 calc(var(--ir) + .5px)); mask-image: radial-gradient(circle at 50% 50%, transparent var(--ir), #000 calc(var(--ir) + .5px)); animation: irGrow .62s cubic-bezier(.65, 0, .25, 1) forwards; }
+#intro.open.fade { -webkit-mask-image: none; mask-image: none; animation: inSkip .35s ease forwards; } /* no registered --ir (older Safari): a fade instead */
 #intro.skip { animation: inSkip .3s ease both; }
-#intro .idf { position: absolute; left: 50%; top: 50%; width: 60vmax; height: 60vmax; margin: -30vmax 0 0 -30vmax; rotate: 45deg; transform: scale(0); }
-#intro .idf { border: 2px solid rgb(255 255 255 / .2); animation: idfGrow 1.1s cubic-bezier(.3, 0, .2, 1) var(--d) both; }
-#intro .f1 { --d: .35s; } #intro .f2 { --d: .6s; }
-#intro .ilines { position: absolute; inset: 0; width: 100%; height: 100%; }
-#intro .ilines { animation: ioFade .22s ease 2.12s forwards; }
-#intro .ilines path { fill: none; stroke: rgb(255 255 255 / .16); stroke-width: 1; stroke-dasharray: 1; stroke-dashoffset: 1; animation: ilDraw .8s ease-out .7s forwards; }
-#intro .ilogo { position: absolute; left: 50%; top: 50%; width: var(--t); height: var(--t); margin: calc(var(--t) / -2) 0 0 calc(var(--t) / -2); animation: ilogoUp .5s cubic-bezier(.2, .8, .2, 1) 1.15s both, ioFade .22s ease 2.12s forwards; }
-#intro .ilogo::before { content: ""; position: absolute; inset: -22%; rotate: 45deg; border-radius: 16%; background: rgb(255 255 255 / .06); box-shadow: inset 0 0 0 1px rgb(255 255 255 / .2); animation: igIn .5s ease .05s both; }
-#intro .ilogo svg { position: relative; width: 100%; height: 100%; display: block; animation: ilmIn .55s cubic-bezier(.34, 1.4, .64, 1) .1s both; }
-#intro .itx { position: absolute; left: 16px; right: 16px; top: calc(50% + var(--t) * .5); display: grid; justify-items: center; gap: 10px; text-align: center; animation: ioFade .22s ease 2.12s forwards; } /* the mark and the name leave first, then the dark page lifts — no ghost over the shop */
-#intro .itx i { display: block; width: 72px; height: 1px; background: rgb(255 255 255 / .5); animation: itlIn .5s cubic-bezier(.2, .8, .2, 1) 1.45s both; }
-#intro .itx b { font-family: var(--f-display); font-weight: 700; font-size: calc(var(--t) * .44); line-height: 1.1; letter-spacing: -.03em; color: #fff; white-space: nowrap; animation: itxIn .65s cubic-bezier(.2, .8, .2, 1) 1.3s both; }
-#intro .itx b em { font-style: normal; color: #FF8A3D; margin-left: .2em; }
-#intro .itx small { font-size: 12.5px; letter-spacing: .14em; text-transform: uppercase; color: rgb(255 255 255 / .62); animation: itsIn .5s ease-out 1.6s both; }
-@keyframes idfGrow { 0% { transform: scale(.25); opacity: 0; } 20% { opacity: 1; } 100% { transform: scale(2.7); opacity: 0; } }
-@keyframes ilDraw { to { stroke-dashoffset: 0; } }
-@keyframes ilmIn { from { opacity: 0; transform: scale(.4) rotate(-10deg); } }
-@keyframes igIn { from { opacity: 0; transform: scale(.6); } }
-@keyframes iGlow { from { opacity: 0; transform: scale(.3); } }
-@keyframes ioFade { to { opacity: 0; } }
-@keyframes ilogoUp { to { transform: translateY(calc(var(--t) * -.6)); } }
-@keyframes itlIn { from { transform: scaleX(0); } }
-@keyframes itxIn { from { opacity: 0; filter: blur(10px); letter-spacing: .16em; transform: scale(1.06); } }
+@keyframes irGrow { to { --ir: 85vmax; } }
+@keyframes iaIn { from { opacity: 0; transform: scale(.5); } }
+@keyframes ioFade { to { opacity: 0; transform: scale(.94); } }
+@keyframes itxIn { from { opacity: 0; transform: translateY(10px); } }
 @keyframes itsIn { from { opacity: 0; transform: translateY(8px); } }
-@keyframes inOut { to { opacity: 0; transform: scale(1.04); visibility: hidden; background-color: #F4F1EC; } }
-@keyframes inSkip { to { opacity: 0; transform: scale(1.04); visibility: hidden; background-color: #F4F1EC; } }
+@keyframes inSkip { to { opacity: 0; visibility: hidden; } }
 .logo b { font-family: var(--f-display); font-weight: 700; font-size: 19px; letter-spacing: -.03em; }
 .logo b em { font-style: normal; color: var(--accent); margin-left: .2em; }
 .cat-btn { display: inline-flex; align-items: center; gap: 8px; background: var(--accent); color: var(--accent-ink); border-radius: 12px; padding: 10px 16px; font-weight: 600; flex: none; }
@@ -338,7 +325,7 @@ html.intro-on body::before { content: ""; position: fixed; inset: 0; z-index: 99
   .search { min-width: 180px; }
 }
 @media (max-width: 760px) {
-  :root { --tb-h: 58px; --tb-gap: max(10px, calc(env(safe-area-inset-bottom, 0px) - 12px)); --nav-h: calc(var(--tb-h) + var(--tb-gap) + 10px); }
+  /* --tb-h, --nav-h: see the bottom bar */
   /* phones: the header stays at the top of the page and scrolls away with it (catalog, cart and profile stay in the tab bar) */
   .hdr { position: relative; top: auto; }
   .hdr-row { flex-wrap: wrap; gap: 10px; padding-block: 10px; }
@@ -363,20 +350,20 @@ html.intro-on body::before { content: ""; position: fixed; inset: 0; z-index: 99
 
 /* ---------- Bottom nav (mobile) ---------- */
 .tabbar { display: none; }
-/* A dark floating capsule with icons only (the names stay for screen readers); the current tab sits on a white disc that
-   slides to the tapped icon, and that icon turns dark as the disc arrives (see tbPill) */
-:root { --tb-bg: #171412; --tb-line: rgb(255 255 255 / .06); --tb-pill: #FFFFFF; --tb-ink: rgb(255 255 255 / .66); --tb-on: #171412; }
-html[data-theme="dark"] { --tb-bg: #0D0B0A; --tb-line: rgb(255 255 255 / .13); }
-@media (prefers-color-scheme: dark) { html:not([data-theme="light"]) { --tb-bg: #0D0B0A; --tb-line: rgb(255 255 255 / .13); } }
+/* A light bar along the bottom edge with an icon and a name per tab (after the owner's reference): the current tab in the accent
+   colour, its icon gives a small bounce when it becomes current (see tbPill); a hairline separates it from the page */
+:root { --tb-h: 58px; }
 @media (max-width: 760px) {
-  .tabbar { display: block; position: fixed; left: 50%; right: auto; width: min(calc(100% - 24px), calc(var(--tb-n, 5) * 64px + 14px)); translate: -50% 0; bottom: var(--tb-gap); height: var(--tb-h); padding: 0 6px; z-index: 30; border-radius: 999px; background: var(--tb-bg); border: 1px solid var(--tb-line); box-shadow: 0 12px 30px rgb(0 0 0 / .26); }
-  .tb-row { display: grid; grid-template-columns: repeat(var(--tb-n, 5), minmax(0, 1fr)); height: 100%; } /* the master's three tabs and the panel's four or five fill the capsule, which is only as wide as they need */
-  .tabbar button { position: relative; z-index: 1; display: grid; place-items: center; color: var(--tb-ink); padding: 0; -webkit-tap-highlight-color: transparent; }
-  .tabbar button[aria-current="true"] { color: var(--tb-on); }
-  .tabbar button svg { width: 23px; height: 23px; }
-  .tabbar button > span:not(.dot) { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-  .tabbar .dot { position: absolute; top: 5px; left: calc(50% + 5px); min-width: 19px; height: 19px; border-radius: 10px; background: var(--signal); color: var(--signal-ink); font-size: 10px; font-weight: 700; display: grid; place-items: center; padding: 0 4px; border: 2px solid var(--tb-bg); }
-  .tb-pill { position: absolute; z-index: 0; left: 0; top: calc(50% - 23px); width: 46px; height: 46px; border-radius: 50%; background: var(--tb-pill); box-shadow: 0 3px 10px rgb(0 0 0 / .28); pointer-events: none; will-change: transform; }
+  :root { --tb-gap: 0px; --nav-h: calc(var(--tb-h) + env(safe-area-inset-bottom, 0px)); }
+  .tabbar { display: block; position: fixed; left: 0; right: 0; bottom: 0; height: calc(var(--tb-h) + env(safe-area-inset-bottom, 0px)); padding: 0 max(4px, env(safe-area-inset-right, 0px)) env(safe-area-inset-bottom, 0px) max(4px, env(safe-area-inset-left, 0px)); background: color-mix(in srgb, var(--surface) 96%, transparent); -webkit-backdrop-filter: blur(14px) saturate(1.4); backdrop-filter: blur(14px) saturate(1.4); border-top: 1px solid var(--line); }
+  .tb-row { display: grid; grid-template-columns: repeat(var(--tb-n, 5), minmax(0, 1fr)); height: var(--tb-h); }
+  .tabbar button { position: relative; display: grid; grid-template-rows: auto auto; place-content: center; justify-items: center; gap: 3px; color: var(--muted); padding: 0; font-size: 10.5px; font-weight: 600; letter-spacing: .01em; -webkit-tap-highlight-color: transparent; }
+  .tabbar button[aria-current="true"] { color: var(--accent); }
+  .tabbar button svg { width: 24px; height: 24px; }
+  .tabbar button[aria-current="true"] svg { stroke-width: 2.3; }
+  .tabbar button > span:not(.dot) { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 2px; }
+  .tabbar .dot { position: absolute; top: 4px; left: calc(50% + 6px); min-width: 17px; height: 17px; border-radius: 9px; background: var(--signal); color: var(--signal-ink); font-size: 10px; font-weight: 700; display: grid; place-items: center; padding: 0 4px; border: 2px solid var(--surface); }
+  .tabbar .dot.pt { min-width: 10px; width: 10px; height: 10px; padding: 0; top: 7px; left: calc(50% + 8px); } /* unread chat: a point, not a number */
   .tabbar { z-index: 53; } /* above the cart, profile, tools and Usta AI panels (50–52) and the catalogue menu, below product sheets and sign-in (55) */
   html .drawer, html .ai, html .wpanel { padding-bottom: var(--nav-h); } /* "html" outranks the panels' own rules further down */
   html .mega-panel { padding-bottom: var(--nav-h); }
@@ -1739,59 +1726,101 @@ html.fx .fx-btn.th-btn, .fx-btn.th-btn { background: var(--surface); color: var(
   .ds-teaser-v svg { max-height: 200px; }
 }
 /* ---------- Phones: an app, not a web page ----------
-   The top bar: on the home a row with where to deliver, support and saved goods (it slides away under the search, which
-   stays on top), on other screens a back button beside the search. The menu, logo, theme and language are not here (the
-   bottom bar and the profile have them); no breadcrumbs, no footer, no floating support button. Work windows keep theirs. */
-.ab-top, .ab-back { display: none; }
+   The top bar (after the owner's reference): on the home a big search pill (it opens the search sheet) with Usta AI beside it, and
+   the home's three sections under it as tabs with pictures — the pictures fold away once the page scrolls; on other screens a back
+   button beside the search field. No menu, logo, theme, language, breadcrumbs, footer or floating support button here (the bottom
+   bar, the profile and the sign-in have them). Work windows keep theirs. */
+.ab-top, .ab-back, .htabs, .demo-fl { display: none; }
 @media (max-width: 760px) {
-  html:not(.workm):not(.loginm) { --abt: 0px; }
-  html.r-home:not(.workm):not(.loginm) { --abt: 50px; }
-  html:not(.workm):not(.loginm) .hdr { position: sticky; top: calc(env(safe-area-inset-top, 0px) - var(--abt)); }
+  html:not(.workm):not(.loginm) .hdr { position: sticky; top: env(safe-area-inset-top, 0px); }
+  /* the home: the bar is laid over the page (fixed) so that folding the pictures away does not shift the page under the finger */
+  html.r-home:not(.workm):not(.loginm) .hdr { position: fixed; left: 0; right: 0; top: env(safe-area-inset-top, 0px); }
+  html.r-home:not(.workm):not(.loginm) #app { padding-top: var(--hdr-full, 152px); }
   html:not(.workm):not(.loginm) .hdr-row > :is(.menu-btn, .logo, .demo-badge, .th-btn, .lang-pick) { display: none; }
   html.r-home:not(.workm):not(.loginm) .ab-top { display: flex; }
+  html.r-home:not(.workm):not(.loginm) .htabs { display: flex; }
+  html.r-home:not(.workm):not(.loginm) .hdr-row > .search { display: none; }
+  html.r-home:not(.workm):not(.loginm) .hdr-row { padding-bottom: 0; row-gap: 6px; }
+  html.r-home:not(.workm):not(.loginm) .hdr { border-bottom: 1px solid var(--line); }
   html:not(.r-home):not(.workm):not(.loginm) .ab-back { display: grid; }
   html:not(.workm):not(.loginm) .search { flex: 1 1 0%; min-width: 0; }
   html:not(.workm):not(.loginm) nav.crumbs { display: none; }
   #foot, .home-setup, #supBtn { display: none !important; }
-  .ab-top { order: 0; flex: 1 0 100%; align-items: center; gap: 0; height: 40px; min-width: 0; }
-  .ab-where { position: relative; flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; height: 40px; padding-right: 4px; color: var(--ink); }
-  .ab-where > svg:first-child { color: var(--accent); flex: none; }
-  .ab-where > svg:last-of-type { transform: rotate(90deg); color: var(--muted); flex: none; width: 14px; height: 14px; }
-  .ab-wt { display: grid; min-width: 0; line-height: 1.15; }
-  .ab-wt small { font-size: 11px; color: var(--muted); }
-  .ab-wt b { font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .ab-where select { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; font-size: 16px; cursor: pointer; }
-  .ab-where:has(select:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 10px; }
-  .ab-top .demo-badge { display: inline-block; flex: none; margin: 0 4px; }
-  .ab-top .ab-lang { height: 32px; margin: 0 2px; padding: 0 6px 0 9px; border-radius: 999px; font-size: 12px; }
-  @media (max-width: 380px) { .ab-top .demo-badge { margin: 0 2px; } .ab-top .ab-lang { padding: 0 8px; } .ab-top .ab-lang svg { display: none; } .ab-ic { width: 34px; } }
-  .ab-ic { position: relative; width: 38px; height: 40px; border-radius: 50%; display: grid; place-items: center; color: var(--ink); flex: none; }
-  .ab-ic .dot { position: absolute; top: 1px; right: -1px; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 9px; background: var(--signal); color: var(--signal-ink); font-size: 10px; font-weight: 700; display: grid; place-items: center; border: 2px solid var(--surface); }
-  .ab-ic .dot[hidden] { display: none; }
+  .ab-top { order: 0; flex: 1 0 100%; align-items: center; gap: 8px; min-width: 0; }
+  .sp { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; height: 58px; padding: 0 16px 0 9px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); box-shadow: 0 4px 16px rgb(0 0 0 / .1); text-align: left; color: var(--ink); }
+  .sp-i { width: 40px; height: 40px; flex: none; border-radius: 50%; display: grid; place-items: center; background: var(--accent); color: #fff; }
+  .sp-t { display: grid; min-width: 0; line-height: 1.25; }
+  .sp-t b { font-size: 15.5px; font-weight: 700; }
+  .sp-t small { font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sp-ai { width: 48px; height: 48px; flex: none; border-radius: 50%; display: grid; place-items: center; background: var(--surface); border: 1px solid var(--line); box-shadow: 0 4px 16px rgb(0 0 0 / .08); color: var(--accent); }
+  .htabs { order: 1; flex: 1 0 100%; position: relative; justify-content: space-around; margin-top: 4px; }
+  .htabs button { display: grid; justify-items: center; gap: 2px; padding: 4px 6px 10px; color: var(--muted); font-size: 13px; font-weight: 600; min-width: 84px; -webkit-tap-highlight-color: transparent; }
+  .htabs button[aria-selected="true"] { color: var(--ink); }
+  .ht-i { position: relative; display: block; width: 42px; height: 42px; transition: height .22s ease, opacity .18s ease, margin .22s ease; }
+  .ht-i svg { width: 100%; height: 100%; display: block; }
+  .htabs button[aria-selected="false"] .ht-i { opacity: .78; }
+  .ht-i em { position: absolute; top: -3px; right: -14px; font-style: normal; font-size: 9px; font-weight: 800; letter-spacing: .04em; padding: 2px 5px; border-radius: 6px 6px 6px 2px; background: #5B4BDB; color: #fff; }
+  .ht-bar { position: absolute; left: 0; bottom: 0; height: 2.5px; width: 0; border-radius: 2px; background: var(--ink); transition: transform .3s cubic-bezier(.3, .8, .25, 1), width .3s cubic-bezier(.3, .8, .25, 1); }
+  html.hd-sc .ht-i { height: 0; opacity: 0; margin-top: -2px; } /* scrolled: the pictures fold away, the names and the line stay */
+  html.hd-sc .ht-i em { display: none; }
   .ab-back { order: 4; width: 42px; height: 42px; border-radius: 50%; place-items: center; flex: none; background: var(--raised); border: 1px solid var(--line); color: var(--ink); }
   .ab-back svg { width: 22px; height: 22px; }
+  /* the masters' and the services' sections */
+  .hpane .sec:first-child { padding-top: 14px; }
+  .svc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .svc { display: flex; align-items: center; gap: 10px; padding: 12px; border-radius: 16px; background: var(--surface); border: 1px solid var(--line); text-align: left; min-width: 0; }
+  .svc-i { width: 40px; height: 40px; flex: none; border-radius: 12px; display: grid; place-items: center; font-size: 21px; background: var(--raised); }
+  .svc-t { display: grid; min-width: 0; line-height: 1.2; }
+  .svc-t b { font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .svc-t small { font-size: 12px; color: var(--muted); }
+  .svc-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .svc-c { display: grid; align-content: start; gap: 6px; padding: 14px; min-height: 150px; border-radius: 20px; text-align: left; color: #fff; background: linear-gradient(140deg, #F2661C, #B8480A); }
+  .svc-c:first-child { grid-column: 1 / -1; min-height: 120px; }
+  .svc-ds { background: linear-gradient(140deg, #3A302A, #171412); } .svc-ls { background: linear-gradient(140deg, #C2551A, #7E3410); }
+  .svc-cl { background: linear-gradient(140deg, #5B4BDB, #3A2E9E); } .svc-fl { background: linear-gradient(140deg, #5A3E2B, #2A1D15); }
+  .svc-ci { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; background: rgb(255 255 255 / .18); margin-bottom: 4px; }
+  .svc-c b { font-size: 16px; font-family: var(--f-display); font-weight: 600; letter-spacing: -.01em; }
+  .svc-c small { font-size: 12.5px; line-height: 1.35; color: rgb(255 255 255 / .86); }
+  .hcta { width: 100%; display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: 18px; background: var(--surface); border: 1px solid var(--line); text-align: left; }
+  .hcta > span:nth-child(2) { flex: 1; display: grid; gap: 2px; } .hcta b { font-size: 15px; } .hcta small { font-size: 13px; color: var(--muted); }
+  .hcta-i { width: 44px; height: 44px; flex: none; border-radius: 14px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); }
+  /* the demo's label: a pill above the bottom bar */
+  html.r-home:not(.workm):not(.loginm) .demo-fl { display: inline-flex; position: fixed; z-index: 29; left: 50%; translate: -50% 0; bottom: calc(var(--nav-h) + 12px); align-items: center; gap: 6px; max-width: calc(100% - 32px); padding: 9px 14px; border-radius: 999px; background: #171412; color: #fff; font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border: 1px solid rgb(255 255 255 / .14); box-shadow: 0 8px 24px rgb(0 0 0 / .25); pointer-events: none; }
+  html.r-home .demo-fl svg { color: #FFB020; flex: none; }
+  html.r-home #app { padding-bottom: 54px; } /* room for the demo pill under the last rail */
+  /* the search sheet: step cards on the page colour, the open one large; a bar with «Очистить» and «Искать» at the bottom */
+  .ss { position: fixed; inset: 0; z-index: 56; display: flex; flex-direction: column; background: var(--bg); visibility: hidden; padding-top: env(safe-area-inset-top, 0px); }
+  .ss.on { visibility: visible; }
+  .ss-top { display: flex; align-items: center; justify-content: center; position: relative; padding: 10px 56px 4px; }
+  .ss-tabs { display: flex; gap: 22px; }
+  .ss-tabs button { padding: 8px 2px; font-weight: 700; font-size: 15px; color: var(--muted); border-bottom: 2.5px solid transparent; }
+  .ss-tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--ink); }
+  .ss-x { position: absolute; right: 14px; top: 10px; width: 38px; height: 38px; border-radius: 50%; background: var(--surface); border: 1px solid var(--line); }
+  .ss-body { flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: 10px 14px 16px; display: grid; align-content: start; gap: 10px; }
+  .ss-card { display: block; width: 100%; background: var(--surface); border-radius: 20px; box-shadow: 0 2px 14px rgb(0 0 0 / .08); }
+  .ss-card.on { padding: 18px 16px; }
+  .ss-card.on h2 { margin: 0 0 14px; font-family: var(--f-display); font-size: 25px; letter-spacing: -.02em; }
+  .ss-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 17px 18px; text-align: left; font-size: 14px; }
+  .ss-row span { color: var(--muted); } .ss-row b { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ss-in { display: flex; align-items: center; gap: 10px; height: 52px; padding: 0 14px; border: 1.5px solid var(--line); border-radius: 14px; color: var(--muted); }
+  .ss-in:focus-within { border-color: var(--ink); }
+  .ss-in input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font-size: 16px; color: var(--ink); }
+  .ss-sg { margin-top: 10px; display: grid; gap: 2px; }
+  .ss-sg .sg-h { display: flex; justify-content: space-between; align-items: center; margin: 10px 0 4px; font-size: 12.5px; font-weight: 700; color: var(--muted); }
+  .ss-sg .sg-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .ss-sg .sg-cats { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+  .ss-sg .sg-i:not(.chip):not(.btn) { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 6px 4px; text-align: left; border-radius: 12px; font-size: 14px; }
+  .ss-sg .sg-ci { width: 36px; height: 36px; flex: none; border-radius: 10px; display: grid; place-items: center; background: var(--raised); color: var(--accent); }
+  .ss-sg .sg-foot { display: grid; gap: 8px; margin-top: 10px; }
+  .ss-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .ss-chips .chip[aria-pressed="true"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+  .ss-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px)); background: var(--surface); border-top: 1px solid var(--line); }
+  .ss-foot .lnk { font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+  .ss-go { display: inline-flex; align-items: center; gap: 8px; padding: 13px 22px; border-radius: 12px; font-size: 15px; }
   /* the cart, the profile and the tools are tabs: a title without ✕ (the bottom bar and Back leave them) */
   #drawer.tabroot #dClose, #wid.tabroot #wHead [data-act="close-wid"] { display: none; }
   #drawer.tabroot .d-head, #wid.tabroot .d-head { border-bottom-color: transparent; }
   #drawer.tabroot #dTitle, #wid.tabroot #wHead h2 { font-size: 24px; letter-spacing: -.02em; }
-  /* the home's banners: one at a time, swiped sideways, dots under them */
-  .abn-w { margin: 4px 0 2px; }
-  .abn { display: grid; grid-auto-flow: column; grid-auto-columns: 100%; gap: 10px; overflow-x: auto; scrollbar-width: none; margin-inline: -16px; padding: 2px 16px; scroll-snap-type: x mandatory; scroll-padding-inline: 16px; overscroll-behavior-x: contain; }
-  .abn::-webkit-scrollbar { display: none; }
-  .abn-s { scroll-snap-align: start; scroll-snap-stop: always; display: grid; grid-template-columns: minmax(0, 1fr) 108px; align-items: center; gap: 10px; min-height: 150px; padding: 16px 14px 16px 18px; border-radius: 22px; text-align: left; overflow: hidden; color: #fff; background: linear-gradient(135deg, #F2661C, #B8480A); }
-  .abn-ds { background: linear-gradient(135deg, #3A302A, #171412); }
-  .abn-ls { background: linear-gradient(135deg, #C2551A, #7E3410); }
-  .abn-ms { background: linear-gradient(135deg, #5A3E2B, #2A1D15); }
-  .abn-t { display: grid; gap: 8px; align-content: center; min-width: 0; }
-  .abn-t small { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 700; letter-spacing: .01em; color: rgb(255 255 255 / .9); }
-  .abn-t b { font-family: var(--f-display); font-size: 17px; line-height: 1.22; font-weight: 600; letter-spacing: -.01em; }
-  .abn-cta { display: inline-flex; align-items: center; gap: 2px; justify-self: start; padding: 7px 10px 7px 14px; border-radius: 999px; background: rgb(255 255 255 / .2); font-size: 13px; font-weight: 700; }
-  .abn-cta svg { width: 14px; height: 14px; }
-  .abn-art { width: 108px; height: 108px; border-radius: 18px; overflow: hidden; display: block; justify-self: end; box-shadow: 0 10px 22px rgb(0 0 0 / .25); rotate: 4deg; }
-  .abn-art > * { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .abn-dots { display: flex; justify-content: center; gap: 6px; margin-top: 8px; }
-  .abn-dots i { width: 6px; height: 6px; border-radius: 3px; background: var(--line-strong); transition: width .25s, background-color .25s; }
-  .abn-dots i.on { width: 18px; background: var(--accent); }
   /* the stores: a strip swiped sideways, all of them */
   .stores { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 86%; gap: 10px; overscroll-behavior-x: contain; overflow-x: auto; scrollbar-width: none; margin-inline: -16px; padding: 2px 16px 6px; scroll-snap-type: x mandatory; scroll-padding-inline: 16px; }
   .stores::-webkit-scrollbar { display: none; }
@@ -1801,8 +1830,8 @@ html.fx .fx-btn.th-btn, .fx-btn.th-btn { background: var(--surface); color: var(
   /* sorting and the masters' filters: pills, not form fields */
   #sortSel, #mfD, #mfS { -webkit-appearance: none; appearance: none; width: auto; max-width: 100%; border-radius: 999px; padding: 8px 34px 8px 14px; border: 1px solid var(--line); color: var(--ink); font-weight: 600; background: var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23948a80' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 12px center / 14px 14px; }
   /* a long press on a button or a picture does not select text or open a link preview, as in an app */
-  .hdr, .tabbar, .abn, .tools-row, .cat-tile, .card .thumb, .chip, .btn, .ab-ic, .pf-row, .mk-row { -webkit-user-select: none; user-select: none; }
-  img, .thumb, .abn-s, .cat-tile { -webkit-touch-callout: none; }
+  .hdr, .tabbar, .tools-row, .cat-tile, .card .thumb, .chip, .btn, .sp, .svc, .svc-c, .pf-row, .mk-row { -webkit-user-select: none; user-select: none; }
+  img, .thumb, .cat-tile, .svc-c { -webkit-touch-callout: none; }
 }
 .livemap { position: relative; aspect-ratio: 4 / 3; max-height: 320px; border-radius: 14px; overflow: hidden; border: 1px solid var(--line); background: var(--raised); }
 .livemap .lm-t { position: absolute; display: grid; grid-template-columns: repeat(3, 256px); width: 768px; height: 768px; }
@@ -2197,8 +2226,8 @@ select { max-width: 100%; }
 .calc-res > div > span:first-child { flex: 0 1 auto; }
 .calc .row3 .f label, .calc .row2 .f label { min-height: 2.6em; display: flex; align-items: end; line-height: 1.25; }
 </style>
-<script>/* the launch animation is dark from the first frame, and so is the strip under the phone's status bar: the page background
-   (what Safari on iPhone samples for that strip) and theme-color go dark before anything is painted; showIntro() gives them back */
+<script>/* the launch animation is orange from the first frame, and so is the strip under the phone's status bar: the page background
+   (what Safari on iPhone samples for that strip) and theme-color go orange before anything is painted; showIntro() gives them back */
 (function () { try {
   var app = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true || !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
   var seen = false; try { seen = sessionStorage.getItem("imorat.intro") === "1"; } catch (e) {}
@@ -2207,7 +2236,7 @@ select { max-width: 100%; }
     var th = "auto"; try { th = JSON.parse(localStorage.getItem("imorat.theme") || '"auto"'); } catch (e) {}
     m.content = th === "dark" || (th !== "light" && matchMedia("(prefers-color-scheme: dark)").matches) ? "#1D1A17" : "#FFFFFF"; return;
   }
-  document.documentElement.classList.add("intro-on"); m.content = "#171412";
+  document.documentElement.classList.add("intro-on"); m.content = "#F2661C";
 } catch (e) {} })();
 </script>
 
@@ -2244,6 +2273,7 @@ select { max-width: 100%; }
     <div class="ai-foot" id="aiFootNote"></div>
   </form>
 </aside>
+<div class="ss" id="ss" role="dialog" aria-modal="true" aria-label="Поиск" aria-hidden="true" inert></div>
 <div class="modal" id="authM" aria-hidden="true"><div class="scrim-g on" data-act="close-auth"></div><div class="m-box auth-box" id="authBox" role="dialog" aria-modal="true" aria-label="Вход"></div></div>
 <div class="modal" id="modal" aria-hidden="true"><div class="scrim-g on" data-act="close-modal"></div><div class="m-box" id="mBox" role="dialog" aria-modal="true"></div></div>
 <input type="file" id="photoIn" accept="image/*" hidden>
@@ -3052,16 +3082,14 @@ function showIntro() {
   if (!force && (mqReduce.matches || navigator.webdriver || (!APP_MODE && seen))) return light();
   nativeBar(true);
   const el = document.createElement("div"); el.id = "intro"; el.setAttribute("aria-hidden", "true");
-  el.innerHTML = `<i class="idf f1"></i><i class="idf f2"></i>
-    <svg class="ilines" viewBox="0 0 100 100" preserveAspectRatio="none"><path d="M0 0L100 100" pathLength="1" vector-effect="non-scaling-stroke"/><path d="M100 0L0 100" pathLength="1" vector-effect="non-scaling-stroke"/></svg>
-    <div class="ilogo"><svg viewBox="0 0 100 100">${MARK_TILES.join("")}</svg></div>
-    <div class="itx"><i></i><b>Quriliş<em>go</em></b><small>${L("Строительные магазины Ташкента", "Toshkent qurilish do‘konlari", "Tashkent building stores")}</small></div>`;
+  el.innerHTML = `<div class="iapp"><svg viewBox="0 0 100 100">${MARK_TILES.join("")}</svg></div>
+    <div class="itx"><b>Quriliş<em>go</em></b><small>${L("Строительные магазины Ташкента", "Toshkent qurilish do‘konlari", "Tashkent building stores")}</small></div>`;
   document.body.appendChild(el);
   let gone = false; const done = () => { if (!gone) { gone = true; el.remove(); light(); } };
-  el.addEventListener("animationstart", e => { if (e.target === el && e.animationName === "inOut") light(); }); // the status bar turns with the page as the intro fades
-  el.addEventListener("animationend", e => { if (e.target === el) done(); }); // gone the moment it has faded out
-  const t = setTimeout(done, 3200); // and in any case
-  el.addEventListener("click", () => { clearTimeout(t); el.classList.add("skip"); light(); setTimeout(done, 450); }, { once: true }); // a tap opens at once
+  const open = () => { if (gone || el.classList.contains("open")) return; light(); el.classList.add("open"); if (!(window.CSS && CSS.registerProperty) || !CSS.supports?.("mask-image", "none") && !CSS.supports?.("-webkit-mask-image", "none")) el.classList.add("fade"); cascade($("#app")); }; // the status bar turns with the page as the circle opens; the home builds up inside it
+  const t1 = setTimeout(open, 1820), t2 = setTimeout(done, 2700); // and in any case
+  el.addEventListener("animationend", e => { if (e.target === el && (e.animationName === "irGrow" || e.animationName === "inSkip")) done(); }); // gone the moment the app has filled the screen
+  el.addEventListener("click", () => { clearTimeout(t1); clearTimeout(t2); el.classList.add("skip"); light(); setTimeout(done, 350); }, { once: true }); // a tap opens at once
 }
 const markSVG = (cls = "logo-mark") => `<svg class="${cls}" viewBox="0 0 100 100" aria-hidden="true" focusable="false">${MARK_TILES.map((t, i) => `<g class="mt mt${i}">${t}</g>`).join("")}</svg>`;
 const mini = p => `<span class="mini studio" style="--h:${hueOf(p)}">${art(p)}</span>`;
@@ -3156,14 +3184,14 @@ function applyLook() {
   const dark = themePref === "dark" || (themePref === "auto" && matchMedia("(prefers-color-scheme: dark)").matches);
   let m = document.querySelector('meta[name="theme-color"]:not([media])'); if (!m) { m = document.createElement("meta"); m.name = "theme-color"; document.head.appendChild(m); }
   const intro = document.documentElement.classList.contains("intro-on");
-  m.content = intro ? "#171412" : dark ? "#1D1A17" : "#FFFFFF"; // same as the header surface (dark while the launch animation runs)
+  m.content = intro ? "#F2661C" : dark ? "#1D1A17" : "#FFFFFF"; // same as the header surface (orange while the launch animation runs)
   nativeBar(intro || dark);
 }
 /* the app (Capacitor): the native status bar takes the same colour; light text on dark, dark text on light */
 function nativeBar(dark) {
   const sb = window.Capacitor?.Plugins?.StatusBar; if (!sb || !window.Capacitor?.isNativePlatform?.()) return;
   const intro = document.documentElement.classList.contains("intro-on");
-  try { sb.setStyle({ style: dark ? "DARK" : "LIGHT" })?.catch?.(() => {}); sb.setBackgroundColor?.({ color: intro ? "#171412" : dark ? "#1D1A17" : "#FFFFFF" })?.catch?.(() => {}); } catch (e) {}
+  try { sb.setStyle({ style: dark ? "DARK" : "LIGHT" })?.catch?.(() => {}); sb.setBackgroundColor?.({ color: intro ? "#F2661C" : dark ? "#1D1A17" : "#FFFFFF" })?.catch?.(() => {}); } catch (e) {}
 }
 applyLook();
 const motionOK = () => document.documentElement.classList.contains("fx");
@@ -3179,7 +3207,6 @@ function setLook(fx, theme) {
    Phones start with a short home (the heavy blocks are off), computers show everything; each keeps its own setting. ---- */
 const HOME_W = [
   ["hero", "Главный экран и Usta AI", "Bosh ekran va Usta AI", "Hero and Usta AI", true],
-  ["promo", "Баннеры: Usta AI, 3D, мастера", "Bannerlar: Usta AI, 3D, ustalar", "Banners: Usta AI, 3D, pros", true],
   ["popular", "Популярные товары", "Ommabop mahsulotlar", "Popular products"],
   ["cats", "Категории", "Toifalar", "Categories"],
   ["tools", "Инструменты: калькуляторы, AI, дизайнер", "Asboblar: kalkulyatorlar, AI, dizayner", "Tools: calculators, AI, designer"],
@@ -3199,11 +3226,12 @@ const HOME_W = [
   ["seller", "Для магазинов", "Do‘konlar uchun", "For stores"]
 ];
 const DESK_ORDER = ["hero", "cats", "tools", "bundles", "trust", "marquee", "bought", "designer", "masters", "recent", "hits", "delivery", "fresh", "winter", "calc", "stores", "seller"];
-const PHONE_OFF = ["fresh", "winter", "calc"];
-/* phones are an app: banners and a feed of goods instead of the site's landing blocks (big hero, benefits, ticker, how delivery
-   works, the stores' pitch — those stay on computers; the same tools are in the bottom bar and the profile) */
-const PHONE_ONLY = ["promo", "popular"], DESK_ONLY = ["hero", "trust", "marquee", "delivery", "seller", "designer"];
-const PHONE_ORDER = ["promo", "tools", "cats", "bought", "recent", "hits", "bundles", "masters", "fresh", "winter", "calc", "stores", "popular"];
+const PHONE_OFF = [];
+/* phones are an app: the «Товары» section is a feed of rails (categories, what you bought and looked at, hits, new goods, the
+   stores, the most reviewed) — the site's landing blocks stay on computers, and the tools, kits and masters have their own
+   sections on a phone (Сервисы, Мастера) */
+const PHONE_ONLY = ["popular"], DESK_ONLY = ["hero", "trust", "marquee", "delivery", "seller", "designer", "tools", "masters", "bundles", "calc"];
+const PHONE_ORDER = ["cats", "bought", "recent", "hits", "fresh", "winter", "stores", "popular"];
 const homeIds = () => HOME_W.map(w => w[0]).filter(id => !(isPhone() ? DESK_ONLY : PHONE_ONLY).includes(id));
 const DESK_OFF = ["tools"]; // computers have the header rail and the ☰ panel; phones get the row of tools under the hero
 const mqPhone = matchMedia("(max-width: 760px)");
@@ -3213,9 +3241,9 @@ const homeName = id => { const w = HOME_W.find(x => x[0] === id); return w ? L(w
 function homeLayout() {
   const ids = homeIds(), pref = LS.get(homeKey(), null);
   const order = (pref?.order || (isPhone() ? PHONE_ORDER : DESK_ORDER)).filter(id => ids.includes(id));
-  for (const id of ids) if (!order.includes(id)) { if (id === "promo") order.unshift(id); else order.push(id); } // a block added later: the banners on top, others at the end
+  for (const id of ids) if (!order.includes(id)) order.push(id); // a block added later goes to the end
   let off = (pref ? pref.off || [] : isPhone() ? PHONE_OFF : DESK_OFF).filter(id => ids.includes(id) && !HOME_W.find(w => w[0] === id)[4]);
-  if (pref && !pref.c2) { order.splice(order.indexOf("cats"), 1); order.splice(order.indexOf(isPhone() ? "tools" : "hero") + 1, 0, "cats"); off = off.filter(id => id !== "cats"); }
+  if (pref && !pref.c2) { order.splice(order.indexOf("cats"), 1); order.splice(isPhone() ? 0 : order.indexOf("hero") + 1, 0, "cats"); off = off.filter(id => id !== "cats"); }
   return { order, off, custom: !!pref };
 }
 function saveHome(order, off) { LS.set(homeKey(), { order, off, c2: 1 }); applyHome(); }
@@ -3251,7 +3279,7 @@ const panelFocus = new WeakMap();
    opening one adds a history entry with the same address; Back returns to the entry below and closes the panel.
    A panel closed by its own button leaves its entry marked as spent (never history.back() at that moment — it would race
    with a page change started right after); the next Back skips the twin entry, so one press always does something. */
-const HIST_PANELS = ["modal", "drawer", "wid", "ai", "authM"];
+const HIST_PANELS = ["modal", "drawer", "wid", "ai", "authM", "ss"];
 /* the app keeps each screen's scroll position itself (navStack); the browser's own restoring put the home back where a sheet had
    been opened long before, when Back skipped that sheet's spent entry */
 try { history.scrollRestoration = "manual"; } catch (e) {}
@@ -3264,7 +3292,7 @@ function histPanel(el, on, was) {
 }
 window.addEventListener("hashchange", () => { histSpent = null; });
 window.addEventListener("popstate", e => {
-  if (histPanelOn()) { histSpent = null; closeModal(); if (drawerView) closeDrawer(); if (aiOpen) closeAI(); if (widOpen) closeWidgets(); if ($("#authM")?.classList.contains("on")) closeAuth(); return; }
+  if (histPanelOn()) { histSpent = null; closeModal(); if (drawerView) closeDrawer(); if (aiOpen) closeAI(); if (widOpen) closeWidgets(); if ($("#authM")?.classList.contains("on")) closeAuth(); if ($("#ss")?.classList.contains("on")) closeSS(); return; }
   if (e.state?.qgPanel || e.state?.qgSpent) { histSpent = null; history.back(); return; } // came back onto an entry a closed panel left behind
   if (histSpent && histSpent === location.href) { histSpent = null; history.back(); } // Back from a spent entry lands on its twin: go one further
 });
@@ -3277,7 +3305,7 @@ function setPanel(el, on) {
 }
 /* while a drawer / modal / sheet is open the page behind it is scroll-locked and inert: Tab and screen readers stay inside the dialog */
 function syncLock() {
-  const on = !!drawerView || aiOpen || !!document.getElementById("addrSheet") || $("#modal").classList.contains("on") || $("#mega").classList.contains("on") || $("#authM").classList.contains("on") || $("#wid").classList.contains("on");
+  const on = !!drawerView || aiOpen || !!document.getElementById("addrSheet") || $("#modal").classList.contains("on") || $("#mega").classList.contains("on") || $("#authM").classList.contains("on") || $("#wid").classList.contains("on") || !!$("#ss")?.classList.contains("on");
   document.documentElement.classList.toggle("lock", on);
   for (const id of ["hdr", "app", "foot", "fab", "apiBar"]) { const el = document.getElementById(id); if (el) { if (on) el.setAttribute("inert", ""); else el.removeAttribute("inert"); } }
 }
@@ -3372,12 +3400,10 @@ function renderHeader() {
   document.querySelectorAll('[aria-label="Закрыть"],[aria-label="Yopish"],[aria-label="Close"]').forEach(el => el.setAttribute("aria-label", L("Закрыть", "Yopish", "Close")));
   const quick = ["build", "tools", "plumb", "heat", "elec", "light", "paint", "tile", "floor", "doors", "kitchen", "furn", "garden"];
   const abTop = `<div class="ab-top">
-      <label class="ab-where">${ui("pin", 18)}<span class="ab-wt"><small>${L("Доставка", "Yetkazish", "Delivery")}</small><b>${esc(dName(district).replace(/\s*(р-н|tumani|district)$/i, ""))}</b></span>${ui("chev", 14)}<select data-distsel aria-label="${L("Район доставки", "Yetkazish tumani", "Delivery district")}">${DISTRICTS.map(d => `<option value="${d.id}" ${d.id === district ? "selected" : ""}>${L(d.ru, d.uz)}</option>`).join("")}</select></label>
-      ${API ? "" : `<span class="demo-badge">${L("демо", "demo", "demo")}</span>`}
-      <label class="lang-pick ab-lang"><span>${lang.toUpperCase()}</span>${ui("chev", 12)}<select data-langsel aria-label="Язык / Til / Language">${[["ru", "Русский"], ["uz", "Özbekça"], ["en", "English"]].map(([v, n]) => `<option value="${v}" ${lang === v ? "selected" : ""}>${n}</option>`).join("")}</select></label>
-      <button class="ab-ic" type="button" data-act="support" aria-label="${L("Поддержка", "Yordam", "Support")}">${ui("headset", 21)}<span class="dot" id="abSupDot" hidden></span></button>
-      <button class="ab-ic" type="button" data-act="favs" aria-label="${L("Избранное", "Saralanganlar")}">${ui("heart", 21)}<span class="dot" id="abFavDot" hidden></span></button>
-    </div><button class="ab-back" type="button" data-act="app-back" aria-label="${L("Назад", "Orqaga", "Back")}">${ui("back", 22)}</button>`;
+      <button class="sp" type="button" data-act="ss-open"><span class="sp-i">${ui("search", 18)}</span><span class="sp-t"><b>${L("Начните поиск", "Qidirishni boshlang", "Start your search")}</b><small>${L("Товары", "Mahsulotlar", "Goods")} · ${L("мастера", "ustalar", "pros")} · ${esc(dName(district).replace(/\s*(р-н|tumani|district)$/i, ""))}</small></span></button>
+      <button class="sp-ai" type="button" data-act="ai" aria-label="Usta AI">${ui("spark", 20)}</button>
+    </div>
+    <div class="htabs" role="tablist" aria-label="${L("Разделы", "Bo‘limlar", "Sections")}">${HTABS().map(([id, art, lbl, tag]) => `<button type="button" role="tab" data-htab="${id}" aria-selected="${homeTab === id}"><span class="ht-i" aria-hidden="true">${art}${tag ? `<em>${tag}</em>` : ""}</span><span class="ht-l">${lbl}</span></button>`).join("")}<span class="ht-bar" aria-hidden="true"></span></div><button class="ab-back" type="button" data-act="app-back" aria-label="${L("Назад", "Orqaga", "Back")}">${ui("back", 22)}</button>`;
   $("#hdr").innerHTML = `
   <div class="wrap hdr-row">${abTop}
     <button class="menu-btn" type="button" data-act="widgets" aria-label="${L("Инструменты: калькуляторы, Usta AI, дизайнер, доставка", "Asboblar: kalkulyatorlar, Usta AI, dizayner, yetkazish", "Tools: calculators, Usta AI, designer, delivery")}" title="${L("Инструменты", "Asboblar", "Tools")}">${ui("menu", 22)}<span class="dot" aria-hidden="true" hidden></span></button>
@@ -3404,13 +3430,12 @@ function renderHeader() {
   $("#q").addEventListener("input", e => { f.q = e.target.value; f.photo = null; if (route.view === "catalog") renderList(); suggInput(); });
   $("#q").addEventListener("keydown", suggKey);
   $("#distSel").addEventListener("change", e => setDistrict(e.target.value));
-  $("#hdr [data-distsel]")?.addEventListener("change", e => { setDistrict(e.target.value); renderHeader(); });
-  counts(); supBadge();
+  counts(); supBadge(); htBar(false); hdrFull();
   $("#fab").innerHTML = `${ui("spark", 22)}<span class="lbl">Usta AI</span><span class="pulse"></span>`;
   $("#fab").setAttribute("aria-label", L("Открыть AI-помощника", "AI yordamchini ochish"));
   syncOrdDot();
 }
-function setDistrict(d) { district = d; LS.set("imorat.district", d); form.district = d; LS.set("imorat.form2", form); if (route.view === "home") updateEstimator(); toast(L("Доставка в: ", "Yetkazish: ") + dName(d)); }
+function setDistrict(d, quiet) { district = d; LS.set("imorat.district", d); form.district = d; LS.set("imorat.form2", form); if (route.view === "home") updateEstimator(); if (!quiet) toast(L("Доставка в: ", "Yetkazish: ") + dName(d)); } // quiet: the search sheet shows the choice itself
 function renderFooter() {
   $("#foot").innerHTML = `<div class="wrap foot">
     <div><button class="logo" type="button" data-go="home">${markSVG()}<b>Quriliş<em>go</em></b></button>
@@ -3432,27 +3457,16 @@ function labelTables(root = document) {
 /* tab strips: only the chosen tab is in the Tab order, the arrows move inside the strip (WAI-ARIA tabs) */
 function rovingTabs(root = document) { root.querySelectorAll('[role="tablist"]').forEach(l => { const tabs = [...l.querySelectorAll('[role="tab"]')]; if (!tabs.some(t => t.getAttribute("aria-selected") === "true")) return; tabs.forEach(t => { t.tabIndex = t.getAttribute("aria-selected") === "true" ? 0 : -1; }); }); }
 { let q = 0; new MutationObserver(() => { if (!q) q = requestAnimationFrame(() => { q = 0; labelTables($("#app")); rovingTabs($("#app")); }); }).observe($("#app"), { childList: true, subtree: true, attributes: true, attributeFilter: ["aria-selected"] }); }
-/* the current-tab disc: placed under the active icon after each render; on a change it slides from the last icon to the new one,
-   the old icon fading back to light as the disc leaves and the new one turning dark as it arrives */
-let tbLastX = null, tbLastI = -1, tbTap = false; // tbTap: this click came from the bottom bar
+/* the current tab: its icon gives a small bounce when it becomes current (a bottom-bar tap may close and open panels in between:
+   the bounce waits for the end of the tap, tbTap) */
+let tbLastI = -1, tbTap = false; // tbTap: this click came from the bottom bar
 function tbPill(anim = true) {
-  const bar = $("#tabbar"); if (!bar || !bar.offsetWidth) return;
+  const bar = $("#tabbar"); if (!bar || !bar.offsetWidth || tbTap) return;
   const btns = [...bar.querySelectorAll(".tb-row > button")], i = btns.findIndex(b => b.getAttribute("aria-current") === "true");
-  let pill = bar.querySelector(".tb-pill"); if (!pill) { pill = document.createElement("span"); pill.className = "tb-pill"; pill.setAttribute("aria-hidden", "true"); bar.append(pill); } // a sibling of the button row: the buttons keep their order (nth-child, last-child)
-  if (tbTap && tbLastX != null && tbLastI >= 0) { pill.style.opacity = "1"; pill.style.transform = `translateX(${tbLastX}px)`; return; } // mid-tap (panels closing and opening): the disc waits and then moves once
-  if (i < 0) { pill.style.opacity = "0"; tbLastI = -1; return; }
-  const b = btns[i], d = pill.offsetWidth || 46, x = b.getBoundingClientRect().left - bar.getBoundingClientRect().left - bar.clientLeft + (b.offsetWidth - d) / 2;
-  pill.style.opacity = "1"; pill.style.transform = `translateX(${x}px)`;
-  if (anim && tbLastX != null && tbLastI >= 0 && tbLastI !== i && animOK() && pill.animate) {
-    const cs = getComputedStyle(bar), ink = cs.getPropertyValue("--tb-ink").trim() || "rgb(255 255 255 / .66)", on = cs.getPropertyValue("--tb-on").trim() || "#171412";
-    const dur = Math.round(Math.min(440, 280 + Math.abs(x - tbLastX) * .45));
-    pill.animate([{ transform: `translateX(${tbLastX}px)` }, { transform: `translateX(${x}px)` }], { duration: dur, easing: "cubic-bezier(.3, .8, .25, 1)" });
-    b.animate([{ color: ink }, { color: on }], { duration: 160, delay: Math.round(dur * .5), easing: "ease-out", fill: "backwards" });
-    const old = btns[tbLastI]; if (old && old !== b) old.animate([{ color: on }, { color: ink }], { duration: 160, delay: 40, easing: "ease-out", fill: "backwards" });
-  }
-  tbLastX = x; tbLastI = i;
+  if (anim && i >= 0 && i !== tbLastI && tbLastI !== -2 && animOK()) btns[i].querySelector("svg")?.animate([{ scale: "1" }, { scale: "1.22", offset: .4 }, { scale: ".96", offset: .75 }, { scale: "1" }], { duration: 420, easing: "ease-out" });
+  tbLastI = i;
 }
-window.addEventListener("resize", () => tbPill(false));
+window.addEventListener("resize", () => { tbPill(false); htBar(false); hdrFull(); });
 /* ================= Motion like a native app (after the reference video the owner sent) =================
    1) a press dips the control by a few pixels and lets it spring back with a small overshoot; even a quick tap shows;
    2) a screen that appears builds up block by block from the top (cascade);
@@ -3561,7 +3575,7 @@ function tabCascade() {
 $("#tabbar").addEventListener("click", e => {
   const b = e.target.closest("button"); if (!b) return;
   const de = document.documentElement; de.classList.add("tb-swap"); tbTap = true; setTimeout(() => { tbTap = false; tbPill(); requestAnimationFrame(() => requestAnimationFrame(() => de.classList.remove("tb-swap"))); }, 0);
-  const act = b.dataset.act, toDrawer = act === "cart" || act === "profile" || act === "login" || !!b.dataset.stab;
+  const act = b.dataset.act, toDrawer = act === "cart" || act === "profile" || act === "login" || act === "favs" || act === "support" || !!b.dataset.stab;
   if (b.dataset.go) navTab = true; // a tab is a fresh start, not a step forward
   if (drawerView && !toDrawer) closeDrawer();
   if (aiOpen) closeAI();
@@ -3585,10 +3599,12 @@ function renderTabbar0() {
     $("#tabbar").innerHTML = `<div class="tb-row">${items.map(([id, icn, lbl]) => `<button type="button" ${id === "profile" ? `data-act="${user ? "profile" : "login"}"` : `data-stab="${id}"`} aria-current="${cur === id}">${ui(icn, 22)}<span>${lbl}</span></button>`).join("")}</div>`;
     return;
   }
-  const dvTab = { cart: "cart", checkout: "cart", repeat: "cart", profile: "profile", orders: "profile", track: "profile", watch: "profile", projects: "profile", homeSetup: "profile" }; // support, saved goods and the comparison belong to no tab
-  const cur = (typeof widOpen !== "undefined" && widOpen) ? "tools" : drawerView ? (dvTab[drawerView] || "") : $("#mega")?.classList.contains("on") || route.view === "catalog" ? "catalog" : "home";
-  const items = [["home", "home", L("Главная", "Asosiy"), "go"], ["catalog", "grid", L("Каталог", "Katalog"), "mega"], ["tools", "calc", L("Инструменты", "Asboblar", "Tools"), "widgets"], ["cart", "cart", L("Корзина", "Savat"), "cart"], ["profile", "user", L("Профиль", "Profil"), "profile"]];
-  $("#tabbar").innerHTML = `<div class="tb-row">${items.map(([id, icn, lbl, act]) => `<button type="button" ${act === "go" ? 'data-go="home"' : `data-act="${act}"`} aria-current="${cur === id}">${ui(icn, 22)}<span>${lbl}</span>${id === "cart" ? `<span class="dot" id="tabCart" ${cartCount() ? "" : "hidden"}>${cartCount()}</span>` : ""}</button>`).join("")}</div>`;
+  // the shopper's tabs (after the owner's reference): search is the home (the catalogue and the tools are reached from it)
+  const dvTab = { cart: "cart", checkout: "cart", repeat: "cart", favs: "favs", compare: "favs", support: "chat", profile: "profile", orders: "profile", track: "profile", watch: "profile", projects: "profile", homeSetup: "profile" };
+  const cur = drawerView ? (dvTab[drawerView] || "") : (typeof widOpen !== "undefined" && widOpen) || $("#mega")?.classList.contains("on") ? "" : "home";
+  const items = [["home", "search", L("Поиск", "Qidiruv", "Search"), "go"], ["favs", "heart", L("Избранное", "Saralangan", "Saved"), "favs"], ["cart", "cart", L("Корзина", "Savat", "Cart"), "cart"], ["chat", "chat", L("Чат", "Chat", "Chat"), "support"], ["profile", "user", L("Профиль", "Profil", "Profile"), "profile"]];
+  const dot = id => id === "cart" ? `<span class="dot" id="tabCart" ${cartCount() ? "" : "hidden"}>${cartCount()}</span>` : id === "favs" ? `<span class="dot" id="tabFav" ${favs.length ? "" : "hidden"}>${favs.length}</span>` : id === "chat" ? `<span class="dot pt" id="tabChat" ${sup?.unread ? "" : "hidden"}><span class="visually-hidden">${L("есть новые", "yangilari bor", "new")}</span></span>` : "";
+  $("#tabbar").innerHTML = `<div class="tb-row">${items.map(([id, icn, lbl, act]) => `<button type="button" ${act === "go" ? 'data-go="home"' : `data-act="${act}"`} aria-current="${cur === id}">${ui(icn, 22)}<span>${lbl}</span>${dot(id)}</button>`).join("")}</div>`;
 }
 function counts() {
   const n = cartCount();
@@ -3596,6 +3612,7 @@ function counts() {
   const tc = $("#tabCart"); if (tc) { tc.textContent = n; tc.hidden = !n; }
   const fd = $("#favDot"); if (fd) { fd.textContent = favs.length; fd.hidden = !favs.length; }
   const af = $("#abFavDot"); if (af) { af.textContent = favs.length; af.hidden = !favs.length; }
+  const tf = $("#tabFav"); if (tf) { tf.textContent = favs.length; tf.hidden = !favs.length; }
 }
 
 /* ================= Mega menu ================= */
@@ -3847,6 +3864,7 @@ document.addEventListener("click", e => { // seller tab bar: open the cabinet (i
   if (t) window.scrollTo({ top: t.getBoundingClientRect().top + scrollY - 12, behavior: animOK() ? "smooth" : "auto" });
 });
 function renderHome() {
+  if (isPhone() && homeTab !== "goods") { $("#app").innerHTML = (homeTab === "masters" ? homeMastersHTML() : homeServicesHTML()) + demoFloat(); return; }
   if (preLaunch()) return renderHomeLaunch();
   document.documentElement.classList.remove("cv-all");
   const hits = PRODUCTS.filter(p => p.hit);
@@ -3871,7 +3889,6 @@ function renderHome() {
       </div>
       <div class="collage" aria-hidden="false">${collage.map(p => `<button class="tile studio" type="button" data-open="${p.id}" style="--h:${hueOf(p)}">${art(p, "", true)}<span>${esc(pName(p))}</span></button>`).join("")}</div>
     </section>
-    ${isPhone() ? promoHTML() : ""}
     <nav class="tools-row" data-w="tools" aria-label="${L("Инструменты", "Asboblar", "Tools")}">
       <button type="button" data-act="w-calc"><span class="tr-i">${ui("calc", 24)}</span><span>${L("Калькуляторы", "Kalkulyatorlar", "Calculators")}</span></button>
       <button type="button" data-act="ai"><span class="tr-i tr-ai">${ui("spark", 24)}</span><span>Usta AI</span></button>
@@ -3958,10 +3975,10 @@ function renderHome() {
       <div class="seller-band"><div><h2 class="h-l">${L("У вас строительный магазин?", "Qurilish do‘koningiz bormi?")}</h2><p>${stage0() ? L("Загружайте товары с фото и остатки, принимайте заказы в кабинете. Покупатель платит вам напрямую при получении — Quriliş Go сейчас не берёт комиссию вовсе. Когда подключим оплату картой, условия объявим заранее.", "Mahsulotlarni rasm va qoldiqlar bilan yuklang, buyurtmalarni kabinetda qabul qiling. Xaridor sizga olganda to‘g‘ridan-to‘g‘ri to‘laydi — Quriliş Go hozir umuman komissiya olmaydi. Karta to‘lovini ulaganimizda shartlarni oldindan e’lon qilamiz.", "Upload products with photos and stock, take orders in your dashboard. The buyer pays you directly on receipt — Quriliş Go takes no commission at all for now. When card payment is connected, the terms will be announced in advance.") : L(`Загружайте товары с фото и остатки, принимайте заказы в кабинете, а доставку до клиента возьмёт на себя Яндекс. Комиссия только с проданных товаров: первые ${feeInfo().months} месяца 0%, дальше ${pct(feeInfo().ours)} Quriliş Go.`, `Mahsulotlarni rasm va qoldiqlar bilan yuklang, buyurtmalarni kabinetda qabul qiling, mijozga yetkazishni Yandex o‘z zimmasiga oladi. Komissiya faqat sotilgan mahsulotdan: birinchi ${feeInfo().months} oy 0%, keyin Quriliş Go ${pct(feeInfo().ours)}.`, `Upload products with photos and stock, accept orders in your dashboard, and Yandex handles delivery to the customer. Commission only on what you sell: the first ${feeInfo().months} months 0%, then ${pct(feeInfo().ours)} Quriliş Go.`)}</p></div>
       <button class="btn" type="button" data-go="seller">${ui("store", 18)} ${L("Открыть кабинет продавца", "Sotuvchi kabinetini ochish")}</button></div>
     </section>
-    ${isPhone() ? popularHTML() : ""}
+    ${isPhone() ? popularHTML() + demoFloat() : ""}
     <div class="home-setup"><button type="button" class="btn btn-line" data-act="home-setup">${ui("grid", 16)} ${L("Настроить главную", "Bosh sahifani sozlash", "Customize home")}</button><small>${L("Выберите, какие блоки показывать и в каком порядке", "Qaysi bloklar va qanday tartibda ko‘rinishini tanlang", "Choose which blocks to show and in what order")}</small></div>
   </div>`;
-  applyHome(); promoRun();
+  applyHome();
   $("#estRange").addEventListener("input", () => updateEstimator());
   $("#heroAsk").addEventListener("submit", e => { e.preventDefault(); const v = $("#heroQ").value.trim(); if (v) { openAI(v); $("#heroQ").value = ""; } else $("#heroQ").focus(); });
   updateEstimator();
@@ -3969,36 +3986,125 @@ function renderHome() {
   // the strip moves at a calm reading speed (px per second), whatever its length or the screen
   requestAnimationFrame(() => { const t = $(".mq-track"); if (t) t.style.setProperty("--mq-dur", Math.round(t.scrollWidth / 2 / (innerWidth < 761 ? 28 : 38)) + "s"); });
 }
-/* phones: banners for what the app can do (all of it works today — nothing here is a sale or a promise), swiped sideways with
-   dots under them; they turn by themselves every 5 s while on screen and untouched (never with reduced motion) */
-function promoHTML() {
-  const pic = k => { const p = byKey(k); return p ? `<span class="abn-art studio" style="--h:${hueOf(p)}" aria-hidden="true">${art(p, "", true)}</span>` : ""; };
+/* ================= Phones: the home's three sections (after the owner's reference) =================
+   Товары (the shop's feed of rails), Мастера (trades and machinery), Сервисы (Usta AI, the designer, the calculators…). The
+   tabs sit under the search pill; switching fades the old section out and builds the new one up; the line under the tabs slides. */
+let homeTab = "goods";
+const HTABS = () => [
+  ["goods", '<svg viewBox="0 0 40 40"><ellipse cx="20" cy="35.5" rx="15" ry="1.8" fill="#000" opacity=".12"/><rect x="5" y="17" width="16" height="17" rx="2.6" fill="#E8590C"/><rect x="18" y="9" width="17" height="25" rx="2.6" fill="#FFA94D"/><path d="M18 17.5h17" stroke="#fff" stroke-width="1.6" opacity=".75"/><rect x="8.5" y="22" width="9" height="2.2" rx="1.1" fill="#fff" opacity=".75"/><rect x="22" y="12.5" width="9" height="2.2" rx="1.1" fill="#fff" opacity=".75"/></svg>', L("Товары", "Mahsulotlar", "Goods")],
+  ["masters", '<svg viewBox="0 0 40 40"><ellipse cx="20" cy="35.5" rx="15" ry="1.8" fill="#000" opacity=".12"/><path d="M8 27.5a12 12 0 0 1 24 0z" fill="#FFC23D"/><path d="M17.6 16v-4a2.4 2.4 0 0 1 4.8 0v4z" fill="#F59F00"/><rect x="5" y="26.5" width="30" height="5.5" rx="2.75" fill="#F59F00"/><path d="M12.5 21.5c1.4-2.4 3.4-3.8 5-4.3" stroke="#fff" stroke-width="1.7" stroke-linecap="round" opacity=".75"/></svg>', L("Мастера", "Ustalar", "Pros")],
+  ["services", '<svg viewBox="0 0 40 40"><ellipse cx="20" cy="36" rx="12" ry="1.6" fill="#000" opacity=".12"/><rect x="11" y="5" width="18" height="29" rx="4.2" fill="#5B4BDB"/><rect x="13.6" y="8.6" width="12.8" height="19.6" rx="2.2" fill="#9A90F7"/><path d="M20 12.4l1.6 3.7 3.6 1.5-3.6 1.5L20 22.8l-1.6-3.7-3.6-1.5 3.6-1.5z" fill="#fff"/><path d="M31.5 6.5l.9 2.1 2.1.9-2.1.9-.9 2.1-.9-2.1-2.1-.9 2.1-.9z" fill="#FFB020"/></svg>', L("Сервисы", "Servislar", "Services"), "AI"]
+];
+/* the home's bar: its full height is the page's top padding (measured while unfolded), and it folds the pictures away once the page
+   scrolls (html.hd-sc) */
+function hdrFull() { const h = $("#hdr"); if (!h || !isPhone() || document.documentElement.classList.contains("hd-sc")) return; requestAnimationFrame(() => { if (!document.documentElement.classList.contains("hd-sc") && h.offsetHeight) document.documentElement.style.setProperty("--hdr-full", h.offsetHeight + "px"); }); }
+let hdSc = false;
+window.addEventListener("scroll", () => { const v = scrollY > 10; if (v !== hdSc) { hdSc = v; document.documentElement.classList.toggle("hd-sc", v); if (!v) hdrFull(); } }, { passive: true });
+function htBar(anim = true) { // the line under the current tab: as wide as its name
+  const bar = $("#hdr .ht-bar"), b = $(`#hdr [data-htab="${homeTab}"] .ht-l`); if (!bar || !b || !b.offsetWidth) return;
+  const box = bar.parentElement.getBoundingClientRect(), r = b.getBoundingClientRect();
+  bar.style.transition = anim && animOK() ? "" : "none"; bar.style.width = r.width + "px"; bar.style.transform = `translateX(${r.left - box.left}px)`;
+}
+function setHomeTab(t) {
+  if (!HTABS().some(x => x[0] === t)) return;
+  const b = $(`#hdr [data-htab="${t}"]`); if (animOK()) b?.querySelector(".ht-i svg")?.animate([{ scale: "1" }, { scale: ".82", offset: .3 }, { scale: "1.12", offset: .7 }, { scale: "1" }], { duration: 420, easing: "ease-out" });
+  if (t === homeTab) { window.scrollTo({ top: 0, behavior: animOK() ? "smooth" : "auto" }); return; }
+  homeTab = t; document.querySelectorAll("#hdr [data-htab]").forEach(x => x.setAttribute("aria-selected", x.dataset.htab === t)); htBar();
+  if (route.view !== "home") return go("home");
+  const app = $("#app"), swap = () => { renderMain(); window.scrollTo(0, 0); cascade(app); };
+  if (!animOK() || !app.animate) return swap();
+  app.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 110, easing: "ease-in", fill: "forwards" }).finished.then(() => { swap(); app.getAnimations().forEach(a => a.cancel()); });
+}
+function homeMastersHTML() {
+  const all = mastersAll().filter(m => !m.mine), n = id => all.filter(m => (m.specs || []).includes(id)).length;
+  const sp = MSPECS().map(([id, name, em]) => [id, name, em, n(id)]).sort((a, b) => b[3] - a[3]);
+  return `<div class="wrap hpane">
+    <section class="sec"><div class="sec-head"><div><h2 class="h-l">${L("Мастера и спецтехника", "Ustalar va maxsus texnika", "Pros and machinery")}</h2><p>${L("Плиточники, электрики, бригады и техника — с отзывами заказчиков", "Kafelchi, elektrik, brigadalar va texnika — mijozlar sharhlari bilan", "Tilers, electricians, crews and machinery — with customers’ reviews")}</p></div></div>
+      <div class="svc-grid">${sp.map(([id, name, em, k]) => `<button type="button" class="svc" data-mspecgo="${id}"><span class="svc-i" aria-hidden="true">${em}</span><span class="svc-t"><b>${esc(name)}</b><small>${k ? `${k} ${L(plural(k, ["мастер", "мастера", "мастеров"]), "ta usta", k === 1 ? "pro" : "pros")}` : L("пока нет анкет", "hozircha anketa yo‘q", "no profiles yet")}</small></span></button>`).join("")}</div></section>
+    ${mastersTeaser().replace(L("Мастера и спецтехника", "Ustalar va maxsus texnika", "Pros and machinery"), L("С лучшими отзывами", "Eng yaxshi sharhlar bilan", "Best reviewed"))}
+    <section class="sec"><button type="button" class="hcta" data-go="masters" data-mtabgo="me"><span class="hcta-i" aria-hidden="true">${ui("wrench", 22)}</span><span><b>${L("Вы мастер или у вас техника?", "Siz ustamisiz yoki texnikangiz bormi?", "A pro, or own machinery?")}</b><small>${L("Разместите анкету — заказчики позвонят сами", "Anketa joylang — mijozlar o‘zlari qo‘ng‘iroq qiladi", "Post a profile — customers will call you")}</small></span>${ui("chev", 18)}</button></section>
+  </div>`;
+}
+function homeServicesHTML() {
   const S = [
-    ["ai", 'data-act="ai"', "spark", "Usta AI", L("Опишите ремонт своими словами — посчитаем материалы и соберём корзину", "Ta’mirni o‘z so‘zingiz bilan yozing — materiallarni hisoblab, savatni yig‘amiz", "Describe the job in your own words — we count the materials and fill the cart"), L("Спросить", "So‘rash", "Ask"), "cement"],
-    ["ds", 'data-go="design"', "home", L("AI-дизайнер комнаты", "AI xona dizayneri", "AI room designer"), L("Фото и размеры — комната в 3D с мебелью и сметой", "Rasm va o‘lchamlar — mebel va smeta bilan 3D xona", "A photo and the sizes — the room in 3D with furniture and an estimate"), L("Открыть", "Ochish", "Open"), "paint"],
-    ["ls", 'data-go="list"', "camera", L("Список по фото", "Rasmdagi ro‘yxat", "List from a photo"), L("Сфотографируйте список прораба — товары сразу в корзине", "Prorab ro‘yxatini suratga oling — mahsulotlar darhol savatda", "Photograph the foreman’s list — the goods go straight to the cart"), L("Сфотографировать", "Suratga olish", "Take a photo"), "mixer"],
-    ["ms", 'data-go="masters"', "wrench", L("Мастера и спецтехника", "Ustalar va maxsus texnika", "Pros and machinery"), L("Плиточники, электрики, сантехники, экскаваторы — с отзывами", "Kafelchi, elektrik, santexnik, ekskavator — sharhlar bilan", "Tilers, electricians, plumbers, diggers — with reviews"), L("Найти", "Topish", "Find"), "porcel"]
+    ["ai", 'data-act="ai"', "spark", "Usta AI", L("Опишите ремонт своими словами — посчитаем материалы и соберём корзину", "Ta’mirni o‘z so‘zingiz bilan yozing — materiallarni hisoblab, savatni yig‘amiz", "Describe the job — we count the materials and fill the cart")],
+    ["ds", 'data-go="design"', "home", L("AI-дизайнер комнаты", "AI xona dizayneri", "AI room designer"), L("Фото и размеры — комната в 3D с мебелью и сметой", "Rasm va o‘lchamlar — mebel va smeta bilan 3D xona", "A photo and the sizes — the room in 3D with an estimate")],
+    ["ls", 'data-go="list"', "camera", L("Список по фото", "Rasmdagi ro‘yxat", "List from a photo"), L("Сфотографируйте список прораба — товары сразу в корзине", "Prorab ro‘yxatini suratga oling — mahsulotlar savatda", "Photograph the foreman’s list — the goods go to the cart")],
+    ["cl", 'data-act="widgets"', "calc", L("Калькуляторы", "Kalkulyatorlar", "Calculators"), L("Плитка, краска, обои, бетон, доставка — сколько брать", "Kafel, bo‘yoq, gulqog‘oz, beton, yetkazish — qancha olish kerak", "Tile, paint, wallpaper, concrete, delivery — how much to buy")],
+    ["fl", 'data-go="flat"', "folder", L("Смета на квартиру", "Kvartira smetasi", "Whole-flat estimate"), L("Комнаты из дизайнера — в одну смету и корзину", "Dizayner xonalari — bitta smeta va savatga", "Rooms from the designer — one estimate and cart")]
   ];
-  return `<section class="abn-w" data-w="promo" aria-roledescription="${L("карусель", "karusel", "carousel")}" aria-label="${L("Возможности Quriliş Go", "Quriliş Go imkoniyatlari", "What Quriliş Go can do")}">
-    <div class="abn" id="abn">${S.map(([k, act, icon, t, sub, cta, pk], i) => `<button type="button" class="abn-s abn-${k}" ${act} aria-label="${esc(t)}. ${esc(sub)}" aria-roledescription="${L("слайд", "slayd", "slide")}" data-abn="${i}">
-      <span class="abn-t"><small>${ui(icon, 15)} ${esc(t)}</small><b>${esc(sub)}</b><span class="abn-cta">${esc(cta)} ${ui("chev", 14)}</span></span>${pic(pk)}</button>`).join("")}</div>
-    <div class="abn-dots" aria-hidden="true">${S.map((_, i) => `<i${i ? "" : ' class="on"'}></i>`).join("")}</div></section>`;
+  return `<div class="wrap hpane">
+    <section class="sec"><div class="sec-head"><div><h2 class="h-l">${L("Сервисы", "Servislar", "Services")}</h2><p>${L("Посчитать, спланировать и собрать заказ — бесплатно в приложении", "Hisoblash, rejalash va buyurtma yig‘ish — ilovada bepul", "Count, plan and put an order together — free in the app")}</p></div></div>
+      <div class="svc-cards">${S.map(([k, act, icon, t, sub]) => `<button type="button" class="svc-c svc-${k}" ${act}><span class="svc-ci" aria-hidden="true">${ui(icon, 22)}</span><b>${esc(t)}</b><small>${esc(sub)}</small></button>`).join("")}</div></section>
+    <section class="sec" data-w="bundles"><div class="sec-head"><div><h2 class="h-l">${L("Комплекты", "To‘plamlar", "Kits")}</h2><p>${L("Весь список для задачи — одной кнопкой", "Vazifa uchun butun ro‘yxat — bitta tugma bilan", "The whole list for the job — in one tap")}</p></div></div>
+      <div class="bundles">${BUNDLES.map(bundleCard).join("")}</div></section>
+  </div>`;
 }
-function promoRun() {
-  clearInterval(promoRun.t); const el = $("#abn"); if (!el) return;
-  const dots = [...el.parentElement.querySelectorAll(".abn-dots i")], slides = [...el.children];
-  const idx = () => Math.round(el.scrollLeft / Math.max(1, (slides[1]?.offsetLeft || el.clientWidth) - (slides[0]?.offsetLeft || 0)));
-  let touched = 0;
-  el.addEventListener("scroll", () => { const i = Math.min(slides.length - 1, idx()); dots.forEach((d, k) => d.classList.toggle("on", k === i)); }, { passive: true });
-  for (const t of ["pointerdown", "touchstart", "wheel", "focusin"]) el.addEventListener(t, () => { touched = Date.now(); }, { passive: true });
-  if (mqReduce.matches) return;
-  promoRun.t = setInterval(() => {
-    if (!el.isConnected) return clearInterval(promoRun.t);
-    if (document.hidden || Date.now() - touched < 8000 || drawerView || widOpen || aiOpen || $("#modal").classList.contains("on")) return;
-    const r = el.getBoundingClientRect(); if (r.bottom < 0 || r.top > innerHeight) return;
-    const i = (idx() + 1) % slides.length; el.scrollTo({ left: slides[i].offsetLeft - slides[0].offsetLeft, behavior: "smooth" });
-  }, 5000);
+/* ================= Phones: the search sheet (after the owner's reference) =================
+   The search pill opens a full-screen sheet of step cards: what (with the shop's suggestions as you type), where to deliver,
+   and in stock or not — or, on the «Мастера» tab, who and where. One card is open at a time; the others are a line with the
+   choice; «Искать» runs the shop's search (or the masters' filter), «Очистить» resets the choices. Back closes the sheet. */
+const ss = { tab: "goods", step: "what", q: "", stock: false, spec: "" };
+function openSS(tab) {
+  const el = $("#ss"); if (!el) return;
+  ss.tab = tab || (homeTab === "masters" ? "masters" : "goods"); ss.step = ss.tab === "masters" ? "who" : "what"; ss.q = f.q || ""; ss.stock = !!f.inStock; ss.spec = mf.spec || "";
+  closeSugg(); renderSS(); setPanel(el, true); syncLock();
+  if (animOK()) { el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 200, easing: "ease-out" }); cascade($("#ssBody")); }
 }
+function closeSS() { const el = $("#ss"); if (!el?.classList.contains("on")) return; setPanel(el, false); syncLock(); }
+function ssCard(step, title, open, valueTxt, body) {
+  return open ? `<section class="ss-card on" data-sscard="${step}"><h2>${title}</h2>${body}</section>`
+    : `<button type="button" class="ss-card ss-row" data-ssstep="${step}"><span>${title}</span><b>${esc(valueTxt)}</b></button>`;
+}
+function renderSS() {
+  const el = $("#ss"); if (!el) return; const g = ss.tab === "goods";
+  const dShort = dName(district), chips = (attr, list, cur) => `<div class="ss-chips">${list.map(([v, t]) => `<button type="button" class="chip" ${attr}="${esc(v)}" aria-pressed="${v === cur}">${esc(t)}</button>`).join("")}</div>`;
+  const where = ssCard("where", L("Куда доставить?", "Qayerga yetkazamiz?", "Deliver where?"), ss.step === "where", dShort, chips("data-ssd", DISTRICTS.map(d => [d.id, L(d.ru, d.uz)]), district));
+  const body = g
+    ? ssCard("what", L("Что ищете?", "Nima qidiryapsiz?", "What are you looking for?"), ss.step === "what", ss.q || L("Любые товары", "Istalgan mahsulot", "Any goods"),
+        `<label class="ss-in">${ui("search", 18)}<input id="ssQ" type="search" enterkeyhint="search" autocomplete="off" placeholder="${L("Цемент, смеситель, ламинат…", "Sement, aralashtirgich, laminat…", "Cement, faucet, laminate…")}" value="${esc(ss.q)}"></label><div class="ss-sg" id="ssSg">${ssSugg(ss.q)}</div>`)
+      + where
+      + ssCard("stock", L("Наличие", "Mavjudlik", "Availability"), ss.step === "stock", ss.stock ? L("Только в наличии", "Faqat mavjud", "In stock only") : L("Все товары", "Barcha mahsulotlar", "All goods"),
+        chips("data-ssstock", [["0", L("Все товары", "Barcha mahsulotlar", "All goods")], ["1", L("Только в наличии", "Faqat mavjud", "In stock only")]], ss.stock ? "1" : "0"))
+    : ssCard("who", L("Кто нужен?", "Kim kerak?", "Who do you need?"), ss.step === "who", ss.spec ? mSpecName(ss.spec) : L("Любой мастер", "Istalgan usta", "Any pro"),
+        `<div class="ss-chips">${[["", "✨", L("Любой мастер", "Istalgan usta", "Any pro")], ...MSPECS().map(([id, n, em]) => [id, em, n])].map(([id, em, n]) => `<button type="button" class="chip" data-ssspec="${id}" aria-pressed="${id === ss.spec}"><span aria-hidden="true">${em}</span> ${esc(n)}</button>`).join("")}</div>`)
+      + where;
+  el.innerHTML = `<div class="ss-top"><div class="ss-tabs" role="tablist">${[["goods", L("Товары", "Mahsulotlar", "Goods")], ["masters", L("Мастера", "Ustalar", "Pros")]].map(([t, n]) => `<button type="button" role="tab" data-sst="${t}" aria-selected="${ss.tab === t}">${n}</button>`).join("")}</div><button type="button" class="ib ss-x" data-act="ss-close" aria-label="${L("Закрыть", "Yopish", "Close")}">${ui("close", 18)}</button></div>
+    <div class="ss-body" id="ssBody">${body}</div>
+    <div class="ss-foot"><button type="button" class="lnk" data-act="ss-clear">${L("Очистить", "Tozalash", "Clear all")}</button><button type="button" class="btn btn-primary ss-go" data-act="ss-go">${ui("search", 18)} ${g ? L("Искать", "Qidirish", "Search") : L("Найти мастера", "Usta topish", "Find a pro")}</button></div>`;
+  const q = $("#ssQ"); if (q) { q.addEventListener("input", () => { ss.q = q.value; $("#ssSg").innerHTML = ssSugg(q.value); }); q.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); ssGo(); } }); }
+}
+const ssSugg = q => q.trim() ? suggHTML(q) : `${recentQ.length ? `<div class="sg-h"><span>${L("Вы искали", "Oxirgi qidiruvlar", "Recent searches")}</span><button type="button" class="lnk" data-sgclear>${L("Очистить", "Tozalash", "Clear")}</button></div><div class="sg-chips">${recentQ.slice(0, 4).map(x => `<button type="button" class="sg-i chip" data-sgq="${esc(x)}">${ui("clock", 14)} ${esc(x)}</button>`).join("")}</div>` : ""}
+  <div class="sg-h"><span>${L("Часто ищут", "Ko‘p qidiriladi", "Popular searches")}</span></div><div class="sg-chips">${popularQ().map(x => `<button type="button" class="sg-i chip" data-sgq="${esc(x)}">${esc(x)}</button>`).join("")}</div>`;
+function ssGo() {
+  if (ss.tab === "masters") { mf.spec = ss.spec; mf.d = district; mf.tab = "find"; mf.sel = null; closeSS(); return go("masters"); }
+  f.inStock = ss.stock; closeSS(); searchGo(ss.q);
+}
+document.addEventListener("click", e => {
+  const t = e.target.closest('[data-htab],[data-mspecgo],#ss [data-sst],#ss [data-ssstep],#ss [data-ssd],#ss [data-ssstock],#ss [data-ssspec],[data-act="ss-open"],#ss [data-act^="ss-"],#ssSg [data-sgq],#ssSg [data-sgclear],#ssSg [data-sggo],#ssSg [data-sgopen],#ssSg [data-sgall],#ssSg [data-sgai]'); if (!t) return;
+  const d = t.dataset, re = step => { if (step) ss.step = step; renderSS(); const c = $(`#ss [data-sscard="${ss.step}"]`); if (c && animOK()) cascade(c); };
+  if (d.htab) return setHomeTab(d.htab);
+  if (d.mspecgo) { mf.spec = d.mspecgo; mf.tab = "find"; mf.sel = null; return go("masters"); }
+  if (d.act === "ss-open") return openSS();
+  if (d.act === "ss-close") return closeSS();
+  if (d.act === "ss-clear") { ss.q = ""; ss.stock = false; ss.spec = ""; return re(ss.tab === "goods" ? "what" : "who"); }
+  if (d.act === "ss-go") return ssGo();
+  if (d.sst) { ss.tab = d.sst; return re(ss.tab === "goods" ? "what" : "who"); }
+  if (d.ssstep) return re(d.ssstep);
+  if (d.ssd) { setDistrict(d.ssd, true); renderHeader(); return re(ss.tab === "goods" ? "stock" : "where"); }
+  if (d.ssstock != null) { ss.stock = d.ssstock === "1"; return re(); }
+  if (d.ssspec != null) { ss.spec = d.ssspec; return re("where"); }
+  // the shop's suggestions inside the sheet
+  if (d.sgclear != null) { recentQ = []; LS.set("imorat.recentQ", []); $("#ssSg").innerHTML = ssSugg(ss.q); return; }
+  if (d.sgq) { ss.q = d.sgq; return ssGo(); }
+  if (d.sgall != null) return ssGo();
+  if (d.sgai != null) { const q = ss.q.trim(); closeSS(); saveRecentQ(q); return openAI(q); }
+  if (d.sgopen) { saveRecentQ(ss.q); closeSS(); return openProduct(+d.sgopen); }
+  if (d.sggo) { const q = ss.q.trim(); closeSS(); if (d.sggo !== "catalog") { f.q = ""; saveRecentQ(q); } else f.q = q; f.inStock = ss.stock;
+    history.pushState(null, "", "#" + d.sggo); route = parseHash(); f.sub = d.sgsub || null; f.max = 0; f.photo = null; renderMain(); window.scrollTo(0, 0); }
+});
+/* the demo's label on a phone: a small pill above the bottom bar on the home (demo data must be marked as demo) */
+const demoFloat = () => API ? "" : `<div class="demo-fl" role="note">${ui("alert", 14)} ${L("Демо: товары, цены и магазины — примеры", "Demo: mahsulot, narx va do‘konlar — namuna", "Demo: goods, prices and stores are samples")}</div>`;
 /* phones: the home ends in a feed of goods, the most reviewed first (as a shop app does) */
 function popularHTML() {
   const pop = [...PRODUCTS].sort((a, b) => (b.reviews || 0) - (a.reviews || 0) || (b.rating || 0) - (a.rating || 0)).slice(0, 20);
@@ -4351,7 +4457,7 @@ function renderDrawer() {
   if (drawerView === "profile" && !user) { closeDrawer(); openAuth("profile"); return; } // the profile exists only after signing in
   $("#drawer").classList.toggle("trk", drawerView === "track" && orders.some(x => x.num === drawerOrder)); // the order screen: map + sheet, no panel header
   $("#drawer").classList.toggle("prof", drawerView === "profile"); // the profile: no footer bar, the list runs under the tab bar
-  $("#drawer").classList.toggle("tabroot", drawerView === "cart" || drawerView === "profile"); // phones: a tab of the bottom bar — no ✕, the bar switches away
+  $("#drawer").classList.toggle("tabroot", ["cart", "profile", "favs", "support"].includes(drawerView)); // phones: a tab of the bottom bar — no ✕, the bar switches away
   $("#dBack").innerHTML = ui("back", 16); $("#dClose").innerHTML = ui("close", 16);
   $("#dBack").hidden = !["checkout", "track", "orders", "watch", "projects"].includes(drawerView);
   ({ cart: dCart, checkout: dCheckout, track: dTrack, profile: dProfile, favs: dFavs, orders: dOrders, compare: dCompare, watch: dWatch, projects: dProjects, homeSetup: dHomeSetup, repeat: dRepeat, support: dSupport })[drawerView]?.();
@@ -10172,7 +10278,7 @@ async function supLoad(peek) {
   catch (e) { if (!peek) sup.msgs = sup.msgs || []; }
   supBadge(); if (drawerView === "support" && !peek) supDraw();
 }
-function supBadge() { if (!sup) return; const ad = $("#abSupDot"); if (ad) { ad.hidden = !sup.unread; ad.textContent = sup.unread || ""; } const b = $("#supBtn"); if (!b) return; const d = b.querySelector(".dot"); d.hidden = !sup.unread; d.textContent = sup.unread; b.hidden = !!drawerView || route.view === "admin" || !!user?.staff; staffSupBadge(); }
+function supBadge() { if (!sup) return; const ad = $("#abSupDot"); if (ad) { ad.hidden = !sup.unread; ad.textContent = sup.unread || ""; } const tc = $("#tabChat"); if (tc) tc.hidden = !sup.unread; const b = $("#supBtn"); if (!b) return; const d = b.querySelector(".dot"); d.hidden = !sup.unread; d.textContent = sup.unread; b.hidden = !!drawerView || route.view === "admin" || !!user?.staff; staffSupBadge(); }
 function supTime(t) { const d = new Date(t), today = new Date().toDateString() === d.toDateString(); return d.toLocaleString(LOCALE, today ? { hour: "2-digit", minute: "2-digit" } : { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }); }
 function supBubbles(list, mine) { return list.map(m => `<div class="sup-m ${m.from === mine ? "me" : "them"}"><div>${esc(m.text).replace(/\n/g, "<br>")}</div><small>${m.from === "staff" ? esc(m.staff_name || "Quriliş Go") + " · " : ""}${m.order ? esc(m.order) + " · " : ""}${supTime(m.at)}</small></div>`).join(""); }
 function dSupport() {
@@ -10508,6 +10614,7 @@ function renderMain() {
   const wm = workMode(), H = document.documentElement;
   const to = h => { history.replaceState(null, "", "#" + h); route = parseHash(); };
   H.classList.toggle("r-home", !["catalog", "seller", "design", "masters", "admin", "flat", "shop", "store", "partner", "staff"].includes(route.view));
+  hdrFull(); requestAnimationFrame(() => htBar(false)); // the home's bar shows or hides its tabs
   if (user && ["partner", "staff"].includes(route.view)) to(wm === "admin" ? "admin" : wm === "seller" ? "seller" : wm === "master" ? "masters" : "");
   else if (wm === "seller" && !["seller", "admin", "owner"].includes(route.view)) to("seller");
   else if (wm === "admin" && !["admin", "store"].includes(route.view)) to("admin");
@@ -10588,7 +10695,7 @@ window.addEventListener("hashchange", () => {
   if (document.startViewTransition && motionOK() && !SAFARI) document.startViewTransition(routeTo); else routeTo();
 });
 /* how much of the screen the header covers while scrolling: the phone header scrolls away, the desktop one sticks */
-const hdrStuck = () => { const h = $("#hdr"); if (!h) return 0; const cs = getComputedStyle(h); return cs.position === "sticky" ? h.offsetHeight + Math.min(0, parseFloat(cs.top) || 0) : 0; }; // a phone header partly slides away (its top row)
+const hdrStuck = () => { const h = $("#hdr"); if (!h) return 0; const cs = getComputedStyle(h); return cs.position === "sticky" || cs.position === "fixed" ? h.offsetHeight + Math.min(0, parseFloat(cs.top) || 0) : 0; }; // the phone home's bar lies over the page (fixed)
 function scrollToSec(id) {
   closeMega(); if (drawerView) closeDrawer(); if (aiOpen) closeAI(); if (widOpen) closeWidgets();
   const doIt = () => { document.documentElement.classList.add("cv-all"); const el = document.getElementById(id); if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - (hdrStuck() + 12), behavior: "smooth" }); };
