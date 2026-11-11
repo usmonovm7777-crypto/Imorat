@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-r5GkyeOPniyYoZhOq2f6QzfXnNIgJgJCf+RZTi2+sh0=' 'sha256-6YgbCWrkFx4by720UWy4WdWirbpVMIQ+yer7fUvyp5o=' 'unsafe-eval' https://api-maps.yandex.ru https://*.api-maps.yandex.ru https://yandex.ru https://*.yandex.ru https://*.yandex.net https://yastatic.net https://accounts.google.com https://appleid.cdn-apple.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com https://*.yandex.ru https://yastatic.net; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https: http://127.0.0.1:* http://localhost:*; media-src 'self' data: blob: https:; connect-src 'self' data: blob: https: wss: http://127.0.0.1:* http://localhost:*; frame-src https:; worker-src 'self' blob: https://*.api-maps.yandex.ru https://yastatic.net; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self' https:">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-r5GkyeOPniyYoZhOq2f6QzfXnNIgJgJCf+RZTi2+sh0=' 'sha256-8/3byLvUkglTK1/DiunmJFw4sNpg+ngSAlcZzm6fVqs=' 'unsafe-eval' https://api-maps.yandex.ru https://*.api-maps.yandex.ru https://yandex.ru https://*.yandex.ru https://*.yandex.net https://yastatic.net https://accounts.google.com https://appleid.cdn-apple.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com https://*.yandex.ru https://yastatic.net; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https: http://127.0.0.1:* http://localhost:*; media-src 'self' data: blob: https:; connect-src 'self' data: blob: https: wss: http://127.0.0.1:* http://localhost:*; frame-src https:; worker-src 'self' blob: https://*.api-maps.yandex.ru https://yastatic.net; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self' https:">
 <meta name="description" content="Quriliş Go — маркетплейс строительных магазинов Ташкента: сравнение цен, Usta AI, калькуляторы ремонта и доставка Яндекс.">
 <style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.5 system-ui,-apple-system,'Segoe UI',Roboto,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
 <script src="config.js"></script>
@@ -1903,6 +1903,11 @@ html.fx .ds-teaser-v { transition: transform .3s; } html.fx .ds-teaser-v:hover {
 @media (max-width: 560px) { .ds-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .ds-actions { grid-template-columns: 1fr; } }
 .fx-btn { width: 36px; height: 36px; border-radius: 11px; display: grid; place-items: center; flex: none; color: var(--muted); border: 1px solid var(--line-strong); transition: color .2s, box-shadow .3s, background .2s; }
 .fx-btn:hover { color: var(--ink); }
+html .fx-btn.th-btn.sn-btn[aria-pressed="true"] { color: #3F86D9; border-color: color-mix(in srgb, #3F86D9 45%, var(--line-strong)); }
+#snow { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 54; pointer-events: none; opacity: 1; transition: opacity .35s ease; }
+#snow.hold { opacity: 0; }
+@media print { #snow { display: none; } }
+.snow-set { margin-top: 4px; }
 html.fx .fx-btn { color: #fff; border-color: transparent; background: linear-gradient(135deg, var(--accent), var(--signal)); box-shadow: 0 0 0 3px color-mix(in srgb, var(--signal) 22%, transparent), 0 6px 18px color-mix(in srgb, var(--signal) 35%, transparent); }
 .srate { font-size: 12.5px; color: var(--muted); }
 .srate b { color: var(--ink); font-weight: 600; } .srate b::first-letter { color: #e8a317; }
@@ -2361,6 +2366,7 @@ const UI = {
   filter: '<path d="M3 5h18l-7 8v6l-4 2v-8z"/>',
   sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
   moon: '<path d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a8.5 8.5 0 1 0 11 11z"/>',
+  snow: '<path d="M12 2v20M3.34 7l17.32 10M3.34 17L20.66 7M9.6 4l2.4 2.4L14.4 4M9.6 20l2.4-2.4 2.4 2.4M3.9 10.9l3.3-.9-.9-3.3M20.1 13.1l-3.3.9.9 3.3M3.9 13.1l3.3.9-.9 3.3M20.1 10.9l-3.3-.9.9-3.3"/>',
   spark: '<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 15l.7 1.8 1.8.7-1.8.7L19 20l-.7-1.8-1.8-.7 1.8-.7z"/>',
   send: '<path d="M5 12h13M13 6l6 6-6 6"/>',
   nav: '<path d="M20 4L3 11l7 2.5L12.5 21z"/>',
@@ -3095,6 +3101,76 @@ function setLook(fx, theme) {
   if (theme) { themePref = theme; LS.set("imorat.theme", theme); }
   applyLook(); renderAll();
 }
+/* ================= Snow: the New Year mood (the owner's request) =================
+   From November to the end of January snow falls over the site and the app. Light theme: ice-blue flakes (white
+   ones would not show on a light page); dark theme: white. A quarter of the flakes are six-armed crystals that turn slowly, the
+   rest are soft dots; nearer flakes are larger and faster. It is only a picture: one canvas that takes no taps.
+   It does not run with the system's reduced-motion setting, stops while the page is hidden, and steps aside while a field is
+   being filled in on a phone. The person switches it off: the snowflake button in the header (computers), «Настройки» in the
+   profile, the «Сервисы» tab of the phone home. */
+const SNOW_SEASON = (() => { const m = new Date().getMonth(); return m >= 10 || m === 0; })(); // November, December, January
+let snowPref = LS.get("imorat.snow", "on");
+const snowCan = () => SNOW_SEASON && !mqReduce.matches; // the switch is offered
+const snowWanted = () => snowCan() && snowPref !== "off";
+const snow = { cv: null, g: null, fl: [], raf: 0, t: 0, w: 0, h: 0, dpr: 1, spr: null, dark: null, hold: false };
+function snowSprites(dark) {
+  const mk = (n, draw) => { const c = document.createElement("canvas"); c.width = c.height = n; draw(c.getContext("2d"), n); return c; };
+  const dot = mk(48, (g, n) => { const r = g.createRadialGradient(n / 2, n / 2, 0, n / 2, n / 2, n / 2);
+    if (dark) { r.addColorStop(0, "rgba(255,255,255,1)"); r.addColorStop(.42, "rgba(255,255,255,.8)"); r.addColorStop(1, "rgba(255,255,255,0)"); }
+    else { r.addColorStop(0, "rgba(176,208,246,1)"); r.addColorStop(.45, "rgba(146,188,240,.92)"); r.addColorStop(1, "rgba(128,172,232,0)"); } // a soft ice-blue dot: with a white heart it read as a ring
+    g.fillStyle = r; g.fillRect(0, 0, n, n); });
+  const star = mk(72, (g, n) => { g.translate(n / 2, n / 2); g.strokeStyle = dark ? "rgba(255,255,255,.96)" : "rgba(112,160,226,.96)"; g.lineWidth = 3.6; g.lineCap = "round";
+    for (let i = 0; i < 6; i++) { g.rotate(Math.PI / 3); g.beginPath(); g.moveTo(0, 0); g.lineTo(0, -31); g.moveTo(0, -17); g.lineTo(-8.5, -25); g.moveTo(0, -17); g.lineTo(8.5, -25); g.stroke(); } });
+  return { dot, star };
+}
+function snowFlake(f, fresh) {
+  const z = Math.random(); // depth: 0 far … 1 near
+  f.x = Math.random() * snow.w; f.y = fresh ? -24 - Math.random() * 80 : Math.random() * snow.h;
+  f.star = Math.random() < .24; f.r = f.star ? 6.5 + z * 6.5 : 2.4 + z * 3.2; // half of the drawn size, px
+  f.vy = 15 + z * 32 + Math.random() * 8; f.sw = 8 + Math.random() * 22; f.ph = Math.random() * 6.28; f.fq = .35 + Math.random() * .7;
+  f.a = .5 + z * .45; f.rot = Math.random() * 6.28; f.vr = (Math.random() - .5) * .9;
+  return f;
+}
+function snowFit() {
+  const s = snow; if (!s.cv) return; s.w = innerWidth; s.h = innerHeight; s.dpr = Math.min(2, devicePixelRatio || 1);
+  s.cv.width = Math.round(s.w * s.dpr); s.cv.height = Math.round(s.h * s.dpr);
+  const n = Math.round(Math.min(90, Math.max(24, s.w * s.h / 20000)));
+  while (s.fl.length < n) s.fl.push(snowFlake({}, false)); s.fl.length = n;
+}
+function snowTick(now) {
+  const s = snow, g = s.g; s.raf = requestAnimationFrame(snowTick);
+  const dt = s.t ? Math.min(.05, (now - s.t) / 1000) : 0; s.t = now;
+  const dark = effTheme() === "dark"; if (dark !== s.dark) { s.dark = dark; s.spr = snowSprites(dark); }
+  const d = s.dpr; g.setTransform(d, 0, 0, d, 0, 0); g.clearRect(0, 0, s.w, s.h);
+  for (const f of s.fl) {
+    f.y += f.vy * dt; f.ph += f.fq * dt; if (f.y - f.r > s.h) snowFlake(f, true);
+    const x = f.x + Math.sin(f.ph) * f.sw; g.globalAlpha = f.a;
+    if (f.star) { f.rot += f.vr * dt; const c = Math.cos(f.rot) * d, n = Math.sin(f.rot) * d; g.setTransform(c, n, -n, c, x * d, f.y * d); g.drawImage(s.spr.star, -f.r, -f.r, f.r * 2, f.r * 2); g.setTransform(d, 0, 0, d, 0, 0); }
+    else g.drawImage(s.spr.dot, x - f.r, f.y - f.r, f.r * 2, f.r * 2);
+  }
+  g.globalAlpha = 1;
+}
+function snowSync() {
+  const s = snow;
+  if (!snowWanted()) { cancelAnimationFrame(s.raf); s.raf = 0; s.cv?.remove(); s.cv = s.g = null; s.fl = []; return; }
+  if (!s.cv) { const cv = document.createElement("canvas"); cv.id = "snow"; cv.setAttribute("aria-hidden", "true"); document.body.append(cv); s.cv = cv; s.g = cv.getContext("2d"); snowFit(); }
+  s.cv.classList.toggle("hold", s.hold);
+  const run = !document.hidden && !s.hold;
+  if (run && !s.raf) { s.t = 0; s.raf = requestAnimationFrame(snowTick); }
+  else if (!run && s.raf) { cancelAnimationFrame(s.raf); s.raf = 0; }
+}
+function setSnow(v) { snowPref = v === "off" ? "off" : "on"; LS.set("imorat.snow", snowPref); snowSync(); renderAll(); }
+/* the switch as a settings row (profile, the «Сервисы» tab) */
+const snowRowHTML = () => !snowCan() ? "" : `<div class="pf-row pf-set"><span class="pf-ic">${ui("snow", 18)}</span><span class="pf-t"><b>${L("Снег", "Qor", "Snow")}</b><small>${L("Новогоднее настроение", "Yangi yil kayfiyati", "New Year mood")}</small></span><div class="seg" role="group" aria-label="${L("Снег", "Qor", "Snow")}"><button type="button" data-snow="on" aria-pressed="${snowPref !== "off"}">${L("Идёт", "Yog‘adi", "On")}</button><button type="button" data-snow="off" aria-pressed="${snowPref === "off"}">${L("Выключен", "O‘chiq", "Off")}</button></div></div>`;
+{
+  const field = el => !!el?.matches?.('input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="button"]):not([type="submit"]):not([type="file"]), textarea, [contenteditable="true"]');
+  const hold = () => { const h = mqPhone.matches && field(document.activeElement); if (h !== snow.hold) { snow.hold = h; snowSync(); } };
+  document.addEventListener("focusin", hold); document.addEventListener("focusout", () => setTimeout(hold, 0));
+  document.addEventListener("visibilitychange", snowSync);
+  window.addEventListener("resize", () => { clearTimeout(snow.rt); snow.rt = setTimeout(snowFit, 150); }, { passive: true });
+  mqReduce.addEventListener?.("change", snowSync);
+}
+snowSync();
 /* ---- Home widgets. Every block of the home page is a widget: the person hides or reorders them in «Настроить главную».
    Phones start with a short home (the heavy blocks are off), computers show everything; each keeps its own setting. ---- */
 const HOME_W = [
@@ -3327,7 +3403,7 @@ function renderHeader() {
     <button class="cat-btn" type="button" data-act="mega">${ui("grid", 18)}${L("Каталог", "Katalog")}</button>
     <div class="search" role="search">${ui("search", 18)}<input id="q" type="search" enterkeyhint="search" role="combobox" aria-controls="sugg" aria-expanded="false" aria-autocomplete="list" value="${esc(f.q)}" placeholder="${L("Цемент, смеситель, ламинат…", "Sement, aralashtirgich, laminat…")}" aria-label="${L("Поиск по каталогу", "Katalog bo‘yicha qidiruv")}" autocomplete="off"><div class="sugg" id="sugg" role="listbox" aria-label="${L("Подсказки поиска", "Qidiruv takliflari")}" hidden></div><span class="s-tools"><button class="s-ic" type="button" data-act="voice" ${SRec ? "" : "hidden"} aria-label="${L("Поиск голосом", "Ovozli qidiruv")}" title="${L("Поиск голосом", "Ovozli qidiruv")}">${ui("mic", 18)}</button><button class="s-ic" type="button" data-act="photo-search" ${photoAIon() ? "" : "hidden"} aria-label="${L("Поиск по фото", "Rasm bo‘yicha qidiruv")}" title="${L("Поиск по фото", "Rasm bo‘yicha qidiruv")}">${ui("camera", 18)}</button><button class="ask" type="button" data-act="ask-search" aria-label="${L("Спросить Usta AI", "Usta AI dan so‘rash", "Ask Usta AI")}">${ui("spark", 14)}<span class="t">${L("Спросить AI", "AI dan so‘rash", "Ask AI")}</span></button></span><input type="file" id="psFile" accept="image/*" hidden></div>
     <label class="where" title="${L("Район доставки", "Yetkazish tumani")}">${ui("pin", 16)}<span class="visually-hidden">${L("Район доставки", "Yetkazish tumani")}</span><select id="distSel">${DISTRICTS.map(d => `<option value="${d.id}" ${d.id === district ? "selected" : ""}>${L(d.ru, d.uz)}</option>`).join("")}</select></label>
-    <button class="fx-btn th-btn" type="button" data-act="theme-toggle" aria-label="${effTheme() === "dark" ? L("Тёмная тема — включить светлую", "Qorong‘i mavzu — yorug‘ini yoqish", "Dark theme — switch to light") : L("Светлая тема — включить тёмную", "Yorug‘ mavzu — qorong‘isini yoqish", "Light theme — switch to dark")}" title="${effTheme() === "dark" ? L("Тёмная тема", "Qorong‘i mavzu", "Dark theme") : L("Светлая тема", "Yorug‘ mavzu", "Light theme")}">${effTheme() === "dark" ? ui("moon", 18) : ui("sun", 18)}</button>
+    <button class="fx-btn th-btn" type="button" data-act="theme-toggle" aria-label="${effTheme() === "dark" ? L("Тёмная тема — включить светлую", "Qorong‘i mavzu — yorug‘ini yoqish", "Dark theme — switch to light") : L("Светлая тема — включить тёмную", "Yorug‘ mavzu — qorong‘isini yoqish", "Light theme — switch to dark")}" title="${effTheme() === "dark" ? L("Тёмная тема", "Qorong‘i mavzu", "Dark theme") : L("Светлая тема", "Yorug‘ mavzu", "Light theme")}">${effTheme() === "dark" ? ui("moon", 18) : ui("sun", 18)}</button>${snowCan() ? `<button class="fx-btn th-btn sn-btn" type="button" data-act="snow-toggle" aria-pressed="${snowPref !== "off"}" aria-label="${L("Снег", "Qor", "Snow")}" title="${snowPref !== "off" ? L("Снег идёт — выключить", "Qor yog‘moqda — o‘chirish", "Snow is on — switch off") : L("Включить снег", "Qorni yoqish", "Switch the snow on")}">${ui("snow", 18)}</button>` : ""}
     <div class="seg" role="group" aria-label="Язык / Til / Language"><button type="button" data-lang="ru" aria-pressed="${lang === "ru"}">RU</button><button type="button" data-lang="uz" aria-pressed="${lang === "uz"}">UZ</button><button type="button" data-lang="en" aria-pressed="${lang === "en"}">EN</button></div><label class="lang-pick"><span>${lang.toUpperCase()}</span>${ui("chev", 12)}<select data-langsel aria-label="Язык / Til / Language">${[["ru", "Русский"], ["uz", "Özbekça"], ["en", "English"]].map(([v, n]) => `<option value="${v}" ${lang === v ? "selected" : ""}>${n}</option>`).join("")}</select></label>
     <button class="hb" type="button" data-act="favs" aria-label="${L("Избранное", "Saralanganlar")}">${ui("heart", 22)}<span class="dot" id="favDot" hidden></span></button>
     <button class="hb" type="button" data-act="${user ? "profile" : "login"}" aria-label="${user ? L("Профиль", "Profil") : L("Войти", "Kirish")}">${user ? `<span class="av">${esc(initial(user.name))}</span>` : ui("user", 22)}</button>
@@ -3961,6 +4037,7 @@ function homeServicesHTML() {
       <div class="svc-cards">${S.map(([k, act, icon, t, sub]) => `<button type="button" class="svc-c svc-${k}" ${act}><span class="svc-ci" aria-hidden="true">${ui(icon, 22)}</span><b>${esc(t)}</b><small>${esc(sub)}</small></button>`).join("")}</div></section>
     <section class="sec" data-w="bundles"><div class="sec-head"><div><h2 class="h-l">${L("Комплекты", "To‘plamlar", "Kits")}</h2><p>${L("Весь список для задачи — одной кнопкой", "Vazifa uchun butun ro‘yxat — bitta tugma bilan", "The whole list for the job — in one tap")}</p></div></div>
       <div class="bundles">${BUNDLES.map(bundleCard).join("")}</div></section>
+    ${snowCan() ? `<section class="sec snow-set"><div class="pf-group">${snowRowHTML()}</div></section>` : ""}
   </div>`;
 }
 /* ================= Phones: the search sheet (after the owner's reference) =================
@@ -4931,6 +5008,7 @@ function dProfile() {
       ${notif}
       <label class="pf-row pf-set" for="pDist"${wk ? " hidden" : ""}><span class="pf-ic">${ui("pin", 18)}</span><span class="pf-t"><b>${L("Район доставки", "Yetkazish tumani", "Delivery district")}</b><small>${L("по умолчанию", "standart", "by default")}</small></span><span class="pf-selw"><select id="pDist" class="pf-sel">${DISTRICTS.map(x => `<option value="${x.id}" ${x.id === district ? "selected" : ""}>${L(x.ru, x.uz)}</option>`).join("")}</select>${ui("chev", 14)}</span></label>
       ${segRow("moon", L("Тема", "Mavzu"), "", `<div class="seg" role="group" aria-label="${L("Тема", "Mavzu")}"><button type="button" data-theme-set="auto" aria-pressed="${themePref === "auto"}">${L("Авто", "Avto")}</button><button type="button" data-theme-set="light" aria-pressed="${themePref === "light"}">${L("Светлая", "Yorug‘")}</button><button type="button" data-theme-set="dark" aria-pressed="${themePref === "dark"}">${L("Тёмная", "Qorong‘i")}</button></div>`)}
+      ${snowRowHTML()}
       ${segRow("chat", L("Язык", "Til"), "", `<div class="seg" role="group" aria-label="${L("Язык", "Til")}"><button type="button" data-lang="ru" aria-pressed="${lang === "ru"}">Русский</button><button type="button" data-lang="uz" aria-pressed="${lang === "uz"}">Özbekça</button><button type="button" data-lang="en" aria-pressed="${lang === "en"}">English</button></div>`)}
       ${APP_MODE ? "" : segRow("spark", L("Оформление", "Ko‘rinish", "Appearance"), L("Подсветка и анимации", "Yoritish va animatsiyalar", "Glow and animations"), `<div class="seg" role="group" aria-label="${L("Оформление", "Ko‘rinish", "Appearance")}"><button type="button" data-look="on" aria-pressed="${fxPref === "on"}">${L("Яркое", "Yorqin")}</button><button type="button" data-look="off" aria-pressed="${fxPref === "off"}">${L("Простое", "Oddiy")}</button><button type="button" data-look="auto" aria-pressed="${fxPref === "auto"}">${L("Авто", "Avto")}</button></div>`)}
     </div></section>
@@ -7137,7 +7215,8 @@ function statementCSV() {
 }
 document.addEventListener("change", e => { if (e.target.id === "stmtMonth") loadStatement(e.target.value); });
 document.addEventListener("click", e => {
-  const b = e.target.closest("[data-look],[data-theme-set]"); if (!b) return;
+  const b = e.target.closest("[data-look],[data-theme-set],[data-snow]"); if (!b) return;
+  if (b.dataset.snow) return setSnow(b.dataset.snow);
   setLook(b.dataset.look, b.dataset.themeSet);
 });
 document.addEventListener("input", e => { if (e.target.id === "payoutTo") { const pw = $("#payoutPw"); if (pw && pw.dataset.was) pw.hidden = e.target.value.trim() === pw.dataset.was; } }); // a new card asks for the password (the server checks it and tells the owner)
@@ -10759,6 +10838,7 @@ document.addEventListener("click", e => {
     case "stores-all": { const st = $(".stores"); if (st) st.classList.add("all"); t.closest(".stores-more")?.remove(); return; }
     case "shopper-toggle": { const toShelf = !!workMode(); LS.set("imorat.shopperView", toShelf); closeDrawer(); renderHeader(); const toH = toShelf ? "home" : user?.admin ? "admin" : myStore ? "seller" : "masters"; setHash(toH); route = parseHash(); renderMain(); toast(toShelf ? (user?.admin ? L("Маркетплейс. Вернуться в панель — кнопка сверху", "Marketpleys. Panelga qaytish — yuqoridagi tugma", "Marketplace. Back to the panel — the button at the top") : L("Маркетплейс. Вернуться в кабинет — кнопка сверху", "Marketpleys. Kabinetga qaytish — yuqoridagi tugma", "Marketplace. Back to the cabinet — the button at the top")) : user?.admin ? L("Панель", "Panel", "Panel") : myStore ? L("Кабинет магазина", "Do‘kon kabineti", "Store cabinet") : L("Кабинет мастера", "Usta kabineti", "Pro cabinet")); return; }
     case "theme-toggle": return setLook(null, effTheme() === "dark" ? "light" : "dark");
+    case "snow-toggle": return setSnow(snowPref === "off" ? "on" : "off");
     case "ai-calc": { const c = CALCS.find(x => x.id === wCalc), items = calcOut["w:" + wCalc] || []; const rows = [...document.querySelectorAll("#w-" + wCalc + "-res > div")].map(d => d.innerText.replace(/\s+/g, " ")).join("; "); return openAI(L(`Проверь мой расчёт «${c.ru}»: ${rows}. Материалы: ${items.map(([p, q]) => `[[${p.id}:${q}]]`).join(", ")}. Всё ли учтено и что ещё понадобится?`, `«${c.uz}» hisobimni tekshir: ${rows}. Materiallar: ${items.map(([p, q]) => `[[${p.id}:${q}]]`).join(", ")}. Hammasi hisobga olinganmi, yana nima kerak?`, `Check my “${L(c.ru, c.uz)}” estimate: ${rows}. Materials: ${items.map(([p, q]) => `[[${p.id}:${q}]]`).join(", ")}. Is everything accounted for, and what else will I need?`)); }
     case "close-modal": return closeModal();
     case "d-back": { dvBack = true; const to = drawerView === "track" ? "orders" : drawerView === "repeat" ? "track" : ["orders", "watch", "projects"].includes(drawerView) ? "profile" : "cart"; return to === "profile" && !user ? closeDrawer() : openDrawer(to); }
