@@ -350,20 +350,32 @@ html.intro-on body::before { content: ""; position: fixed; inset: 0; z-index: 99
 
 /* ---------- Bottom nav (mobile) ---------- */
 .tabbar { display: none; }
-/* A light bar along the bottom edge with an icon and a name per tab (after the owner's reference): the current tab in the accent
-   colour, its icon gives a small bounce when it becomes current (see tbPill); a hairline separates it from the page */
-:root { --tb-h: 58px; }
+/* A floating capsule of dark glass (after the owner's reference): icons only, the page shows through it; the current tab lies on
+   a lighter capsule that slides to the tab that becomes current (tbPill). The profile tab is the person's initial in a circle
+   once signed in. The cabinets' bars (store, master, panel) keep a small name under each icon: their sections are less familiar. */
+:root { --tb-h: 62px; }
 @media (max-width: 760px) {
-  :root { --tb-gap: 0px; --nav-h: calc(var(--tb-h) + env(safe-area-inset-bottom, 0px)); }
-  .tabbar { display: block; position: fixed; left: 0; right: 0; bottom: 0; height: calc(var(--tb-h) + env(safe-area-inset-bottom, 0px)); padding: 0 max(4px, env(safe-area-inset-right, 0px)) env(safe-area-inset-bottom, 0px) max(4px, env(safe-area-inset-left, 0px)); background: color-mix(in srgb, var(--surface) 96%, transparent); -webkit-backdrop-filter: blur(14px) saturate(1.4); backdrop-filter: blur(14px) saturate(1.4); border-top: 1px solid var(--line); }
-  .tb-row { display: grid; grid-template-columns: repeat(var(--tb-n, 5), minmax(0, 1fr)); height: var(--tb-h); }
-  .tabbar button { position: relative; display: grid; grid-template-rows: auto auto; place-content: center; justify-items: center; gap: 3px; color: var(--muted); padding: 0; font-size: 10.5px; font-weight: 600; letter-spacing: .01em; -webkit-tap-highlight-color: transparent; }
-  .tabbar button[aria-current="true"] { color: var(--accent); }
-  .tabbar button svg { width: 24px; height: 24px; }
-  .tabbar button[aria-current="true"] svg { stroke-width: 2.3; }
-  .tabbar button > span:not(.dot) { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 2px; }
-  .tabbar .dot { position: absolute; top: 4px; left: calc(50% + 6px); min-width: 17px; height: 17px; border-radius: 9px; background: var(--signal); color: var(--signal-ink); font-size: 10px; font-weight: 700; display: grid; place-items: center; padding: 0 4px; border: 2px solid var(--surface); }
-  .tabbar .dot.pt { min-width: 10px; width: 10px; height: 10px; padding: 0; top: 7px; left: calc(50% + 8px); } /* unread chat: a point, not a number */
+  :root { --tb-b: max(10px, calc(env(safe-area-inset-bottom, 0px) - 12px)); --tb-gap: 0px; --nav-h: calc(var(--tb-h) + var(--tb-b) + 10px); }
+  .tabbar { display: block; position: fixed; left: max(16px, env(safe-area-inset-left, 0px), calc(50% - 230px)); right: max(16px, env(safe-area-inset-right, 0px), calc(50% - 230px)); bottom: var(--tb-b); height: var(--tb-h); padding: 5px; border-radius: 999px;
+    background: rgba(20, 22, 24, .76); -webkit-backdrop-filter: blur(24px) saturate(1.8); backdrop-filter: blur(24px) saturate(1.8); border: 1px solid rgba(255, 255, 255, .17);
+    box-shadow: 0 14px 34px rgba(0, 0, 0, .26), 0 2px 8px rgba(0, 0, 0, .18), inset 0 1px 0 rgba(255, 255, 255, .18), inset 0 -1px 0 rgba(0, 0, 0, .28); }
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .tabbar { background: rgba(20, 22, 24, .95); } }
+  .tb-row { position: relative; display: grid; grid-template-columns: repeat(var(--tb-n, 5), minmax(0, 1fr)); height: 100%; border-radius: 999px; overflow: hidden; overflow: clip; }
+  .tb-pill { position: absolute; z-index: 0; top: 0; bottom: 0; left: 0; width: calc(100% / var(--tb-n, 5)); border-radius: 999px; pointer-events: none; opacity: 0;
+    background: rgba(255, 255, 255, .17); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .22), inset 0 0 0 1px rgba(255, 255, 255, .06); }
+  .tabbar button { position: relative; z-index: 1; display: grid; place-content: center; justify-items: center; gap: 2px; min-width: 0; color: rgba(255, 255, 255, .84); padding: 0; border-radius: 999px; font-size: 9.5px; font-weight: 600; letter-spacing: .01em; -webkit-tap-highlight-color: transparent; }
+  .tabbar button[aria-current="true"] { color: #fff; }
+  .tabbar button svg { width: 27px; height: 27px; stroke-width: 1.9; }
+  .tabbar button[aria-current="true"] svg { stroke-width: 2.4; }
+  .tb-l { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; } /* the name stays for screen readers */
+  .tb-row.work button svg { width: 23px; height: 23px; }
+  .tb-row.work .tb-l { position: static; width: auto; height: auto; clip-path: none; max-width: 100%; text-overflow: ellipsis; padding: 0 3px; }
+  .tb-av { width: 31px; height: 31px; border-radius: 50%; display: grid; place-items: center; font-family: var(--f-display); font-size: 14px; font-weight: 700; line-height: 1; color: #fff;
+    background: linear-gradient(140deg, #FFA126, #F2661C 55%, #D63D0E); box-shadow: 0 0 0 1.5px rgba(255, 255, 255, .5); }
+  .tabbar button[aria-current="true"] .tb-av { box-shadow: 0 0 0 2px #fff; }
+  .tabbar .dot { position: absolute; top: 6px; left: calc(50% + 5px); min-width: 17px; height: 17px; border-radius: 9px; background: #FF3B30; color: #fff; font-size: 10px; font-weight: 700; line-height: 1; display: grid; place-items: center; padding: 0 4px; box-shadow: 0 0 0 2px rgba(34, 36, 38, .92); }
+  .tabbar .dot.pt { min-width: 10px; width: 10px; height: 10px; padding: 0; top: auto; bottom: 12px; left: calc(50% + 8px); } /* unread chat: a point at the icon's lower right, as in the reference */
+  .tb-row.work .dot { top: 3px; }
   .tabbar { z-index: 53; } /* above the cart, profile, tools and Usta AI panels (50–52) and the catalogue menu, below product sheets and sign-in (55) */
   html .drawer, html .ai, html .wpanel { padding-bottom: var(--nav-h); } /* "html" outranks the panels' own rules further down */
   html .mega-panel { padding-bottom: var(--nav-h); }
@@ -780,6 +792,7 @@ html .drawer.swiped:not(.on), html .ai.swiped:not(.on), html .wpanel.swiped:not(
   html .drawer:not(.swiped), html .wpanel:not(.swiped) { transform: none; opacity: 0; transition: opacity .18s ease, visibility 0s linear .18s; }
   html .drawer.on:not(.swiped), html .wpanel.on:not(.swiped) { opacity: 1; transition: transform .3s cubic-bezier(.2, .8, .2, 1), visibility 0s; } /* opens at once: its blocks rise in (cascade) */
   /* a tap on another tab: the old panel is gone at once, as in the reference — no cross-fade of two screens */
+  html.nav-ua :is(#drawer, #modal, #wid, #ai, #authM, #ss, .scrim), html.nav-ua :is(#drawer, #modal, #wid, #ai, #authM, #ss) * { transition: none !important; animation: none !important; } /* closed by the system's own swipe back: no second animation */
   html.tb-swap .drawer:not(.on), html.tb-swap .wpanel:not(.on), html.tb-swap .mega:not(.on), html.tb-swap .mega:not(.on) .mega-panel, html.tb-swap .mega:not(.on) .scrim { transition: none !important; }
 }
 .scrim-g.dragging { transition: none; }
@@ -3277,24 +3290,48 @@ window.addEventListener("resize", () => { clearTimeout(catSpan.t); catSpan.t = s
 const panelFocus = new WeakMap();
 /* the phone/browser Back button closes an open sheet, drawer, AI or sign-in window instead of leaving the page under it:
    opening one adds a history entry with the same address; Back returns to the entry below and closes the panel.
-   A panel closed by its own button leaves its entry marked as spent (never history.back() at that moment — it would race
-   with a page change started right after); the next Back skips the twin entry, so one press always does something. */
+   A panel closed by its own button takes its entry away again (history.back(), histEat), and a page change made right from a
+   panel takes that entry's place (setHash / pushHash): no twin of the page stays in the history. A twin is what an iPhone showed
+   as "the same page sliding over itself": its edge swipe draws a picture of the entry it is going to.
+   iPhones get no panel entries at all — there is no Back button there, and an entry left ahead would be reached by the swipe
+   from the right edge; a swipe back with a panel open closes the panel and steps one screen back. */
+const IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 const HIST_PANELS = ["modal", "drawer", "wid", "ai", "authM", "ss"];
-/* the app keeps each screen's scroll position itself (navStack); the browser's own restoring put the home back where a sheet had
-   been opened long before, when Back skipped that sheet's spent entry */
+/* the app keeps each screen's scroll position itself (navStack); the browser's own restoring is off */
 try { history.scrollRestoration = "manual"; } catch (e) {}
-let histSpent = null; // the address of the current entry when it is a spent panel entry
+let histEat = false; // our own history.back() that removes a closed panel's entry is on its way
 const histPanelOn = () => HIST_PANELS.some(id => document.getElementById(id)?.classList.contains("on"));
 function histPanel(el, on, was) {
-  if (!HIST_PANELS.includes(el.id) || on === was) return;
-  if (on) { if (!history.state?.qgPanel) history.pushState({ qgPanel: 1 }, "", location.href); histSpent = null; return; }
-  setTimeout(() => { if (!histPanelOn() && history.state?.qgPanel) { history.replaceState({ qgSpent: 1 }, "", location.href); histSpent = location.href; } }, 0);
+  if (IOS || !HIST_PANELS.includes(el.id) || on === was) return;
+  if (on) { if (!history.state?.qgPanel) history.pushState({ qgPanel: 1 }, "", location.href); return; }
+  setTimeout(() => { if (!histEat && !histPanelOn() && history.state?.qgPanel) { histEat = true; history.back(); } }, 0); // still the panel's entry: nothing navigated meanwhile
 }
-window.addEventListener("hashchange", () => { histSpent = null; });
+/* a page change while a closed panel's entry is still the current one replaces that entry instead of adding one after it */
+const histOverPanel = () => !!history.state?.qgPanel && !histPanelOn();
+function setHash(h) { h = String(h).replace(/^#/, ""); if (histOverPanel()) location.replace("#" + h); else location.hash = h; }
+function pushHash(u) { if (histOverPanel()) history.replaceState(null, "", u); else history.pushState(null, "", u); }
+/* the system has drawn the step itself (an iPhone's edge swipe, a trackpad swipe): the app adds no slide of its own on top.
+   Browsers report it (hasUAVisualTransition); older iPhones are recognised by a touch that began at the screen edge. */
+let navUAAt = 0, edgeT = 0, edgeOn = false;
+const navUA = () => Date.now() - navUAAt < 700;
+window.addEventListener("touchstart", e => { const x = e.touches[0]?.clientX ?? 99; edgeOn = e.touches.length === 1 && (x < 30 || x > innerWidth - 30); edgeT = edgeOn ? Date.now() : 0; }, { passive: true, capture: true });
+for (const ev of ["touchmove", "touchend", "touchcancel"]) window.addEventListener(ev, () => { if (edgeOn) edgeT = Date.now(); }, { passive: true, capture: true });
+window.addEventListener("click", () => { edgeOn = false; edgeT = 0; }, true); // a tap on a control at the edge is not a swipe
+function histClosePanels(instant) {
+  const de = document.documentElement; if (instant) de.classList.add("nav-ua");
+  closeModal(); if (drawerView) closeDrawer(); if (aiOpen) closeAI(); if (widOpen) closeWidgets(); if ($("#authM")?.classList.contains("on")) closeAuth(); if ($("#ss")?.classList.contains("on")) closeSS();
+  if (instant) setTimeout(() => de.classList.remove("nav-ua"), 120);
+}
 window.addEventListener("popstate", e => {
-  if (histPanelOn()) { histSpent = null; closeModal(); if (drawerView) closeDrawer(); if (aiOpen) closeAI(); if (widOpen) closeWidgets(); if ($("#authM")?.classList.contains("on")) closeAuth(); if ($("#ss")?.classList.contains("on")) closeSS(); return; }
-  if (e.state?.qgPanel || e.state?.qgSpent) { histSpent = null; history.back(); return; } // came back onto an entry a closed panel left behind
-  if (histSpent && histSpent === location.href) { histSpent = null; history.back(); } // Back from a spent entry lands on its twin: go one further
+  if (e.hasUAVisualTransition || (IOS && Date.now() - edgeT < 3000)) navUAAt = Date.now();
+  if (histEat) { // our own step back off a closed panel's entry
+    histEat = false;
+    if (e.state?.qgPanel) { history.forward(); return; } // a page change slipped in before it: return to that page
+    if (histPanelOn() && !IOS) history.pushState({ qgPanel: 1 }, "", location.href); // another panel was opened meanwhile: it needs its entry
+    return;
+  }
+  if (histPanelOn()) { histClosePanels(navUA()); return; }
+  if (e.state?.qgPanel || e.state?.qgSpent) history.back(); // an entry a panel left behind (an older visit, Forward): step over it
 });
 function setPanel(el, on) {
   const was = el.classList.contains("on"); histPanel(el, on, was);
@@ -3457,13 +3494,20 @@ function labelTables(root = document) {
 /* tab strips: only the chosen tab is in the Tab order, the arrows move inside the strip (WAI-ARIA tabs) */
 function rovingTabs(root = document) { root.querySelectorAll('[role="tablist"]').forEach(l => { const tabs = [...l.querySelectorAll('[role="tab"]')]; if (!tabs.some(t => t.getAttribute("aria-selected") === "true")) return; tabs.forEach(t => { t.tabIndex = t.getAttribute("aria-selected") === "true" ? 0 : -1; }); }); }
 { let q = 0; new MutationObserver(() => { if (!q) q = requestAnimationFrame(() => { q = 0; labelTables($("#app")); rovingTabs($("#app")); }); }).observe($("#app"), { childList: true, subtree: true, attributes: true, attributeFilter: ["aria-selected"] }); }
-/* the current tab: its icon gives a small bounce when it becomes current (a bottom-bar tap may close and open panels in between:
-   the bounce waits for the end of the tap, tbTap) */
+/* the current tab lies on a lighter capsule; when another tab becomes current the capsule slides to it and the icon gives a small
+   bounce (a bottom-bar tap may close and open panels in between: the move waits for the end of the tap, tbTap).
+   The bar is drawn anew on every change, so the capsule is put back each time and the slide starts from the tab remembered. */
 let tbLastI = -1, tbTap = false; // tbTap: this click came from the bottom bar
 function tbPill(anim = true) {
-  const bar = $("#tabbar"); if (!bar || !bar.offsetWidth || tbTap) return;
-  const btns = [...bar.querySelectorAll(".tb-row > button")], i = btns.findIndex(b => b.getAttribute("aria-current") === "true");
-  if (anim && i >= 0 && i !== tbLastI && tbLastI !== -2 && animOK()) btns[i].querySelector("svg")?.animate([{ scale: "1" }, { scale: "1.22", offset: .4 }, { scale: ".96", offset: .75 }, { scale: "1" }], { duration: 420, easing: "ease-out" });
+  const bar = $("#tabbar"), row = bar?.querySelector(".tb-row"); if (!row || !bar.offsetWidth || tbTap) return;
+  const btns = [...row.querySelectorAll(":scope > button")], i = btns.findIndex(b => b.getAttribute("aria-current") === "true");
+  let pill = row.querySelector(".tb-pill"); if (!pill) { pill = document.createElement("i"); pill.className = "tb-pill"; pill.setAttribute("aria-hidden", "true"); row.prepend(pill); }
+  pill.style.opacity = i < 0 ? "0" : "1"; if (i >= 0) pill.style.translate = `${i * 100}% 0`;
+  if (anim && i >= 0 && i !== tbLastI && tbLastI !== -2 && animOK()) {
+    if (tbLastI >= 0 && tbLastI < btns.length) pill.animate([{ translate: `${tbLastI * 100}% 0`, scale: "1 1" }, { scale: "1.08 .9", offset: .42 }, { translate: `${i * 100}% 0`, scale: "1 1" }], { duration: 460, easing: "cubic-bezier(.3, 1.2, .45, 1)" });
+    else pill.animate([{ opacity: 0, scale: ".7" }, { opacity: 1, scale: "1" }], { duration: 260, easing: "ease-out" });
+    btns[i].querySelector("svg, .tb-av")?.animate([{ scale: "1" }, { scale: "1.2", offset: .4 }, { scale: ".96", offset: .75 }, { scale: "1" }], { duration: 420, easing: "ease-out" });
+  }
   tbLastI = i;
 }
 window.addEventListener("resize", () => { tbPill(false); htBar(false); hdrFull(); });
@@ -3590,13 +3634,13 @@ function renderTabbar0() {
     const items = wm === "admin" ? ADMIN_TABS().map(([id, icn, lbl]) => [id, icn, lbl, "atab"]) : MASTER_TABS().map(([id, icn, lbl]) => [id, icn, lbl, "mwtab"]);
     const cur = drawerView ? "profile" : wm === "admin" ? adminTabNow() : (masterTab || "req");
     const cnt = wm === "admin" ? adminCounts() : { req: (mApi.me?.requests || []).filter(q => q.status === "new").length };
-    $("#tabbar").innerHTML = `<div class="tb-row">${[...items, ["profile", "user", L("Профиль", "Profil", "Profile"), "profile"]].map(([id, icn, lbl, kind]) => `<button type="button" ${kind === "profile" ? 'data-act="profile"' : `data-${kind}="${id}"`} aria-current="${cur === id}">${ui(icn, 22)}<span>${lbl}</span>${cnt[id] ? `<span class="dot">${cnt[id]}</span>` : ""}</button>`).join("")}</div>`;
+    $("#tabbar").innerHTML = `<div class="tb-row work">${[...items, ["profile", "user", L("Профиль", "Profil", "Profile"), "profile"]].map(([id, icn, lbl, kind]) => `<button type="button" ${kind === "profile" ? 'data-act="profile"' : `data-${kind}="${id}"`} aria-current="${cur === id}">${ui(icn, 22)}<span class="tb-l">${lbl}</span>${cnt[id] ? `<span class="dot">${cnt[id]}</span>` : ""}</button>`).join("")}</div>`;
     return;
   }
   if (sellerMode()) {
     const cur = drawerView ? "profile" : route.view === "seller" ? (sellerTab || "orders") : "";
     const items = [["orders", "clock", L("Заказы", "Buyurtmalar", "Orders")], ["goods", "grid", L("Товары", "Mahsulotlar", "Goods")], ["store", "store", L("Магазин", "Do‘kon", "Store")], ["money", "wallet", L("Финансы", "Moliya", "Finance")], ["profile", "user", L("Профиль", "Profil", "Profile")]];
-    $("#tabbar").innerHTML = `<div class="tb-row">${items.map(([id, icn, lbl]) => `<button type="button" ${id === "profile" ? `data-act="${user ? "profile" : "login"}"` : `data-stab="${id}"`} aria-current="${cur === id}">${ui(icn, 22)}<span>${lbl}</span></button>`).join("")}</div>`;
+    $("#tabbar").innerHTML = `<div class="tb-row work">${items.map(([id, icn, lbl]) => `<button type="button" ${id === "profile" ? `data-act="${user ? "profile" : "login"}"` : `data-stab="${id}"`} aria-current="${cur === id}">${ui(icn, 22)}<span class="tb-l">${lbl}</span></button>`).join("")}</div>`;
     return;
   }
   // the shopper's tabs (after the owner's reference): search is the home (the catalogue and the tools are reached from it)
@@ -3604,7 +3648,7 @@ function renderTabbar0() {
   const cur = drawerView ? (dvTab[drawerView] || "") : (typeof widOpen !== "undefined" && widOpen) || $("#mega")?.classList.contains("on") ? "" : "home";
   const items = [["home", "search", L("Поиск", "Qidiruv", "Search"), "go"], ["favs", "heart", L("Избранное", "Saralangan", "Saved"), "favs"], ["cart", "cart", L("Корзина", "Savat", "Cart"), "cart"], ["chat", "chat", L("Чат", "Chat", "Chat"), "support"], ["profile", "user", L("Профиль", "Profil", "Profile"), "profile"]];
   const dot = id => id === "cart" ? `<span class="dot" id="tabCart" ${cartCount() ? "" : "hidden"}>${cartCount()}</span>` : id === "favs" ? `<span class="dot" id="tabFav" ${favs.length ? "" : "hidden"}>${favs.length}</span>` : id === "chat" ? `<span class="dot pt" id="tabChat" ${sup?.unread ? "" : "hidden"}><span class="visually-hidden">${L("есть новые", "yangilari bor", "new")}</span></span>` : "";
-  $("#tabbar").innerHTML = `<div class="tb-row">${items.map(([id, icn, lbl, act]) => `<button type="button" ${act === "go" ? 'data-go="home"' : `data-act="${act}"`} aria-current="${cur === id}">${ui(icn, 22)}<span>${lbl}</span>${dot(id)}</button>`).join("")}</div>`;
+  $("#tabbar").innerHTML = `<div class="tb-row">${items.map(([id, icn, lbl, act]) => `<button type="button" ${act === "go" ? 'data-go="home"' : `data-act="${act}"`} aria-current="${cur === id}">${id === "profile" && user ? `<span class="tb-av" aria-hidden="true">${esc(initial(user.name))}</span>` : ui(icn, 24)}<span class="tb-l">${lbl}</span>${dot(id)}</button>`).join("")}</div>`;
 }
 function counts() {
   const n = cartCount();
@@ -3851,7 +3895,7 @@ document.addEventListener("click", e => {
 document.addEventListener("click", e => { // seller tab bar: open the cabinet (if needed) and its section
   const b = e.target.closest("[data-stab]"); if (!b) return;
   const id = b.dataset.stab; if (drawerView) closeDrawer();
-  if (route.view !== "seller") { sellerTab = id; LS.set("imorat.sellerTab", id); location.hash = "seller"; return; }
+  if (route.view !== "seller") { sellerTab = id; LS.set("imorat.sellerTab", id); setHash("seller"); return; }
   if (document.getElementById("stp-" + id)) {
     sellerShowTab(id);
     const sec = document.getElementById("stp-" + id), bar = document.querySelector(".stabs");
@@ -4101,7 +4145,7 @@ document.addEventListener("click", e => {
   if (d.sgai != null) { const q = ss.q.trim(); closeSS(); saveRecentQ(q); return openAI(q); }
   if (d.sgopen) { saveRecentQ(ss.q); closeSS(); return openProduct(+d.sgopen); }
   if (d.sggo) { const q = ss.q.trim(); closeSS(); if (d.sggo !== "catalog") { f.q = ""; saveRecentQ(q); } else f.q = q; f.inStock = ss.stock;
-    history.pushState(null, "", "#" + d.sggo); route = parseHash(); f.sub = d.sgsub || null; f.max = 0; f.photo = null; renderMain(); window.scrollTo(0, 0); }
+    pushHash("#" + d.sggo); route = parseHash(); f.sub = d.sgsub || null; f.max = 0; f.photo = null; renderMain(); window.scrollTo(0, 0); }
 });
 /* the demo's label on a phone: a small pill above the bottom bar on the home (demo data must be marked as demo) */
 const demoFloat = () => API ? "" : `<div class="demo-fl" role="note">${ui("alert", 14)} ${L("Демо: товары, цены и магазины — примеры", "Demo: mahsulot, narx va do‘konlar — namuna", "Demo: goods, prices and stores are samples")}</div>`;
@@ -5858,7 +5902,7 @@ function renderAuth() {
         if (login.toLowerCase() !== DEMO_OWNER.login || password !== DEMO_OWNER.pass) { er.textContent = L("Неверный логин или пароль", "Login yoki parol noto‘g‘ri", "Wrong login or password"); er.hidden = false; btn.disabled = false; return; }
         user = { id: "demo-owner", name: L("Владелец (демо)", "Egasi (demo)", "Owner (demo)"), phone: "", via: "password", admin: true, owner: true, staff: { login: DEMO_OWNER.login, role: "owner", must_change: false, env: true, demo: true }, district };
         LS.set("imorat.user", user); closeAuth(); renderHeader(); renderTabbar(); toast(L("Вы вошли как владелец (демо)", "Egasi sifatida kirdingiz (demo)", "Signed in as the owner (demo)"));
-        history.pushState(null, "", "#admin"); route = parseHash(); renderMain(); window.scrollTo(0, 0); return;
+        pushHash("#admin"); route = parseHash(); renderMain(); window.scrollTo(0, 0); return;
       }
       try { const r = await api("POST", "/api/auth/staff", { login, password }); auth.via = "password"; afterLogin(r); }
       catch (ex) { er.textContent = ex.code === "bad_login" ? L("Неверный логин или пароль", "Login yoki parol noto‘g‘ri", "Wrong login or password") : ex.code === "rate_limited" ? L("Слишком много попыток — подождите 15 минут", "Urinishlar ko‘p — 15 daqiqa kuting", "Too many attempts — wait 15 minutes") : apiErr(ex); er.hidden = false; btn.disabled = false; }
@@ -6002,7 +6046,7 @@ function logout() {
   if (drawerView) closeDrawer();
   renderHeader(); renderTabbar(); counts();
   // after signing out nothing of the account stays on screen: the cabinet, the panel and the profile give way to the home page
-  if (route.view !== "home") { history.pushState(null, "", "#"); route = parseHash(); renderMain(); window.scrollTo(0, 0); } else renderMain();
+  if (route.view !== "home") { pushHash("#"); route = parseHash(); renderMain(); window.scrollTo(0, 0); } else renderMain();
   toast(L("Вы вышли из аккаунта", "Akkauntdan chiqdingiz"));
 }
 
@@ -10571,7 +10615,7 @@ document.addEventListener("click", e => {
   if (d.sgai != null) { const q = inp.value.trim(); closeSugg(); saveRecentQ(q); return openAI(q); }
   if (d.sgopen) { saveRecentQ(inp.value); closeSugg(); inp.blur(); return openProduct(+d.sgopen); }
   if (d.sggo) { closeSugg(); inp.blur(); const q = inp.value.trim(); if (d.sggo !== "catalog") { f.q = ""; inp.value = ""; saveRecentQ(q); }
-    history.pushState(null, "", "#" + d.sggo); route = parseHash(); f.sub = d.sgsub || null; f.max = 0; f.photo = null; renderMain(); window.scrollTo(0, 0); }
+    pushHash("#" + d.sggo); route = parseHash(); f.sub = d.sgsub || null; f.max = 0; f.photo = null; renderMain(); window.scrollTo(0, 0); }
 });
 function suggKey(e) {
   const box = $("#sugg"), items = box && !box.hidden ? [...box.querySelectorAll(".sg-i")] : [];
@@ -10647,7 +10691,7 @@ function go(h, sub) {
   if (h !== "catalog") f.q = "";
   // the same link again: re-render (and leave an open master's page)
   if ((location.hash.slice(1) || "home") === h) { if (h === "masters" && (mf.sel || mf.form)) { mf.sel = null; mf.form = null; } route = parseHash(); renderMain(); const qi = $("#q"); if (qi) qi.value = f.q; }
-  else location.hash = h;
+  else setHash(h);
   window.scrollTo(0, 0);
 }
 function routeTo() {
@@ -10691,6 +10735,7 @@ function pageSlide(dir, render) {
 /* View transitions snapshot the whole page; WebKit does that slowly on a page this size, so Safari gets a plain route change. */
 const SAFARI = /AppleWebKit/.test(navigator.userAgent) && !/Chrome|Chromium|CriOS|Edg|OPR|Android/.test(navigator.userAgent);
 window.addEventListener("hashchange", () => {
+  if (navUA()) { navUAAt = 0; if (isPhone()) navDir(navKey()); navSliding = true; try { routeTo(); } finally { navSliding = false; } return; } // the system has already shown the step
   if (isPhone() && animOK()) { const dir = navDir(navKey()); return dir ? pageSlide(dir, routeTo) : routeTo(); }
   if (document.startViewTransition && motionOK() && !SAFARI) document.startViewTransition(routeTo); else routeTo();
 });
@@ -10699,7 +10744,7 @@ const hdrStuck = () => { const h = $("#hdr"); if (!h) return 0; const cs = getCo
 function scrollToSec(id) {
   closeMega(); if (drawerView) closeDrawer(); if (aiOpen) closeAI(); if (widOpen) closeWidgets();
   const doIt = () => { document.documentElement.classList.add("cv-all"); const el = document.getElementById(id); if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - (hdrStuck() + 12), behavior: "smooth" }); };
-  if (route.view !== "home") { location.hash = "home"; setTimeout(doIt, 80); } else doIt();
+  if (route.view !== "home") { setHash("home"); setTimeout(doIt, 80); } else doIt();
 }
 
 document.addEventListener("change", e => {
@@ -10735,7 +10780,7 @@ document.addEventListener("click", e => {
   if (ds.inc) { cart[ds.inc]++; saveCart(); dCart(); return refreshCards(); }
   if (ds.dec) { cart[ds.dec]--; if (cart[ds.dec] <= 0) delete cart[ds.dec]; saveCart(); dCart(); return refreshCards(); }
   if (ds.lang) { lang = ds.lang; LS.set("imorat.lang", lang); syncLangFormats(); return renderAll(); }
-  if (ds.store) { f.stores = [ds.store]; f.q = ""; f.sub = null; f.max = 0; if (location.hash === "#catalog") { route = parseHash(); renderMain(); } else location.hash = "catalog"; return window.scrollTo(0, 0); }
+  if (ds.store) { f.stores = [ds.store]; f.q = ""; f.sub = null; f.max = 0; if (location.hash === "#catalog") { route = parseHash(); renderMain(); } else setHash("catalog"); return window.scrollTo(0, 0); }
   if (ds.q) { f.q = ds.q; route = { view: "catalog", cat: null }; history.replaceState(null, "", "#catalog"); renderMain(); $("#q").value = f.q; return window.scrollTo(0, 0); }
   if (ds.scroll) return scrollToSec(ds.scroll);
   if (ds.seltab) sellerShowTab(ds.seltab);
@@ -10833,7 +10878,7 @@ document.addEventListener("click", e => {
     case "staff-hide": staffNew = null; return renderAdmin();
     case "home-reset": resetHome(); if (drawerView === "homeSetup") dHomeSetup(); return toast(L("Главная как по умолчанию", "Bosh sahifa standart holatda", "Home reset to default"));
     case "stores-all": { const st = $(".stores"); if (st) st.classList.add("all"); t.closest(".stores-more")?.remove(); return; }
-    case "shopper-toggle": { const toShelf = !!workMode(); LS.set("imorat.shopperView", toShelf); closeDrawer(); renderHeader(); location.hash = toShelf ? "home" : user?.admin ? "admin" : myStore ? "seller" : "masters"; route = parseHash(); renderMain(); toast(toShelf ? (user?.admin ? L("Маркетплейс. Вернуться в панель — кнопка сверху", "Marketpleys. Panelga qaytish — yuqoridagi tugma", "Marketplace. Back to the panel — the button at the top") : L("Маркетплейс. Вернуться в кабинет — кнопка сверху", "Marketpleys. Kabinetga qaytish — yuqoridagi tugma", "Marketplace. Back to the cabinet — the button at the top")) : user?.admin ? L("Панель", "Panel", "Panel") : myStore ? L("Кабинет магазина", "Do‘kon kabineti", "Store cabinet") : L("Кабинет мастера", "Usta kabineti", "Pro cabinet")); return; }
+    case "shopper-toggle": { const toShelf = !!workMode(); LS.set("imorat.shopperView", toShelf); closeDrawer(); renderHeader(); const toH = toShelf ? "home" : user?.admin ? "admin" : myStore ? "seller" : "masters"; setHash(toH); route = parseHash(); renderMain(); toast(toShelf ? (user?.admin ? L("Маркетплейс. Вернуться в панель — кнопка сверху", "Marketpleys. Panelga qaytish — yuqoridagi tugma", "Marketplace. Back to the panel — the button at the top") : L("Маркетплейс. Вернуться в кабинет — кнопка сверху", "Marketpleys. Kabinetga qaytish — yuqoridagi tugma", "Marketplace. Back to the cabinet — the button at the top")) : user?.admin ? L("Панель", "Panel", "Panel") : myStore ? L("Кабинет магазина", "Do‘kon kabineti", "Store cabinet") : L("Кабинет мастера", "Usta kabineti", "Pro cabinet")); return; }
     case "theme-toggle": return setLook(null, effTheme() === "dark" ? "light" : "dark");
     case "ai-calc": { const c = CALCS.find(x => x.id === wCalc), items = calcOut["w:" + wCalc] || []; const rows = [...document.querySelectorAll("#w-" + wCalc + "-res > div")].map(d => d.innerText.replace(/\s+/g, " ")).join("; "); return openAI(L(`Проверь мой расчёт «${c.ru}»: ${rows}. Материалы: ${items.map(([p, q]) => `[[${p.id}:${q}]]`).join(", ")}. Всё ли учтено и что ещё понадобится?`, `«${c.uz}» hisobimni tekshir: ${rows}. Materiallar: ${items.map(([p, q]) => `[[${p.id}:${q}]]`).join(", ")}. Hammasi hisobga olinganmi, yana nima kerak?`, `Check my “${L(c.ru, c.uz)}” estimate: ${rows}. Materials: ${items.map(([p, q]) => `[[${p.id}:${q}]]`).join(", ")}. Is everything accounted for, and what else will I need?`)); }
     case "close-modal": return closeModal();
