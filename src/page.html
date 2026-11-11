@@ -4149,7 +4149,18 @@ const HTABS = () => [
 ];
 /* the home's bar: its full height is the page's top padding (measured while unfolded), and it folds the pictures away once the page
    scrolls (html.hd-sc) */
-function hdrFull() { const h = $("#hdr"); if (!h || !isPhone() || document.documentElement.classList.contains("hd-sc")) return; requestAnimationFrame(() => { if (!document.documentElement.classList.contains("hd-sc") && h.offsetHeight) document.documentElement.style.setProperty("--hdr-full", h.offsetHeight + "px"); }); }
+/* Measured only while the bar is fully open: when the page comes back to the top the pictures unfold over a moment, and a
+   measurement taken in that moment was the folded height — the first heading («Категории») then hid under the bar. */
+function hdrFull() {
+  const h = $("#hdr"), de = document.documentElement; if (!h || !isPhone()) return;
+  clearTimeout(hdrFull.t);
+  const go = () => {
+    if (de.classList.contains("hd-sc") || !h.offsetHeight) return; // folded: measured when it opens again
+    if (h.getAnimations?.({ subtree: true }).some(a => a.transitionProperty && a.playState === "running")) { hdrFull.t = setTimeout(go, 80); return; } // still unfolding
+    de.style.setProperty("--hdr-full", h.offsetHeight + "px");
+  };
+  if (h.getAnimations) requestAnimationFrame(go); else hdrFull.t = setTimeout(go, 420); // no way to ask about transitions: after the longest of them
+}
 let hdSc = false;
 window.addEventListener("scroll", () => { const v = scrollY > 10; if (v !== hdSc) { hdSc = v; document.documentElement.classList.toggle("hd-sc", v); if (!v) hdrFull(); } }, { passive: true });
 function htBar(anim = true) { // the line under the current tab: as wide as its name
