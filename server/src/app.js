@@ -192,7 +192,7 @@ export function createApp(cfg, log = console) {
   const contractView = s => ({ meet_at: s.meet_at || null, meet_place: s.meet_place || "", contract_no: s.contract_no || "", contract_at: s.contract_at || null });
   const publicStore = s => ({
     id: s.id, name: s.name, d: s.district, addr: s.addr, addrUz: s.addr_uz || s.addr, hours: s.hours, ru: s.ru || s.descr.slice(0, 80), uz: s.uz || s.ru || s.descr.slice(0, 80),
-    descr: s.descr, cats: JSON.parse(s.cats || "[]"), phone: s.phone, telegram: s.telegram, verified: !!s.verified, landmark: s.landmark, la: s.la, lo: s.lo, status: s.status, loc_src: s.loc_src, note: s.review_note, created: s.created_at
+    descr: s.descr, cats: JSON.parse(s.cats || "[]"), phone: s.phone, telegram: s.telegram, verified: !!s.verified, logo: mediaUrl(s.logo) || null, landmark: s.landmark, la: s.la, lo: s.lo, status: s.status, loc_src: s.loc_src, note: s.review_note, created: s.created_at
   });
   const ownerStore = s => ({ ...publicStore(s), payout_to: s.payout_to || "", free_until: s.free_until || null, prices_confirmed_at: s.prices_confirmed_at || null, ...contractView(s) }); // the store's own view adds its payout details, free months, price confirmation
 
@@ -733,6 +733,25 @@ export function createApp(cfg, log = console) {
     return { store: ownerStore(db.get("SELECT * FROM stores WHERE id=?", s.id)) };
   });
 
+  /* The store's own logo: a picture shown instead of the first letter of its name. Like the other edits of an open store it is
+     shown at once and the moderators are told (post-moderation); an admin takes a bad one down (PATCH /api/admin/stores/:id {logo: null}). */
+  r.post("/api/seller/store/logo", async req => {
+    const { s } = needSeller(req);
+    lim.hit("logo:" + s.id, 20, 86400_000);
+    const path = saveImage(await readBody(req, 2 * 1024 * 1024), "s" + String(s.id).replace(/[^\w-]/g, "").slice(0, 40));
+    removeUpload(s.logo);
+    db.run("UPDATE stores SET logo=? WHERE id=?", path, s.id);
+    audit(req, "store.logo", s.id, { path });
+    if (s.status === "active") notify.owners(`🖼 Магазин «${String(s.name).replace(/[<>&]/g, "")}» поставил свой логотип. Проверьте в админке.`);
+    bumpCatalog();
+    return { store: ownerStore(db.get("SELECT * FROM stores WHERE id=?", s.id)) };
+  });
+  r.del("/api/seller/store/logo", req => {
+    const { s } = needSeller(req);
+    if (s.logo) { removeUpload(s.logo); db.run("UPDATE stores SET logo=NULL WHERE id=?", s.id); audit(req, "store.logo_removed", s.id, { by: "seller" }); bumpCatalog(); }
+    return { store: ownerStore(db.get("SELECT * FROM stores WHERE id=?", s.id)) };
+  });
+
   r.get("/api/seller/summary", req => {
     const { s } = needSeller(req);
     const since = Date.now() - 30 * 86400_000;
@@ -1166,7 +1185,8 @@ export function createApp(cfg, log = console) {
     if (meetAt !== undefined || b.meet_place != null) db.run("UPDATE stores SET meet_at=?, meet_place=? WHERE id=?", meetAt !== undefined ? meetAt : s.meet_at, b.meet_place != null ? str(b.meet_place, 200).replace(/[<>]/g, "") : s.meet_place, s.id);
     if (contractNo && contractNo !== s.contract_no) db.run("UPDATE stores SET contract_no=?, contract_at=?, contract_by=? WHERE id=?", contractNo.replace(/[<>]/g, ""), Date.now(), adm.id, s.id);
     db.run("UPDATE stores SET status=COALESCE(?,status), review_note=COALESCE(?,review_note), verified=COALESCE(?,verified), free_until=COALESCE(?,free_until) WHERE id=?", b.status || null, b.note != null ? str(b.note, 300) : null, b.verified == null ? null : b.verified ? 1 : 0, freeUntil ?? null, s.id);
-    audit(req, "store." + (b.status || "edit"), s.id, { note: str(b.note, 300), owner_phone: str(b.owner_phone, 20) });
+    if (b.logo === null && s.logo) { removeUpload(s.logo); db.run("UPDATE stores SET logo=NULL WHERE id=?", s.id); audit(req, "store.logo_removed", s.id, { by: "admin" }); } // a logo that does not fit is taken down
+    audit(req, "store." + (b.status || "edit"), s.id, { note: str(b.note, 300), owner_phone: str(b.owner_phone, 20), ...(b.verified == null ? {} : { verified: !!b.verified }) });
     if (b.status === "active" && s.status !== "active") channel.storeApproved(s).catch(e => log.warn("[channel]", e.message));
     if (b.status && s.owner_id) { const ow = db.get("SELECT tg_chat FROM users WHERE id=?", s.owner_id); if (ow?.tg_chat) tg.send(ow.tg_chat, b.status === "meeting" ? (() => { const x = db.get("SELECT meet_at, meet_place FROM stores WHERE id=?", s.id); return `📅 Анкета магазина «${s.name.replace(/[<>&]/g, "")}» проверена. Встреча для подписания договора: ${new Date(x.meet_at).toLocaleString("ru-RU", { timeZone: "Asia/Tashkent", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })}${x.meet_place ? ", " + x.meet_place.replace(/[<>&]/g, "") : ""}. После подписания откроем доступ к кабинету.`; })() : b.status === "active" ? `🎉 Магазин «${s.name.replace(/[<>&]/g, "")}» одобрен и виден покупателям на Quriliş Go.` : `Статус магазина «${s.name.replace(/[<>&]/g, "")}»: ${b.status}.${b.note ? " " + str(b.note, 300).replace(/[<>&]/g, "") : ""}`); }
     if (newOwner) {

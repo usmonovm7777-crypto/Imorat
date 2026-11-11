@@ -87,6 +87,7 @@ export function openDb(path, catalogPath, opts = {}) {
   addCol("tg_logins", "ip", "TEXT"); addCol("shipments", "price_named_at", "INTEGER"); addCol("users", "tg_chat", "TEXT"); addCol("users", "token_ver", "INTEGER NOT NULL DEFAULT 0");
   addCol("users", "points", "INTEGER NOT NULL DEFAULT 0"); addCol("users", "ref_code", "TEXT"); addCol("users", "ref_by", "TEXT"); addCol("users", "ref_paid", "INTEGER NOT NULL DEFAULT 0");
   addCol("stores", "verified", "INTEGER NOT NULL DEFAULT 0"); addCol("stores", "payout_to", "TEXT NOT NULL DEFAULT ''");
+  addCol("stores", "logo", "TEXT"); // the store's own picture (an /uploads path), set by the seller
   raw.exec("CREATE TABLE IF NOT EXISTS payouts(id INTEGER PRIMARY KEY AUTOINCREMENT, store_id TEXT NOT NULL, amount INTEGER NOT NULL, status TEXT NOT NULL DEFAULT 'requested', note TEXT NOT NULL DEFAULT '', payout_to TEXT NOT NULL DEFAULT '', admin_id TEXT, requested_at INTEGER NOT NULL, done_at INTEGER); CREATE INDEX IF NOT EXISTS payouts_store ON payouts(store_id, status)");
   addCol("masters", "busy", "INTEGER NOT NULL DEFAULT 0"); addCol("users", "lang", "TEXT NOT NULL DEFAULT 'ru'");
   addCol("orders", "points_used", "INTEGER NOT NULL DEFAULT 0");

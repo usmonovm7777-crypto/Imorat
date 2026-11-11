@@ -76,7 +76,7 @@ export function registerDashboard({ r, db, needAdmin }) {
       const fail = cur.filter(s => s.status === "cancelled" && FAIL.includes(s.cancel_reason)).length;
       return {
         id: st.id, name: st.name, status: st.status, d: st.district, owner_name: st.owner_name || "", owner_phone: st.owner_phone || "", phone: st.phone,
-        contract_no: st.contract_no || "", created: st.created_at, free_until: st.free_until || null, prices_confirmed_at: st.prices_confirmed_at || null, verified: !!st.verified,
+        contract_no: st.contract_no || "", created: st.created_at, free_until: st.free_until || null, prices_confirmed_at: st.prices_confirmed_at || null, verified: !!st.verified, logo: st.logo || null,
         orders: cur.length, gmv: ok.reduce((a, s) => a + goodsOf(s), 0), commission: ok.reduce((a, s) => a + (s.commission || 0), 0),
         done: cur.filter(s => ["delivered", "picked"].includes(s.status)).length, cancelled: cur.filter(s => s.status === "cancelled").length,
         fail, fail_pct: cur.length ? Math.round(fail * 100 / cur.length) : 0, accept_min: acc.length ? Math.round(acc.reduce((a, b) => a + b, 0) / acc.length) : null,

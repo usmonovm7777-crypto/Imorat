@@ -677,6 +677,44 @@ test("Questions to a store, answers, public FAQ; verified badge", async () => {
   assert.equal((await call("GET", "/api/me/questions", null, buyer)).data.questions[0].answer, "Да, 40 листов на складе");
 });
 
+test("Store logo: the seller sets and removes it, the catalogue shows it, an admin can take it down; the badge is the admin's alone", async () => {
+  const seller = (await login("992230011")).data.token;
+  const st = await call("POST", "/api/seller/store", { name: "Logo Market", descr: "Магазин для проверки логотипа и значка проверки", cats: ["paint"], phone: "712003300", addr: "ул. Знаков, 7", hours: "09:00–18:00", district: "yunus" }, seller);
+  assert.equal(st.status, 200, JSON.stringify(st.data)); const sid = st.data.store.id;
+  assert.equal(st.data.store.logo, null); assert.equal(st.data.store.verified, false);
+  await call("PATCH", `/api/admin/stores/${sid}`, { status: "active", contract_no: "T-LOGO" }, globalThis.ADMIN);
+  const inCat = async () => (await call("GET", "/api/catalog")).data.stores.find(s => s.id === sid);
+  assert.equal((await inCat()).verified, false, "opening a store does not verify it");
+  // a seller cannot verify the store himself
+  await call("PATCH", "/api/seller/store", { verified: true, descr: "Магазин для проверки логотипа и значка проверки." }, seller);
+  assert.equal((await inCat()).verified, false, "the seller's own edit must not set the badge");
+  await call("PATCH", `/api/admin/stores/${sid}`, { verified: true }, globalThis.ADMIN); assert.equal((await inCat()).verified, true);
+  await call("PATCH", `/api/admin/stores/${sid}`, { verified: false }, globalThis.ADMIN); assert.equal((await inCat()).verified, false);
+  // the logo
+  const at = p => (/^https?:/.test(p) ? p : base + p); // the server gives a path when it has no public address set
+  const png1 = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==", "base64");
+  const post = body => fetch(`${base}/api/seller/store/logo`, { method: "POST", headers: { authorization: "Bearer " + seller, "content-type": "image/png" }, body });
+  const bad = await post("not an image"); assert.equal(bad.status, 400); assert.equal((await bad.json()).error, "bad_image");
+  assert.equal((await fetch(`${base}/api/seller/store/logo`, { method: "POST", headers: { "content-type": "image/png" }, body: png1 })).status, 401, "signed out");
+  const up = await post(png1); assert.equal(up.status, 200); const logo1 = (await up.json()).store.logo;
+  assert.match(logo1, /\/uploads\/s[\w-]+\.png$/); assert.equal((await inCat()).logo, logo1);
+  assert.equal((await fetch(at(logo1))).status, 200, "the picture is served");
+  const up2 = await post(png1); const logo2 = (await up2.json()).store.logo; assert.notEqual(logo2, logo1);
+  assert.equal((await fetch(at(logo1))).status, 404, "the replaced picture is deleted"); assert.equal((await inCat()).logo, logo2);
+  // the seller takes it off
+  const del = await call("DELETE", "/api/seller/store/logo", null, seller); assert.equal(del.data.store.logo, null); assert.equal((await inCat()).logo, null);
+  assert.equal((await fetch(at(logo2))).status, 404);
+  // an admin takes a logo down; a helper of another kind or a buyer cannot
+  const logo3 = (await (await post(png1)).json()).store.logo;
+  const buyer = (await login("992230022")).data.token;
+  assert.equal((await call("PATCH", `/api/admin/stores/${sid}`, { logo: null }, buyer)).status, 403);
+  assert.equal((await inCat()).logo, logo3);
+  const off = await call("PATCH", `/api/admin/stores/${sid}`, { logo: null }, globalThis.ADMIN); assert.equal(off.data.store.logo, null);
+  assert.equal((await fetch(at(logo3))).status, 404); assert.equal((await inCat()).logo, null);
+  // someone without a store has nothing to upload to
+  assert.equal((await fetch(`${base}/api/seller/store/logo`, { method: "POST", headers: { authorization: "Bearer " + buyer, "content-type": "image/png" }, body: png1 })).status, 403);
+});
+
 test("Back in stock alert and product reviews with a photo", async () => {
   const seller = (await login("991110011")).data.token;
   const st = await call("POST", "/api/seller/store", { name: "Nalichie Test", descr: "Магазин для проверки наличия и отзывов", cats: ["tools"], phone: "712001100", addr: "ул. Наличия, 1", hours: "00:00–00:00", district: "mirob" }, seller);

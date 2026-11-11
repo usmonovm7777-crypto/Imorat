@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-r5GkyeOPniyYoZhOq2f6QzfXnNIgJgJCf+RZTi2+sh0=' 'sha256-VOLPNzWXCW7KoBJTd6MCRdhCKbeXyxMK0+zC57Ph5OQ=' 'unsafe-eval' https://api-maps.yandex.ru https://*.api-maps.yandex.ru https://yandex.ru https://*.yandex.ru https://*.yandex.net https://yastatic.net https://accounts.google.com https://appleid.cdn-apple.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com https://*.yandex.ru https://yastatic.net; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https: http://127.0.0.1:* http://localhost:*; media-src 'self' data: blob: https:; connect-src 'self' data: blob: https: wss: http://127.0.0.1:* http://localhost:*; frame-src https:; worker-src 'self' blob: https://*.api-maps.yandex.ru https://yastatic.net; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self' https:">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-r5GkyeOPniyYoZhOq2f6QzfXnNIgJgJCf+RZTi2+sh0=' 'sha256-hEK0U3ZyWt5iMyHuAaWc/VnMK+DYdeERFvv+G90jt0U=' 'unsafe-eval' https://api-maps.yandex.ru https://*.api-maps.yandex.ru https://yandex.ru https://*.yandex.ru https://*.yandex.net https://yastatic.net https://accounts.google.com https://appleid.cdn-apple.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com https://*.yandex.ru https://yastatic.net; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https: http://127.0.0.1:* http://localhost:*; media-src 'self' data: blob: https:; connect-src 'self' data: blob: https: wss: http://127.0.0.1:* http://localhost:*; frame-src https:; worker-src 'self' blob: https://*.api-maps.yandex.ru https://yastatic.net; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self' https:">
 <meta name="description" content="Quriliş Go — маркетплейс строительных магазинов Ташкента: сравнение цен, Usta AI, калькуляторы ремонта и доставка Яндекс.">
 <style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.5 system-ui,-apple-system,'Segoe UI',Roboto,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
 <script src="config.js"></script>
@@ -850,6 +850,17 @@ html.tb-swap .drawer:not(.on), html.tb-swap .wpanel:not(.on), html.tb-swap .mega
 .trk-km { color: var(--muted); font-size: 12.5px; }
 .trk-ships { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
 .trk-ships .chip[aria-selected="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.trk-rate { gap: 10px; border-color: color-mix(in srgb, var(--accent) 35%, var(--line)); }
+.trk-rate.rated { border-color: var(--line); }
+.trk-rate h3 { margin: 0; } .rate-q { margin: 2px 0 0; color: var(--ink); font-size: 15px; } .rate-q span { color: var(--muted); font-size: 13px; white-space: nowrap; }
+.rate-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; min-height: 44px; } .rate-lbl, .rate-row > b { font-weight: 600; font-size: 14px; color: var(--muted); }
+.stars.big { gap: 6px; } .stars.big button { font-size: 38px; padding: 0 2px; min-width: 44px; min-height: 44px; transition: color .15s, transform .15s; }
+.stars.big button.on { transform: scale(1.06); } .stars-ro.big { font-size: 26px; letter-spacing: 3px; }
+.rate-more { display: grid; gap: 8px; } .rate-more[hidden] { display: none; }
+.rate-more textarea { width: 100%; border: 1.5px solid var(--line); border-radius: 12px; padding: 10px 12px; background: var(--raised); font: inherit; color: inherit; resize: vertical; }
+.rate-more .btn { border-radius: 999px; }
+.rate-txt { margin: 0; font-size: 14px; } .rate-txt small { color: var(--muted); }
+.rate-low { display: grid; gap: 8px; padding: 10px 12px; border-radius: 12px; background: var(--raised); font-size: 13.5px; } .rate-low .btn { justify-self: start; display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; font-size: 13.5px; }
 .trk-done { justify-items: center; text-align: center; }
 .trk-done .ok-c { width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; background: color-mix(in srgb, var(--ok) 16%, transparent); color: var(--ok); }
 .trk-done .ok-c svg { width: 30px; height: 30px; }
@@ -1547,6 +1558,16 @@ html.ds-dragging, html.ds-dragging * { cursor: grabbing !important; user-select:
 .slink { text-align: left; color: inherit; display: block; max-width: 100%; } .slink:hover b { color: var(--accent); text-decoration: underline; }
 .store .slink b { display: inline; }
 .vmini { color: var(--accent); vertical-align: -1px; }
+.av.lg, .store .av.lg, .sp-h .av.big.lg { background: #fff; overflow: hidden; padding: 0; border: 1px solid var(--line); }
+.av.lg img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.st-logo { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 10px 12px; border-radius: 14px; background: var(--raised); border: 1px solid var(--line); }
+.st-logo .av.big { width: 56px; height: 56px; border-radius: 16px; font-size: 24px; font-weight: 700; display: grid; place-items: center; flex: none; background: var(--accent-soft); color: var(--accent); }
+.st-logo .av.big.lg { background: #fff; }
+.st-logo-t { flex: 1 1 200px; min-width: 0; display: grid; gap: 2px; } .st-logo-t small { color: var(--muted); font-size: 12.5px; line-height: 1.35; }
+.st-logo-b { display: flex; gap: 8px; flex-wrap: wrap; } .st-logo-b .btn { padding: 8px 12px; font-size: 13.5px; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.st-ver { margin: 0; display: flex; gap: 6px; align-items: flex-start; color: var(--muted); font-size: 13px; } .st-ver svg { flex: none; margin-top: 2px; }
+.sov-acts { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; } .sov-acts .btn { display: inline-flex; align-items: center; gap: 6px; }
+.sov-logo, .adm-logo { display: inline-flex; align-items: center; gap: 8px; } .adm-logo { float: right; margin-left: 8px; } .sov-logo .av, .adm-logo .av { width: 36px; height: 36px; border-radius: 10px; }
 .vbadge { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; color: var(--accent); background: var(--accent-soft); padding: 3px 9px; border-radius: 999px; vertical-align: middle; }
 .sp-grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 12px; margin-top: 8px; }
 .sp-info { display: grid; gap: 10px; align-content: start; }
@@ -2551,6 +2572,7 @@ const STORES = [
   { id: "temir", name: "Temir Ombor", d: "bekt", addr: "ул. Хусейна Байкары, 15", addrUz: "Husayn Boyqaro ko‘ch., 15", hours: "08:00–18:00", ru: "Металлопрокат, крепёж, кровля", uz: "Metall prokat, mahkamlagich, tom" }
 ];
 const STORE = Object.fromEntries(STORES.map(s => [s.id, s]));
+if (!API) { const sp = LS.get("imorat.demoSeedPatch", {}); for (const id in sp) if (STORE[id]) Object.assign(STORE[id], sp[id]); } // demo: what the demo admin or seller set on a sample store (the «Проверенный» mark, a logo) stays in this browser
 if (myStore && !API) STORE[myStore.id] = myStore;
 
 /* ================= Categories ================= */
@@ -3994,7 +4016,7 @@ function renderHome() {
 
     <section class="sec" id="stores" data-w="stores">
       <div class="sec-head"><div><h2 class="h-l">${L("Магазины-партнёры", "Hamkor do‘konlar")}</h2><p>${storeDelivers() ? L("Магазин собирает заказ и привозит его своим курьером", "Do‘kon buyurtmani yig‘adi va o‘z kuryeri bilan olib keladi", "The store packs the order and brings it with its own courier") : L("Курьер забирает заказ прямо со склада магазина", "Kuryer buyurtmani do‘kon omboridan oladi")}</p></div></div>
-      <div class="stores rv">${STORES.map(s => { const n = PRODUCTS.filter(p => p.offers.some(o => o.store === s.id)).length; if (!n) return ""; return `<div class="store"><span class="av">${esc(s.name.slice(0, 1))}</span><div><button type="button" class="slink" data-go="store-${s.id}"><b>${esc(s.name)}${isVerified(s) ? ` <span class="vmini">${ui("shield", 12)}</span>` : ""}</b></button><span class="m">${dName(s.d)}, ${esc(L(s.addr, s.addrUz))}</span><br><span class="m">${esc(L(s.ru, s.uz))}</span>${ratingHTML(s, true)}<div class="r"><span class="pill ${openState(s).open ? "ok" : "closed"}">${openState(s).text}</span><button class="link" type="button" data-store="${s.id}">${n} ${L(plural(n, ["товар", "товара", "товаров"]), "mahsulot", n === 1 ? "product" : "products")} ${ui("chev", 14)}</button></div></div></div>`; }).join("")}</div>
+      <div class="stores rv">${STORES.map(s => { const n = PRODUCTS.filter(p => p.offers.some(o => o.store === s.id)).length; if (!n) return ""; return `<div class="store">${storeAv(s)}<div><button type="button" class="slink" data-go="store-${s.id}"><b>${esc(s.name)}${isVerified(s) ? ` <span class="vmini" title="${L("Проверен администрацией Quriliş Go", "Quriliş Go ma’muriyati tekshirgan", "Checked by the Quriliş Go team")}">${ui("shield", 12)}</span>` : ""}</b></button><span class="m">${dName(s.d)}, ${esc(L(s.addr, s.addrUz))}</span><br><span class="m">${esc(L(s.ru, s.uz))}</span>${ratingHTML(s, true)}<div class="r"><span class="pill ${openState(s).open ? "ok" : "closed"}">${openState(s).text}</span><button class="link" type="button" data-store="${s.id}">${n} ${L(plural(n, ["товар", "товара", "товаров"]), "mahsulot", n === 1 ? "product" : "products")} ${ui("chev", 14)}</button></div></div></div>`; }).join("")}</div>
       ${STORES.length > 5 ? `<div class="stores-more"><button class="btn btn-line" type="button" data-act="stores-all">${L(`Все ${STORES.length} магазинов`, `Barcha ${STORES.length} do‘kon`, `All ${STORES.length} stores`)}</button></div>` : ""}
     </section>
 
@@ -4428,7 +4450,7 @@ function openProduct(id) {
       <p class="desc">${esc(pDesc(p))}</p>
       <dl class="specs"><dt>${L("Единица", "O‘lchov")}</dt><dd>${unitName(p.unit)}</dd><dt>${L("Вес", "Vazn")}</dt><dd>${fmtKg(p.kg)}</dd><dt>${L("Страна", "Mamlakat")}</dt><dd>${L(...p.country)}</dd><dt>${L("Гарантия", "Kafolat")}</dt><dd>${p.warranty ? `${p.warranty} ${L("мес.", "oy")}` : L("по закону о защите прав потребителей", "iste’molchilar huquqlari qonuni bo‘yicha")}</dd><dt>${L("Цена", "Narx")}</dt><dd>${offers.length > 1 && offers[0].price !== offers[offers.length - 1].price ? `${fmt(offers[0].price)} – ${fmt(offers[offers.length - 1].price)}` : fmt(mp)}</dd></dl>
       <div><h3 class="h-m" style="margin-bottom:10px">${L("Цены в магазинах", "Do‘konlardagi narxlar")}</h3>
-      <div class="offers">${offers.map((o, i) => { const s = STORE[o.store], st = stockOf(p, o.store); return `<div class="offer ${i === 0 && offers.length > 1 ? "best" : ""}"><div><button type="button" class="slink" data-go="store-${s.id}"><b>${esc(s.name)}</b>${isVerified(s) ? ` <span class="vmini" title="${L("Проверенный магазин", "Tekshirilgan do‘kon")}">${ui("shield", 12)}</span>` : ""}</button><small>${dName(s.d)} · ${openState(s).text}</small><small>${ratingHTML(s)}</small>${i === 0 && offers.length > 1 ? `<small style="color:var(--accent);font-weight:600">${L("Лучшая цена", "Eng yaxshi narx")}</small>` : ""}</div><div style="display:grid;justify-items:end;gap:4px"><span class="pr">${fmt(o.price)}</span>${stockTxt(st)}</div><button class="btn btn-primary" type="button" data-addo="${p.id}|${o.store}">${L("В корзину", "Savatga")}</button>${freshHTML(o.upd, "offer-fresh")}</div>`; }).join("")}</div></div>
+      <div class="offers">${offers.map((o, i) => { const s = STORE[o.store], st = stockOf(p, o.store); return `<div class="offer ${i === 0 && offers.length > 1 ? "best" : ""}"><div><button type="button" class="slink" data-go="store-${s.id}"><b>${esc(s.name)}</b>${isVerified(s) ? ` <span class="vmini" title="${L("Проверен администрацией Quriliş Go", "Quriliş Go ma’muriyati tekshirgan", "Checked by the Quriliş Go team")}">${ui("shield", 12)}</span>` : ""}</button><small>${dName(s.d)} · ${openState(s).text}</small><small>${ratingHTML(s)}</small>${i === 0 && offers.length > 1 ? `<small style="color:var(--accent);font-weight:600">${L("Лучшая цена", "Eng yaxshi narx")}</small>` : ""}</div><div style="display:grid;justify-items:end;gap:4px"><span class="pr">${fmt(o.price)}</span>${stockTxt(st)}</div><button class="btn btn-primary" type="button" data-addo="${p.id}|${o.store}">${L("В корзину", "Savatga")}</button>${freshHTML(o.upd, "offer-fresh")}</div>`; }).join("")}</div></div>
       ${stockWatchHTML(p)}
       <div class="infobox">${ui(t.icon, 20)}<span><b>${storeDelivers() ? L("Доставка магазином в", "Do‘kon yetkazadi:", "Store delivery to") : L("Доставка Яндекс в", "Yandex yetkazish:")} ${dName(district)}</b><small>${storeDelivers() ? `${tName(t)} · ${L("цену доставки назовёт магазин", "yetkazish narxini do‘kon aytadi", "the store names the delivery price")}` : `${tName(t)} · ${fromP(round(t.base + t.perKm * dist))} · ${etaStr(t)}`}</small></span></div>
       ${discOn() && TIER_CATS.includes(p.cat) ? `<div class="infobox">${ui("store", 20)}<span style="flex:1"><b>${L("Оптом дешевле — для мастеров и прорабов", "Ulgurji arzonroq — ustalar va prorablar uchun")}</b><span class="tier"><span class="on">${L("1–9", "1–9")}<b>${fmt(mp)}</b></span><span>${L("от 10", "10 dan")}<b>${fmt(round(mp * .97))}</b></span><span>${L("от 50", "50 dan")}<b>${fmt(round(mp * .94))}</b></span></span></span></div>` : ""}
@@ -4900,6 +4922,7 @@ function dTrack() {
       ${doneCard}
       <div class="trk-card"><div class="trk-head"><div>${live}<h2 id="trkH">${esc(h1)}</h2><p id="trkP">${esc(h2)}</p></div><span id="trkEta">${trkEtaHTML(c, S.key)}</span></div>${prog}</div>
       <div id="trkWho">${trkWhoHTML(o, s, S, c)}</div>
+      ${done ? orderRateHTML(o, s, i) : ""}
       ${notes}
       ${timeline}
       ${trkRouteHTML(o, s, st)}
@@ -6667,6 +6690,8 @@ function storeBanner(s, demo) {
 }
 function storeCardHTML(s) {
   return `<div class="panel store-info"><div class="panel-h"><h2 class="h-m">${L("О магазине", "Do‘kon haqida")}</h2><button class="btn btn-line" type="button" data-act="store-edit">${L("Изменить", "O‘zgartirish")}</button></div>
+    ${storeLogoRowHTML(s)}
+    <p class="st-ver">${ui("shield", 15)} ${isVerified(s) ? L("Магазин отмечен как «Проверенный» — покупатели видят значок рядом с названием.", "Do‘kon «Tekshirilgan» deb belgilangan — xaridorlar nom yonida belgini ko‘radi.", "The store is marked «Verified» — buyers see the mark beside its name.") : L("Значок «Проверенный» ставит администрация Quriliş Go после проверки магазина. Сейчас его нет.", "«Tekshirilgan» belgisini Quriliş Go ma’muriyati do‘konni tekshirgach qo‘yadi. Hozir u yo‘q.", "The «Verified» mark is set by the Quriliş Go team after it has checked the store. It is not set yet.")}</p>
     <p style="margin:0">${esc(s.descr || "")}</p>
     <div class="cat-picks" style="margin-top:4px">${(s.cats || []).map(c => `<span class="pill mute">${esc(catName(c))}</span>`).join("")}</div>
     <small style="color:var(--muted)">${ui("pin", 13)} ${dName(s.d)}, ${esc(s.addr)}${s.landmark ? " · " + esc(s.landmark) : ""}${s.la != null && s.loc_src !== "district" ? ` · <a href="${yaLink(s.la, s.lo)}" target="_blank" rel="noopener">${L("на карте", "xaritada")}</a>` : ""} · ${ui("clock", 13)} ${esc(s.hours)} · ${esc(s.phone ? "+" + digitsOf(s.phone) : "")}${s.telegram ? " · @" + esc(s.telegram) : ""}</small></div>`;
@@ -6687,7 +6712,11 @@ document.addEventListener("click", async e => {
     try { await adminApi("PATCH", "/api/admin/stores/" + encodeURIComponent(fz.dataset.admf), { free_until: d.toISOString() }); toast(L("Комиссия Quriliş Go 0% до", "Quriliş Go komissiyasi 0% gacha:", "Quriliş Go commission 0% until") + " " + d.toLocaleDateString(LOCALE)); adminStores = null; renderMain(); } catch (er) { fz.disabled = false; toast(apiErr(er)); } return; }
   const v = e.target.closest("[data-admv]");
   if (v && !API) { const [id, on] = v.dataset.admv.split("|"); demoStorePatch(id, { verified: on === "1" }); toast(on === "1" ? L("Демо: магазин отмечен проверенным", "Demo: do‘kon tekshirilgan deb belgilandi", "Demo: the store is marked as verified") : L("Демо: отметка снята", "Demo: belgi olib tashlandi", "Demo: the mark is removed")); renderMain(); return; }
-  if (v) { const [id, on] = v.dataset.admv.split("|"); v.disabled = true; try { await adminApi("PATCH", "/api/admin/stores/" + encodeURIComponent(id), { verified: on === "1" }); toast(on === "1" ? L("Магазин отмечен проверенным", "Do‘kon tekshirilgan deb belgilandi") : L("Отметка снята", "Belgi olib tashlandi")); adminStores = null; renderMain(); syncCatalog(); } catch (er) { v.disabled = false; toast(apiErr(er)); } return; }
+  if (v) { const [id, on] = v.dataset.admv.split("|"); v.disabled = true; try { await adminApi("PATCH", "/api/admin/stores/" + encodeURIComponent(id), { verified: on === "1" }); toast(on === "1" ? L("Магазин отмечен проверенным", "Do‘kon tekshirilgan deb belgilandi") : L("Отметка снята", "Belgi olib tashlandi")); adminStores = null; sov.one = null; sov.list = null; renderMain(); syncCatalog(); } catch (er) { v.disabled = false; toast(apiErr(er)); } return; }
+  const lg = e.target.closest("[data-admlogo]"); // an admin takes a store's logo down
+  if (lg) { const id = lg.dataset.admlogo; if (!confirm(L("Убрать логотип этого магазина?", "Bu do‘kon logotipi olib tashlansinmi?", "Remove this store's logo?"))) return;
+    if (!API) { demoStorePatch(id, { logo: null }); toast(L("Демо: логотип убран", "Demo: logotip olib tashlandi", "Demo: the logo is removed")); renderMain(); return; }
+    lg.disabled = true; try { await adminApi("PATCH", "/api/admin/stores/" + encodeURIComponent(id), { logo: null }); toast(L("Логотип убран", "Logotip olib tashlandi", "The logo is removed")); adminStores = null; sov.one = null; renderMain(); syncCatalog(); } catch (er) { lg.disabled = false; toast(apiErr(er)); } return; }
   const t = e.target.closest("[data-admm],[data-mtabgo]"); if (!t) return;
   if (t.dataset.mtabgo) { mf.tab = t.dataset.mtabgo; mf.sel = null; return; }
   const [id, st] = t.dataset.admm.split("|"); t.disabled = true;
@@ -6724,7 +6753,7 @@ function adminStoresHTML() {
   const pend = adminStores.filter(s => s.status === "pending" || s.status === "meeting");
   return `<div class="panel" style="margin-top:12px"><div class="panel-h"><h2 class="h-m">${L("Модерация магазинов", "Do‘konlar moderatsiyasi")}</h2><span class="pill ${pend.length ? "warn" : "ok"}">${pend.length} ${L("ждут", "kutmoqda")}</span></div>
     <div class="tbl-wrap"><table><thead><tr><th>${L("Магазин", "Do‘kon")}</th><th>${L("Владелец", "Egasi")}</th><th>${L("Статус", "Holat")}</th><th></th></tr></thead><tbody>
-    ${adminStores.slice(0, 40).map(s => { const [lb, c] = ST_STATUS()[s.status] || ["?", "mute"]; return `<tr><td><b>${esc(s.name)}</b><br><small style="color:var(--muted)">${dName(s.d)}, ${esc(s.addr)} · ${(s.cats || []).map(catName).join(", ")}</small><br><small>${esc(s.descr || "")}</small></td><td style="font-size:13px">${esc(s.owner_name || "—")}<br><span class="num">${esc(s.owner_phone ? "+" + s.owner_phone : "")}</span></td><td><span class="pill ${c}">${lb}</span>${s.status === "active" ? `<br><small style="color:${s.promo ? "var(--ok)" : "var(--muted)"}">${s.promo ? L("комиссия 0% до", "komissiya 0% gacha:", "0% commission until") + " " + new Date(s.free_until).toLocaleDateString(LOCALE) : L("комиссия", "komissiya", "commission") + " " + pct(feeInfo().ours)}</small>` : ""}</td>
+    ${adminStores.slice(0, 40).map(s => { const [lb, c] = ST_STATUS()[s.status] || ["?", "mute"]; return `<tr><td>${storeLogoSrc(s) ? `<span class="adm-logo">${storeAv(s)}<button class="lnk" type="button" data-admlogo="${esc(s.id)}">${L("убрать логотип", "logotipni olish", "remove logo")}</button></span>` : ""}<b>${esc(s.name)}</b><br><small style="color:var(--muted)">${dName(s.d)}, ${esc(s.addr)} · ${(s.cats || []).map(catName).join(", ")}</small><br><small>${esc(s.descr || "")}</small></td><td style="font-size:13px">${esc(s.owner_name || "—")}<br><span class="num">${esc(s.owner_phone ? "+" + s.owner_phone : "")}</span></td><td><span class="pill ${c}">${lb}</span>${s.status === "active" ? `<br><small style="color:${s.promo ? "var(--ok)" : "var(--muted)"}">${s.promo ? L("комиссия 0% до", "komissiya 0% gacha:", "0% commission until") + " " + new Date(s.free_until).toLocaleDateString(LOCALE) : L("комиссия", "komissiya", "commission") + " " + pct(feeInfo().ours)}</small>` : ""}</td>
       <td style="white-space:nowrap">${s.status !== "active" ? admStoreWay(s) : `<button class="btn btn-line" type="button" data-admf="${esc(s.id)}" title="${L("Ещё 3 месяца без комиссии Quriliş Go", "Yana 3 oy Quriliş Go komissiyasisiz", "Three more months without the Quriliş Go commission")}">0% +3 ${L("мес", "oy", "mo")}</button>`} ${["pending", "meeting"].includes(s.status) ? `<button class="btn btn-line" type="button" data-adm="${esc(s.id)}|rejected">${L("Отклонить", "Rad etish")}</button>` : s.status === "active" ? `<button class="btn btn-line" type="button" data-adm="${esc(s.id)}|blocked">${L("Скрыть", "Yashirish")}</button>` : ""} <button class="btn btn-line" type="button" data-admv="${esc(s.id)}|${s.verified ? 0 : 1}">${s.verified ? "✓ " + L("Проверен", "Tekshirilgan") : L("Отметить проверенным", "Tekshirilgan deb belgilash")}</button></td></tr>`; }).join("")}
     </tbody></table></div></div>`;
 }
@@ -7040,30 +7069,56 @@ function shipExtra2(o, s) {
   if (s.status === "cancelled") return `<div class="note warnn">${ui("close", 14)} ${L("Отменено", "Bekor qilindi")}: ${CANCEL_TXT()[s.cancel_reason] || ""}${s.cancel_reason && s.cancel_reason !== "buyer" ? ". " + L("Платить ничего не нужно — закажите у другого магазина.", "Hech narsa to‘lash shart emas — boshqa do‘kondan buyurtma bering.") : ""}${s.cancel_note ? `<br><small>${s.cancel_reason === "buyer" ? L("Ваш комментарий", "Izohingiz", "Your note") : L("Магазин пишет", "Do‘kon yozadi", "The store says")}: «${esc(s.cancel_note)}»</small>` : ""}</div>`;
   if (s.status === "new" && s.accept_by && o.pay_status === "paid") return `<div class="note">${ui("clock", 14)} ${L(`Магазин подтвердит заказ до ${hhmm(s.accept_by)}. Не успеет — заказ отменится, а деньги вернутся на карту.`, `Do‘kon buyurtmani ${hhmm(s.accept_by)} gacha tasdiqlaydi. Ulgurmasa — buyurtma bekor bo‘ladi, pul kartaga qaytadi.`, `The store confirms the order by ${hhmm(s.accept_by)}. If it does not, the order is cancelled and the money returns to your card.`)}</div>`;
   if (s.status === "new" && s.accept_by) return `<div class="note">${ui("clock", 14)} ${L(`Магазин подтвердит заказ до ${hhmm(s.accept_by)}. Не успеет — заказ отменится автоматически, платить ничего не нужно.`, `Do‘kon buyurtmani ${hhmm(s.accept_by)} gacha tasdiqlaydi. Ulgurmasa — buyurtma avtomatik bekor qilinadi, to‘lash shart emas.`, `The store will confirm the order by ${hhmm(s.accept_by)}. If it doesn't, the order is cancelled automatically and you pay nothing.`)}</div>`;
-  if (["delivered", "picked"].includes(s.status)) {
-    if (s.review) return `<div class="note"><span class="stars-ro">${"★".repeat(s.review.stars)}${"☆".repeat(5 - s.review.stars)}</span> ${L("Ваш отзыв", "Sharhingiz")}${s.review.text ? `: «${esc(s.review.text)}»` : ""}${s.review.reply ? `<br><small>${L("Ответ магазина", "Do‘kon javobi")}: ${esc(s.review.reply)}</small>` : ""}</div>`;
-    return `<form class="rv-form" data-rvform="${esc(o.num)}|${s.id}"><b>${L("Оцените магазин", "Do‘konni baholang")}</b>
-      <div class="stars" role="radiogroup" aria-label="${L("Оценка", "Baho")}">${[1, 2, 3, 4, 5].map(n => `<button type="button" role="radio" aria-checked="false" data-star="${n}" aria-label="${n}">★</button>`).join("")}</div>
-      <label class="visually-hidden" for="rvt${s.id}">${L("Отзыв", "Sharh")}</label><textarea id="rvt${s.id}" rows="2" maxlength="500" placeholder="${L("Что понравилось или нет? Помогите другим покупателям", "Nima yoqdi yoki yoqmadi? Boshqa xaridorlarga yordam bering")}"></textarea>
-      <button class="btn btn-primary" type="submit" disabled>${L("Отправить отзыв", "Sharh yuborish")}</button></form>`;
-  }
   return "";
+}
+/* «Оцените заказ. Всё прошло по плану?» — the card on a delivered (or picked up) shipment: stars and a few words about how it went.
+   With the server the stars count for the store's rating at once and the text waits for a check (POST /api/orders/:num/review);
+   in the demo the rating stays in this browser and changes nothing. A low rating offers the complaint form right away.
+   What is typed survives a redraw of the screen (rateDraft). */
+const rateDraft = {};
+const RATE_LBL = () => [L("Плохо", "Yomon", "Bad"), L("Так себе", "Unchalik emas", "Not great"), L("Нормально", "O‘rtacha", "Okay"), L("Хорошо", "Yaxshi", "Good"), L("Отлично", "A’lo", "Excellent")];
+function orderRateHTML(o, s, i) {
+  if (o.api && !user) return "";
+  const key = o.api ? s.id : i, rv = o.api ? s.review : (o.rv || {})[i], stName = (STORE[s.store] || {}).name || s.store_name || "";
+  if (rv) return `<div class="trk-card trk-rate rated"><h3>${L("Ваша оценка заказа", "Buyurtmaga bahoyingiz", "Your rating of the order")}</h3>
+    <div class="rate-row"><span class="stars-ro big" role="img" aria-label="${rv.stars} / 5">${"★".repeat(rv.stars)}${"☆".repeat(5 - rv.stars)}</span><b>${RATE_LBL()[rv.stars - 1] || ""}</b></div>
+    ${rv.text ? `<p class="rate-txt">«${esc(rv.text)}»</p>` : ""}${rv.reply ? `<p class="rate-txt"><small>${L("Ответ магазина", "Do‘kon javobi", "The store replied")}:</small> ${esc(rv.reply)}</p>` : ""}
+    ${rv.stars <= 3 ? `<div class="rate-low"><span>${L("Жаль, что не всё прошло по плану. Расскажите, что случилось, — разберёмся.", "Afsus, hammasi reja bo‘yicha o‘tmadi. Nima bo‘lganini yozing — hal qilamiz.", "Sorry it did not all go to plan. Tell us what happened and we will sort it out.")}</span><button class="btn btn-line" type="button" data-act="rate-problem">${ui("shield", 15)} ${L("Сообщить о проблеме", "Muammo haqida xabar berish", "Report a problem")}</button></div>` : ""}
+    ${o.api ? "" : `<small class="mu">${L("Демо: оценка хранится только в этом браузере и не меняет рейтинг магазина.", "Demo: baho faqat shu brauzerda saqlanadi va do‘kon reytingini o‘zgartirmaydi.", "Demo: the rating is kept in this browser only and does not change the store's rating.")}</small>`}</div>`;
+  const d = rateDraft[o.num + "|" + key] || {}, n = d.stars || 0;
+  return `<form class="trk-card trk-rate" data-rvform="${esc(o.num)}|${key}"${n ? ` data-stars="${n}"` : ""}>
+    <div><h3>${L("Оцените заказ", "Buyurtmani baholang", "Rate the order")}</h3><p class="rate-q">${L("Всё прошло по плану?", "Hammasi reja bo‘yicha o‘tdimi?", "Did it all go to plan?")}${stName ? ` <span>${L("Магазин", "Do‘kon", "Store")} «${esc(stName)}»</span>` : ""}</p></div>
+    <div class="rate-row"><div class="stars big" role="radiogroup" aria-label="${L("Оценка", "Baho", "Rating")}">${[1, 2, 3, 4, 5].map(k => `<button type="button" role="radio" class="${k <= n ? "on" : ""}" aria-checked="${k === n}" data-star="${k}" aria-label="${k} — ${RATE_LBL()[k - 1]}">★</button>`).join("")}</div><b class="rate-lbl" aria-live="polite">${n ? RATE_LBL()[n - 1] : ""}</b></div>
+    <div class="rate-more"${n ? "" : " hidden"}><label class="visually-hidden" for="rvt${esc(String(key))}">${L("Отзыв", "Sharh", "Review")}</label><textarea id="rvt${esc(String(key))}" rows="2" maxlength="500" placeholder="${n && n <= 3 ? L("Что пошло не так?", "Nima noto‘g‘ri bo‘ldi?", "What went wrong?") : L("Что понравилось? Помогите другим покупателям", "Nima yoqdi? Boshqa xaridorlarga yordam bering", "What did you like? Help other buyers")}">${esc(d.text || "")}</textarea>
+      <button class="btn btn-primary" type="submit"${n ? "" : " disabled"}>${L("Отправить оценку", "Bahoni yuborish", "Send the rating")}</button></div>
+    ${o.api ? "" : `<small class="mu">${L("Демо: оценка сохранится только в этом браузере.", "Demo: baho faqat shu brauzerda saqlanadi.", "Demo: the rating is kept in this browser only.")}</small>`}</form>`;
 }
 document.addEventListener("click", e => {
   const st = e.target.closest("[data-star]"); if (!st) return;
   const f = st.closest("form"), n = +st.dataset.star; f.dataset.stars = n;
   f.querySelectorAll("[data-star]").forEach(b => { b.classList.toggle("on", +b.dataset.star <= n); b.setAttribute("aria-checked", +b.dataset.star === n); });
   f.querySelector("[type=submit]").disabled = false;
+  if (f.classList.contains("trk-rate")) { // the order card: the words open under the stars, and the choice survives a redraw
+    (rateDraft[f.dataset.rvform] ||= {}).stars = n; f.querySelector(".rate-more").hidden = false; f.querySelector(".rate-lbl").textContent = RATE_LBL()[n - 1];
+    f.querySelector("textarea").placeholder = n <= 3 ? L("Что пошло не так?", "Nima noto‘g‘ri bo‘ldi?", "What went wrong?") : L("Что понравилось? Помогите другим покупателям", "Nima yoqdi? Boshqa xaridorlarga yordam bering", "What did you like? Help other buyers");
+  }
 });
+document.addEventListener("input", e => { const f = e.target.closest?.("form.trk-rate"); if (f && e.target.tagName === "TEXTAREA") (rateDraft[f.dataset.rvform] ||= {}).text = e.target.value; });
 document.addEventListener("submit", async e => {
   const f = e.target.closest("[data-rvform]"); if (!f) return;
   e.preventDefault();
   const [num, sid] = f.dataset.rvform.split("|"), stars = +f.dataset.stars || 0; if (!stars) return;
   const btn = f.querySelector("[type=submit]"); btn.disabled = true;
+  const od = orders.find(x => x.num === num);
+  if (od && !od.api) { // demo: no server — the rating is written into the order kept in this browser
+    od.rv = { ...(od.rv || {}), [sid]: { stars, text: f.querySelector("textarea").value.trim(), t: Date.now() } }; delete rateDraft[f.dataset.rvform];
+    LS.set("imorat.orders", orders.slice(0, 30)); toast(L("Спасибо за оценку!", "Baho uchun rahmat!", "Thanks for the rating!")); return renderDrawer();
+  }
   try {
     await api("POST", `/api/orders/${encodeURIComponent(num)}/review`, { ship_id: +sid, stars, text: f.querySelector("textarea").value.trim() });
     const o = orders.find(x => x.num === num), s = o?.ships.find(x => String(x.id) === sid);
     if (s) s.review = { stars, text: f.querySelector("textarea").value.trim(), reply: "" };
+    delete rateDraft[f.dataset.rvform];
     LS.set("imorat.orders", orders.slice(0, 30)); toast(f.querySelector("textarea").value.trim() ? L("Спасибо! Оценка учтена, текст отзыва появится после проверки", "Rahmat! Baho hisobga olindi, sharh matni tekshiruvdan keyin chiqadi", "Thanks! The rating counts now; the text appears after a check") : L("Спасибо за отзыв!", "Sharh uchun rahmat!")); renderDrawer(); syncCatalog();
   } catch (er) { btn.disabled = false; toast(apiErr(er)); }
 });
@@ -7262,6 +7317,7 @@ document.addEventListener("input", e => { if (e.target.id === "payoutTo") { cons
 /* behaviour that used to be inline attributes (onsubmit/onerror/onclick): the Content-Security-Policy of the site forbids inline handlers */
 document.addEventListener("submit", e => { if (e.target.matches?.("form[data-nosubmit]")) e.preventDefault(); }, true);
 document.addEventListener("error", e => { if (e.target.matches?.("img[data-hideerr]")) e.target.style.visibility = "hidden"; }, true);
+document.addEventListener("error", e => { const p = e.target.tagName === "IMG" && e.target.parentElement; if (p && p.classList.contains("av") && p.classList.contains("lg")) { p.classList.remove("lg"); p.textContent = p.dataset.l || ""; } }, true);
 document.addEventListener("click", e => { if (e.target.closest?.('[data-act="reload-page"]')) location.reload(); });
 document.addEventListener("submit", async e => {
   if (e.target.id === "payoutForm") {
@@ -8799,6 +8855,7 @@ function renderSeller() {
   const tabsHTML = `<nav class="stabs" role="tablist" aria-label="${L("Разделы кабинета", "Kabinet bo‘limlari", "Cabinet sections")}">${TABS.map(([id, t, badge, cls]) => `<button type="button" role="tab" id="stab-${id}" aria-selected="${sellerTab === id}" aria-controls="stp-${id}" data-seltab="${id}">${t}${badge ? `<span class="stab-b ${cls}">${badge}</span>` : ""}</button>`).join("")}</nav>`;
   const secO = id => `<section class="stp" id="stp-${id}" role="tabpanel" aria-labelledby="stab-${id}"${sellerTab === id ? "" : " hidden"}>`;
   const storeTab = s.mine ? storeCardHTML(s) : `<div class="panel store-info"><div class="panel-h"><h2 class="h-m">${L("О магазине", "Do‘kon haqida", "About the store")}</h2><span class="pill mute">${L("демо-магазин", "demo do‘kon", "demo store")}</span></div>
+      ${storeLogoRowHTML(s)}
       <div class="cat-picks">${(s.cats || []).map(c => `<span class="pill mute">${esc(catName(c))}</span>`).join("")}</div>
       <small style="color:var(--muted)">${ui("pin", 13)} ${dName(s.d)}, ${esc(L(s.addr, s.addrUz))}${s.hours ? " · " + esc(s.hours) : ""}</small>
       <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-line" type="button" data-go="store-${esc(s.id)}">${L("Витрина магазина", "Do‘kon vitrinasi", "Store page")}</button>${myStore ? "" : `<button class="btn btn-primary" type="button" data-act="store-reg">${L("Добавить свой магазин", "Do‘konimni qo‘shish", "Add my store")}</button>`}</div>
@@ -9626,7 +9683,42 @@ document.addEventListener("submit", async e => {
 
 /* ================= Store page: contacts, map, rating, products, questions ================= */
 let storeQA = {}, myQuestions = null, sellerQuestions = null, qDemo = LS.get("imorat.questions", []);
-const isVerified = s => !!s.verified || (ratingOf(s).reliability ?? 0) >= 95;
+/* «Проверенный»: only the mark an admin has set on the store (panel → the store). Good figures do not earn it by themselves. */
+const isVerified = s => !!s?.verified;
+/* A store's picture: its own logo once the seller has set one (cabinet → «Магазин»), otherwise the first letter of its name.
+   A logo that fails to load gives way to the letter (see the image error handler). */
+const storeLogoSrc = s => { const u = s?.logo; return !u ? "" : String(u).startsWith("/uploads/") ? API + u : String(u); };
+const storeAv = (s, cls = "") => { const src = storeLogoSrc(s), l = esc(String(s?.name || "?").slice(0, 1)); return `<span class="av${cls ? " " + cls : ""}${src ? " lg" : ""}" data-l="${l}">${src ? `<img src="${esc(src)}" alt="" loading="lazy" decoding="async">` : l}</span>`; };
+/* the seller's row for it: the picture is fitted into a white square in the browser, so any photo of a sign works */
+function storeLogoRowHTML(s) {
+  const has = !!storeLogoSrc(s);
+  return `<div class="st-logo">${storeAv(s, "big")}<div class="st-logo-t"><b>${L("Логотип магазина", "Do‘kon logotipi", "Store logo")}</b><small>${L("Покупатели видят его в каталоге и на странице магазина вместо первой буквы названия. JPEG, PNG или WEBP.", "Xaridorlar uni katalogda va do‘kon sahifasida nom bosh harfi o‘rnida ko‘radi. JPEG, PNG yoki WEBP.", "Buyers see it in the catalogue and on the store page instead of the first letter of the name. JPEG, PNG or WEBP.")}${API ? "" : " " + L("Демо: сохраняется только в этом браузере.", "Demo: faqat shu brauzerda saqlanadi.", "Demo: kept in this browser only.")}</small></div>
+    <div class="st-logo-b"><label class="btn btn-line">${ui("camera", 16)} ${has ? L("Заменить", "Almashtirish", "Replace") : L("Загрузить", "Yuklash", "Upload")}<input type="file" accept="image/png,image/jpeg,image/webp" hidden data-storelogo="${esc(s.id)}"></label>${has ? `<button class="btn btn-line" type="button" data-storelogodel="${esc(s.id)}">${L("Убрать", "Olib tashlash", "Remove")}</button>` : ""}</div></div>`;
+}
+function logoSquare(file, size) { // the picture whole, centred on a white square
+  return new Promise((res, rej) => {
+    const url = URL.createObjectURL(file), img = new Image();
+    img.onload = () => { URL.revokeObjectURL(url); if (!img.width || !img.height) return rej(new Error("bad image"));
+      const c = document.createElement("canvas"); c.width = c.height = size; const g = c.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, size, size);
+      const k = Math.min(size / img.width, size / img.height), w = img.width * k, h = img.height * k; g.imageSmoothingQuality = "high"; g.drawImage(img, (size - w) / 2, (size - h) / 2, w, h); res(c.toDataURL("image/jpeg", .9)); };
+    img.onerror = () => { URL.revokeObjectURL(url); rej(new Error("bad image")); };
+    img.src = url;
+  });
+}
+const storeLogoApplied = st => { if (st) { myStore = st; LS.set("imorat.myStore", st); if (sellerData) sellerData.store = st; if (STORE[st.id]) STORE[st.id].logo = st.logo || null; } renderMain(); if (API) syncCatalog(); };
+document.addEventListener("change", async e => {
+  const inp = e.target.closest?.("[data-storelogo]"); if (!inp) return; const f = inp.files?.[0]; inp.value = ""; if (!f) return;
+  if (!/^image\/(png|jpeg|webp)$/.test(f.type) || f.size > 12 * 1024 * 1024) return toast(L("Нужна картинка JPEG, PNG или WEBP до 12 МБ", "12 MB gacha JPEG, PNG yoki WEBP rasm kerak", "A JPEG, PNG or WEBP picture up to 12 MB is needed"));
+  let data; try { data = await logoSquare(f, API ? 512 : 256); } catch (er) { return toast(L("Не получилось прочитать картинку — выберите другую", "Rasmni o‘qib bo‘lmadi — boshqasini tanlang", "Could not read the picture — choose another")); }
+  if (!API) { demoStorePatch(inp.dataset.storelogo, { logo: data }); toast(L("Демо: логотип поставлен", "Demo: logotip qo‘yildi", "Demo: the logo is set")); return renderMain(); }
+  try { const r = await api("POST", "/api/seller/store/logo", await (await fetch(data)).blob()); storeLogoApplied(r.store); toast(L("Логотип поставлен — покупатели уже видят его", "Logotip qo‘yildi — xaridorlar uni ko‘rmoqda", "The logo is set — buyers see it now")); }
+  catch (er) { toast(apiErr(er)); }
+});
+document.addEventListener("click", async e => {
+  const b = e.target.closest("[data-storelogodel]"); if (!b) return;
+  if (!API) { demoStorePatch(b.dataset.storelogodel, { logo: null }); toast(L("Демо: логотип убран", "Demo: logotip olib tashlandi", "Demo: the logo is removed")); return renderMain(); }
+  b.disabled = true; try { const r = await api("DELETE", "/api/seller/store/logo"); storeLogoApplied(r.store); toast(L("Логотип убран", "Logotip olib tashlandi", "The logo is removed")); } catch (er) { b.disabled = false; toast(apiErr(er)); }
+});
 const storePt = s => (s.la != null && s.lo != null ? { la: +s.la, lo: +s.lo } : DIST[s.d] ? { la: DIST[s.d].la, lo: DIST[s.d].lo } : null);
 function storeMapHTML(s) {
   const pt = storePt(s); if (!pt) return "";
@@ -9649,7 +9741,7 @@ function renderStore(id) {
   $("#app").innerHTML = `<div class="wrap spage">
     <nav class="crumbs"><button type="button" data-go="home">${L("Главная", "Asosiy")}</button>${ui("chev", 12)}<button type="button" data-scroll="stores">${L("Магазины", "Do‘konlar")}</button>${ui("chev", 12)}<span>${esc(s.name)}</span></nav>
     <div class="sp-grid"><div class="panel sp-info">
-      <div class="sp-h"><span class="av big">${esc(s.name.slice(0, 1))}</span><div><h1 class="h-l" style="margin:0">${esc(s.name)} ${isVerified(s) ? `<span class="vbadge" title="${L("Магазин проверен модератором Quriliş Go и выполняет заказы без срывов", "Do‘kon Quriliş Go moderatori tomonidan tekshirilgan va buyurtmalarni buzmasdan bajaradi")}">${ui("shield", 14)} ${L("Проверенный", "Tekshirilgan")}</span>` : ""}</h1>
+      <div class="sp-h">${storeAv(s, "big")}<div><h1 class="h-l" style="margin:0">${esc(s.name)} ${isVerified(s) ? `<span class="vbadge" title="${L("Магазин проверен администрацией Quriliş Go", "Do‘kon Quriliş Go ma’muriyati tomonidan tekshirilgan", "Checked by the Quriliş Go team")}">${ui("shield", 14)} ${L("Проверенный", "Tekshirilgan")}</span>` : ""}</h1>
         <p class="mu" style="margin:4px 0 0">${esc(L(s.ru || "", s.uz || s.ru || ""))}</p></div></div>
       ${ratingHTML(s, true)}
       <dl class="specs"><dt>${L("Адрес", "Manzil")}</dt><dd>${dName(s.d)}, ${esc(L(s.addr || "", s.addrUz || s.addr || ""))}${s.landmark ? `<br><small class="mu">${esc(s.landmark)}</small>` : ""}</dd>
@@ -9881,7 +9973,10 @@ function storeOnePageHTML() {
     <button class="lnk" type="button" data-sovback>${ui("back", 15)} ${L("Все магазины", "Barcha do‘konlar", "All stores")}</button>
     <div class="panel" style="margin-top:10px;display:grid;gap:6px"><div class="panel-h"><h2 class="h-l" style="margin:0">${esc(s.name)}</h2><span class="pill ${c}">${lb}</span></div>
       <p class="mu" style="margin:0">${dName(s.d)}${s.owner_name ? ` · ${L("владелец", "egasi", "owner")}: ${esc(s.owner_name)}` : ""}${s.owner_phone ? ` · <a href="tel:+${esc(s.owner_phone)}">+${esc(s.owner_phone)}</a>` : ""}${s.contract_no ? ` · ${L("договор", "shartnoma", "contract")} № ${esc(s.contract_no)}` : ""} · ${L("на Quriliş Go с", "Quriliş Go’da", "on Quriliş Go since")} ${new Date(s.created).toLocaleDateString(LOCALE)}${D.store.demo ? ` · <span class="pill mute">${L("демо-данные", "demo ma’lumotlar", "demo data")}</span>` : ""}</p>
-      ${s.status === "active" ? `<button class="btn btn-line" type="button" data-go="store-${esc(s.id)}" style="justify-self:start">${L("Витрина магазина", "Do‘kon vitrinasi", "Store page")}</button>` : ""}</div>
+      <div class="sov-acts">${s.status === "active" ? `<button class="btn btn-line" type="button" data-go="store-${esc(s.id)}">${L("Витрина магазина", "Do‘kon vitrinasi", "Store page")}</button>` : ""}
+        ${(v => `<button class="btn ${v ? "btn-line" : "btn-primary"}" type="button" data-admv="${esc(s.id)}|${v ? 0 : 1}">${ui("shield", 15)} ${v ? L("Проверен — снять отметку", "Tekshirilgan — belgini olish", "Verified — remove the mark") : L("Отметить проверенным", "Tekshirilgan deb belgilash", "Mark as verified")}</button>`)(API ? !!s.verified : isVerified(STORE[s.id] || s))}
+        ${storeLogoSrc(API ? s : (STORE[s.id] || s)) ? `<span class="sov-logo">${storeAv(API ? s : (STORE[s.id] || s))}<button class="lnk" type="button" data-admlogo="${esc(s.id)}">${L("Убрать логотип", "Logotipni olib tashlash", "Remove the logo")}</button></span>` : ""}</div>
+      <small class="mu">${L("Значок «Проверенный» покупатели видят только у магазинов, которые отметили здесь.", "«Tekshirilgan» belgisini xaridorlar faqat shu yerda belgilangan do‘konlarda ko‘radi.", "Buyers see the «Verified» mark only on stores marked here.")}</small></div>
     <div class="kpis adm-k">${kpi(L("Заказов", "Buyurtmalar", "Orders"), s.orders, `${s.done} ${L("выполнено", "bajarildi", "done")} · ${s.open} ${L("открыто", "ochiq", "open")}`)}${kpi(L("Оборот товаров", "Mahsulot aylanmasi", "Turnover"), big(s.gmv), L(`за ${D.days} дн`, `${D.days} kunda`, `last ${D.days} days`))}${kpi(L("Комиссия Quriliş Go", "Quriliş Go komissiyasi", "Quriliş Go commission"), big(s.commission))}${kpi(L("Срывы", "Buzilishlar", "Failures"), s.fail_pct + "%", `${L(`${s.fail} из ${s.orders}`, `${s.orders} tadan ${s.fail}`, `${s.fail} of ${s.orders}`)} · ${L("отмен всего", "jami bekor", "cancelled")} ${s.cancelled}`, s.fail_pct >= 10)}
       ${kpi(L("Принимает заказ за", "Buyurtmani qabul qiladi", "Accepts in"), s.accept_min != null ? s.accept_min + " " + L("мин", "daq", "min") : "—", "", (s.accept_min || 0) > 10)}${kpi(L("Рейтинг", "Reyting", "Rating"), s.stars ? "★ " + String(s.stars).replace(".", DEC) : "—", `${s.reviews} ${L("отзывов", "sharh", "reviews")}`)}${kpi(L("Товары", "Mahsulotlar", "Goods"), s.products, s.out_of_stock ? `${s.out_of_stock} ${L("нет в наличии", "mavjud emas", "out of stock")}` : L("все в наличии", "hammasi bor", "all in stock"), !!s.out_of_stock)}${kpi(L("Жалобы", "Shikoyatlar", "Complaints"), s.problems, s.problems ? L("открыты", "ochiq", "open") : L("нет открытых", "ochiq yo‘q", "none open"), !!s.problems)}</div>
     <div class="panel" style="margin-top:12px"><div class="panel-h"><h2 class="h-m">${L("Оборот по дням", "Kunlik aylanma", "Turnover by day")}</h2><span class="mu" style="font-size:13px">${(v => L(`макс. ${v} в день`, `kunlik eng ko‘p: ${v}`, `max ${v} a day`))(fmt(Math.max(0, ...D.series.map(x => x.gmv))))}</span></div>${chart}<div class="st-ax"><span>${D.series[0]?.day.slice(5).split("-").reverse().join(".") || ""}</span><span>${L("сегодня", "bugun", "today")}</span></div></div>
@@ -9920,8 +10015,11 @@ function demoStorePatch(id, patch) {
   const ds = LS.get("imorat.demoStores", {});
   for (const k in ds) if (ds[k]?.id === id) ds[k] = { ...ds[k], ...patch };
   LS.set("imorat.demoStores", ds);
-  if (myStore?.id === id) { myStore = { ...myStore, ...patch }; LS.set("imorat.myStore", myStore); }
-  if (STORE[id]) STORE[id] = { ...STORE[id], ...patch };
+  if (myStore?.id === id) { Object.assign(myStore, patch); LS.set("imorat.myStore", myStore); }
+  if (STORE[id]) { // changed in place: the lists that already hold the store see the change
+    Object.assign(STORE[id], patch);
+    if (STORES.includes(STORE[id]) && STORE[id] !== myStore) { const keep = {}; for (const k of ["verified", "logo"]) if (k in patch) keep[k] = patch[k]; if (Object.keys(keep).length) { const sp = LS.get("imorat.demoSeedPatch", {}); sp[id] = { ...sp[id], ...keep }; LS.set("imorat.demoSeedPatch", sp); } }
+  }
   if ("status" in patch) buildProducts(); // goods of a store that has just opened (or closed) join (or leave) the catalogue
 }
 function demoDash() { // demo: the figures add up — the cards, the chart and «Все магазины» come from the same per-store numbers
@@ -10810,6 +10908,7 @@ document.addEventListener("click", e => {
     case "login": return openAuth();
     case "store-reg": return openStoreReg();
     case "store-edit": return openAuth("seller-edit", "store");
+    case "rate-problem": { const d = $("#trk details.prob") || $("#trk .prob-card"); if (d) { if (d.tagName === "DETAILS") d.open = true; d.scrollIntoView({ behavior: animOK() ? "smooth" : "auto", block: "center" }); d.querySelector("textarea")?.focus({ preventScroll: true }); } return; }
     case "store-approve-demo": if (myStore) { // demo: the moderator's two steps — a meeting, then the signed contract
       if (myStore.status === "meeting") { myStore.status = "active"; myStore.contract_no = "DEMO-1"; myStore.contract_at = Date.now(); toast(L("Демо: договор подписан, доступ открыт", "Demo: shartnoma imzolandi, kirish ochildi", "Demo: contract signed, access open")); }
       else { const d = new Date(); d.setDate(d.getDate() + 1); d.setHours(11, 0, 0, 0); myStore.status = "meeting"; myStore.meet_at = d.getTime(); myStore.meet_place = L("Офис Quriliş Go (демо)", "Quriliş Go ofisi (demo)", "Quriliş Go office (demo)"); toast(L("Демо: встреча назначена", "Demo: uchrashuv belgilandi", "Demo: meeting set")); }
