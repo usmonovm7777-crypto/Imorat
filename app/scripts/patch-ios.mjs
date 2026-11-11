@@ -76,6 +76,17 @@ if (!existsSync(entPath)) {
 </dict>
 </plist>
 `);
-  changed.push("App.entitlements (add the Push Notifications capability in Xcode so the project uses it)");
+  changed.push("App.entitlements");
+}
+/* The project must point at the entitlements file — that is what "+ Push Notifications" does in Xcode. Cloud builds create the
+   project anew every time, so the build setting is written here (both configurations of the App target). */
+const pbxPath = join(app, "ios", "App", "App.xcodeproj", "project.pbxproj");
+if (existsSync(pbxPath)) {
+  const pbx = readFileSync(pbxPath, "utf8");
+  if (!pbx.includes("CODE_SIGN_ENTITLEMENTS")) {
+    const next = pbx.replace(/(\n([ \t]*)INFOPLIST_FILE = App\/Info\.plist;)/g, "$1\n$2CODE_SIGN_ENTITLEMENTS = App/App.entitlements;");
+    if (next !== pbx) { writeFileSync(pbxPath, next); changed.push("project.pbxproj: CODE_SIGN_ENTITLEMENTS"); }
+    else console.warn("! INFOPLIST_FILE = App/Info.plist not found in project.pbxproj — the entitlements file is not wired; add Push Notifications in Xcode");
+  }
 }
 console.log(changed.length ? `ios project patched: ${changed.join(", ")}` : "ios project already up to date");

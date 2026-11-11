@@ -1,0 +1,124 @@
+name: iOS app (TestFlight)
+
+# The signed iPhone build, made on GitHub's Mac — the project has no Mac of its own. Started only by hand
+# (Actions → iOS app (TestFlight) → Run workflow); nothing here runs on a push.
+#
+# What it does: builds the website for the real server, creates the Xcode project, signs it with the owner's Apple Developer
+# team (automatic signing through an App Store Connect API key) and either uploads the build to TestFlight or keeps the .ipa
+# as a workflow artifact. It does NOT submit anything for App Store review — that button is pressed by the owner in
+# App Store Connect.
+#
+# HONEST STATE: this workflow has not been run with real Apple keys yet (there is no developer account so far). The part
+# that needs no keys — creating the project and compiling the device build — is checked by "iOS app (build check)".
+# Expect to adjust the signing step on the first real run.
+#
+# What the owner sets up once (see app/README.md → «TestFlight без Mac»):
+#   secrets:   APPSTORE_KEY_ID, APPSTORE_ISSUER_ID, APPSTORE_KEY_P8 (the text of AuthKey_XXXX.p8; role: Admin),
+#   variables: APPLE_TEAM_ID (10 characters), IMORAT_API (https address of the real server), IMORAT_SITE_URL
+#   App Store Connect: the app record with the bundle id from app/capacitor.config.json must exist before an upload.
+
+on:
+  workflow_dispatch:
+    inputs:
+      upload:
+        description: "testflight = upload the build to TestFlight · file = only keep the .ipa as an artifact"
+        type: choice
+        options: [file, testflight]
+        default: file
+
+permissions:
+  contents: read
+
+env:
+  IMORAT_API: ${{ vars.IMORAT_API }}
+  IMORAT_SITE_URL: ${{ vars.IMORAT_SITE_URL }}
+  IMORAT_YMAPS_KEY: ${{ vars.IMORAT_YMAPS_KEY }}
+  APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
+  APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+  APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+  APP_RELEASE: "1"
+
+jobs:
+  testflight:
+    runs-on: macos-26
+    timeout-minutes: 60
+    steps:
+      - name: Check what the owner has to set up first
+        env:
+          APPSTORE_KEY_P8: ${{ secrets.APPSTORE_KEY_P8 }}
+        run: |
+          fail=0
+          [ -n "$IMORAT_API" ] || { echo "::error::Repository variable IMORAT_API is empty — a store build must point to the real server (https)"; fail=1; }
+          [ -n "$APPLE_TEAM_ID" ] || { echo "::error::Repository variable APPLE_TEAM_ID is empty — the 10-character team id from developer.apple.com → Membership"; fail=1; }
+          [ -n "$APPSTORE_KEY_ID" ] && [ -n "$APPSTORE_ISSUER_ID" ] && [ -n "$APPSTORE_KEY_P8" ] || { echo "::error::Secrets APPSTORE_KEY_ID / APPSTORE_ISSUER_ID / APPSTORE_KEY_P8 are missing — create an App Store Connect API key (Users and Access → Integrations → Team Keys, role Admin); see app/README.md"; fail=1; }
+          exit $fail
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: Pick the newest Xcode on the runner
+        run: |
+          X=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1); [ -n "$X" ] || X=$(ls -d /Applications/Xcode*.app | sort -V | tail -1)
+          sudo xcode-select -s "$X"; xcodebuild -version
+      - name: Build website
+        run: python3 tools/build_site.py
+      - name: Install Capacitor
+        working-directory: app
+        run: npm install --no-audit --no-fund
+      - name: Create the iOS project (release)
+        working-directory: app
+        # www:release also checks the server itself (same API contract, not in SMS dev mode, no sample stores) and stops otherwise
+        run: |
+          npm run www:release
+          [ -d ios ] || npx cap add ios
+          npx @capacitor/assets generate --ios --iconBackgroundColor '#F2661C' --splashBackgroundColor '#F2661C' || echo "icons: using defaults"
+          npx cap sync ios
+          npm run patch:ios
+          plutil -lint ios/App/App/Info.plist ios/App/App/PrivacyInfo.xcprivacy ios/App/App/App.entitlements
+          plutil -p ios/App/App/Info.plist | grep -E "CFBundleShortVersionString|CFBundleVersion|CFBundleIdentifier" || true
+      - name: The API key, kept only on this runner
+        env:
+          APPSTORE_KEY_P8: ${{ secrets.APPSTORE_KEY_P8 }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/keys"
+          printf '%s\n' "$APPSTORE_KEY_P8" > "$RUNNER_TEMP/keys/AuthKey_${APPSTORE_KEY_ID}.p8"
+          grep -q "BEGIN PRIVATE KEY" "$RUNNER_TEMP/keys/AuthKey_${APPSTORE_KEY_ID}.p8" || { echo "::error::APPSTORE_KEY_P8 must hold the whole text of the .p8 file, with the BEGIN/END lines"; exit 1; }
+          echo "AUTH_KEY=$RUNNER_TEMP/keys/AuthKey_${APPSTORE_KEY_ID}.p8" >> "$GITHUB_ENV"
+      - name: Archive (automatic signing with the owner's team)
+        working-directory: app/ios/App
+        run: |
+          set -o pipefail
+          if [ -d App.xcworkspace ]; then T="-workspace App.xcworkspace"; else T="-project App.xcodeproj"; fi
+          xcodebuild $T -scheme App -configuration Release -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/App.xcarchive" \
+            -skipPackagePluginValidation -allowProvisioningUpdates \
+            -authenticationKeyPath "$AUTH_KEY" -authenticationKeyID "$APPSTORE_KEY_ID" -authenticationKeyIssuerID "$APPSTORE_ISSUER_ID" \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" CODE_SIGN_STYLE=Automatic archive | tail -60
+      - name: Export${{ inputs.upload == 'testflight' && ' and upload to TestFlight' || ' the .ipa' }}
+        working-directory: app/ios/App
+        run: |
+          set -o pipefail
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>${{ inputs.upload == 'testflight' && 'upload' || 'export' }}</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>teamID</key><string>${APPLE_TEAM_ID}</string>
+            <key>manageAppVersionAndBuildNumber</key><false/>
+            <key>uploadSymbols</key><true/>
+          </dict></plist>
+          EOF
+          plutil -lint "$RUNNER_TEMP/ExportOptions.plist"
+          xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/App.xcarchive" -exportPath "$RUNNER_TEMP/export" -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            -allowProvisioningUpdates -authenticationKeyPath "$AUTH_KEY" -authenticationKeyID "$APPSTORE_KEY_ID" -authenticationKeyIssuerID "$APPSTORE_ISSUER_ID" | tail -40
+          ls -la "$RUNNER_TEMP/export" || true
+      - uses: actions/upload-artifact@v4
+        if: inputs.upload == 'file'
+        with:
+          name: ios-ipa
+          path: ${{ runner.temp }}/export/*.ipa
+          if-no-files-found: error
+          retention-days: 7
+      - name: Remove the key from the runner
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/keys"

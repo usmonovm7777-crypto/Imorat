@@ -34,7 +34,7 @@ jobs:
         run: |
           npm run www
           [ -d ios ] || npx cap add ios
-          npx @capacitor/assets generate --ios --iconBackgroundColor '#0B6E69' --splashBackgroundColor '#F3F5F2' || echo "icons: using defaults"
+          npx @capacitor/assets generate --ios --iconBackgroundColor '#F2661C' --splashBackgroundColor '#F2661C' || echo "icons: using defaults"
           npx cap sync ios
           npm run patch:ios
           plutil -lint ios/App/App/Info.plist ios/App/App/PrivacyInfo.xcprivacy ios/App/App/App.entitlements
@@ -47,6 +47,14 @@ jobs:
           # Capacitor 8 creates a Swift Package Manager project (App.xcodeproj); older setups have a CocoaPods workspace
           if [ -d App.xcworkspace ]; then T="-workspace App.xcworkspace"; else T="-project App.xcodeproj"; fi
           xcodebuild $T -scheme App -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -skipPackagePluginValidation CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build | tail -40
+      - name: Compile the device build as the store gets it (Release, arm64, no signing)
+        working-directory: app/ios/App
+        run: |
+          set -o pipefail
+          if [ -d App.xcworkspace ]; then T="-workspace App.xcworkspace"; else T="-project App.xcodeproj"; fi
+          xcodebuild $T -scheme App -configuration Release -showBuildSettings 2>/dev/null | grep -E " (CODE_SIGN_ENTITLEMENTS|PRODUCT_BUNDLE_IDENTIFIER|IPHONEOS_DEPLOYMENT_TARGET|MARKETING_VERSION|CURRENT_PROJECT_VERSION) = " | sort -u
+          xcodebuild $T -scheme App -configuration Release -showBuildSettings 2>/dev/null | grep -q "CODE_SIGN_ENTITLEMENTS = App/App.entitlements" || { echo "::error::the App target does not use App.entitlements (push would be missing in a store build)"; exit 1; }
+          xcodebuild $T -scheme App -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -skipPackagePluginValidation CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build | tail -30
       - uses: actions/upload-artifact@v4
         if: always()
         with:

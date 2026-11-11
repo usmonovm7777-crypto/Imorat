@@ -50,7 +50,7 @@ jobs:
         run: |
           npm run www
           [ -d android ] || npx cap add android
-          npx @capacitor/assets generate --android --iconBackgroundColor '#0B6E69' --splashBackgroundColor '#F3F5F2' || echo "icons: using defaults"
+          npx @capacitor/assets generate --android --iconBackgroundColor '#F2661C' --splashBackgroundColor '#F2661C' || echo "icons: using defaults"
           npx cap sync android
           npm run patch:android
           grep -E "compileSdkVersion|targetSdkVersion|minSdkVersion" android/variables.gradle
@@ -109,7 +109,7 @@ jobs:
         run: |
           npm run www:release
           [ -d android ] || npx cap add android
-          npx @capacitor/assets generate --android --iconBackgroundColor '#0B6E69' --splashBackgroundColor '#F3F5F2' || echo "icons: using defaults"
+          npx @capacitor/assets generate --android --iconBackgroundColor '#F2661C' --splashBackgroundColor '#F2661C' || echo "icons: using defaults"
           npx cap sync android
           npm run patch:android
           grep -E "compileSdkVersion|targetSdkVersion|minSdkVersion" android/variables.gradle
