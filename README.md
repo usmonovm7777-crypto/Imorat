@@ -37,6 +37,9 @@ python3 -m http.server 8000
 # открыть http://localhost:8000
 ```
 
+Сборка сжимает скрипты страницы, если найдёт esbuild (`npm i esbuild` в корне репозитория или в `tools/`); без него
+сайт собирается и работает так же, только файл больше. `MINIFY=0 python3 tools/build_site.py` — собрать без сжатия.
+
 ## Опубликовать на GitHub Pages
 
 1. Settings → Pages → Source: **Deploy from a branch**, ветка `main`, папка `/ (root)`.

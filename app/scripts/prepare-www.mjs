@@ -31,7 +31,7 @@ if (release) {
      was built for, and be configured for real use. Otherwise the app in the store would open onto an error screen. */
   if (api && !problems.length) {
     const page = existsSync(join(root, "index.html")) ? readFileSync(join(root, "index.html"), "utf8") : "";
-    const clientContract = Number((page.match(/const API_CONTRACT = (\d+)/) || [])[1] || 0);
+    const clientContract = Number((page.match(/<meta name="imorat:api-contract" content="(\d+)">/) || page.match(/const API_CONTRACT = (\d+)/) || [])[1] || 0); // the tag is written by build_site.py (the constant's name does not survive minification)
     if (!clientContract) problems.push("could not read API_CONTRACT from ../index.html — build the website first (python3 tools/build_site.py)");
     const get = async path => { try { const r = await fetch(api + path, { signal: AbortSignal.timeout(12000), headers: { accept: "application/json" } }); return { status: r.status, json: await r.json().catch(() => null) }; } catch (e) { return { error: e.cause?.code || e.name || String(e) }; } };
     const h = await get("/api/health"), c = await get("/api/config");
