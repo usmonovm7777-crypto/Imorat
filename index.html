@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-r5GkyeOPniyYoZhOq2f6QzfXnNIgJgJCf+RZTi2+sh0=' 'sha256-hEK0U3ZyWt5iMyHuAaWc/VnMK+DYdeERFvv+G90jt0U=' 'unsafe-eval' https://api-maps.yandex.ru https://*.api-maps.yandex.ru https://yandex.ru https://*.yandex.ru https://*.yandex.net https://yastatic.net https://accounts.google.com https://appleid.cdn-apple.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com https://*.yandex.ru https://yastatic.net; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https: http://127.0.0.1:* http://localhost:*; media-src 'self' data: blob: https:; connect-src 'self' data: blob: https: wss: http://127.0.0.1:* http://localhost:*; frame-src https:; worker-src 'self' blob: https://*.api-maps.yandex.ru https://yastatic.net; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self' https:">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-r5GkyeOPniyYoZhOq2f6QzfXnNIgJgJCf+RZTi2+sh0=' 'sha256-CpGPo3K4ZJkps1a+EsTCTmM3wxc4MTdFo8SndIJARAg=' 'unsafe-eval' https://api-maps.yandex.ru https://*.api-maps.yandex.ru https://yandex.ru https://*.yandex.ru https://*.yandex.net https://yastatic.net https://accounts.google.com https://appleid.cdn-apple.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com https://*.yandex.ru https://yastatic.net; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https: http://127.0.0.1:* http://localhost:*; media-src 'self' data: blob: https:; connect-src 'self' data: blob: https: wss: http://127.0.0.1:* http://localhost:*; frame-src https:; worker-src 'self' blob: https://*.api-maps.yandex.ru https://yastatic.net; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self' https:">
 <meta name="description" content="Quriliş Go — маркетплейс строительных магазинов Ташкента: сравнение цен, Usta AI, калькуляторы ремонта и доставка Яндекс.">
 <style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.5 system-ui,-apple-system,'Segoe UI',Roboto,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
 <script src="config.js"></script>
@@ -848,6 +848,14 @@ html.tb-swap .drawer:not(.on), html.tb-swap .wpanel:not(.on), html.tb-swap .mega
 .trk-route .ic { display: grid; place-items: center; color: var(--accent); } .trk-route .ic.home { color: var(--signal); } .trk-route svg { width: 18px; height: 18px; }
 .trk-route small { color: var(--muted); display: block; font-size: 11.5px; } .trk-route .ln { width: 2px; height: 14px; margin: 0 auto; background: var(--line-strong); }
 .trk-km { color: var(--muted); font-size: 12.5px; }
+.trk-tel { display: inline-flex; align-items: center; gap: 5px; margin-top: 4px; color: var(--accent); font-weight: 600; font-size: 13px; white-space: nowrap; } .trk-tel svg { width: 14px; height: 14px; }
+.s-tel { color: var(--accent); font-weight: 600; white-space: nowrap; } .s-tel svg { width: 12px; height: 12px; vertical-align: -1px; }
+.ns-warn { color: var(--signal); font-weight: 700; } .ns-warn svg { width: 13px; height: 13px; vertical-align: -2px; }
+.drv-f { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; align-items: center; }
+.drv-f input { width: 118px; padding: 6px 8px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--surface); color: inherit; font-size: 13px; } .drv-f input[type=tel] { width: 150px; }
+.drv-f .btn, .drv-share { padding: 6px 9px; font-size: 12.5px; } .drv-share { margin-top: 6px; }
+.ns-f { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; } .ns-f input { flex: 1 1 180px; min-width: 0; padding: 6px 8px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--surface); color: inherit; font-size: 13px; }
+.nsb { display: grid; gap: 4px; padding: 10px 0; border-top: 1px solid var(--line); } .nsb:first-of-type { border-top: 0; } .nsb-h { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; } .nsb-h b { font-size: 14.5px; } .nsb-h .btn { margin-left: auto; padding: 6px 10px; font-size: 13px; } .nsb small { color: var(--muted); }
 .trk-ships { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
 .trk-ships .chip[aria-selected="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
 .trk-rate { gap: 10px; border-color: color-mix(in srgb, var(--accent) 35%, var(--line)); }
@@ -2426,7 +2434,8 @@ const UI = {
   eye: '<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
   eyeoff: '<path d="M3 3l18 18M10.6 5.1A10.6 10.6 0 0 1 12 5c6.4 0 10 7 10 7a17.6 17.6 0 0 1-3.2 4.1M6.6 6.6C3.8 8.4 2 12 2 12s3.6 7 10 7a10 10 0 0 0 5.4-1.6M9.9 9.9a3 3 0 0 0 4.2 4.2"/>',
   cal: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
-  pen: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>'
+  pen: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>',
+  phone: '<path d="M21 16.5v2.6a1.8 1.8 0 0 1-2 1.8 17.8 17.8 0 0 1-7.8-2.8 17.5 17.5 0 0 1-5.4-5.4A17.8 17.8 0 0 1 3 4.9 1.8 1.8 0 0 1 4.8 3h2.6a1.8 1.8 0 0 1 1.8 1.5c.1.9.3 1.7.6 2.5a1.8 1.8 0 0 1-.4 1.9l-1.1 1.1a14.4 14.4 0 0 0 5.4 5.4l1.1-1.1a1.8 1.8 0 0 1 1.9-.4c.8.3 1.6.5 2.5.6a1.8 1.8 0 0 1 1.8 2Z"/>'
 };
 const ui = (k, s = 20) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${UI[k]}</svg>`;
 
@@ -2525,6 +2534,8 @@ function apiErr(e) {
     bad_status: L("Такой переход статуса невозможен", "Bunday holat o‘tishi mumkin emas", "This status change is not possible"),
     bad_token: L("Вход не подтверждён — попробуйте ещё раз", "Kirish tasdiqlanmadi — qayta urinib ko‘ring", "Sign-in could not be verified — try again"),
     bad_json: L("Ошибка запроса — обновите страницу", "So‘rov xatosi — sahifani yangilang", "Bad request — reload the page"),
+    buyer_restricted: L("Несколько ваших заказов магазины не смогли передать — новые заказы с оплатой при получении приостановлены. Напишите в поддержку.", "Bir nechta buyurtmangizni do‘konlar topshira olmadi — olganda to‘lanadigan yangi buyurtmalar to‘xtatilgan. Yordam xizmatiga yozing.", "Stores could not hand over several of your orders — new pay-on-receipt orders are paused. Write to support."),
+    not_on_receipt: L("Отметить можно только заказ с оплатой при получении", "Faqat olganda to‘lanadigan buyurtmani belgilash mumkin", "Only an order paid on receipt can be marked"),
     total_changed: L("Цены или доставка изменились — проверьте новую сумму", "Narx yoki yetkazish o‘zgardi — yangi summani tekshiring", "Prices or delivery changed — check the new total"),
     cart_changed: L("Часть товаров закончилась — проверьте корзину", "Ba’zi mahsulotlar tugadi — savatni tekshiring", "Some items just went out of stock — check the cart"),
     delivery_price_unavailable: L("Перевозчик не вернул цену доставки по этому адресу — попробуйте через минуту или выберите самовывоз", "Yetkazuvchi bu manzil uchun narx bermadi — bir daqiqadan keyin urinib ko‘ring yoki olib ketishni tanlang", "The carrier gave no delivery price for this address — try again in a minute or choose pickup"),
@@ -4877,19 +4888,20 @@ function trkEtaHTML(c, key) {
 }
 function trkWhoHTML(o, s, S, c) {
   if (S.key === "searching") return `<div class="trk-card"><div class="trk-find">${L("Ищем вам курьера…", "Sizga kuryer qidirilmoqda…", "Finding you a courier…")}</div></div>`;
-  if (!["to_store", "on_way"].includes(S.key)) return "";
-  const who = trkCourier(o, s, c, S.t), byStore = o.d?.delivery_by === "store";
+  const byStore = o.d?.delivery_by === "store", drv = byStore && s.driver?.phone ? s.driver : null; // the store named its driver: shown from packing on
+  if (!["to_store", "on_way"].includes(S.key) && !(drv && S.key === "assembling")) return "";
+  const who = S.key === "assembling" ? null : trkCourier(o, s, c, S.t);
   if (!who && !byStore) return "";
-  const name = who?.name || L("Курьер магазина", "Do‘kon kuryeri", "The store's courier");
+  const name = drv?.name || who?.name || L("Курьер магазина", "Do‘kon kuryeri", "The store's courier");
   const yaGo = s.tracking_url || c?.tracking_url;
-  return `<div class="trk-card"><div class="trk-who"><span class="trk-ava" aria-hidden="true">${esc(name.trim().charAt(0).toUpperCase())}</span><span><b>${esc(name)}</b><small>${byStore && !who ? L("Время доставки назовёт магазин", "Yetkazish vaqtini do‘kon aytadi", "The store names the delivery time") : !o.api ? L("Демо · телефон курьера придёт в SMS", "Demo · kuryer telefoni SMSda keladi", "Demo · the courier's phone comes by SMS") : L("Телефон курьера придёт в SMS", "Kuryer telefoni SMSda keladi", "The courier's phone comes by SMS")}</small></span>
-    <span class="trk-acts">${o.api ? `<button type="button" data-act="order-support" aria-label="${L("Написать в поддержку", "Yordamga yozish", "Write to support")}">${ui("chat", 18)}</button>` : ""}${yaGo ? `<a class="go" href="${esc(yaGo)}" target="_blank" rel="noopener" aria-label="${L("Открыть в Яндекс Go", "Yandex Go da ochish", "Open in Yandex Go")}">${ui("nav", 18)}</a>` : ""}</span></div>
+  return `<div class="trk-card"><div class="trk-who"><span class="trk-ava" aria-hidden="true">${esc(name.trim().charAt(0).toUpperCase())}</span><span><b>${esc(name)}</b><small>${drv ? `${L("Водитель магазина", "Do‘kon haydovchisi", "The store's driver")} · <span style="white-space:nowrap">${telTxt(drv.phone)}</span>` : byStore && !who ? L("Время доставки назовёт магазин", "Yetkazish vaqtini do‘kon aytadi", "The store names the delivery time") : !o.api ? L("Демо · телефон курьера придёт в SMS", "Demo · kuryer telefoni SMSda keladi", "Demo · the courier's phone comes by SMS") : L("Телефон курьера придёт в SMS", "Kuryer telefoni SMSda keladi", "The courier's phone comes by SMS")}</small></span>
+    <span class="trk-acts">${o.api ? `<button type="button" data-act="order-support" aria-label="${L("Написать в поддержку", "Yordamga yozish", "Write to support")}">${ui("chat", 18)}</button>` : ""}${drv ? `<a class="go" href="${telHref(drv.phone)}" aria-label="${L("Позвонить водителю", "Haydovchiga qo‘ng‘iroq qilish", "Call the driver")}">${ui("phone", 18)}</a>` : ""}${yaGo ? `<a class="go" href="${esc(yaGo)}" target="_blank" rel="noopener" aria-label="${L("Открыть в Яндекс Go", "Yandex Go da ochish", "Open in Yandex Go")}">${ui("nav", 18)}</a>` : ""}</span></div>
     ${who?.car || who?.plate ? `<div class="trk-veh"><span>${ui(S.t?.icon || "car", 18)} ${esc(who.car || "")}</span>${who.plate ? `<b>${esc(who.plate)}</b>` : ""}</div>` : ""}</div>`;
 }
 function trkRouteHTML(o, s, st) {
   const from = storePt(st) || DIST[st.d], home = o.d.la != null && o.d.lo != null ? { la: +o.d.la, lo: +o.d.lo } : null;
   const pickup = o.d?.mode === "pickup", km = !pickup && from && home ? kmBetween(from, home) : null;
-  return `<div class="trk-card"><div class="trk-route"><span class="ic">${ui("store", 18)}</span><span><small>${L("Откуда", "Qayerdan", "From")}</small>${esc(st.name)}${st.addr ? ` · ${esc(L(st.addr, st.addrUz || st.addr))}` : ""}</span>
+  return `<div class="trk-card"><div class="trk-route"><span class="ic">${ui("store", 18)}</span><span><small>${L("Откуда", "Qayerdan", "From")}</small>${esc(st.name)}${st.addr ? ` · ${esc(L(st.addr, st.addrUz || st.addr))}` : ""}${(ph => ph && !["delivered", "picked", "cancelled"].includes(s.status) ? ` <a class="trk-tel" href="${telHref(ph)}">${ui("phone", 14)} ${L("Позвонить в магазин", "Do‘konga qo‘ng‘iroq qilish", "Call the store")} · ${telTxt(ph)}</a>` : "")(s.store_phone || st.phone)}</span>
     ${pickup ? "" : `<span class="ln"></span><span></span><span class="ic home">${ui("pin", 18)}</span><span><small>${L("Куда", "Qayerga", "To")}</small>${esc(o.d.street || "")}${o.d.flat ? ", " + L("кв. ", "xonadon ", "flat ") + esc(o.d.flat) : ""}</span>`}</div>
     ${km != null ? `<span class="trk-km">${ui("truck", 14)} ≈ ${kmTxt(km)} ${L("по прямой", "to‘g‘ri chiziqda", "as the crow flies")}</span>` : ""}</div>`;
 }
@@ -5167,6 +5179,9 @@ let user = LS.get("imorat.user", null);
 let accounts = LS.get("imorat.accounts", {});
 let auth = {}, authTimer = null;
 const digitsOf = s => String(s || "").replace(/\D/g, "");
+const telDigits = v => { const d = String(v ?? "").replace(/\D/g, ""); return d.length === 9 ? "998" + d : d; };
+const telHref = v => "tel:+" + telDigits(v);
+const telTxt = v => { const d = telDigits(v); return /^998\d{9}$/.test(d) ? `+998 ${d.slice(3, 5)} ${d.slice(5, 8)} ${d.slice(8, 10)} ${d.slice(10)}` : "+" + d; };
 const fmtPhone = d => { d = d.slice(0, 9); return [d.slice(0, 2), d.slice(2, 5), d.slice(5, 7), d.slice(7, 9)].filter(Boolean).join(" "); };
 const fullPhone = d => "+998 " + fmtPhone(d);
 const initial = n => (String(n || "?").trim()[0] || "?").toUpperCase();
@@ -6477,7 +6492,7 @@ function requestServerQuote(d, qt) {
   sq.timer = setTimeout(async () => {
     const ac = sq.ac = new AbortController();
     const body = { lines: cartLines().map(l => ({ id: l.p.id, store: l.store, q: l.q })), services: Object.keys(services).map(Number), bundles: bundlesOn, form: d, promo, points: qt.pts || 0, lang };
-    try { const r = await api("POST", "/api/quote", body, { signal: ac.signal }); if (seq !== sq.seq) return; sq.quote = r.quote; sq.problems = r.problems || []; renderServerQuote(r.quote, sq.problems, d); }
+    try { const r = await api("POST", "/api/quote", body, { signal: ac.signal }); if (seq !== sq.seq) return; sq.quote = r.quote; sq.problems = r.problems || []; sq.buyer = r.buyer || null; renderServerQuote(r.quote, sq.problems, d); }
     catch (e) { if (e.name === "AbortError" || seq !== sq.seq) return; const b = $("#payBtn"); if (b) { b.disabled = true; b.textContent = e.code === "offline" ? L("Нет связи с сервером", "Server bilan aloqa yo‘q", "No connection to the server") : L("Не удалось посчитать стоимость", "Narxni hisoblab bo‘lmadi", "Could not calculate the cost"); } if (e.code !== "offline") toast(apiErr(e)); }
   }, 350);
 }
@@ -6498,12 +6513,23 @@ function renderServerQuote(q, problems, d) {
     (q.pts ? `<div class="sumrow disc"><span>${L("Бонусами", "Bonus bilan")}</span><span class="num">−${fmt(q.pts)}</span></div>` : "") +
     (q.cash ? `<div class="sumrow cash"><span>${L("Кешбэк баллами", "Keshbek ballari", "Cashback in points")}</span><span class="num">+${fmt(q.cash)}</span></div>` : "") +
     `<div class="sumrow total"><span>${totalLabel(byStore)}</span>${q.total == null ? dash : `<span class="num">${fmt(q.total)}</span>`}</div>`;
+  // orders this account did not take: the notice stands at the top of the form, where it is read before the button
+  const bl = (d.pay === "cash" || d.pay === "store") && sq.buyer?.no_shows && (sq.buyer.restricted || sq.buyer.limit) ? sq.buyer : null;
+  $("#nsNote")?.remove(); if (bl) ($("#orderForm") || $("#totals")).insertAdjacentHTML("afterbegin", buyerLimitHTML(bl));
   const pb = $("#payBtn"); if (!pb) return;
   const bad = problems.find(p => p.reason === "stock" || p.reason === "unavailable");
   if (bad) { pb.disabled = true; pb.textContent = L("Проверьте корзину", "Savatni tekshiring", "Check the cart"); toast(L("Не хватает товара: ", "Mahsulot yetmaydi: ") + (problems.map(p => `${PROD[p.id] ? pName(PROD[p.id]) : "#" + p.id}${p.reason === "stock" ? ` — ${L("в наличии", "mavjud", "in stock")} ${p.stock}` : ""}`).join("; "))); expectTotal = null; return; }
   if (q.unknown) { pb.disabled = true; pb.textContent = L("Стоимость доставки недоступна", "Yetkazish narxi mavjud emas", "Delivery price unavailable"); const n = $("#delNote"); if (n) n.innerHTML = `${ui("clock", 14)} ${L("Перевозчик не вернул цену доставки по этому адресу. Попробуйте через минуту, уточните адрес на карте или выберите самовывоз.", "Tashuvchi bu manzil uchun yetkazish narxini qaytarmadi. Bir daqiqadan keyin urinib ko‘ring, manzilni xaritada aniqlang yoki olib ketishni tanlang.", "The carrier returned no delivery price for this address. Try again in a minute, refine the address on the map or choose pickup.")}`; expectTotal = null; return; }
+  // a warning first, then new pay-on-receipt orders are paused
+  if (bl?.restricted) { pb.disabled = true; pb.textContent = L("Оформление приостановлено", "Rasmiylashtirish to‘xtatilgan", "Ordering is paused"); expectTotal = null; return; }
   expectTotal = q.total;
   pb.disabled = false; pb.innerHTML = d.pay === "cash" || d.pay === "store" ? L("Подтвердить заказ", "Buyurtmani tasdiqlash") : `${L("Оплатить картой", "Karta bilan to‘lash", "Pay by card")} <span style="white-space:nowrap" data-cu="pay" data-cu-sum>${fmt(q.total)}</span>`; // the sum never splits across two lines
+}
+function buyerLimitHTML(b) {
+  return `<div class="note warnn" id="nsNote" style="margin:0 0 14px">${ui("alert", 14)} ${b.restricted
+    ? L(`Магазины не смогли передать вам заказы (${b.no_shows} за ${b.days} дн.): не дозвонились или никого не было на месте. Новые заказы с оплатой при получении приостановлены.`, `Do‘konlar sizga buyurtmalarni topshira olmadi (${b.days} kunda ${b.no_shows} ta): qo‘ng‘iroqqa javob bo‘lmadi yoki joyda hech kim yo‘q edi. Olganda to‘lanadigan yangi buyurtmalar to‘xtatilgan.`, `Stores could not hand your orders over (${b.no_shows} in ${b.days} days): no answer or nobody at the address. New pay-on-receipt orders are paused.`)
+    : b.limit ? L(`Магазин не смог передать вам заказ: ${b.no_shows} из ${b.limit}. После ${b.limit} таких случаев за ${b.days} дн. оформление приостанавливается — будьте на связи.`, `Do‘kon sizga buyurtmani topshira olmadi: ${b.limit} tadan ${b.no_shows} ta. ${b.days} kunda ${b.limit} ta shunday holatdan keyin rasmiylashtirish to‘xtatiladi — aloqada bo‘ling.`, `A store could not hand your order over: ${b.no_shows} of ${b.limit}. After ${b.limit} such cases in ${b.days} days ordering is paused — please stay reachable.`) : ""}
+    <button class="lnk" type="button" data-act="support">${L("Написать в поддержку", "Yordamga yozish", "Write to support")}</button></div>`;
 }
 function showServerTotals(q) {
   $("#totals").innerHTML = totalsHTML(q.goods, q.svc, q.disc, delRowHTML(q.del, q.delivery_by === "store")) +
@@ -6535,6 +6561,7 @@ async function submitOrderApi(d, qt) {
       const names = (e.data.problems || []).map(p => `${PROD[p.id] ? pName(PROD[p.id]) : "#" + p.id} — ${p.reason === "stock" ? L(`в наличии ${p.stock}`, `mavjud ${p.stock}`, `in stock: ${p.stock}`) : L("нет в продаже", "sotuvda yo‘q")}`).join("; ");
       toast(L("Не хватает товара: ", "Mahsulot yetmaydi: ") + names); syncCatalog();
     } else if (e.code === "auth_required") openAuth("checkout");
+    else if (e.code === "buyer_restricted") { sq.buyer = e.data?.buyer || sq.buyer; if (sq.quote) renderServerQuote(sq.quote, sq.problems, d); toast(apiErr(e)); }
     else toast(apiErr(e));
   }
 }
@@ -6746,7 +6773,7 @@ function adminHTML(topShown) {
   if (adminState.need) return adminGateHTML();
   if (!adminStores) { loadAdmin(); return ""; }
   if (user.owner && !adminFin && !adminState.finLoading) { adminState.finLoading = true; loadAdminFin().finally(() => { adminState.finLoading = false; }); }
-  return `${topShown ? "" : adminSupportHTML() + adminModHTML()}${adminStoresHTML()}${adminProblemsHTML()}${adminMastersHTML()}${user.owner ? adminFinanceHTML() : ""}`;
+  return `${topShown ? "" : adminSupportHTML() + adminModHTML()}${adminStoresHTML()}${adminProblemsHTML()}${adminNoShowHTML()}${adminMastersHTML()}${user.owner ? adminFinanceHTML() : ""}`;
 }
 function adminStoresHTML() {
   if (!adminStores) { loadAdmin(); return ""; }
@@ -6821,10 +6848,10 @@ function renderSellerApi() {
     </div>
     <div class="panel" style="margin-top:12px"><div class="panel-h"><h2 class="h-m">${L("Заказы", "Buyurtmalar")}</h2><span class="mu" style="font-size:13px">${ords.length ? L(`${ords.length} за 30 дней`, `30 kunda ${ords.length} ta`, `${ords.length} in 30 days`) : ""}</span></div>
       ${ords.length ? `<div class="tbl-wrap"><table class="tbl-stack"><thead><tr><th>${L("Заказ", "Buyurtma")}</th><th>${L("Состав", "Tarkibi")}</th><th class="r">${L("Сумма", "Summa")}</th><th>${L("Статус", "Holat")}</th><th></th></tr></thead><tbody>
-      ${ords.map(o => { const [lb, c] = lab[o.status] || [o.status, "mute"]; return `<tr><td><b class="mono">${esc(o.num)}</b><br><small style="color:var(--muted)">${esc(o.buyer || "")} · ${esc(o.phone || "")}<br>${o.tariff ? `${L(DIST[o.district]?.ru || "", DIST[o.district]?.uz || "")}, ${esc(o.street)}${o.private ? ", " + L("частный дом", "xususiy uy", "private house") : `${o.entrance ? ", " + L("подъезд", "kirish", "entrance") + " " + esc(o.entrance) : ""}${+o.floor > 1 ? ", " + L("этаж", "qavat", "floor") + " " + esc(o.floor) : ""}`}${o.help === "one" || o.help === "two" ? ` · <b>${o.delivery_by === "store" ? L("покупатель просит помочь занести — условия назовите сами", "xaridor olib kirishga yordam so‘raydi — shartlarni o‘zingiz ayting", "the buyer asks for help carrying in — name your terms") : L("курьер поможет спустить и занести", "kuryer tushirib, olib kirishga yordam beradi", "courier helps unload and carry in")}</b>` : o.help === "none" ? ` · ${L("покупатель заберёт у машины", "xaridor mashina oldidan oladi", "buyer takes it at the car")}` : ""}${o.access === "far" ? ` · <b style="color:var(--signal)">${L("машина не подъедет к подъезду", "mashina kirishgacha kelolmaydi", "no vehicle access to the entrance")}</b>` : ""}${+o.floor > 1 && !o.private && o.elevator != null ? ` · ${o.elevator ? L("есть лифт", "lift bor", "lift available") : L("без лифта", "liftsiz", "no lift")}` : ""}${o.loaders_failed ? ` · <b style="color:var(--signal)">${L("перевозчик не дал грузчика", "tashuvchi yuk tashuvchi bermadi", "carrier gave no loader")}</b>` : ""}` : L("Самовывоз", "Olib ketish")}${o.when === "vip" ? ` · ${L("завтра", "ertaga")} ${o.hour}:00` : o.when === "slot" ? ` · ${L("завтра 10–14", "ertaga 10–14")}` : ""}</small>${o.comment ? `<br><small>«${esc(o.comment)}»</small>` : ""}</td>
+      ${ords.map(o => { const [lb, c] = lab[o.status] || [o.status, "mute"]; return `<tr><td><b class="mono">${esc(o.num)}</b><br><small style="color:var(--muted)">${esc(o.buyer || "")}${o.phone ? ` · <a class="s-tel" href="${telHref(o.phone)}">${ui("phone", 12)} ${esc(telTxt(o.phone))}</a>` : ""}${o.buyer_no_shows ? `<br><b class="ns-warn">${ui("alert", 13)} ${L(`Непринятых заказов у покупателя: ${o.buyer_no_shows} — позвоните перед выездом`, `Xaridor olmagan buyurtmalar: ${o.buyer_no_shows} — yo‘lga chiqishdan oldin qo‘ng‘iroq qiling`, `Orders this buyer did not take: ${o.buyer_no_shows} — call before you leave`)}</b>` : ""}<br>${o.tariff ? `${L(DIST[o.district]?.ru || "", DIST[o.district]?.uz || "")}, ${esc(o.street)}${o.private ? ", " + L("частный дом", "xususiy uy", "private house") : `${o.entrance ? ", " + L("подъезд", "kirish", "entrance") + " " + esc(o.entrance) : ""}${+o.floor > 1 ? ", " + L("этаж", "qavat", "floor") + " " + esc(o.floor) : ""}${o.flat ? ", " + L("кв.", "xonadon", "flat") + " " + esc(o.flat) : ""}`}${o.help === "one" || o.help === "two" ? ` · <b>${o.delivery_by === "store" ? L("покупатель просит помочь занести — условия назовите сами", "xaridor olib kirishga yordam so‘raydi — shartlarni o‘zingiz ayting", "the buyer asks for help carrying in — name your terms") : L("курьер поможет спустить и занести", "kuryer tushirib, olib kirishga yordam beradi", "courier helps unload and carry in")}</b>` : o.help === "none" ? ` · ${L("покупатель заберёт у машины", "xaridor mashina oldidan oladi", "buyer takes it at the car")}` : ""}${o.access === "far" ? ` · <b style="color:var(--signal)">${L("машина не подъедет к подъезду", "mashina kirishgacha kelolmaydi", "no vehicle access to the entrance")}</b>` : ""}${+o.floor > 1 && !o.private && o.elevator != null ? ` · ${o.elevator ? L("есть лифт", "lift bor", "lift available") : L("без лифта", "liftsiz", "no lift")}` : ""}${o.loaders_failed ? ` · <b style="color:var(--signal)">${L("перевозчик не дал грузчика", "tashuvchi yuk tashuvchi bermadi", "carrier gave no loader")}</b>` : ""}` : L("Самовывоз", "Olib ketish")}${o.when === "vip" ? ` · ${L("завтра", "ertaga")} ${o.hour}:00` : o.when === "slot" ? ` · ${L("завтра 10–14", "ertaga 10–14")}` : ""}</small>${o.comment ? `<br><small>«${esc(o.comment)}»</small>` : ""}</td>
         <td style="min-width:180px;font-size:13px">${o.lines.map(l => `${esc(PROD[l.id] ? pName(PROD[l.id]) : l.name)} × ${l.q}`).join("<br>")}<br><small style="color:var(--muted)">${o.tariff ? `${o.delivery_by === "store" ? L("Ваш курьер", "Sizning kuryeringiz", "Your courier") + " · " + L("нужен", "kerak", "needs") + " " + tName(TARIFFS.find(t => t.id === o.tariff) || TARIFFS[0]).toLowerCase() : tName(TARIFFS.find(t => t.id === o.tariff) || TARIFFS[0])} · ${fmtKg(o.kg)}${o.delivery_by === "store" ? ` · <b>${L("цену доставки назовите покупателю", "yetkazish narxini xaridorga ayting", "tell the buyer the delivery price")}</b>` : ""}` : ""}</small></td>
         <td class="r">${fmt(o.lines.reduce((a, l) => a + l.price * l.q, 0))}<br><small style="color:var(--muted)">${["cash", "store"].includes(o.pay) ? L("оплата при получении", "olganda to‘lov", "paid on receipt") : o.pay_status === "paid" ? L("оплачен картой — выдавайте без оплаты", "karta bilan to‘langan — to‘lovsiz bering", "paid by card — hand over without payment") : L("ждёт оплаты", "to‘lov kutilmoqda")}</small></td>
-        <td><span class="pill ${c}">${lb}</span>${o.status === "new" && o.accept_by ? `<br><small data-until="${o.accept_by}"></small>` : ""}${o.status === "cancelled" && o.cancel_reason ? `<br><small style="color:var(--muted)">${CANCEL_TXT()[o.cancel_reason] || ""}</small>` : ""}${o.status === "cancelled" && o.cancel_note ? `<br><small>«${esc(o.cancel_note)}»</small>` : ""}</td><td style="white-space:nowrap">${o.next.map(n => `<button class="btn ${n === "cancelled" ? "btn-line" : "btn-primary"}" type="button" data-shipst="${o.ship_id}|${n}" style="margin:2px 0">${(o.delivery_by === "store" ? SH_NEXT(true) : nx)[n]}</button>`).join(" ")}${o.delivery_by === "store" && ["new", "assembling", "on_way"].includes(o.status) ? `<form class="delp" data-shipprice="${o.ship_id}" style="display:flex;gap:4px;margin-top:6px;align-items:center"><label class="visually-hidden" for="dp${o.ship_id}">${L("Стоимость доставки", "Yetkazish narxi", "Delivery price")}</label><input id="dp${o.ship_id}" type="number" inputmode="numeric" min="0" max="5000000" step="1000" placeholder="${L("доставка, сум", "yetkazish, so‘m", "delivery, so'm")}" value="${o.delivery_price ?? ""}" style="width:118px;padding:6px 8px;border:1px solid var(--line-strong);border-radius:8px;background:var(--surface);color:inherit;font-size:13px"><button class="btn btn-line" type="submit" style="padding:6px 9px;font-size:12.5px">${o.delivery_price != null ? L("Изменить", "O‘zgartirish", "Change") : L("Сообщить", "Xabar berish", "Tell the buyer")}</button></form>${o.delivery_price != null ? `<small class="mu" style="display:block;margin-top:2px">${L("покупателю сообщили", "xaridorga xabar berildi", "the buyer was told")}: ${o.delivery_price ? fmt(o.delivery_price) : L("бесплатно", "bepul", "free")}</small>` : `<small class="mu" style="display:block;margin-top:2px">${L("покупатель ждёт цену доставки", "xaridor yetkazish narxini kutmoqda", "the buyer waits for the delivery price")}</small>`}` : ""}</td></tr>`; }).join("")}
+        <td><span class="pill ${c}">${lb}</span>${o.status === "new" && o.accept_by ? `<br><small data-until="${o.accept_by}"></small>` : ""}${o.status === "cancelled" && o.cancel_reason ? `<br><small style="color:var(--muted)">${o.cancel_reason === "no_show" ? L("покупатель не вышел на связь — товар снова в продаже", "xaridor javob bermadi — mahsulot yana sotuvda", "the buyer did not answer — the goods are back on sale") : CANCEL_TXT()[o.cancel_reason] || ""}</small>` : ""}${o.status === "cancelled" && o.cancel_note ? `<br><small>«${esc(o.cancel_note)}»</small>` : ""}</td><td style="white-space:nowrap">${o.next.map(n => `<button class="btn ${n === "cancelled" ? "btn-line" : "btn-primary"}" type="button" data-shipst="${o.ship_id}|${n}" style="margin:2px 0">${(o.delivery_by === "store" ? SH_NEXT(true) : nx)[n]}</button>`).join(" ")}${o.can_no_show ? ` <button class="btn btn-line" type="button" data-shipst="${o.ship_id}|no_show" style="margin:2px 0">${L("Покупатель не вышел на связь", "Xaridor javob bermadi", "Buyer did not answer")}</button>` : ""}${o.delivery_by === "store" && ["new", "assembling", "on_way"].includes(o.status) ? `<form class="delp" data-shipprice="${o.ship_id}" style="display:flex;gap:4px;margin-top:6px;align-items:center"><label class="visually-hidden" for="dp${o.ship_id}">${L("Стоимость доставки", "Yetkazish narxi", "Delivery price")}</label><input id="dp${o.ship_id}" type="number" inputmode="numeric" min="0" max="5000000" step="1000" placeholder="${L("доставка, сум", "yetkazish, so‘m", "delivery, so'm")}" value="${o.delivery_price ?? ""}" style="width:118px;padding:6px 8px;border:1px solid var(--line-strong);border-radius:8px;background:var(--surface);color:inherit;font-size:13px"><button class="btn btn-line" type="submit" style="padding:6px 9px;font-size:12.5px">${o.delivery_price != null ? L("Изменить", "O‘zgartirish", "Change") : L("Сообщить", "Xabar berish", "Tell the buyer")}</button></form>${o.delivery_price != null ? `<small class="mu" style="display:block;margin-top:2px">${L("покупателю сообщили", "xaridorga xabar berildi", "the buyer was told")}: ${o.delivery_price ? fmt(o.delivery_price) : L("бесплатно", "bepul", "free")}</small>` : `<small class="mu" style="display:block;margin-top:2px">${L("покупатель ждёт цену доставки", "xaridor yetkazish narxini kutmoqda", "the buyer waits for the delivery price")}</small>`}${sellerDriverHTML(o)}` : ""}</td></tr>`; }).join("")}
       </tbody></table></div>` : `<p style="color:var(--muted);margin:0">${products.length ? L("Заказов пока нет. Когда покупатель оформит заказ с вашими товарами, он появится здесь.", "Hozircha buyurtmalar yo‘q. Xaridor mahsulotlaringiz bilan buyurtma bersa, shu yerda chiqadi.") : L("Заказы появятся, когда на витрине будут товары с ценами.", "Vitrinada narxli mahsulotlar bo‘lgach buyurtmalar paydo bo‘ladi.", "Orders appear once the shelf has goods with prices.")}</p>${products.length ? "" : `<button class="btn btn-primary" type="button" data-seltab="goods" data-scrollto="impPanel" style="margin-top:10px">${ui("file", 16)} ${L("Загрузить прайс", "Narxlarni yuklash", "Upload prices")}</button>`}`}</div>`;
   const storeTab = `${sellerStepsHTML(s, sellerData)}
     <div style="margin-top:12px">${storeCardHTML(s)}</div>
@@ -6923,9 +6950,13 @@ document.addEventListener("click", async e => {
       if (!document.getElementById("oos" + id)) t.insertAdjacentHTML("afterend", `<form class="oos-f" id="oos${id}" data-nosubmit><label class="visually-hidden" for="oosN${id}">${L("Чего нет", "Nima yo‘q", "What is missing")}</label><input id="oosN${id}" maxlength="300" placeholder="${L("Чего нет и чем можно заменить (необязательно)", "Nima yo‘q va nima bilan almashtirish mumkin (ixtiyoriy)", "What is missing, what can replace it (optional)")}"><button class="btn btn-danger" type="button" data-shipst="${id}|cancelled" data-sure="1">${L("Отменить заказ", "Buyurtmani bekor qilish", "Cancel the order")}</button></form>`);
       document.getElementById("oosN" + id)?.focus(); return;
     }
-    const note = st === "cancelled" ? (document.getElementById("oosN" + id)?.value || "").trim() : undefined;
+    if (st === "no_show" && !t.dataset.sure) { // the buyer did not answer: say what was tried (optional), a second press confirms
+      if (!document.getElementById("nsf" + id)) t.insertAdjacentHTML("afterend", `<form class="ns-f" id="nsf${id}" data-nosubmit><label class="visually-hidden" for="nsN${id}">${L("Что было", "Nima bo‘ldi", "What happened")}</label><input id="nsN${id}" maxlength="300" placeholder="${L("Например: звонили три раза, дома никого (необязательно)", "Masalan: uch marta qo‘ng‘iroq qildik, uyda hech kim yo‘q (ixtiyoriy)", "E.g. called three times, nobody home (optional)")}"><button class="btn btn-danger" type="button" data-shipst="${id}|no_show" data-sure="1">${L("Отметить и вернуть товар в продажу", "Belgilash va mahsulotni sotuvga qaytarish", "Mark and put the goods back on sale")}</button></form>`);
+      document.getElementById("nsN" + id)?.focus(); return;
+    }
+    const note = st === "cancelled" ? (document.getElementById("oosN" + id)?.value || "").trim() : st === "no_show" ? (document.getElementById("nsN" + id)?.value || "").trim() : undefined;
     t.disabled = true;
-    try { await api("PATCH", "/api/seller/shipments/" + id, note ? { status: st, note } : { status: st }); toast(st === "on_way" ? L("Покупателю сообщили, что курьер выехал", "Xaridorga kuryer yo‘lga chiqqani aytildi", "The buyer was told the courier has left") : st === "searching" ? L("Курьер вызван — заказ передан в Яндекс Доставку", "Kuryer chaqirildi — buyurtma Yandexga berildi") : L("Статус обновлён", "Holat yangilandi")); sellerData = null; renderSeller(); }
+    try { await api("PATCH", "/api/seller/shipments/" + id, note ? { status: st, note } : { status: st }); toast(st === "no_show" ? L("Отмечено: покупатель не вышел на связь. Товар снова в продаже", "Belgilandi: xaridor javob bermadi. Mahsulot yana sotuvda", "Marked: the buyer did not answer. The goods are back on sale") : st === "on_way" ? L("Покупателю сообщили, что курьер выехал", "Xaridorga kuryer yo‘lga chiqqani aytildi", "The buyer was told the courier has left") : st === "searching" ? L("Курьер вызван — заказ передан в Яндекс Доставку", "Kuryer chaqirildi — buyurtma Yandexga berildi") : L("Статус обновлён", "Holat yangilandi")); sellerData = null; renderSeller(); }
     catch (er) { t.disabled = false; toast(apiErr(er)); }
   } else if (ds.sphoto) { photoTarget = "api:" + ds.sphoto; $("#photoIn").click(); }
   else if (ds.admway !== undefined) { const [k, id] = ds.admway.split("|"); admWay = { meet: k === "meet" ? id : null, sign: k === "sign" ? id : null }; renderMain(); setTimeout(() => document.getElementById((k === "meet" ? "awAt" : "awNo") + id)?.focus(), 30); }
@@ -6952,7 +6983,7 @@ document.addEventListener("click", async e => {
 
 /* ================= Ratings, timers, reviews, notifications, finance (v2) ================= */
 const hhmm = ms => new Date(ms).toLocaleTimeString(LOCALE, { hour: "2-digit", minute: "2-digit" });
-const CANCEL_TXT = () => ({ unpaid: L("оплата картой не поступила вовремя — товар снова в продаже, можно оформить заново", "karta to‘lovi o‘z vaqtida kelmadi — mahsulot yana sotuvda, qayta rasmiylashtirish mumkin", "the card payment did not arrive in time — the goods are back on sale, you can order again"), refund: L("платёж отменён, деньги вернутся на карту", "to‘lov bekor qilindi, pul kartaga qaytadi", "the payment was cancelled, the money returns to your card"), not_accepted: L("магазин не подтвердил заказ вовремя", "do‘kon buyurtmani o‘z vaqtida tasdiqlamadi"), out_of_stock: L("товара не оказалось в наличии", "mahsulot mavjud emas ekan"), not_shipped: L("магазин не передал заказ вовремя", "do‘kon buyurtmani o‘z vaqtida topshirmadi"), buyer: L("вы отменили заказ", "buyurtmani bekor qildingiz"), admin: L("отменено поддержкой Quriliş Go", "Quriliş Go yordam xizmati bekor qildi") });
+const CANCEL_TXT = () => ({ unpaid: L("оплата картой не поступила вовремя — товар снова в продаже, можно оформить заново", "karta to‘lovi o‘z vaqtida kelmadi — mahsulot yana sotuvda, qayta rasmiylashtirish mumkin", "the card payment did not arrive in time — the goods are back on sale, you can order again"), refund: L("платёж отменён, деньги вернутся на карту", "to‘lov bekor qilindi, pul kartaga qaytadi", "the payment was cancelled, the money returns to your card"), not_accepted: L("магазин не подтвердил заказ вовремя", "do‘kon buyurtmani o‘z vaqtida tasdiqlamadi"), out_of_stock: L("товара не оказалось в наличии", "mahsulot mavjud emas ekan"), not_shipped: L("магазин не передал заказ вовремя", "do‘kon buyurtmani o‘z vaqtida topshirmadi"), no_show: L("магазин не смог с вами связаться или передать заказ", "do‘kon siz bilan bog‘lana olmadi yoki buyurtmani topshira olmadi", "the store could not reach you or hand the order over"), buyer: L("вы отменили заказ", "buyurtmani bekor qildingiz"), admin: L("отменено поддержкой Quriliş Go", "Quriliş Go yordam xizmati bekor qildi") });
 /* Store hours are Tashkent time (UTC+5) */
 function openState(s) {
   const m = String(s.hours || "").match(/(\d{1,2}):(\d{2})\D+(\d{1,2}):(\d{2})/);
@@ -7066,7 +7097,7 @@ function shipExtra(o, s) {
   return shipExtra2(o, s);
 }
 function shipExtra2(o, s) {
-  if (s.status === "cancelled") return `<div class="note warnn">${ui("close", 14)} ${L("Отменено", "Bekor qilindi")}: ${CANCEL_TXT()[s.cancel_reason] || ""}${s.cancel_reason && s.cancel_reason !== "buyer" ? ". " + L("Платить ничего не нужно — закажите у другого магазина.", "Hech narsa to‘lash shart emas — boshqa do‘kondan buyurtma bering.") : ""}${s.cancel_note ? `<br><small>${s.cancel_reason === "buyer" ? L("Ваш комментарий", "Izohingiz", "Your note") : L("Магазин пишет", "Do‘kon yozadi", "The store says")}: «${esc(s.cancel_note)}»</small>` : ""}</div>`;
+  if (s.status === "cancelled") return `<div class="note warnn">${ui("close", 14)} ${L("Отменено", "Bekor qilindi")}: ${CANCEL_TXT()[s.cancel_reason] || ""}${s.cancel_reason === "no_show" ? ". " + L("Если это ошибка, напишите в поддержку.", "Agar bu xato bo‘lsa, yordam xizmatiga yozing.", "If this is a mistake, write to support.") + (o.api ? ` <button class="lnk" type="button" data-act="order-support">${L("Написать", "Yozish", "Write")}</button>` : "") : s.cancel_reason && s.cancel_reason !== "buyer" ? ". " + L("Платить ничего не нужно — закажите у другого магазина.", "Hech narsa to‘lash shart emas — boshqa do‘kondan buyurtma bering.") : ""}${s.cancel_note ? `<br><small>${s.cancel_reason === "buyer" ? L("Ваш комментарий", "Izohingiz", "Your note") : L("Магазин пишет", "Do‘kon yozadi", "The store says")}: «${esc(s.cancel_note)}»</small>` : ""}</div>`;
   if (s.status === "new" && s.accept_by && o.pay_status === "paid") return `<div class="note">${ui("clock", 14)} ${L(`Магазин подтвердит заказ до ${hhmm(s.accept_by)}. Не успеет — заказ отменится, а деньги вернутся на карту.`, `Do‘kon buyurtmani ${hhmm(s.accept_by)} gacha tasdiqlaydi. Ulgurmasa — buyurtma bekor bo‘ladi, pul kartaga qaytadi.`, `The store confirms the order by ${hhmm(s.accept_by)}. If it does not, the order is cancelled and the money returns to your card.`)}</div>`;
   if (s.status === "new" && s.accept_by) return `<div class="note">${ui("clock", 14)} ${L(`Магазин подтвердит заказ до ${hhmm(s.accept_by)}. Не успеет — заказ отменится автоматически, платить ничего не нужно.`, `Do‘kon buyurtmani ${hhmm(s.accept_by)} gacha tasdiqlaydi. Ulgurmasa — buyurtma avtomatik bekor qilinadi, to‘lash shart emas.`, `The store will confirm the order by ${hhmm(s.accept_by)}. If it doesn't, the order is cancelled automatically and you pay nothing.`)}</div>`;
   return "";
@@ -9666,6 +9697,27 @@ function sellerProblemsHTML(sid) {
     <p class="mu" style="margin:0;font-size:13px">${L("Ответьте покупателю и решите вопрос сами — модератор видит жалобы и учитывает их в рейтинге магазина.", "Xaridorga javob bering va masalani o‘zingiz hal qiling — moderator shikoyatlarni ko‘radi va do‘kon reytingida hisobga oladi.")}</p>
     ${list.slice(0, 20).map(p => problemCard(p, true)).join("")}</div>`;
 }
+/* Owner and helpers: buyers who did not answer or did not take an order (marked by stores), with "lift the limit" */
+let anos = { data: null, at: 0 };
+function adminNoShowHTML() {
+  if (anos.data === null || Date.now() - anos.at > 30000) {
+    const first = anos.data === null; if (first) anos.data = false; anos.at = Date.now();
+    adminApi("GET", "/api/admin/noshow").then(r => { const was = JSON.stringify(anos.data); anos.data = r; if ((route.view === "seller" || route.view === "admin") && JSON.stringify(r) !== was) renderMain(); }).catch(() => { if (first) anos.data = { buyers: [] }; });
+    if (first) return "";
+  }
+  const d = anos.data; if (!d?.buyers?.length) return "";
+  const held = d.buyers.filter(b => b.restricted).length, day = t => new Date(t).toLocaleDateString(lang === "en" ? "en-GB" : "ru-RU", { day: "numeric", month: "short" });
+  return `<div class="panel" id="nsPanel" style="margin-top:12px"><div class="panel-h"><h2 class="h-m">${ui("phone", 18)} ${L("Не вышли на связь", "Javob bermaganlar", "Did not answer")}</h2><span class="pill ${held ? "warn" : "ok"}">${held} ${L("ограничено", "cheklangan", "paused")}</span></div>
+    <p class="mu" style="margin:0 0 4px;font-size:13px">${d.limit ? L(`Магазин отмечает заказ, если не дозвонился до покупателя или не смог передать товар. После ${d.limit} таких заказов за ${d.days} дн. покупатель не может оформить заказ с оплатой при получении, пока вы не снимете ограничение.`, `Do‘kon xaridorga qo‘ng‘iroq qila olmasa yoki mahsulotni topshira olmasa, buyurtmani belgilaydi. ${d.days} kunda ${d.limit} ta shunday buyurtmadan keyin xaridor, siz cheklovni olib tashlamaguningizcha, olganda to‘lanadigan buyurtma bera olmaydi.`, `A store marks an order when it could not reach the buyer or hand the goods over. After ${d.limit} such orders in ${d.days} days the buyer cannot place pay-on-receipt orders until you lift the limit.`) : L("Ограничение выключено настройкой сервера; отметки магазинов всё равно видны здесь.", "Cheklov server sozlamasida o‘chirilgan; do‘kon belgilari baribir shu yerda ko‘rinadi.", "The limit is switched off in the server settings; the stores' marks still show here.")}</p>
+    ${d.buyers.map(b => `<div class="nsb"><div class="nsb-h"><b>${esc(b.name || L("Покупатель", "Xaridor", "Buyer"))}</b>${b.phone ? `<a class="s-tel" href="${telHref(b.phone)}">${ui("phone", 12)} ${esc(telTxt(b.phone))}</a>` : ""}<span class="pill ${b.restricted ? "warn" : "mute"}">${b.no_shows}${d.limit ? " / " + d.limit : ""}${b.restricted ? " · " + L("ограничен", "cheklangan", "paused") : ""}</span><button class="btn btn-line" type="button" data-nsreset="${esc(b.id)}">${b.restricted ? L("Снять ограничение", "Cheklovni olib tashlash", "Lift the limit") : L("Обнулить счётчик", "Hisobni nolga tushirish", "Reset the count")}</button></div>
+      <small>${b.orders.map(x => `${esc(x.num)} · ${esc(x.store || "")} · ${day(x.at)}${x.note ? ` · «${esc(x.note)}»` : ""}`).join("<br>")}</small></div>`).join("")}</div>`;
+}
+document.addEventListener("click", async e => {
+  const t = e.target.closest("[data-nsreset]"); if (!t) return;
+  t.disabled = true;
+  try { await adminApi("POST", `/api/admin/noshow/${encodeURIComponent(t.dataset.nsreset)}/reset`); toast(L("Готово: покупатель снова может оформлять заказы", "Tayyor: xaridor yana buyurtma bera oladi", "Done: the buyer can order again")); anos = { data: null, at: 0 }; renderMain(); }
+  catch (er) { t.disabled = false; toast(apiErr(er)); }
+});
 /* Moderator: all complaints */
 function adminProblemsHTML() {
   const staleA = Array.isArray(adminProblems) && Date.now() - (adminProblemsAt || 0) > 20000;
@@ -10053,6 +10105,43 @@ function staffPanelHTML() {
       <button class="btn btn-primary" type="submit">${ui("plus", 16)} ${L("Добавить", "Qo‘shish", "Add")}</button>
     </form></div>`;
 }
+/* The store's own driver for a store-delivered order: the buyer sees the name and the number; the last driver is remembered on this
+   device so the next order needs one press. "Send to the driver" hands over the address and the buyer's number as plain text. */
+function sellerDriverHTML(o) {
+  const d = o.driver || LS.get("imorat.drv", null) || {}, saved = !!o.driver;
+  return `<form class="drv-f" data-shipdriver="${o.ship_id}"><label class="visually-hidden" for="dn${o.ship_id}">${L("Имя водителя", "Haydovchi ismi", "Driver's name")}</label><input id="dn${o.ship_id}" maxlength="60" placeholder="${L("водитель", "haydovchi", "driver")}" value="${esc(d.name || "")}" autocomplete="off"><label class="visually-hidden" for="dt${o.ship_id}">${L("Телефон водителя", "Haydovchi telefoni", "Driver's phone")}</label><input id="dt${o.ship_id}" type="tel" inputmode="tel" maxlength="19" placeholder="+998 __ ___ __ __" value="${d.phone ? esc(telTxt(d.phone)) : ""}" autocomplete="off"><button class="btn btn-line" type="submit">${saved ? L("Изменить", "O‘zgartirish", "Change") : L("Сообщить", "Xabar berish", "Tell the buyer")}</button></form>
+    <small class="mu" style="display:block;margin-top:2px">${saved ? L("покупатель видит имя и номер водителя", "xaridor haydovchi ismi va raqamini ko‘radi", "the buyer sees the driver's name and number") : L("укажите водителя — покупатель увидит его номер", "haydovchini kiriting — xaridor uning raqamini ko‘radi", "name the driver — the buyer will see the number")}</small>
+    <button class="btn btn-line drv-share" type="button" data-shipshare="${o.ship_id}">${ui("send", 14)} ${L("Отправить водителю", "Haydovchiga yuborish", "Send to the driver")}</button>`;
+}
+function driverShareText(o) {
+  const st = sellerData?.store || {}, goods = o.lines.reduce((a, l) => a + l.price * l.q, 0), onReceipt = ["cash", "store"].includes(o.pay), plain = v => String(v).replace(/\u00a0/g, " ");
+  const addr = `${L(DIST[o.district]?.ru || "", DIST[o.district]?.uz || "")}, ${o.street}${o.private ? ", " + L("частный дом", "xususiy uy", "private house") : `${o.entrance ? ", " + L("подъезд", "kirish", "entrance") + " " + o.entrance : ""}${+o.floor > 1 ? ", " + L("этаж", "qavat", "floor") + " " + o.floor : ""}${o.flat ? ", " + L("кв.", "xonadon", "flat") + " " + o.flat : ""}${o.intercom ? ", " + L("домофон", "domofon", "intercom") + " " + o.intercom : ""}`}`;
+  return [
+    `${L("Заказ", "Buyurtma", "Order")} ${o.num}${st.name ? " · " + st.name : ""}`,
+    `${L("Покупатель", "Xaridor", "Buyer")}: ${o.buyer || ""}${o.phone ? ", " + telTxt(o.phone) : ""}`,
+    `${L("Адрес", "Manzil", "Address")}: ${addr}`,
+    o.comment ? `${L("Комментарий", "Izoh", "Note")}: ${o.comment}` : "",
+    o.lines.map(l => `• ${PROD[l.id] ? pName(PROD[l.id]) : l.name} × ${l.q}`).join("\n"),
+    onReceipt ? `${L("Получить с покупателя", "Xaridordan olinadi", "Collect from the buyer")}: ${plain(fmt(goods))}${o.delivery_price != null ? (o.delivery_price ? ` + ${L("доставка", "yetkazish", "delivery")} ${plain(fmt(o.delivery_price))} = ${plain(fmt(goods + o.delivery_price))}` : ` (${L("доставка бесплатно", "yetkazish bepul", "free delivery")})`) : ` + ${L("доставка", "yetkazish", "delivery")}`}` : L("Оплачен картой — деньги не брать", "Karta bilan to‘langan — pul olinmaydi", "Paid by card — take no money"),
+    st.phone ? `${L("Магазин", "Do‘kon", "Store")}: ${telTxt(st.phone)}` : ""
+  ].filter(Boolean).join("\n");
+}
+document.addEventListener("submit", async e => {
+  const f = e.target.closest("[data-shipdriver]"); if (!f) return; e.preventDefault();
+  const [nameI, telI] = f.querySelectorAll("input"), btn = f.querySelector("button"), name = nameI.value.trim(), raw = telI.value.trim(), ph = raw ? telDigits(raw) : "";
+  if (raw && !/^998\d{9}$/.test(ph)) { telI.focus(); return toast(L("Проверьте номер водителя: +998 и девять цифр", "Haydovchi raqamini tekshiring: +998 va to‘qqiz raqam", "Check the driver's number: +998 and nine digits")); }
+  btn.disabled = true;
+  try { await api("PATCH", `/api/seller/shipments/${f.dataset.shipdriver}`, { driver: { name, phone: ph } }); if (ph) LS.set("imorat.drv", { name, phone: ph }); toast(ph ? L("Покупатель видит водителя и его номер", "Xaridor haydovchi va uning raqamini ko‘radi", "The buyer sees the driver and the number") : L("Водитель убран", "Haydovchi olib tashlandi", "Driver removed")); sellerData = null; renderSeller(); }
+  catch (er) { btn.disabled = false; toast(apiErr(er)); }
+});
+document.addEventListener("click", async e => {
+  const t = e.target.closest("[data-shipshare]"); if (!t) return;
+  const o = sellerData?.orders?.find(x => String(x.ship_id) === t.dataset.shipshare); if (!o) return;
+  const text = driverShareText(o);
+  try { if (navigator.share && isPhone()) { await navigator.share({ text }); return; } } catch (er) { if (er?.name === "AbortError") return; }
+  try { await navigator.clipboard.writeText(text); toast(L("Скопировано — вставьте водителю в Telegram или SMS", "Nusxalandi — haydovchiga Telegram yoki SMS orqali yuboring", "Copied — paste it to the driver in Telegram or SMS")); }
+  catch { prompt(L("Скопируйте текст для водителя", "Haydovchi uchun matnni nusxalang", "Copy the text for the driver"), text); }
+});
 /* the store names (or changes) its delivery price for a store-delivered order: the buyer gets the sum to pay on receipt */
 document.addEventListener("submit", async e => {
   const f = e.target.closest("[data-shipprice]"); if (!f) return; e.preventDefault();
@@ -10099,7 +10188,7 @@ function adminSectionHTML(tab) {
   if (!API && tab === "req") { adminStores = demoAdminStores(); return adminStores.length ? adminStoresHTML() + `<p class="mu" style="font-size:13px;margin:8px 2px 0">${L("Демо: здесь анкеты магазинов, зарегистрированных в этом браузере. На рабочем сайте — все анкеты с сервера.", "Demo: bu yerda shu brauzerda ro‘yxatdan o‘tgan do‘konlar anketalari. Haqiqiy saytda — serverdagi barcha anketalar.", "Demo: applications of stores registered in this browser. On the working site — all applications from the server.")}</p>` : empty(L("Анкет пока нет. Зарегистрируйте магазин как продавец (Вход для продавцов и мастеров → Регистрация → Продавец) — анкета появится здесь.", "Hozircha anketa yo‘q. Sotuvchi sifatida do‘kon ro‘yxatdan o‘tkazing — anketa shu yerda chiqadi.", "No applications yet. Register a store as a seller — the application appears here.")); }
   if (!API) return tab === "sup" ? demoSupportHTML() : empty(L("В демо-версии здесь пусто. На рабочем сайте здесь будут анкеты магазинов и мастеров, товары и отзывы на проверке, жалобы по заказам.", "Demo versiyada bu yer bo‘sh. Haqiqiy saytda do‘kon va usta anketalari, tekshiruvdagi mahsulot va sharhlar, buyurtma shikoyatlari bo‘ladi.", "Empty in the demo. On the working site: store and master applications, goods and reviews to check, order complaints."));
   if (tab === "req") return adminStoresHTML() + adminMastersHTML() + adminModHTML();
-  if (tab === "issues") return adminProblemsHTML() || empty(L("Открытых жалоб нет", "Ochiq shikoyatlar yo‘q", "No open complaints"));
+  if (tab === "issues") return (adminProblemsHTML() + adminNoShowHTML()) || empty(L("Открытых жалоб нет", "Ochiq shikoyatlar yo‘q", "No open complaints"));
   return adminSupportHTML();
 }
 document.addEventListener("click", e => { const t = e.target.closest("[data-atab]"); if (!t) return; adminTab = t.dataset.atab; LS.set("imorat.adminTab", adminTab); if (drawerView) closeDrawer(); if (route.view !== "admin") location.hash = "admin"; else renderAdmin(); renderTabbar(); window.scrollTo(0, 0); });

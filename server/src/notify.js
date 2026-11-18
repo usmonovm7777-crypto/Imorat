@@ -8,7 +8,7 @@ const BUYER_TEXT = {
   assembling: (o, s) => `Магазин ${s.name} принял заказ ${o.num} и собирает его.`,
   searching: o => `Заказ ${o.num} собран, вызываем курьера Яндекс.`,
   to_store: o => `Курьер едет в магазин за заказом ${o.num}.`,
-  on_way: (o, s, f) => f?.delivery_by === "store" ? `Курьер магазина ${s.name} выехал с заказом ${o.num} к вам.` : `Курьер забрал заказ ${o.num} и едет к вам.`,
+  on_way: (o, s, f, sh) => f?.delivery_by === "store" ? `Курьер магазина ${s.name} выехал с заказом ${o.num} к вам.${sh?.driver_phone ? ` Водитель: ${sh.driver_name ? sh.driver_name + ", " : ""}+${sh.driver_phone}.` : ""}` : `Курьер забрал заказ ${o.num} и едет к вам.`,
   delivered: o => `Заказ ${o.num} доставлен. Оцените магазин на сайте — это помогает другим покупателям.`,
   ready: (o, s) => `Заказ ${o.num} готов к выдаче: ${s.name}, ${s.addr}. Часы работы: ${s.hours}.`,
   picked: o => `Заказ ${o.num} выдан. Спасибо! Оцените магазин на сайте.`
@@ -17,20 +17,22 @@ const CANCEL_TEXT = {
   not_accepted: "магазин не подтвердил заказ вовремя",
   out_of_stock: "товара не оказалось в наличии",
   not_shipped: "магазин не передал заказ вовремя",
+  no_show: "магазин не смог с вами связаться или передать заказ",
   buyer: "вы отменили заказ",
   unpaid: "оплата картой не поступила вовремя; товар снова в продаже, можно оформить заново",
   refund: "платёж отменён банком или вами, деньги вернутся на карту"
 };
-export const sellerButtons = (s, byStore = false) => {
+export const sellerButtons = (s, byStore = false, onReceipt = false) => {
+  const ns = onReceipt ? [[{ text: "📵 Покупатель не вышел на связь · Javob bermadi", callback_data: `nsh:${s.id}` }]] : [];
   if (s.status === "new") return [[{ text: "✅ Принять · Qabul qilish", callback_data: `acc:${s.id}` }], [{ text: "❌ Нет в наличии · Mavjud emas", callback_data: `oos:${s.id}` }]];
-  if (s.status === "on_way" && byStore) return [[{ text: "✅ Доставлен · Yetkazildi", callback_data: `dlv:${s.id}` }]];
-  if (s.status === "assembling") return [[s.tariff ? (byStore ? { text: "🚚 Курьер выехал · Kuryer yo‘lda", callback_data: `rdy:${s.id}` } : { text: "🚚 Готов, вызвать курьера · Kuryer chaqirish", callback_data: `rdy:${s.id}` }) : { text: "📦 Готов к выдаче · Tayyor", callback_data: `rdy:${s.id}` }]];
-  if (s.status === "ready") return [[{ text: "🤝 Выдан покупателю · Topshirildi", callback_data: `pick:${s.id}` }]];
+  if (s.status === "on_way" && byStore) return [[{ text: "✅ Доставлен · Yetkazildi", callback_data: `dlv:${s.id}` }], ...ns];
+  if (s.status === "assembling") return [[s.tariff ? (byStore ? { text: "🚚 Курьер выехал · Kuryer yo‘lda", callback_data: `rdy:${s.id}` } : { text: "🚚 Готов, вызвать курьера · Kuryer chaqirish", callback_data: `rdy:${s.id}` }) : { text: "📦 Готов к выдаче · Tayyor", callback_data: `rdy:${s.id}` }], ...ns];
+  if (s.status === "ready") return [[{ text: "🤝 Выдан покупателю · Topshirildi", callback_data: `pick:${s.id}` }], ...ns];
   return [];
 };
 const STATUS_RU = { new: "🆕 Новый", assembling: "🛠 Собирается", searching: "🚚 Ищем курьера", to_store: "🚚 Курьер едет", on_way: "🚚 В пути", delivered: "✅ Доставлен", ready: "📦 Готов к выдаче", picked: "✅ Выдан", cancelled: "❌ Отменён" };
 
-export function createNotify({ db, cfg, tg, push, sms, ref, log = console }) {
+export function createNotify({ db, cfg, tg, push, sms, ref, log = console, noShows = () => 0 }) {
   const D = Object.fromEntries(ref.districts.map(d => [d.id, d]));
   const ctx = shipId => {
     const s = db.get("SELECT * FROM shipments WHERE id=?", shipId);
@@ -45,15 +47,18 @@ export function createNotify({ db, cfg, tg, push, sms, ref, log = console }) {
     const lines = JSON.parse(s.lines).map(l => `• ${h(l.name)} × ${l.q} — ${money(l.price * l.q)}`).join("\n");
     const goods = JSON.parse(s.lines).reduce((a, l) => a + l.price * l.q, 0);
     const where = s.tariff ? `${f.delivery_by === "store" ? (s.price_named_at ? `🚚 Доставка вашим курьером: ${s.price ? money(s.price) : "бесплатно"} (покупателю сообщили)` : "🚚 Доставка вашим курьером (цену доставки назовите покупателю при подтверждении)") : "Яндекс Доставка"} → ${h(D[f.district]?.ru || "")} р-н, ${h(f.street)}${f.private ? ", частный дом" : `${f.entrance ? ", подъезд " + h(f.entrance) : ""}${f.flat ? ", кв. " + h(f.flat) : ""}${f.floor > 1 ? `, этаж ${f.floor}` : ""}${f.intercom ? ", домофон " + h(f.intercom) : ""}`}${f.help === "one" || (f.help == null && f.lift) ? "\n🏋️ Разгрузка: курьер поможет спустить и занести" : "\nРазгрузка: покупатель заберёт у машины"}` : "Самовывоз из магазина";
+    // before the store drives out: this buyer has orders they did not take
+    const ns = ["new", "assembling", "ready"].includes(s.status) && (o.pay === "store" || o.pay === "cash") ? noShows(o.user_id) : 0;
+    const warn = ns ? `\n⚠️ У покупателя ${ns} ${ns === 1 ? "непринятый заказ" : "непринятых заказа(ов)"} за последние ${cfg.noShow.days} дн. — позвоните перед выездом.` : "";
     const deadline = s.status === "new" ? `\n⏱ Примите в течение ${cfg.timers.cancel} минут${s.start_at > Date.now() + 60000 ? ` (отсчёт с ${new Date(s.start_at + 5 * 3600000).toISOString().slice(11, 16)}, когда магазин откроется)` : ""}, иначе заказ отменится.` : "";
-    return `<b>${STATUS_RU[s.status] || s.status} заказ ${h(o.num)}</b> · ${h(st.name)}\n\n${lines}\n<b>Итого: ${money(goods)}</b>\n\n${where}\nКогда: ${WHEN[f.when] || f.when}${f.when === "vip" ? ` (${f.hour}:00)` : ""}\nПокупатель: ${h(f.name)}, +${h(String(f.phone).replace(/\D/g, ""))}${f.comment ? `\nКомментарий: «${h(f.comment)}»` : ""}\nОплата: ${o.pay === "store" || o.pay === "cash" ? "покупатель платит магазину при получении" : o.pay_status === "paid" ? "💳 оплачен картой полностью, включая доставку — выдавайте без оплаты" : "ожидает оплаты"}${deadline}`;
+    return `<b>${STATUS_RU[s.status] || s.status} заказ ${h(o.num)}</b> · ${h(st.name)}\n\n${lines}\n<b>Итого: ${money(goods)}</b>\n\n${where}\nКогда: ${WHEN[f.when] || f.when}${f.when === "vip" ? ` (${f.hour}:00)` : ""}\nПокупатель: ${h(f.name)}, +${h(String(f.phone).replace(/\D/g, ""))}${f.comment ? `\nКомментарий: «${h(f.comment)}»` : ""}${warn}\nОплата: ${o.pay === "store" || o.pay === "cash" ? "покупатель платит магазину при получении" : o.pay_status === "paid" ? "💳 оплачен картой полностью, включая доставку — выдавайте без оплаты" : "ожидает оплаты"}${deadline}`;
   }
   const cabinet = `${cfg.siteUrl}#seller`;
   return {
     async shipmentNew(shipId) {
       const c = ctx(shipId); if (!c.s || !c.o || !c.st) return;
       if (c.owner?.tg_chat) {
-        const m = await safe(tg.send(c.owner.tg_chat, sellerText(c), sellerButtons(c.s, c.f?.delivery_by === "store")));
+        const m = await safe(tg.send(c.owner.tg_chat, sellerText(c), sellerButtons(c.s, c.f?.delivery_by === "store", ["store", "cash"].includes(c.o.pay))));
         if (m?.message_id) db.run("UPDATE shipments SET tg_msg=? WHERE id=?", JSON.stringify({ chat: c.owner.tg_chat, id: m.message_id }), c.s.id);
       }
       if (c.owner) safe(push.toUser(c.owner.id, { title: `Новый заказ ${c.o.num}`, body: `${JSON.parse(c.s.lines).length} поз. · примите за ${cfg.timers.cancel} мин`, url: cabinet, tag: "ship-" + c.s.id }));
@@ -61,7 +66,7 @@ export function createNotify({ db, cfg, tg, push, sms, ref, log = console }) {
     async sellerRefresh(shipId) {
       const c = ctx(shipId); if (!c.s?.tg_msg || !c.o || !c.st) return;
       const m = JSON.parse(c.s.tg_msg);
-      await safe(tg.edit(m.chat, m.id, sellerText(c), sellerButtons(c.s, c.f?.delivery_by === "store")));
+      await safe(tg.edit(m.chat, m.id, sellerText(c), sellerButtons(c.s, c.f?.delivery_by === "store", ["store", "cash"].includes(c.o.pay))));
     },
     async remind(shipId) {
       const c = ctx(shipId); if (!c.s || !c.o || !c.owner) return;
@@ -100,19 +105,26 @@ export function createNotify({ db, cfg, tg, push, sms, ref, log = console }) {
       if (c.buyer.tg_chat) safe(tg.send(c.buyer.tg_chat, h(text)));
       safe(push.toUser(c.buyer.id, { title: `Quriliş Go · ${c.o.num}`, body: text, url: `${cfg.siteUrl}#orders`, tag: "order-" + c.o.num }));
     },
+    /* the store named (or changed) its driver while the order is already on its way */
+    driverNamed(shipId) {
+      const c = ctx(shipId); if (!c.s || !c.o || !c.st || !c.buyer || !c.s.driver_phone) return;
+      const text = `Заказ ${c.o.num}: водитель магазина ${c.st.name} — ${c.s.driver_name ? c.s.driver_name + ", " : ""}+${c.s.driver_phone}.`;
+      if (c.buyer.tg_chat) safe(tg.send(c.buyer.tg_chat, h(text)));
+      safe(push.toUser(c.buyer.id, { title: `Quriliş Go · ${c.o.num}`, body: text, url: `${cfg.siteUrl}#orders`, tag: "order-" + c.o.num }));
+    },
     async status(shipId) {
       const c = ctx(shipId); if (!c.s || !c.o || !c.st) return; // a shipment whose order or store row is gone (dropped demo stores) must not crash the job
       this.sellerRefresh(shipId);
       // the store hears about a cancellation it did not make itself (the buyer, a timer, an admin, a failed payment): otherwise it keeps packing
-      if (c.s.status === "cancelled" && c.s.cancel_reason !== "out_of_stock" && c.owner) {
+      if (c.s.status === "cancelled" && !["out_of_stock", "no_show"].includes(c.s.cancel_reason) && c.owner) {
         const why = { buyer: "покупатель отменил заказ", admin: "отменён администратором Quriliş Go", not_accepted: "не подтверждён вовремя", not_shipped: "не передан курьеру вовремя", unpaid: "покупатель не оплатил картой", refund: "платёж отменён" }[c.s.cancel_reason] || "отменён";
         const line = `❌ <b>Заказ ${h(c.o.num)} отменён</b>: ${why}.${c.s.cancel_note ? `\nПричина покупателя: «${h(c.s.cancel_note)}»` : ""} Собирать и везти его не нужно; товар снова в продаже.`;
         if (c.owner.tg_chat) safe(tg.send(c.owner.tg_chat, line));
         safe(push.toUser(c.owner.id, { title: `❌ Заказ ${c.o.num} отменён`, body: why, url: cabinet, tag: "ship-" + c.s.id }));
       }
       const text = c.s.status === "cancelled"
-        ? `Заказ ${c.o.num} из магазина ${c.st.name} отменён: ${CANCEL_TEXT[c.s.cancel_reason] || "отмена"}.${c.s.cancel_reason === "out_of_stock" && c.s.cancel_note ? ` Магазин пишет: «${c.s.cancel_note}».` : ""}${c.s.cancel_reason !== "buyer" ? " Оплачивать ничего не нужно. Попробуйте заказать этот товар в другом магазине." : ""}`
-        : BUYER_TEXT[c.s.status]?.(c.o, c.st, c.f);
+        ? `Заказ ${c.o.num} из магазина ${c.st.name} отменён: ${CANCEL_TEXT[c.s.cancel_reason] || "отмена"}.${c.s.cancel_reason === "out_of_stock" && c.s.cancel_note ? ` Магазин пишет: «${c.s.cancel_note}».` : ""}${c.s.cancel_reason === "no_show" ? " Если это ошибка, напишите в поддержку на сайте." : c.s.cancel_reason !== "buyer" ? " Оплачивать ничего не нужно. Попробуйте заказать этот товар в другом магазине." : ""}`
+        : BUYER_TEXT[c.s.status]?.(c.o, c.st, c.f, c.s);
       if (!text || !c.buyer || c.s.cancel_reason === "buyer") return;
       if (c.buyer.tg_chat) safe(tg.send(c.buyer.tg_chat, h(text)));
       safe(push.toUser(c.buyer.id, { title: `Quriliş Go · ${c.o.num}`, body: text, url: `${cfg.siteUrl}#orders`, tag: "order-" + c.o.num }));

@@ -125,6 +125,9 @@ export function loadConfig(env = process.env) {
     payme: { id: env.PAYME_MERCHANT_ID || "", key: env.PAYME_KEY || "", testKey: env.PAYME_TEST_KEY || "", url: (env.PAYME_CHECKOUT_URL || "https://checkout.paycom.uz").replace(/\/$/, "") },
     click: { serviceId: env.CLICK_SERVICE_ID || "", merchantId: env.CLICK_MERCHANT_ID || "", secret: env.CLICK_SECRET_KEY || "", userId: env.CLICK_MERCHANT_USER_ID || "" },
     payTimeoutMin: Number(env.PAY_TIMEOUT_MIN || 30),
+    /* A buyer who did not answer the phone or did not take the order (the store marks it): after `limit` such orders within
+       `days` the account cannot place pay-on-receipt orders until the owner lifts it or the days pass. 0 switches the limit off. */
+    noShow: { limit: env.NOSHOW_LIMIT === undefined || env.NOSHOW_LIMIT === "" ? 3 : Math.max(0, Math.floor(Number(env.NOSHOW_LIMIT)) || 0), days: Math.max(1, Math.floor(Number(env.NOSHOW_DAYS)) || 90) },
     /* "stage 0": no payment provider yet and pay-at-store allowed — buyers pay the store on receipt, the platform holds no money */
     get payOnReceipt() { return this.allowPayAtStore && !this.paymentsOnline.length; },
     /* who delivers: Yandex when its token is set; in stage 0 (pay on receipt) the store itself with its own courier, price

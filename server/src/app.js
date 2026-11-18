@@ -75,7 +75,7 @@ export function createApp(cfg, log = console) {
   const webPush = createPush(db, cfg.pushSubject, log), nativePush = createNativePush({ db, cfg, log });
   // one door for notifications: the installed site (Web Push) and the app (FCM / APNs) both hang on push.toUser
   const push = { publicKey: webPush.publicKey, native: nativePush.enabled, async toUser(uid, data) { const [a, b] = await Promise.all([webPush.toUser(uid, data), nativePush.toUser(uid, data)]); return a + b; } };
-  const notify = createNotify({ db, cfg, tg, push, sms, ref, log });
+  const notify = createNotify({ db, cfg, tg, push, sms, ref, log, noShows: id => noShows(id) });
   const bonus = createBonus({ db, cfg, log });
   const courier = createCourier({ db, cfg, ref, log });
   const geo = createGeo({ cfg, log });
@@ -107,6 +107,17 @@ export function createApp(cfg, log = console) {
     const day = Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate()) - 5 * 3600000;
     return mins < o ? day + o * 60000 : day + 86400000 + o * 60000;
   }
+  /* Orders a buyer did not take: the store could not reach them or hand the order over (pay on receipt only). Counted per order,
+     within cfg.noShow.days and after the last time the owner lifted the limit. */
+  const NO_SHOW_FROM = ["assembling", "on_way", "ready"];
+  function noShows(userId) {
+    if (!userId) return 0;
+    const reset = db.get("SELECT noshow_reset_at r FROM users WHERE id=?", userId)?.r || 0;
+    return db.get("SELECT COUNT(DISTINCT o.id) n FROM shipments sh JOIN orders o ON o.id=sh.order_id WHERE o.user_id=? AND sh.status='cancelled' AND sh.cancel_reason='no_show' AND sh.status_at>?",
+      userId, Math.max(Date.now() - cfg.noShow.days * 86400_000, reset)).n;
+  }
+  const buyerLimit = userId => { const n = noShows(userId); return { no_shows: n, limit: cfg.noShow.limit, days: cfg.noShow.days, restricted: cfg.noShow.limit > 0 && n >= cfg.noShow.limit }; };
+  const phone998 = v => { const d = String(v ?? "").replace(/\D/g, ""); return /^998\d{9}$/.test(d) ? d : null; };
   /* Reliability and reviews of every store, shown to buyers */
   function storeStats() {
     const since = Date.now() - 90 * 86400000, out = {};
@@ -202,7 +213,7 @@ export function createApp(cfg, log = console) {
     sms: sms.mode, google_client_id: cfg.google.clientId || null, apple_client_id: cfg.apple.clientId || null,
     apple_redirect_uri: cfg.apple.redirectUri || null, ai: !!cfg.ai.key, yandex: !!cfg.yandex.token, pay_at_store: cfg.allowPayAtStore, discounts: cfg.discounts, model3d: !!cfg.model3d.workerToken, model3d_worker: model3d.workerOnline(),
     payments: cfg.paymentsOnline, telegram_bot: tg.enabled ? tg.username || null : null, telegram_channel: /^@/.test(cfg.channel?.chat || "") ? cfg.channel.chat : null, push_key: push.publicKey,
-    timers: cfg.timers, commission: cfg.commission, acquiring: cfg.acquiring, acquiring_by: cfg.acquiringBy, promo_months: cfg.promoMonths, demo: cfg.demoStores,
+    timers: cfg.timers, no_show: cfg.noShow, commission: cfg.commission, acquiring: cfg.acquiring, acquiring_by: cfg.acquiringBy, promo_months: cfg.promoMonths, demo: cfg.demoStores,
     ymaps_key: cfg.maps.jsKey || null, geo: geo.provider, bonus: cfg.bonus.enabled, // the site draws a Yandex map with the key; address search goes through /api/geo
     site_url: cfg.siteUrl, // the public website (SITE_URL): legal pages for the app, the bank's return address — an explicit setting, never derived from the API host
     pay_on_receipt: cfg.payOnReceipt, delivery_by: cfg.deliveryBy // "stage 0": buyers pay the store on receipt; who delivers (yandex | store)
@@ -394,7 +405,7 @@ export function createApp(cfg, log = console) {
   r.post("/api/auth/google", async req => { const b = await readJson(req); return social(req, "google", b.credential, b.name); });
   r.post("/api/auth/apple", async req => { const b = await readJson(req); return social(req, "apple", b.id_token, b.name); });
 
-  r.get("/api/me", req => ({ user: { ...publicUser(need(req), cfg.admins, staffOf(req.user)), telegram: !!req.user.tg_chat, mfa: !!req.user.totp_on }, store: req.user.store_id ? publicStore(db.get("SELECT * FROM stores WHERE id=?", req.user.store_id)) : null }));
+  r.get("/api/me", req => ({ user: { ...publicUser(need(req), cfg.admins, staffOf(req.user)), telegram: !!req.user.tg_chat, mfa: !!req.user.totp_on, ...(({ no_shows, restricted }) => ({ no_shows, restricted }))(buyerLimit(req.user.id)) }, store: req.user.store_id ? publicStore(db.get("SELECT * FROM stores WHERE id=?", req.user.store_id)) : null }));
   r.patch("/api/me", async req => {
     const u = need(req), b = await readJson(req);
     const name = b.name !== undefined ? str(b.name, 80) : u.name;
@@ -473,7 +484,7 @@ export function createApp(cfg, log = console) {
     const q = quote(db, ref, { lines, services: b.services || [], bundles: b.bundles || [], form, promo: b.promo, user, yandexPrices: yp, points: cfg.bonus.enabled ? b.points : 0, maxShare: cfg.bonus.maxShare, bonusOn: cfg.bonus.enabled, discounts: cfg.discounts, storeDelivery: cfg.deliveryBy === "store" });
     return { q, form, lines, problems };
   }
-  r.post("/api/quote", async req => { lim.hit("quote-ip:" + req.ip, 120, 60_000); const b = await readJson(req); const { q, problems } = await computeQuote(req, b); return { quote: q, problems }; });
+  r.post("/api/quote", async req => { lim.hit("quote-ip:" + req.ip, 120, 60_000); const b = await readJson(req); const { q, problems } = await computeQuote(req, b); return { quote: q, problems, ...(req.user && q.pay_at_store ? { buyer: buyerLimit(req.user.id) } : {}) }; });
 
   r.post("/api/orders", async req => {
     const u = need(req), b = await readJson(req);
@@ -491,6 +502,8 @@ export function createApp(cfg, log = console) {
       if (!cfg.allowPayAtStore) throw cfg.paymentsOnline.length ? bad("card_required", "Orders are paid by card on the site") : new HttpError(503, "payments_off", "Online payment is not connected yet — ordering opens in a few days");
       if (form.mode !== "pickup" && cfg.paymentsOnline.length) throw bad("card_required", "Delivery orders are paid by card on the site; cash is for pickup only");
     } else if (!cfg.paymentsOnline.includes(form.pay)) throw cfg.paymentsOnline.length ? bad("payment_unavailable", "This payment method is not available") : new HttpError(503, "payments_off", "Online payment is not connected yet — ordering opens in a few days");
+    // pay on receipt: the store drives out before any money moves, so an account that keeps not taking its orders cannot place new ones
+    if (["store", "cash"].includes(form.pay)) { const bl = buyerLimit(u.id); if (bl.restricted) throw new HttpError(403, "buyer_restricted", "Several of your orders were not taken — new pay-on-receipt orders are paused. Write to support", { buyer: bl }); }
     if (b.expected_total != null && Number(b.expected_total) !== q.total) throw new HttpError(409, "total_changed", "Prices or delivery changed, check the new total", { quote: q });
     const now = Date.now(), online = !["store", "cash"].includes(form.pay);
     const order = db.tx(() => {
@@ -535,7 +548,7 @@ export function createApp(cfg, log = console) {
   });
 
   function orderOut(o, { forStore = null } = {}) {
-    const ships = db.all("SELECT sh.*, st.name store_name, st.addr store_addr, st.hours store_hours FROM shipments sh LEFT JOIN stores st ON st.id=sh.store_id WHERE sh.order_id=? ORDER BY sh.id", o.id).filter(s => !forStore || s.store_id === forStore);
+    const ships = db.all("SELECT sh.*, st.name store_name, st.addr store_addr, st.hours store_hours, st.phone store_phone FROM shipments sh LEFT JOIN stores st ON st.id=sh.store_id WHERE sh.order_id=? ORDER BY sh.id", o.id).filter(s => !forStore || s.store_id === forStore);
     return {
       num: o.num, t: o.created_at, status: o.status, pay: o.pay, pay_status: o.pay_status, d: JSON.parse(o.form),
       goods: o.goods, del: o.del, svc: o.svc, disc: o.disc + o.promo_disc, bdisc: o.disc, pd: o.promo_disc, pts: o.points_used || 0, total: o.total, cash: o.cash, promo: o.promo,
@@ -543,7 +556,7 @@ export function createApp(cfg, log = console) {
       pay_deadline: o.pay_status === "pending" && !["store", "cash"].includes(o.pay) ? o.created_at + cfg.payTimeoutMin * 60000 : null,
       // store delivery: the price the store named (null until it does) and what the buyer pays on receipt for the whole order
       del_store: ships.some(s => s.price_named_at) ? ships.reduce((a, s) => a + (s.price_named_at ? s.price : 0), 0) : null,
-      ships: ships.map(s => ({ id: s.id, store: s.store_id, store_name: s.store_name, store_addr: s.store_addr, store_hours: s.store_hours, tariff: s.tariff, tracking_url: s.tracking_url || null, delivery_price: s.price_named_at ? s.price : null, live: !!(s.claim_id && !String(s.claim_id).startsWith("sim-")), price: s.price, kg: s.kg, dist: s.dist, status: s.status, status_at: s.status_at,
+      ships: ships.map(s => ({ id: s.id, store: s.store_id, store_name: s.store_name, store_addr: s.store_addr, store_hours: s.store_hours, store_phone: s.store_phone || null, driver: s.driver_phone && ["assembling", "on_way"].includes(s.status) ? { name: s.driver_name || "", phone: s.driver_phone } : null, tariff: s.tariff, tracking_url: s.tracking_url || null, delivery_price: s.price_named_at ? s.price : null, live: !!(s.claim_id && !String(s.claim_id).startsWith("sim-")), price: s.price, kg: s.kg, dist: s.dist, status: s.status, status_at: s.status_at,
         step: (STEPS[flowOf(s, JSON.parse(o.form))].indexOf(s.status)), history: JSON.parse(s.history), lines: JSON.parse(s.lines), courier: s.courier,
         cancel_reason: s.cancel_reason, cancel_note: s.cancel_note || null, accept_by: s.status === "new" ? (s.start_at || s.status_at) + cfg.timers.cancel * 60000 : null,
         loaders_failed: !!s.loaders_failed, // the carrier refused the loader: the buyer meets the car at the entrance (see notify.loadersFailed)
@@ -755,7 +768,8 @@ export function createApp(cfg, log = console) {
   r.get("/api/seller/summary", req => {
     const { s } = needSeller(req);
     const since = Date.now() - 30 * 86400_000;
-    const ships = db.all("SELECT sh.*, o.num, o.form, o.created_at oc, o.pay, o.pay_status FROM shipments sh JOIN orders o ON o.id=sh.order_id WHERE sh.store_id=? AND sh.status<>'unpaid' ORDER BY sh.id DESC LIMIT 100", s.id);
+    const ships = db.all("SELECT sh.*, o.num, o.form, o.created_at oc, o.pay, o.pay_status, o.user_id buyer_id FROM shipments sh JOIN orders o ON o.id=sh.order_id WHERE sh.store_id=? AND sh.status<>'unpaid' ORDER BY sh.id DESC LIMIT 100", s.id);
+    const nsMemo = new Map(), nsOf = id => { if (!nsMemo.has(id)) nsMemo.set(id, noShows(id)); return nsMemo.get(id); };
     const revenue = ships.filter(x => x.oc >= since && x.status !== "cancelled").reduce((a, x) => a + JSON.parse(x.lines).reduce((b, l) => b + l.price * l.q, 0), 0);
     const products = db.all(`SELECT p.id,p.ru,p.uz,p.cat,p.sub,p.unit,p.kg,p.img,p.active,p.store_id,p.review,p.review_note,p.m3d,p.m3d_state,p.m3d_err,p.m3d_at,p.img_orig,p.cut_img,p.cut_state,p.cut_err,p.cut_warn, o.price,o.stock FROM offers o JOIN products p ON p.id=o.product_id WHERE o.store_id=? ORDER BY p.id`, s.id)
       .map(({ m3d, m3d_state, m3d_err, m3d_at, img_orig, cut_img, cut_state, cut_err, cut_warn, ...p }) => ({ ...p, img: mediaUrl(p.img), own: p.store_id === s.id, model3d: p.store_id === s.id ? model3d.out({ id: p.id, m3d, m3d_state, m3d_err, m3d_at }) : undefined,
@@ -772,10 +786,14 @@ export function createApp(cfg, log = console) {
       orders: ships.map(x => {
         const f = JSON.parse(x.form);
         return { ship_id: x.id, num: x.num, t: x.oc, status: x.status, tariff: x.tariff, price: x.price, kg: x.kg, pay: x.pay, pay_status: x.pay_status,
-          buyer: f.name, phone: f.phone, district: f.district, street: f.mode === "pickup" ? "" : f.street, floor: f.private ? null : f.floor, entrance: f.entrance || "", private: !!f.private, help: f.help || (f.lift ? "one" : "none"), access: f.access || "door", elevator: f.elevator ?? null, loaders_failed: !!x.loaders_failed, when: f.when, hour: f.hour, comment: f.comment, lines: JSON.parse(x.lines),
+          buyer: f.name, phone: f.phone, district: f.district, street: f.mode === "pickup" ? "" : f.street, floor: f.private ? null : f.floor, entrance: f.entrance || "", flat: f.mode === "pickup" || f.private ? "" : f.flat || "", intercom: f.mode === "pickup" || f.private ? "" : f.intercom || "", private: !!f.private, help: f.help || (f.lift ? "one" : "none"), access: f.access || "door", elevator: f.elevator ?? null, loaders_failed: !!x.loaders_failed, when: f.when, hour: f.hour, comment: f.comment, lines: JSON.parse(x.lines),
           cancel_reason: x.cancel_reason, cancel_note: x.cancel_note || null, accept_by: x.status === "new" ? (x.start_at || x.status_at) + cfg.timers.cancel * 60000 : null, commission: x.commission, acquiring: x.acquiring,
           delivery_by: x.tariff ? (f.delivery_by === "store" ? "store" : "yandex") : null, // who delivers: the store's own courier (stage 0) or Yandex
           delivery_price: x.price_named_at ? x.price : null, // the price the store named to the buyer (store delivery), null until it does
+          driver: x.driver_phone ? { name: x.driver_name || "", phone: x.driver_phone } : null, // the store's own driver for this order
+          // the buyer did not answer / did not take the order: only where the buyer pays on receipt, once the store has accepted it
+          can_no_show: ["store", "cash"].includes(x.pay) && NO_SHOW_FROM.includes(x.status),
+          buyer_no_shows: ["delivered", "picked", "cancelled"].includes(x.status) ? 0 : nsOf(x.buyer_id), // shown before the store drives out
           next: SELLER_MOVES[x.status]?.filter(n => (x.tariff ? n !== "ready" && (f.delivery_by === "store" ? n !== "searching" : !(n === "on_way" && x.status === "assembling")) : !["searching", "on_way"].includes(n))) || [] };
       }),
       products
@@ -915,11 +933,48 @@ export function createApp(cfg, log = console) {
       if (price !== (sh.price || 0) || !sh.price_named_at) { lim.hit("delprice:" + sh.id, 5, 3600_000); db.run("UPDATE shipments SET price=?, price_named_at=? WHERE id=?", price, Date.now(), sh.id); audit(req, "ship.delivery_price", sh.id, { price }); setImmediate(() => notify.deliveryPriced(sh.id)); }
       if (b.status === undefined) return { ok: true, delivery_price: price };
     }
+    // the store's own driver for this order: the buyer sees the name and the number while the order is being packed and on its way
+    if (b.driver !== undefined) {
+      if (sh.store_id !== s.id) throw new HttpError(403, "forbidden", "Only the store that delivers names its driver");
+      if (!byStore) throw bad("not_store_delivery", "A driver is named only when the store delivers");
+      if (!["new", "assembling", "on_way"].includes(sh.status)) throw bad("bad_status", "The driver can be named until the order is handed over");
+      const name = str(b.driver?.name, 60), raw = String(b.driver?.phone ?? "").trim(), ph = raw ? phone998(raw) : "";
+      if (ph === null) throw bad("bad_phone", "Driver phone must be +998 XX XXX XX XX");
+      if (name !== (sh.driver_name || "") || ph !== (sh.driver_phone || "")) {
+        lim.hit("driver:" + sh.id, 10, 3600_000);
+        db.run("UPDATE shipments SET driver_name=?, driver_phone=? WHERE id=?", ph ? name : null, ph || null, sh.id); audit(req, "ship.driver", sh.id, { set: !!ph });
+        if (ph && sh.status === "on_way") setImmediate(() => notify.driverNamed(sh.id)); // already on the way: the buyer hears the number now
+      }
+      if (b.status === undefined) return { ok: true, driver: ph ? { name, phone: ph } : null };
+    }
+    if (b.status === "no_show") { noShowShipment(sh, req, b.note); return { ok: true, status: "cancelled", reason: "no_show" }; }
     if (!(SELLER_MOVES[sh.status] || []).includes(b.status) || (b.status === "ready" && sh.tariff) || (b.status === "searching" && (!sh.tariff || byStore)) || (b.status === "on_way" && sh.status === "assembling" && !byStore)) throw bad("bad_status", `Cannot move from ${sh.status} to ${b.status}`);
     if (b.status === "cancelled" && b.note !== undefined) { const note = str(b.note, 300); if (note) db.run("UPDATE shipments SET cancel_note=? WHERE id=?", note, sh.id); } // which item is missing, what it can be replaced with
     moveShipment(sh, b.status, req);
     return { ok: true, status: b.status };
   });
+
+  /* "The buyer did not answer / did not take the order" (cabinet, Telegram button). Pay on receipt only: nothing was paid, the goods
+     go back on sale, the store's reliability is not touched; the mark is counted on the buyer's account (see noShows). */
+  function noShowShipment(sh, req, note) {
+    const o = db.get("SELECT * FROM orders WHERE id=?", sh.order_id);
+    if (!o || !["store", "cash"].includes(o.pay)) throw bad("not_on_receipt", "Only for orders the buyer pays on receipt");
+    if (!NO_SHOW_FROM.includes(sh.status)) throw bad("bad_status", `Cannot mark from ${sh.status}`);
+    lim.hit("noshow:" + sh.store_id, 20, 86400_000);
+    const before = buyerLimit(o.user_id), text = str(note, 300);
+    db.tx(() => {
+      for (const l of JSON.parse(sh.lines)) db.run("UPDATE offers SET stock=stock+?, updated_at=? WHERE product_id=? AND store_id=?", l.q, Date.now(), l.id, sh.store_id);
+      if (text) db.run("UPDATE shipments SET cancel_note=? WHERE id=?", text, sh.id);
+      setShipStatus(sh, "cancelled", "no_show");
+    });
+    audit(req, "ship.no_show", sh.id, { order: o.num, note: text });
+    bumpCatalog();
+    const after = buyerLimit(o.user_id);
+    if (after.restricted && !before.restricted) {
+      const bu = db.get("SELECT name, phone FROM users WHERE id=?", o.user_id);
+      notify.admins(`📵 Покупатель ${bu?.name || ""} ${bu?.phone ? "+" + bu.phone : ""} не принял ${after.no_shows} заказа за ${after.days} дн. — новые заказы с оплатой при получении ему закрыты. Снять ограничение: панель → «Не вышли на связь».`);
+    }
+  }
 
   /* One place for seller moves (cabinet, Telegram buttons): "cancelled" by the store means out of stock */
   function moveShipment(sh, status, req) {
@@ -1049,6 +1104,11 @@ export function createApp(cfg, log = console) {
     const ow = st?.owner_id && db.get("SELECT * FROM users WHERE id=?", st.owner_id);
     if (!sh || !ow || ow.tg_chat !== String(q.message?.chat?.id)) return tg.answer(q.id, "Нет доступа к этому заказу");
     const fo = JSON.parse(db.get("SELECT form FROM orders WHERE id=?", sh.order_id)?.form || "{}");
+    if (act === "nsh") {
+      try { noShowShipment(sh, { user: ow, ip: "telegram" }); await tg.answer(q.id, "Отмечено: покупатель не вышел на связь. Товар снова в продаже"); }
+      catch (e) { await tg.answer(q.id, e?.code === "bad_status" ? "Статус уже изменён" : "Не получилось отметить"); notify.sellerRefresh(sh.id); }
+      return;
+    }
     const target = { acc: "assembling", oos: "cancelled", rdy: sh.tariff ? (fo.delivery_by === "store" ? "on_way" : "searching") : "ready", pick: "picked", dlv: "delivered" }[act];
     if (!target || !(SELLER_MOVES[sh.status] || []).includes(target)) { await tg.answer(q.id, "Статус уже изменён"); return notify.sellerRefresh(sh.id); }
     moveShipment(sh, target, { user: ow, ip: "telegram" });
@@ -1196,6 +1256,23 @@ export function createApp(cfg, log = console) {
     }
     bumpCatalog();
     return { store: publicStore(db.get("SELECT * FROM stores WHERE id=?", s.id)) };
+  });
+  /* Buyers who did not take their orders: the list for the owner and helpers, and "lift the limit" (earlier marks stop counting) */
+  r.get("/api/admin/noshow", req => {
+    needAdmin(req);
+    const since = Date.now() - cfg.noShow.days * 86400_000;
+    const rows = db.all(`SELECT o.user_id id, u.name, u.phone, MAX(sh.status_at) last_at FROM shipments sh JOIN orders o ON o.id=sh.order_id LEFT JOIN users u ON u.id=o.user_id
+      WHERE sh.status='cancelled' AND sh.cancel_reason='no_show' AND sh.status_at>? AND sh.status_at>COALESCE(u.noshow_reset_at,0) GROUP BY o.user_id ORDER BY last_at DESC LIMIT 200`, since);
+    return { limit: cfg.noShow.limit, days: cfg.noShow.days, buyers: rows.map(x => ({ id: x.id, name: x.name || "", phone: x.phone || "", last_at: x.last_at, ...(({ no_shows, restricted }) => ({ no_shows, restricted }))(buyerLimit(x.id)),
+      orders: db.all("SELECT o.num, sh.status_at at, st.name store, sh.cancel_note note FROM shipments sh JOIN orders o ON o.id=sh.order_id LEFT JOIN stores st ON st.id=sh.store_id WHERE o.user_id=? AND sh.status='cancelled' AND sh.cancel_reason='no_show' AND sh.status_at>? ORDER BY sh.status_at DESC LIMIT 10", x.id, since) })) };
+  });
+  r.post("/api/admin/noshow/:uid/reset", (req, res, p) => {
+    needAdmin(req);
+    const u = db.get("SELECT id FROM users WHERE id=?", String(p.uid || ""));
+    if (!u) throw new HttpError(404, "not_found", "User not found");
+    db.run("UPDATE users SET noshow_reset_at=? WHERE id=?", Date.now(), u.id);
+    audit(req, "buyer.noshow_reset", u.id, null);
+    return { ok: true, buyer: buyerLimit(u.id) };
   });
   r.patch("/api/admin/shipments/:id", async (req, res, p) => {
     needAdmin(req); const b = await readJson(req);

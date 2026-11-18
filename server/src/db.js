@@ -108,6 +108,8 @@ export function openDb(path, catalogPath, opts = {}) {
   addCol("stores", "contract_no", "TEXT NOT NULL DEFAULT ''"); addCol("stores", "contract_at", "INTEGER"); addCol("stores", "contract_by", "TEXT"); // signed on paper; the admin records it and opens access
   addCol("masters", "works", "TEXT NOT NULL DEFAULT '[]'"); // photos of the master's finished jobs, shown on the public profile after moderation
   addCol("users", "deleted_at", "INTEGER"); // account deleted by its owner: personal data wiped, the row keeps the orders' accounting trail
+  addCol("shipments", "driver_name", "TEXT"); addCol("shipments", "driver_phone", "TEXT"); // the store's own driver for this order: the buyer sees the name and the number while the order is on its way
+  addCol("users", "noshow_reset_at", "INTEGER"); // the owner lifted the "did not take the order" limit at this moment: earlier marks no longer count
   addCol("orders", "paid_at", "INTEGER"); addCol("orders", "pay_ref", "TEXT");
   raw.exec(`CREATE TABLE IF NOT EXISTS payments(id INTEGER PRIMARY KEY AUTOINCREMENT, provider TEXT NOT NULL, pid TEXT NOT NULL, order_id INTEGER NOT NULL REFERENCES orders(id),
     amount INTEGER NOT NULL, state INTEGER NOT NULL, create_time INTEGER NOT NULL, perform_time INTEGER, cancel_time INTEGER, reason INTEGER, UNIQUE(provider, pid));

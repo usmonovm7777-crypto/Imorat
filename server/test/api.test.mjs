@@ -1489,6 +1489,102 @@ test("Stage 0: pay on receipt, the store delivers itself, no invented delivery p
   } finally { a0.stopJobs(); a0.close(); a0.closeAllConnections(); a0.db.raw.close(); rmSync(d0, { recursive: true, force: true }); }
 });
 
+test("Buyer did not answer: the store marks it, goods return to sale, the store's reliability stays, the third mark pauses pay-on-receipt orders, the owner lifts it; phones of the store and the driver reach the buyer", async () => {
+  const dn = mkdtempSync(join(tmpdir(), "imorat-ns-"));
+  const cfgN = loadConfig({ JWT_SECRET: "x", DB_PATH: join(dn, "ns.db"), UPLOADS_DIR: join(dn, "up"), ADMIN_PHONES: "998901111111", ADMIN_MFA: "0", SMS_MODE: "dev", OTP_PER_IP_HOUR: "500",
+    ALLOW_PAY_AT_STORE: "1", TELEGRAM_BOT_TOKEN: "TGTOKEN", TELEGRAM_API_URL: fakeBase + "/tg", TELEGRAM_POLL_TIMEOUT: "0" });
+  assert.deepEqual(cfgN.noShow, { limit: 3, days: 90 }, "three orders in ninety days unless the owner sets another number");
+  assert.equal(loadConfig({ JWT_SECRET: "x", NOSHOW_LIMIT: "0" }).noShow.limit, 0, "0 switches the limit off"); assert.equal(loadConfig({ JWT_SECRET: "x", NOSHOW_LIMIT: "5", NOSHOW_DAYS: "30" }).noShow.days, 30);
+  const aN = createApp(cfgN, { info() {}, warn() {}, error: console.error });
+  await new Promise(r => aN.listen(0, "127.0.0.1", r)); const bN = `http://127.0.0.1:${aN.address().port}`;
+  const c = async (m, p, body, tok) => { const r = await fetch(bN + p, { method: m, headers: { "content-type": "application/json", ...(tok ? { authorization: "Bearer " + tok } : {}) }, body: body ? JSON.stringify(body) : undefined }); return { status: r.status, data: await r.json().catch(() => ({})) }; };
+  const lg = async ph => (await c("POST", "/api/auth/otp/verify", { phone: ph, code: (await c("POST", "/api/auth/otp/send", { phone: ph })).data.dev_code })).data.token;
+  try {
+    assert.deepEqual((await c("GET", "/api/config")).data.no_show, { limit: 3, days: 90 });
+    const t = await lg("998901234571"), seller = await lg("998901234572"), other = await lg("998901234573"), admin = await lg("998901111111");
+    aN.db.run("UPDATE stores SET owner_id=(SELECT id FROM users WHERE phone='998901234572') WHERE id='usta'"); aN.db.run("UPDATE users SET store_id='usta', tg_chat='6161' WHERE phone='998901234572'");
+    aN.db.run("UPDATE stores SET owner_id=(SELECT id FROM users WHERE phone='998901234573') WHERE id='santex'"); aN.db.run("UPDATE users SET store_id='santex' WHERE phone='998901234573'");
+    aN.db.run("UPDATE stores SET phone='998712000001' WHERE id='usta'");
+    aN.db.run("UPDATE users SET tg_chat='7171' WHERE phone='998901234571'"); aN.db.run("UPDATE users SET tg_chat='8181' WHERE phone='998901111111'");
+    const form = { name: "Не дома", phone: "998901234571", mode: "yandex", district: "yunus", street: "ул. Амира Темура, 15", floor: "3", pay: "store", help: "none" };
+    const stock = () => aN.db.get("SELECT stock FROM offers WHERE product_id=1 AND store_id='usta'").stock, stock0 = stock();
+    const place = async (f = form) => { const o = await c("POST", "/api/orders", { lines: [{ id: 1, store: "usta", q: 2 }], form: f }, t); assert.equal(o.status, 200, JSON.stringify(o.data)); return { num: o.data.order.num, sh: aN.db.get("SELECT * FROM shipments WHERE order_id=(SELECT id FROM orders WHERE num=?)", o.data.order.num) }; };
+    const mine = async num => (await c("GET", "/api/seller/summary", null, seller)).data.orders.find(x => x.num === num);
+
+    // --- order 1: phones, the driver, then nobody answers ---
+    const o1 = await place(); assert.equal(stock(), stock0 - 2);
+    assert.equal((await c("PATCH", `/api/seller/shipments/${o1.sh.id}`, { status: "no_show" }, seller)).data.error, "bad_status", "not before the store has accepted the order");
+    assert.equal((await c("PATCH", `/api/seller/shipments/${o1.sh.id}`, { status: "assembling" }, seller)).status, 200);
+    let row = await mine(o1.num); assert.equal(row.can_no_show, true); assert.equal(row.buyer_no_shows, 0); assert.equal(String(row.phone).replace(/\D/g, ""), "998901234571", "the store sees the buyer's number"); assert.equal(row.driver, null);
+    // the store's own driver: a real Uzbek number or nothing
+    for (const bad of ["123", "+7 900 000 00 00", "99890123456"]) assert.equal((await c("PATCH", `/api/seller/shipments/${o1.sh.id}`, { driver: { name: "Али", phone: bad } }, seller)).data.error, "bad_phone", bad);
+    assert.equal((await c("PATCH", `/api/seller/shipments/${o1.sh.id}`, { driver: { name: "Али", phone: "+998 90 123 45 99" } }, other)).status, 404, "another store cannot touch this order");
+    assert.deepEqual((await c("PATCH", `/api/seller/shipments/${o1.sh.id}`, { driver: { name: "Али", phone: "+998 90 123 45 99" } }, seller)).data.driver, { name: "Али", phone: "998901234599" });
+    let ord = (await c("GET", `/api/orders/${o1.num}`, null, t)).data.order;
+    assert.deepEqual(ord.ships[0].driver, { name: "Али", phone: "998901234599" }); assert.equal(ord.ships[0].store_phone, "998712000001", "the buyer sees the store's number");
+    assert.deepEqual((await mine(o1.num)).driver, { name: "Али", phone: "998901234599" });
+    const nW = tgSent.length;
+    assert.equal((await c("PATCH", `/api/seller/shipments/${o1.sh.id}`, { status: "on_way" }, seller)).status, 200);
+    const way = await until(() => tgSent.slice(nW).find(m => String(m.chat_id) === "7171" && /выехал с заказом/.test(m.text || "")));
+    assert.match(way.text, /Водитель: Али, \+998901234599/, "the buyer is told who is coming and the number");
+    // nobody opens the door: the store marks it
+    assert.equal((await c("PATCH", `/api/seller/shipments/${o1.sh.id}`, { status: "no_show", note: "звонили три раза" }, other)).status, 404);
+    assert.equal((await c("PATCH", `/api/seller/shipments/${o1.sh.id}`, { status: "no_show", note: "звонили три раза" }, t)).status, 403, "a buyer is not a seller");
+    const nC = tgSent.length;
+    const ns = await c("PATCH", `/api/seller/shipments/${o1.sh.id}`, { status: "no_show", note: "звонили три раза" }, seller); assert.equal(ns.status, 200, JSON.stringify(ns.data)); assert.equal(ns.data.reason, "no_show");
+    const sh1 = aN.db.get("SELECT * FROM shipments WHERE id=?", o1.sh.id); assert.equal(sh1.status, "cancelled"); assert.equal(sh1.cancel_reason, "no_show"); assert.equal(sh1.cancel_note, "звонили три раза");
+    assert.equal(stock(), stock0, "the goods are back on sale — unlike «нет в наличии», which empties the stock");
+    const told = await until(() => tgSent.slice(nC).find(m => String(m.chat_id) === "7171" && new RegExp("Заказ " + o1.num).test(m.text || "")));
+    assert.match(told.text, /не смог с вами связаться/); assert.match(told.text, /напишите в поддержку/); assert.ok(!/Попробуйте заказать/.test(told.text));
+    await wait(300); assert.ok(!tgSent.slice(nC).some(m => m.m === "sendMessage" && String(m.chat_id) === "6161" && /отменён/.test(m.text || "")), "the store is not told about its own mark");
+    ord = (await c("GET", `/api/orders/${o1.num}`, null, t)).data.order; assert.equal(ord.status, "cancelled"); assert.equal(ord.ships[0].cancel_reason, "no_show"); assert.equal(ord.ships[0].driver, null, "the driver's number is shown only while the order is on its way");
+    assert.equal((await c("GET", "/api/seller/summary", null, seller)).data.rating?.fail || 0, 0, "the store's reliability is untouched");
+    let me = (await c("GET", "/api/me", null, t)).data.user; assert.equal(me.no_shows, 1); assert.equal(me.restricted, false);
+    assert.equal((await c("PATCH", `/api/seller/shipments/${o1.sh.id}`, { status: "no_show" }, seller)).data.error, "bad_status", "not twice");
+
+    // --- order 2: the store sees the count before it drives out; a card-paid order cannot be marked ---
+    const o2 = await place(); assert.equal((await c("PATCH", `/api/seller/shipments/${o2.sh.id}`, { status: "assembling" }, seller)).status, 200);
+    row = await mine(o2.num); assert.equal(row.buyer_no_shows, 1);
+    aN.notify.sellerRefresh(o2.sh.id); aN.db.run("UPDATE shipments SET tg_msg=NULL WHERE id=?", o2.sh.id); const nS = tgSent.length; aN.notify.shipmentNew(o2.sh.id);
+    const card = await until(() => tgSent.slice(nS).find(m => String(m.chat_id) === "6161" && new RegExp(o2.num).test(m.text || "")));
+    assert.match(card.text, /У покупателя 1 непринятый заказ/); assert.ok(JSON.stringify(card.reply_markup || {}).includes(`nsh:${o2.sh.id}`), "the bot offers the same button");
+    aN.db.run("UPDATE orders SET pay='payme', pay_status='paid' WHERE num=?", o2.num);
+    assert.equal((await c("PATCH", `/api/seller/shipments/${o2.sh.id}`, { status: "no_show" }, seller)).data.error, "not_on_receipt", "a prepaid order is another matter");
+    aN.db.run("UPDATE orders SET pay='store', pay_status='to_store' WHERE num=?", o2.num);
+    await aN.tg.feed({ callback_query: { id: "cbNS", data: `nsh:${o2.sh.id}`, from: { id: 6161 }, message: { chat: { id: 6161, type: "private" }, message_id: 7 } } });
+    await until(() => aN.db.get("SELECT cancel_reason r FROM shipments WHERE id=?", o2.sh.id).r === "no_show");
+    me = (await c("GET", "/api/me", null, t)).data.user; assert.equal(me.no_shows, 2); assert.equal(me.restricted, false);
+
+    // --- order 3: pickup that nobody came for; the third mark pauses the account and the team is told ---
+    const o3 = await place({ ...form, mode: "pickup" });
+    assert.equal((await c("PATCH", `/api/seller/shipments/${o3.sh.id}`, { status: "assembling" }, seller)).status, 200); assert.equal((await c("PATCH", `/api/seller/shipments/${o3.sh.id}`, { status: "ready" }, seller)).status, 200);
+    assert.equal((await c("PATCH", `/api/seller/shipments/${o3.sh.id}`, { driver: { name: "Али", phone: "998901234599" } }, seller)).data.error, "not_store_delivery", "no driver for a pickup");
+    const nA = tgSent.length;
+    assert.equal((await c("PATCH", `/api/seller/shipments/${o3.sh.id}`, { status: "no_show" }, seller)).status, 200);
+    const alarm = await until(() => tgSent.slice(nA).find(m => String(m.chat_id) === "8181" && /не принял 3 заказа/.test(m.text || "")));
+    assert.match(alarm.text, /998901234571/);
+    me = (await c("GET", "/api/me", null, t)).data.user; assert.equal(me.no_shows, 3); assert.equal(me.restricted, true);
+    const qR = (await c("POST", "/api/quote", { lines: [{ id: 1, store: "usta", q: 1 }], form }, t)).data; assert.equal(qR.buyer.restricted, true); assert.equal(qR.buyer.no_shows, 3);
+    const refused = await c("POST", "/api/orders", { lines: [{ id: 1, store: "usta", q: 1 }], form }, t);
+    assert.equal(refused.status, 403); assert.equal(refused.data.error, "buyer_restricted"); assert.equal(refused.data.buyer.limit, 3); assert.equal(stock(), stock0, "a refused order holds no goods");
+    assert.equal((await c("POST", "/api/orders", { lines: [{ id: 1, store: "usta", q: 1 }], form }, other)).status, 200, "other buyers order as before");
+
+    // --- the owner's list and "lift the limit" ---
+    assert.equal((await c("GET", "/api/admin/noshow", null, t)).status, 403);
+    const list = (await c("GET", "/api/admin/noshow", null, admin)).data; assert.equal(list.limit, 3); assert.equal(list.buyers.length, 1);
+    assert.equal(list.buyers[0].no_shows, 3); assert.equal(list.buyers[0].restricted, true); assert.equal(list.buyers[0].phone, "998901234571"); assert.equal(list.buyers[0].orders.length, 3); assert.ok(list.buyers[0].orders.some(x => x.note === "звонили три раза"));
+    assert.equal((await c("POST", `/api/admin/noshow/${list.buyers[0].id}/reset`, null, t)).status, 403); assert.equal((await c("POST", "/api/admin/noshow/nobody/reset", null, admin)).status, 404);
+    const lifted = await c("POST", `/api/admin/noshow/${list.buyers[0].id}/reset`, null, admin); assert.equal(lifted.status, 200); assert.equal(lifted.data.buyer.restricted, false); assert.equal(lifted.data.buyer.no_shows, 0);
+    assert.equal((await c("GET", "/api/admin/noshow", null, admin)).data.buyers.length, 0);
+    assert.equal(aN.db.get("SELECT COUNT(*) n FROM audit WHERE action='buyer.noshow_reset'").n, 1); assert.equal(aN.db.get("SELECT COUNT(*) n FROM audit WHERE action='ship.no_show'").n, 3);
+    const again = await c("POST", "/api/orders", { lines: [{ id: 1, store: "usta", q: 1 }], form }, t); assert.equal(again.status, 200, "the buyer orders again: " + JSON.stringify(again.data));
+    // marks older than the window stop counting by themselves
+    aN.db.run("UPDATE users SET noshow_reset_at=NULL WHERE phone='998901234571'"); assert.equal((await c("GET", "/api/me", null, t)).data.user.no_shows, 3);
+    aN.db.run("UPDATE shipments SET status_at=? WHERE cancel_reason='no_show'", Date.now() - 91 * 86400_000); assert.equal((await c("GET", "/api/me", null, t)).data.user.no_shows, 0);
+    await new Promise(r => setTimeout(r, 400));
+  } finally { aN.stopJobs(); aN.close(); aN.closeAllConnections(); aN.db.raw.close(); rmSync(dn, { recursive: true, force: true }); }
+});
+
 test("Owner by login/password from .env, helper accounts the owner adds: moderation yes, money and analytics no", async () => {
   assert.ok(verifyPassword("Owner-Pass-123!", hashPassword("Owner-Pass-123!"))); assert.equal(verifyPassword("Owner-Pass-123!", hashPassword("Other-Pass-123!")), false); assert.equal(verifyPassword("x", null), false);
   assert.throws(() => hashPassword("short"), /weak_password|10 to 256/); assert.throws(() => hashPassword(1234567890123), /weak_password|must be a string/);
