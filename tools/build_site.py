@@ -103,9 +103,15 @@ APP_URL = "app.js?v=" + _ver(app_js)
 (ROOT / "en.js").write_text(en_js, encoding="utf-8")
 # In the page: config.js (the public settings) runs first, then this loader adds the dictionary (only when the saved language is
 # English — the page's first script has put it on <html lang>) and the page script. Scripts added this way run in order and do
-# not hold the parser or the first paint; the head preloads them, so they are requested from the first bytes of the page.
-LOADER = ('(function(){var d=document,l=d.documentElement.lang==="en"?["%s","%s"]:["%s"];for(var i=0;i<l.length;i++){var s=d.createElement("script");'
-          's.src=l[i];s.async=false;d.body.appendChild(s)}})();' % (EN_URL, APP_URL, APP_URL))
+# not hold the parser or the first paint; the head preloads the page script, so it is requested from the first bytes of the page.
+# With the launch animation on the screen the loader first lets the browser paint it and only then starts the page script
+# (the download is already running): starting a megabyte of script must not be what the first frame waits for. On a repeat
+# visit (no animation), in a background tab and in automated browsers it starts at once.
+LOADER = ('(function(){var d=document,e=d.documentElement,l=e.lang==="en"?["%s","%s"]:["%s"],n=0;'
+          'function go(){if(n++)return;for(var i=0;i<l.length;i++){var s=d.createElement("script");s.src=l[i];s.async=false;d.body.appendChild(s)}}'
+          'if(!/\\bintro-on\\b/.test(e.className)||navigator.webdriver||d.visibilityState!=="visible"||!window.PerformanceObserver)return go();'
+          'try{new PerformanceObserver(function(a,o){if(a.getEntriesByName("first-contentful-paint").length){o.disconnect();go()}}).observe({type:"paint",buffered:true})}catch(x){return go()}'
+          'setTimeout(go,300)})();' % (EN_URL, APP_URL, APP_URL))
 _at = body.index("<script>" + main_js + "</script>")
 body = body[:_at] + '<script src="config.js"></script>\n<script>' + LOADER + "</script>" + body[_at + len("<script>" + main_js + "</script>"):]
 body = re.sub(r"<script>([\s\S]*?)</script>", lambda m: m.group(0) if m.group(1) == LOADER else "<script>" + _minify(m.group(1), inline=True) + "</script>", body)
