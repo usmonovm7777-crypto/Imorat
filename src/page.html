@@ -388,6 +388,9 @@ html[lang="ru"] #intro .itx small [lang="ru"], html[lang="uz"] #intro .itx small
   .tb-row.work .dot { top: 3px; }
   .tabbar { z-index: 53; } /* above the cart, profile, tools and Usta AI panels (50–52) and the catalogue menu, below product sheets and sign-in (55) */
   html .drawer, html .ai, html .wpanel { padding-bottom: var(--nav-h); } /* "html" outranks the panels' own rules further down */
+  /* the keyboard is open (see the visualViewport watcher): no tab bar above the keys; the panel ends where the keyboard begins, and its own colour continues below it, so the page does not show through a translucent keyboard */
+  html.kb .tabbar, html.kb .sup-btn { display: none; }
+  html.kb .drawer, html.kb .ai, html.kb .wpanel { top: var(--vvt, 0px); bottom: auto; height: var(--vvh, 100%); padding-bottom: 0; box-shadow: 0 var(--vvh, 0px) 0 0 var(--surface); }
   html .mega-panel { padding-bottom: var(--nav-h); }
 }
 
@@ -972,7 +975,9 @@ legend { font-family: var(--f-display); font-size: 15px; font-weight: 600; margi
 .f label, .f > span { font-size: 13px; color: var(--muted); }
 .f input, .f select, .f textarea { border: 1.5px solid var(--line); background: var(--raised); border-radius: 10px; padding: 10px 12px; width: 100%; }
 .f input:focus, .f select:focus, .f textarea:focus { border-color: var(--accent); outline: none; }
-.f input[aria-invalid="true"] { border-color: var(--signal); }
+.f input[aria-invalid="true"], .f textarea[aria-invalid="true"], .f.bad .phone-in { border-color: var(--signal); }
+.f > .f-err, fieldset > .f-err, .f-err { display: block; color: var(--signal); font-size: 13px; font-weight: 600; line-height: 1.35; }
+fieldset > .f-err { margin-top: 8px; }
 .err { color: var(--signal); font-size: 12px; }
 .two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 #accessRow { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); } #accessRow:has(#liftRow[hidden]) { grid-template-columns: minmax(0, 1fr); } /* the long choice gets the room; full width when there is no lift question */
@@ -2074,6 +2079,18 @@ html.xmas .cat-tile > .cat-img, html.xmas .cat-tile.all > .ico, html.xmas .cat-t
 html.xmas .cat-tile > span:not(.cat-img):not(.ico):not(.all-th) { grid-area: 2 / 1; position: relative; z-index: 2; }
 html.xmas .cat-tile > .drift { display: block; grid-area: 1 / 1; align-self: end; justify-self: start; position: relative; z-index: 1; width: calc(100% + var(--tpx) * 2); max-width: none; height: clamp(20px, 5.2vw, 30px); margin: 0 0 calc(var(--tgap) * -1) calc(var(--tpx) * -1); pointer-events: none; filter: drop-shadow(0 -1px 1.2px rgb(92 136 194 / .3)); }
 @media (min-width: 761px) { html.xmas .cat-tile > .drift { height: 30px; } html.xmas .cat-tile.all.wide > .drift { display: none; } }
+/* New Year, the still part, continued: heaps of snow lie on the header's buttons, the search field and the page titles, and the logo wears a red hat (on a phone, where the header has no logo, the round search button wears it). Pictures only: no pointer events, nothing for a screen reader. */
+html.xmas .logo, html.xmas .cat-btn, html.xmas button.sp, html.xmas .sec-head .h-l, html.xmas main h1.h-l { position: relative; }
+html.xmas .sec-head .h-l, html.xmas main h1.h-l { width: fit-content; max-width: 100%; }
+html.xmas .cat-btn::before, html.xmas .cart-btn::before, html.xmas .search::before, html.xmas button.sp::before, html.xmas .sec-head .h-l::before, html.xmas main h1.h-l::before {
+  content: ""; position: absolute; z-index: 2; left: 5px; right: 5px; top: -11px; height: 21px; pointer-events: none; border-radius: 10px 10px 7px 7px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 28' preserveAspectRatio='none'%3E%3Cpath fill='%23b3cdea' d='M0 14C5 7 15 5 23 10C29 3 43 2 51 9C57 5 66 5 71 10C77 6 89 6 96 14V20C92 25 85 25 81 20C78 28 70 28 68 21C62 25 54 25 50 20C45 24 38 24 34 20C31 27 24 27 22 20C16 24 8 24 4 20C3 22 1 22 0 20Z'/%3E%3Cpath fill='%23fff' d='M0 12C5 5 15 3 23 8C29 1 43 0 51 7C57 3 66 3 71 8C77 4 89 4 96 12V18C92 22 85 22 81 18C78 25 70 25 68 19C62 22 54 22 50 18C45 21 38 21 34 18C31 24 24 24 22 18C16 21 8 21 4 18C3 19.500 1 19.500 0 18Z'/%3E%3C/svg%3E") 0 0 / 66px 100% round no-repeat; filter: drop-shadow(0 1.5px 1.5px rgba(50, 85, 130, .3)); }
+html.xmas .search::before { left: 10px; right: 10px; }
+html.xmas button.sp::before { left: 62px; right: 22px; top: -10px; }
+html.xmas .sec-head .h-l::before, html.xmas main h1.h-l::before { left: -.12em; right: -.12em; top: -.31em; height: .66em; background-size: 2.1em 100%; }
+html.xmas .logo::before, html.xmas .sp-i::before { content: ""; position: absolute; z-index: 3; left: -8px; top: -13px; width: 31px; height: 26px; pointer-events: none; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 44 36'%3E%3Cpath fill='%23d3232a' d='M6 25C6 12 15 3 26 4C34 5 39 12 39 21C35 15 31 13 27 14C29 18 30 22 30 26Z'/%3E%3Cpath fill='%23a8161d' d='M27 14C29 18 30 22 30 26L24 25.7C24.6 21 25.4 17 27 14Z'/%3E%3Crect x='2.5' y='22.5' width='31' height='10' rx='5' fill='%23fff' stroke='%23b3cdea' stroke-width='1'/%3E%3Ccircle cx='38.5' cy='22.5' r='4.6' fill='%23fff' stroke='%23b3cdea' stroke-width='1'/%3E%3C/svg%3E") center / contain no-repeat; transform: rotate(-17deg); filter: drop-shadow(0 1px 1px rgba(40, 20, 20, .3)); }
+html.xmas .sp-i { position: relative; }
+html.xmas .sp-i::before { left: -6px; top: -12px; width: 29px; height: 24px; }
 html.fx .fx-btn { color: #fff; border-color: transparent; background: linear-gradient(135deg, var(--accent), var(--signal)); box-shadow: 0 0 0 3px color-mix(in srgb, var(--signal) 22%, transparent), 0 6px 18px color-mix(in srgb, var(--signal) 35%, transparent); }
 .srate { font-size: 12.5px; color: var(--muted); }
 .srate b { color: var(--ink); font-weight: 600; } .srate b::first-letter { color: #e8a317; }
@@ -5841,6 +5858,18 @@ function storeFormHTML() {
       <p class="fine">${stage0() ? L("Условия сейчас: покупатели платят вам напрямую при получении (самовывоз или доставка вашим курьером), Quriliş Go комиссию не удерживает и деньги не принимает. Когда подключим оплату картой на сайте, новые условия (комиссия Quriliş Go и эквайринг) объявим заранее — без вашего согласия они не изменятся.", "Hozirgi shartlar: xaridorlar sizga olganda to‘g‘ridan-to‘g‘ri to‘laydi (olib ketish yoki sizning kuryeringiz bilan yetkazish), Quriliş Go komissiya ushlamaydi va pul qabul qilmaydi. Saytda karta to‘lovini ulaganimizda yangi shartlarni (Quriliş Go komissiyasi va ekvayring) oldindan e’lon qilamiz — roziligingizsiz ular o‘zgarmaydi.", "Terms for now: buyers pay you directly on receipt (pickup or delivery by your courier); Quriliş Go withholds no commission and takes no money. When card payment on the site is connected, the new terms (Quriliş Go commission and acquiring) will be announced in advance — they will not change without your consent.") : L(`Условия: с заказов, оплаченных картой, удерживается комиссия Quriliş Go ${pct(feeInfo().ours)} и эквайринг Payme/Click ${bankPct()} — двумя отдельными строками в кабинете. Первые ${feeInfo().months} месяца комиссия Quriliş Go 0%.${apiCfg?.pay_at_store ? " Самовывоз с оплатой в магазине — без комиссии." : ""}`, `Shartlar: karta bilan to‘langan buyurtmalardan Quriliş Go komissiyasi ${pct(feeInfo().ours)} va Payme/Click ekvayringi ${bankPct()} ushlab qolinadi — kabinetda ikki alohida qator. Birinchi ${feeInfo().months} oy Quriliş Go komissiyasi 0%.${apiCfg?.pay_at_store ? " Do‘konda to‘lab olib ketish — komissiyasiz." : ""}`, `Terms: on card-paid orders the Quriliş Go commission of ${pct(feeInfo().ours)} and the Payme/Click acquiring fee of ${bankPct()} are withheld — two separate lines in your dashboard. The first ${feeInfo().months} months the Quriliş Go commission is 0%.${apiCfg?.pay_at_store ? " Pickup paid at the store — no commission." : ""}`)}</p>`}
     </form>`;
 }
+/* a mistake in a form is written under the field it belongs to, and the page scrolls to that field: a note at the bottom of a long form is not seen on a phone */
+function fieldErrClear(root, only) { for (const e of (root || document).querySelectorAll(".f-err")) { if (only && !only.contains(e) && e.previousElementSibling !== only) continue; const h = e.parentElement; e.remove(); h.classList.remove("bad"); for (const i of h.querySelectorAll("[aria-describedby=fErr]")) { i.removeAttribute("aria-invalid"); i.removeAttribute("aria-describedby"); } } }
+function fieldErr(el, msg, after) {
+  const host = after ? after.parentElement : el.closest(".f, fieldset") || el.parentElement, form = el.closest("form");
+  fieldErrClear(form);
+  const e = document.createElement("span"); e.className = "err f-err"; e.id = "fErr"; e.setAttribute("role", "alert"); e.textContent = msg;
+  if (after) after.after(e); else host.appendChild(e);
+  host.classList.add("bad"); el.setAttribute("aria-invalid", "true"); el.setAttribute("aria-describedby", "fErr");
+  if (form && !form.dataset.ferr) { form.dataset.ferr = "1"; const off = ev => { const h = ev.target.closest?.(".bad"); if (h) fieldErrClear(form, h); }; form.addEventListener("input", off); form.addEventListener("change", off); form.addEventListener("click", ev => { if (ev.target.closest("[aria-pressed]")) fieldErrClear(form); }); }
+  (after || host).scrollIntoView({ block: "center", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+  el.focus({ preventScroll: true });
+}
 function bindStoreForm() {
   const f = $("#storeForm"); if (!f) return;
   const ph = $("#sPhone"); ph.addEventListener("input", () => { ph.value = fmtPhone(digitsOf(ph.value).slice(0, 9)); });
@@ -5851,9 +5880,10 @@ function bindStoreForm() {
   f.addEventListener("submit", async e => {
     e.preventDefault();
     const s = readStoreForm(), er = $("#sErr");
-    const fail = (msg, el) => { er.textContent = msg; er.hidden = false; el?.focus(); };
+    const fail = (msg, el) => { er.hidden = true; fieldErr(el, msg); };
+    fieldErrClear(f);
     if (s.name.length < 2) return fail(L("Укажите название магазина", "Do‘kon nomini kiriting"), $("#sName"));
-    if (s.descr.length < 10) return fail(L("Опишите магазин хотя бы одним предложением", "Do‘konni kamida bir gap bilan tasvirlang"), $("#sDescr"));
+    if (s.descr.length < 10) return fail(L("Опишите магазин подробнее — хотя бы 10 символов", "Do‘konni batafsilroq tasvirlang — kamida 10 ta belgi", "Describe the store in more detail — at least 10 characters"), $("#sDescr"));
     if (!s.cats.length) return fail(L("Отметьте, что продаёте — хотя бы одну категорию", "Nima sotishingizni belgilang — kamida bitta toifa"), f.querySelector("[name=cats]"));
     if (s.phone.length !== 9) return fail(L("Введите 9 цифр телефона магазина", "Do‘kon telefonining 9 ta raqamini kiriting"), ph);
     if (s.addr.length < 3) return fail(L("Укажите адрес магазина", "Do‘kon manzilini kiriting"), $("#sAddr"));
@@ -9383,7 +9413,8 @@ document.addEventListener("submit", async e => {
   if (e.target.id === "mForm") {
     e.preventDefault(); const v = masterFormRead(), er = $("#mfErr");
     const msg = v.name.length < 2 ? L("Укажите имя", "Ismingizni kiriting") : !v.specs.length ? L("Выберите хотя бы один вид работ", "Kamida bitta ish turini tanlang") : !v.districts.length ? L("Выберите районы, где работаете", "Ishlaydigan tumanlarni tanlang") : $("#mfExp").value.trim() === "" ? L("Укажите опыт работы, лет", "Ish tajribangizni kiriting, yil", "Enter your experience, years") : "";
-    if (msg) { er.textContent = msg; er.hidden = false; return; }
+    if (msg) { er.hidden = true; const q = e.target.querySelectorAll(".ds-q"); if (v.name.length < 2) fieldErr($("#mfName"), msg); else if (!v.specs.length) fieldErr(e.target.querySelector("[data-mfspec]"), msg, q[0]); else if (!v.districts.length) fieldErr(e.target.querySelector("[data-mfdist]"), msg, q[1]); else fieldErr($("#mfExp"), msg); return; }
+    fieldErrClear(e.target);
     if (API) { try { const r = await api("POST", "/api/masters/me", v); mApi.me = { master: r.master, requests: mApi.me?.requests || [] }; mf.edit = false; toast(r.master.status === "pending" ? L("Анкета отправлена — модератор проверит её в течение дня", "Anketa yuborildi — moderator bir kun ichida tekshiradi") : L("Анкета сохранена", "Anketa saqlandi")); renderMasters(); } catch (e2) { er.textContent = apiErr(e2); er.hidden = false; } return; }
     myMasterDemo = { ...(myMasterDemo || { id: "me" + Date.now().toString(36), status: "active" }), ...v }; LS.set("imorat.master", myMasterDemo); mf.edit = false;
     toast(L("Анкета сохранена. В демо-версии она сразу видна в списке мастеров", "Anketa saqlandi. Demo versiyada u darhol ustalar ro‘yxatida ko‘rinadi")); renderMasters();
@@ -11001,6 +11032,25 @@ function searchGo(q) {
 }
 document.addEventListener("pointerdown", e => { if (!e.target.closest(".search")) closeSugg(); });
 document.addEventListener("focusin", e => { if (e.target.id === "q") openSugg(); });
+/* The on-screen keyboard of a phone. iOS keeps the page's own height and slides the page up under the keyboard, so a panel pinned to the bottom of the screen showed the tab bar above the keys and the page below it.
+   While a text field is in use, the tab bar is hidden and an open side panel takes exactly the part of the screen that is left above the keyboard. */
+(function () {
+  const vv = window.visualViewport; if (!vv) return;
+  const root = document.documentElement; let on = false, raf = 0;
+  const typing = () => { const a = document.activeElement; return !!a && (a.tagName === "TEXTAREA" || a.isContentEditable || (a.tagName === "INPUT" && !/^(checkbox|radio|range|button|submit|reset|file|color|image)$/.test(a.type))); };
+  const sync = () => {
+    raf = 0;
+    const full = Math.max(innerHeight, root.clientHeight), kb = isPhone() && typing() && full - vv.height * vv.scale > 150;
+    if (kb) { root.style.setProperty("--vvh", Math.round(vv.height) + "px"); root.style.setProperty("--vvt", Math.round(vv.offsetTop) + "px"); }
+    if (kb === on) return;
+    on = kb; root.classList.toggle("kb", kb);
+    if (!kb) { root.style.removeProperty("--vvh"); root.style.removeProperty("--vvt"); return; }
+    const log = document.activeElement.closest(".ai") && $("#aiLog"); if (log) log.scrollTop = log.scrollHeight; // the last answer stays in view above the field
+  };
+  const ask = () => { raf ||= requestAnimationFrame(sync); };
+  vv.addEventListener("resize", ask); vv.addEventListener("scroll", ask);
+  document.addEventListener("focusin", ask); document.addEventListener("focusout", () => setTimeout(ask, 80));
+})();
 document.addEventListener("click", e => {
   const t = e.target.closest("#sugg [data-sgq],#sugg [data-sgclear],#sugg [data-sggo],#sugg [data-sgopen],#sugg [data-sgall],#sugg [data-sgai]"); if (!t) return;
   const d = t.dataset, inp = $("#q");
