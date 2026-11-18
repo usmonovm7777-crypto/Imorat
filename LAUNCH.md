@@ -77,7 +77,7 @@ imorat doctor                            # DNS, HTTPS, настройки, кл�
 - База — один файл SQLite в Docker-томе `imorat-data`; ежедневная копия пишется в `/data/backups` (переменная `BACKUP_DIR`).
 - Снять копию вручную: `docker compose exec api sh -c "cp /data/imorat.db /data/backup-$(date +%F).db"`.
 - Обновить сервер: `git pull && docker compose up -d --build`. Обновить сайт: пуш в `main` (GitHub Pages).
-- Пересобрать сайт из исходника: `cp <исходник> src/page.html && python3 tools/build_site.py` (создаёт `index.html`, `app.js`, `en.js`, `sw.js`, SEO-страницы).
+- Пересобрать сайт из исходника: `cp <исходник> src/page.html && python3 tools/build_site.py` (создаёт `index.html`, `app.js`, `en.js`, `uz.js`, `sw.js`, SEO-страницы).
 
 ## 7. Что проверено перед запуском (октябрь 2026)
 

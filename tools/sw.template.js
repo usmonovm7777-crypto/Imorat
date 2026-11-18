@@ -1,7 +1,7 @@
 /* Quriliş Go service worker: works offline with the last opened catalog, caches photos, shows push notifications. */
 const VERSION = "__BUILD__";
 const SHELL = `imorat-shell-${VERSION}`, IMG = "imorat-img-v1";
-const SHELL_FILES = ["./", "index.html", "config.js", "__APP__", "__EN__", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png"]; // the page script and the English dictionary carry their version in the address
+const SHELL_FILES = ["./", "index.html", "config.js", "__APP__", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png"]; // the page script carries its version in the address; the language files (en.js, uz.js) are cached when they are first used
 
 self.addEventListener("install", e => { e.waitUntil(caches.open(SHELL).then(c => c.addAll(SHELL_FILES)).then(() => self.skipWaiting())); });
 self.addEventListener("activate", e => {
@@ -15,7 +15,7 @@ self.addEventListener("fetch", e => {
     e.respondWith(caches.open(IMG).then(async c => (await c.match(req)) || fetch(req).then(r => { if (r.ok) c.put(req, r.clone()); return r; })));
     return;
   }
-  if (/\/(app|en)\.js$/.test(url.pathname)) { // versioned by ?v=: what is cached under this address never changes
+  if (/\/(app|en|uz)\.js$/.test(url.pathname)) { // versioned by ?v=: what is cached under this address never changes
     e.respondWith(caches.match(req).then(hit => hit || fetch(req).then(r => { if (r.ok) { const copy = r.clone(); caches.open(SHELL).then(c => c.put(req, copy)); } return r; })));
     return;
   }
