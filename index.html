@@ -1706,8 +1706,8 @@ html:not(.workm):not(.loginm) nav.crumbs { display: none; }
 .htabs button { display: grid; justify-items: center; gap: 2px; padding: 4px 6px 10px; color: var(--muted); font-size: 13px; font-weight: 600; min-width: 84px; -webkit-tap-highlight-color: transparent; }
 .htabs button[aria-selected="true"] { color: var(--ink); }
 .ht-i { position: relative; display: block; width: 42px; height: 42px; transition: height .22s ease, opacity .18s ease, margin .22s ease; }
-.ht-i svg { width: 100%; height: 100%; display: block; }
-.htabs button[aria-selected="false"] .ht-i { opacity: .78; }
+.ht-i svg { width: 100%; height: 100%; display: block; transition: opacity .18s ease; }
+.htabs button[aria-selected="false"] .ht-i svg { opacity: .78; }
 .ht-i em { position: absolute; top: -3px; right: -14px; font-style: normal; font-size: 9px; font-weight: 800; letter-spacing: .04em; padding: 2px 5px; border-radius: 6px 6px 6px 2px; background: #5B4BDB; color: #fff; }
 .ht-bar { position: absolute; left: 0; bottom: 0; height: 2.5px; width: 0; border-radius: 2px; background: var(--ink); transition: transform .3s cubic-bezier(.3, .8, .25, 1), width .3s cubic-bezier(.3, .8, .25, 1); }
 html.hd-sc .ht-i { height: 0; opacity: 0; margin-top: -2px; }

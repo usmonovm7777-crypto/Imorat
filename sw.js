@@ -1,5 +1,5 @@
 /* Quriliş Go service worker: works offline with the last opened catalog, caches photos, shows push notifications. */
-const VERSION = "20261118130004";
+const VERSION = "20261118131639";
 const SHELL = `imorat-shell-${VERSION}`, IMG = "imorat-img-v1";
 const SHELL_FILES = ["./", "index.html", "config.js", "app.js?v=ca6ead09f2", "en.js?v=b73733b545", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png"]; // the page script and the English dictionary carry their version in the address
 
