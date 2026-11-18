@@ -52,7 +52,7 @@ if (release) {
 }
 
 rmSync(www, { recursive: true, force: true }); mkdirSync(www, { recursive: true });
-for (const f of ["index.html", "manifest.webmanifest", "favicon.ico"]) if (existsSync(join(root, f))) cpSync(join(root, f), join(www, f));
+for (const f of ["index.html", "app.js", "en.js", "manifest.webmanifest", "favicon.ico"]) if (existsSync(join(root, f))) cpSync(join(root, f), join(www, f));
 for (const d of ["img", "icons", "templates", "legal", "vendor"]) if (existsSync(join(root, d))) cpSync(join(root, d), join(www, d), { recursive: true });
 // Inside the app there is no service worker; notifications come natively (FCM / APNs) and through Telegram
 writeFileSync(join(www, "config.js"), [

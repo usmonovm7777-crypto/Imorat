@@ -1,7 +1,7 @@
 /* Quriliş Go service worker: works offline with the last opened catalog, caches photos, shows push notifications. */
-const VERSION = "20261118030117";
+const VERSION = "20261118122010";
 const SHELL = `imorat-shell-${VERSION}`, IMG = "imorat-img-v1";
-const SHELL_FILES = ["./", "index.html", "config.js", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png"];
+const SHELL_FILES = ["./", "index.html", "config.js", "app.js?v=ca6ead09f2", "en.js?v=b73733b545", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png"]; // the page script and the English dictionary carry their version in the address
 
 self.addEventListener("install", e => { e.waitUntil(caches.open(SHELL).then(c => c.addAll(SHELL_FILES)).then(() => self.skipWaiting())); });
 self.addEventListener("activate", e => {
@@ -13,6 +13,10 @@ self.addEventListener("fetch", e => {
   if (url.origin !== location.origin) return; // API, fonts and maps go straight to the network
   if (url.pathname.includes("/img/") || url.pathname.includes("/icons/") || url.pathname.includes("/vendor/")) { // vendor/: versioned libraries (the 3D viewer), never change under the same path
     e.respondWith(caches.open(IMG).then(async c => (await c.match(req)) || fetch(req).then(r => { if (r.ok) c.put(req, r.clone()); return r; })));
+    return;
+  }
+  if (/\/(app|en)\.js$/.test(url.pathname)) { // versioned by ?v=: what is cached under this address never changes
+    e.respondWith(caches.match(req).then(hit => hit || fetch(req).then(r => { if (r.ok) { const copy = r.clone(); caches.open(SHELL).then(c => c.put(req, copy)); } return r; })));
     return;
   }
   if (req.mode === "navigate" || url.pathname.endsWith("/") || url.pathname.endsWith(".html") || url.pathname.endsWith("config.js")) {
