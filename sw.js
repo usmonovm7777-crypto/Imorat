@@ -1,7 +1,7 @@
 /* Quriliş Go service worker: works offline with the last opened catalog, caches photos, shows push notifications. */
-const VERSION = "20261118174815";
+const VERSION = "20261118180942";
 const SHELL = `imorat-shell-${VERSION}`, IMG = "imorat-img-v1";
-const SHELL_FILES = ["./", "index.html", "config.js", "app.js?v=f1b9fd3ad1", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png"]; // the page script carries its version in the address; the language files (en.js, uz.js) are cached when they are first used
+const SHELL_FILES = ["./", "index.html", "config.js", "app.js?v=756f934403", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png"]; // the page script carries its version in the address; the language files (en.js, uz.js) are cached when they are first used
 
 self.addEventListener("install", e => { e.waitUntil(caches.open(SHELL).then(c => c.addAll(SHELL_FILES)).then(() => self.skipWaiting())); });
 self.addEventListener("activate", e => {

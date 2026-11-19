@@ -210,6 +210,7 @@ html.intro-on, html.intro-on body { background: #F2661C !important; color-scheme
    launch animation when it is due, otherwise the still mark on the page colour — and that one only if the page takes more
    than a moment to start (a fast load never flashes it). showIntro() takes it away. */
 html.boot #foot, html.boot .sup-btn, html.boot .tabbar { visibility: hidden; }
+html.boot.pre .tabbar { visibility: visible; } /* the ready first screen (tools/prerender.js) brings its own tab bar */
 html.boot-plain #intro { background: var(--bg); animation: bootShow 0s linear .3s both, bootIn .25s ease .3s both; }
 html.boot-plain #intro .iapp { background: #F2661C; box-shadow: none; animation: none; } html.boot-plain #intro .iapp svg { fill: #fff; }
 html.boot-plain #intro .itx b { color: var(--ink); animation: none; } html.boot-plain #intro .itx b em { color: var(--accent); opacity: 1; }
@@ -223,9 +224,9 @@ html[lang="ru"] #intro .itx small [lang="ru"], html[lang="uz"] #intro .itx small
 #intro .iapp svg { width: 76%; height: 76%; display: block; }
 #intro .itx { position: absolute; left: 16px; right: 16px; top: calc(50% + var(--t) * .5 - 10px); display: grid; justify-items: center; gap: 8px; text-align: center; }
 #intro.out .iapp, #intro.out .itx { animation: ioFade .26s ease forwards; } /* the icon and the name leave when the page is ready, not on a clock: on a slow network they stay until then */
-#intro .itx b { font-family: var(--f-display); font-weight: 700; font-size: calc(var(--t) * .4); line-height: 1.1; letter-spacing: -.03em; color: #fff; white-space: nowrap; animation: itxIn .6s cubic-bezier(.2, .8, .2, 1) .32s both; }
+#intro .itx b { font-family: var(--f-display); font-weight: 700; font-size: calc(var(--t) * .4); line-height: 1.1; letter-spacing: -.03em; color: #fff; white-space: nowrap; animation: itxIn .5s cubic-bezier(.2, .8, .2, 1) .26s both; }
 #intro .itx b em { font-style: normal; margin-left: .2em; opacity: .78; }
-#intro .itx small { font-size: 13px; color: rgb(255 255 255 / .86); animation: itsIn .5s ease-out .55s both; }
+#intro .itx small { font-size: 13px; color: rgb(255 255 255 / .86); animation: itsIn .42s ease-out .44s both; }
 /* the opening: a hole in the orange grows from the centre until the app fills the screen */
 #intro.open { -webkit-mask-image: radial-gradient(circle at 50% 50%, transparent var(--ir), #000 calc(var(--ir) + .5px)); mask-image: radial-gradient(circle at 50% 50%, transparent var(--ir), #000 calc(var(--ir) + .5px)); animation: irGrow .62s cubic-bezier(.65, 0, .25, 1) forwards; }
 #intro.open.fade { -webkit-mask-image: none; mask-image: none; animation: inSkip .35s ease forwards; } /* no registered --ir (older Safari): a fade instead */
@@ -1793,7 +1794,7 @@ html.fx .fx-btn.th-btn, .fx-btn.th-btn { background: var(--surface); color: var(
   html:not(.workm):not(.loginm) .hdr { position: sticky; top: env(safe-area-inset-top, 0px); }
   /* the home: the bar is laid over the page (fixed) so that folding the pictures away does not shift the page under the finger */
   html.r-home:not(.workm):not(.loginm) .hdr { position: fixed; left: 0; right: 0; top: env(safe-area-inset-top, 0px); }
-  html.r-home:not(.workm):not(.loginm) #app { padding-top: var(--hdr-full, 152px); }
+  html.r-home:not(.workm):not(.loginm) #app { padding-top: var(--hdr-full, 157px); } /* 157: the bar's height at every phone width and with any font (its rows have fixed heights), so the measured value changes nothing */
   html:not(.workm):not(.loginm) .hdr-row > :is(.menu-btn, .logo, .demo-badge, .th-btn, .lang-pick) { display: none; }
   html.r-home:not(.workm):not(.loginm) .ab-top { display: flex; }
   html.r-home:not(.workm):not(.loginm) .htabs { display: flex; }
@@ -2321,14 +2322,24 @@ select { max-width: 100%; }
 (function () { var de = document.documentElement; try {
   de.classList.add("boot"); // the empty footer, tab bar and support button stay out of sight until the first render
   window.__bootT = Date.now();
-  var pl = document.querySelector('link[rel="preload"][as="style"]'); // the built site declares the web fonts this way: they load without holding the first paint
-  if (pl) { var fl = document.createElement("link"); fl.rel = "stylesheet"; fl.href = pl.href; document.head.appendChild(fl); }
   var vp = document.querySelector('meta[name="viewport"]'); // iPhone zooms the page when a field with small text takes focus unless the scale is capped; there the cap does not stop pinch-zoom. Android is left free to zoom
   if (vp && !/maximum-scale/.test(vp.content) && (/iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1))) vp.content += ",maximum-scale=1";
   var get = function (k, d) { try { var v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } };
   var lg = (location.search.match(/[?&]lang=(ru|uz|en)\b/) || [])[1] || get("imorat.lang", "ru"); de.lang = lg === "uz" || lg === "en" ? lg : "ru";
   var th = get("imorat.theme", "auto"); if (th === "dark" || th === "light") de.setAttribute("data-theme", th);
   var app = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true || !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+  var mo = new Date().getMonth(); if ((mo >= 10 || mo === 0) && get("imorat.snow", "on") !== "off") de.classList.add("xmas"); // the New Year look from the first frame (snowDecor() in the page script decides the same way)
+  /* The built site can carry a ready first screen of the home (tools/prerender.js): what a first-time visitor sees is then in the
+     page itself and does not wait for the page script. It fits only a visit with nothing saved yet, in Russian, to the home page,
+     in a browser tab. For such a visit the web fonts and the page script are fetched after the first screen's pictures (the
+     loader at the end of the page starts them); for every other visit both start here, at once. */
+  var fresh = true; try { for (var i = 0; i < localStorage.length; i++) if (/^imorat\./.test(localStorage.key(i))) { fresh = false; break; } } catch (e) { fresh = false; }
+  var aj = document.querySelector('link[rel="x-app"]'); // the built site: the page script's address; "data-pre" says the page carries the ready first screen
+  window.__pre = fresh && !app && de.lang === "ru" && /^(#|#home)?$/.test(location.hash) && /^(\?intro=1)?$/.test(location.search) && !!aj && (" " + (aj.getAttribute("data-pre") || "") + " ").indexOf(matchMedia("(max-width: 760px)").matches ? " m " : " d ") >= 0;
+  var pl = document.querySelector('link[rel="preload"][as="style"]'), fdone = false; // the built site declares the web fonts this way: they load without holding the first paint
+  window.__fonts = function () { if (fdone || !pl) return; fdone = true; var fl = document.createElement("link"); fl.rel = "stylesheet"; fl.href = pl.href; document.head.appendChild(fl); };
+  if (!window.__pre) { window.__fonts(); if (aj) { var al = document.createElement("link"); al.rel = "preload"; al.as = "script"; al.href = aj.getAttribute("href"); document.head.appendChild(al); } }
+  else setTimeout(window.__fonts, 4000); // (a net under the loader)
   var seen = false; try { seen = sessionStorage.getItem("imorat.intro") === "1"; } catch (e) {}
   var m = document.querySelector('meta[name="theme-color"]:not([media])'); if (!m) { m = document.createElement("meta"); m.name = "theme-color"; document.head.appendChild(m); }
   if (!/[?&]intro=1/.test(location.search) && (matchMedia("(prefers-reduced-motion: reduce)").matches || navigator.webdriver || (!app && seen))) { // no animation: the still mark, the header's colour at once
@@ -3208,14 +3219,18 @@ function showIntro() {
   let seen = false; try { seen = sessionStorage.getItem("imorat.intro") === "1"; sessionStorage.setItem("imorat.intro", "1"); } catch (e) {}
   const light = () => { document.documentElement.classList.remove("intro-on"); applyLook(); }; // the page colours and status bar back to the theme
   let el = $("#intro");
+  if (window.__intro) { // the built page has already opened the animation itself, over the ready first screen it came with (the loader at the end of the page): nothing to play, only the theme's colours once it is gone
+    const t = setInterval(() => { if (window.__intro === 2 || !$("#intro")) { clearInterval(t); light(); } }, 80); return;
+  }
+  window.__intro = 1; // from here the animation is this function's: the loader leaves it alone
   if (!force && (mqReduce.matches || navigator.webdriver || (!APP_MODE && seen))) { el?.remove(); document.documentElement.classList.remove("boot-plain"); return light(); }
   nativeBar(true);
   if (!el) { el = document.createElement("div"); el.id = "intro"; el.setAttribute("aria-hidden", "true"); el.innerHTML = `<div class="iapp"><svg viewBox="0 0 100 100" fill="#F2661C">${MARK_BRICKS}</svg></div><div class="itx"><b>Quriliş<em>go</em></b><small></small></div>`; document.body.appendChild(el); window.__bootT = Date.now(); }
   document.documentElement.classList.remove("boot-plain"); document.documentElement.classList.add("intro-on");
   const sm = el.querySelector(".itx small"); if (sm) sm.textContent = L("Строительные магазины Ташкента", "Toshkent qurilish do‘konlari", "Tashkent building stores");
-  const up = Math.max(0, Date.now() - (window.__bootT || Date.now())), wait = Math.max(0, 1550 - up); // how long it has been on the screen already
+  const up = Math.max(0, Date.now() - (window.__bootT || Date.now())), wait = Math.max(0, (APP_MODE ? 1550 : 950) - up); // how long it has been on the screen already (the installed app keeps its longer greeting; in a browser tab the page shows after about a second)
   let gone = false; const done = () => { if (!gone) { gone = true; el.remove(); light(); } };
-  const open = () => { if (gone || el.classList.contains("open")) return; light(); el.classList.add("open"); if (!(window.CSS && CSS.registerProperty) || !CSS.supports?.("mask-image", "none") && !CSS.supports?.("-webkit-mask-image", "none")) el.classList.add("fade"); cascade($("#app")); }; // the status bar turns with the page as the circle opens; the home builds up inside it
+  const open = () => { if (gone || el.classList.contains("open")) return; cascade($("#app")); light(); el.classList.add("open"); if (!(window.CSS && CSS.registerProperty) || !CSS.supports?.("mask-image", "none") && !CSS.supports?.("-webkit-mask-image", "none")) el.classList.add("fade"); }; // the status bar turns with the page as the circle opens; the home builds up inside it (its blocks are measured first, while the page is still as the browser last laid it out)
   const t0 = setTimeout(() => el.classList.add("out"), wait), t1 = setTimeout(open, wait + 270), t2 = setTimeout(done, wait + 1150); // and in any case
   el.addEventListener("animationend", e => { if (e.target === el && (e.animationName === "irGrow" || e.animationName === "inSkip")) done(); }); // gone the moment the app has filled the screen
   el.addEventListener("click", () => { clearTimeout(t0); clearTimeout(t1); clearTimeout(t2); el.classList.add("skip"); light(); setTimeout(done, 350); }, { once: true }); // a tap opens at once
@@ -3811,6 +3826,7 @@ function cuRun(el, from, f, text, ms) {
   requestAnimationFrame(step);
 }
 function cuScan(root = document, fresh = performance.now() - cuFresh < 1500) { // fresh: the screen has just built up
+  const todo = []; // all the measuring first, then the changes: one layout for the lot instead of one per figure
   root.querySelectorAll(CU_SEL).forEach(el => {
     const text = el.textContent.trim(), had = cuSeen.has(el); if (cuSeen.get(el) === text && !(fresh === true && root !== document)) return; cuSeen.set(el, text);
     const f = cuParse(text), key = (el.dataset.cu || (el.closest("[id]")?.id || "") + "|" + (el.closest(".kpi, .stats > div, .sumrow")?.querySelector(":scope > span")?.textContent || "").trim()), prev = cuLast.get(key);
@@ -3818,11 +3834,14 @@ function cuScan(root = document, fresh = performance.now() - cuFresh < 1500) { /
     if (!f || mqReduce.matches || el.classList.contains("cu-run") || !el.getClientRects().length) return;
     const r = el.getBoundingClientRect(); if (r.bottom < 0 || r.top > innerHeight) return;
     const sum = el.matches(".sumrow.total .num, [data-cu-sum]"); // money: only a change rolls, a sum never counts up from zero
-    if (fresh && !sum && (!had || root !== document) && f.v > 0) cuRun(el, 0, f, text, 760);
-    else if (prev != null && prev !== f.v) cuRun(el, prev, f, text, 520);
+    if (fresh && !sum && (!had || root !== document) && f.v > 0) todo.push([el, 0, f, text, 760]);
+    else if (prev != null && prev !== f.v) todo.push([el, prev, f, text, 520]);
   });
+  for (const a of todo) cuRun(...a);
 }
-new MutationObserver(() => { if (!cuScan.q) cuScan.q = requestAnimationFrame(() => setTimeout(() => { cuScan.q = 0; cuScan(); }, 0)); }).observe(document.body, { childList: true, subtree: true, characterData: true });
+let cuHold = false; // while the home's lower blocks are being let in one by one (homeLate), the figures are not looked for: each look would make the browser lay the page out in the middle of that work
+const cuAsk = () => { if (!cuScan.q && !cuHold) cuScan.q = requestAnimationFrame(() => setTimeout(() => { cuScan.q = 0; if (!cuHold) cuScan(); }, 0)); };
+new MutationObserver(cuAsk).observe(document.body, { childList: true, subtree: true, characterData: true });
 /* phones: a tab (home, the cart, the profile, the tools, a panel's own tab) builds up after the disc has moved */
 function tabCascade() {
   if (!isPhone()) return;
@@ -4259,7 +4278,8 @@ function homeLate() {
   rest.push(...wrap.querySelectorAll(":scope > .home-setup")); const foot = $("#foot"); if (foot) rest.push(foot);
   for (const n of rest) n.classList.add("late");
   const evs = ["touchstart", "wheel", "keydown", "pointerdown", "scroll"]; let timer = 0, going = false;
-  const fin = () => { for (const e of evs) removeEventListener(e, all, true); clearTimeout(timer); homeLateShow = () => {}; requestAnimationFrame(mqDur); };
+  const fin = () => { for (const e of evs) removeEventListener(e, all, true); clearTimeout(timer); homeLateShow = () => {}; requestAnimationFrame(mqDur); cuHold = false; cuAsk(); };
+  cuHold = true;
   const all = () => { for (const n of rest.splice(0)) n.classList.remove("late"); fin(); }; // at once: the person is already moving
   const step = () => { const n = rest.shift(); if (!n) return fin(); n.classList.remove("late"); if (rest.length) (window.requestIdleCallback || setTimeout)(step, window.requestIdleCallback ? { timeout: 150 } : 30); else fin(); }; // otherwise a block per idle moment, so the main thread is never held for long
   const start = () => { if (going) return; going = true; requestAnimationFrame(() => setTimeout(step, 0)); };
@@ -11386,16 +11406,34 @@ function swipeClose(el, close) {
   el.addEventListener("touchend", end); el.addEventListener("touchcancel", end);
 }
 swipeClose($("#drawer"), () => closeDrawer()); swipeClose($("#wid"), () => closeWidgets()); swipeClose($("#ai"), () => closeAI());
-showIntro();
-renderAll();
-document.documentElement.classList.remove("boot");
-if (!enReady) setTimeout(needEN, 6000); // the English dictionary for the search, once the page has settled
-renderCmpBar();
-apiBoot();
-if (location.hash === "#orders") setTimeout(() => openDrawer("orders"), 300);
-["#drawer", "#ai", "#modal", "#mega", "#authM", "#wid"].forEach(s => { if (!$(s).classList.contains("on")) $(s).setAttribute("inert", ""); }); // a panel the first render already opened (#owner, #support, a product link) stays usable
-mqFine.addEventListener?.("change", () => { applyLook(); if (route.view === "home") renderMain(); });
-mqDark.addEventListener?.("change", () => { if (themePref === "auto") renderHeader(); });
-mqPhone.addEventListener?.("change", () => { if (route.view === "home") renderMain(); });
+const bootMark = n => { try { performance.mark("qg:" + n); } catch {} }; // where the start-up time goes, readable in the browser's performance panel
+/* Start-up. Reading this script is one piece of work for the browser; the first render is taken in further, smaller pieces
+   whenever the screen is covered meanwhile — by the launch animation or by the ready first screen the page came with
+   (html.pre) — so a slow phone never freezes for one long stretch and the header and the home are laid out in separate frames.
+   With nothing covering the screen (a repeat visit, a deep link, a background tab) everything is rendered in one go, as a
+   half-built page must not be seen. */
+function bootRender() { showIntro(); renderAll(); bootDone(); }
+function bootDone() { bootMark("rendered"); document.documentElement.classList.remove("boot", "pre"); try { window.__snap && window.__snap(); } catch {} } // tools/prerender.js takes the ready first screen here: the home is rendered, the blocks below the first screen are still held back
+function bootRest() {
+  if (!enReady) setTimeout(needEN, 6000); // the English dictionary for the search, once the page has settled
+  renderCmpBar();
+  apiBoot();
+  if (location.hash === "#orders") setTimeout(() => openDrawer("orders"), 300);
+  ["#drawer", "#ai", "#modal", "#mega", "#authM", "#wid"].forEach(s => { if (!$(s).classList.contains("on")) $(s).setAttribute("inert", ""); }); // a panel the first render already opened (#owner, #support, a product link) stays usable
+  mqFine.addEventListener?.("change", () => { applyLook(); if (route.view === "home") renderMain(); });
+  mqDark.addEventListener?.("change", () => { if (themePref === "auto") renderHeader(); });
+  mqPhone.addEventListener?.("change", () => { if (route.view === "home") renderMain(); });
+  bootMark("ready");
+}
+{
+  const de = document.documentElement, covered = document.visibilityState === "visible" && (de.classList.contains("pre") || (de.classList.contains("intro-on") && !!$("#intro")));
+  const frame = fn => { let did = false; const run = () => { if (!did) { did = true; fn(); } }; requestAnimationFrame(() => setTimeout(run, 0)); setTimeout(run, 120); }; // after the next frame (or soon anyway: a tab sent to the background gets no frames)
+  bootMark("defined");
+  if (!covered) { bootRender(); bootRest(); }
+  else setTimeout(() => {
+    renderHeader(); renderFooter(); bootMark("header");
+    frame(() => { renderMain(); if (drawerView) renderDrawer(); if (aiOpen) renderAI(); showIntro(); bootDone(); frame(bootRest); }); // the cover leaves only when the home under it is rendered
+  }, 0);
+}
 })();
 </script>

@@ -135,14 +135,40 @@ if not UZ_URL and (ROOT / "uz.js").exists(): (ROOT / "uz.js").unlink()  # a tabl
 # With the launch animation on the screen the loader first lets the browser paint it and only then starts the page script
 # (the download is already running): starting a megabyte of script must not be what the first frame waits for. On a repeat
 # visit (no animation), in a background tab and in automated browsers it starts at once.
-LOADER = ('(function(){var d=document,e=d.documentElement,f={en:"%s",uz:"%s"}[e.lang],l=f?[f,"%s"]:["%s"],n=0;'
-          'function go(){if(n++)return;for(var i=0;i<l.length;i++){var s=d.createElement("script");s.src=l[i];s.async=false;d.body.appendChild(s)}}'
-          'if(!/\\bintro-on\\b/.test(e.className)||navigator.webdriver||d.visibilityState!=="visible"||!window.PerformanceObserver)return go();'
+# When the page carries the ready first screen and shows it (window.__pre, see below), the loader waits for that screen's
+# pictures (decoded and painted) before it starts the web fonts and the page script: on a slow phone network the visitor's first
+# screen must not share the line with a megabyte of script. The launch animation then opens on its own clock (about a second
+# on the screen) over the ready screen, without waiting for the page script; showIntro() in the page script takes it over if
+# the script gets there first (window.__intro says who has it).
+LOADER = ('(function(){var d=document,e=d.documentElement,w=window,f={en:"%s",uz:"%s"}[e.lang],l=f?[f,"%s"]:["%s"],n=0;'
+          'function go(){if(n++)return;w.__fonts&&w.__fonts();for(var i=0;i<l.length;i++){var s=d.createElement("script");s.src=l[i];s.async=false;d.body.appendChild(s)}}'
+          'if(w.__pre&&!navigator.webdriver&&d.visibilityState==="visible"){var m=[].slice.call(d.querySelectorAll("#app img,#hdr img")).filter(function(i){return i.getAttribute("loading")!=="lazy"}),k=m.length+1,q=0,el=d.getElementById("intro"),'
+          'io=function(){if(w.__intro||!el||!/\\bintro-on\\b/.test(e.className))return;w.__intro=1;el.classList.add("out");'
+          'setTimeout(function(){e.classList.remove("intro-on");var t=e.getAttribute("data-theme"),c=d.querySelector(\'meta[name="theme-color"]:not([media])\');if(c)c.content=t==="dark"||(t!=="light"&&matchMedia("(prefers-color-scheme: dark)").matches)?"#1D1A17":"#FFFFFF";'
+          'el.classList.add("open");if(!(w.CSS&&CSS.registerProperty)||!(CSS.supports&&(CSS.supports("mask-image","none")||CSS.supports("-webkit-mask-image","none"))))el.classList.add("fade")},270);'
+          'setTimeout(function(){el.parentNode&&el.parentNode.removeChild(el);w.__intro=2},1150)},'
+          'z=function(){if(q++)return;setTimeout(io,Math.max(0,950-(Date.now()-(w.__bootT||Date.now()))));go()},'
+          'y=function(){if(--k<=0)requestAnimationFrame(function(){requestAnimationFrame(function(){setTimeout(z,0)})})};'
+          'm.forEach(function(i){if(i.decode)i.decode().then(y,y);else if(i.complete)y();else{i.addEventListener("load",y);i.addEventListener("error",y)}});y();setTimeout(z,2500);return}'
+          'if(!/\\bintro-on\\b/.test(e.className)||navigator.webdriver||d.visibilityState!=="visible"||!w.PerformanceObserver)return go();'
           'try{new PerformanceObserver(function(a,o){if(a.getEntriesByName("first-contentful-paint").length){o.disconnect();go()}}).observe({type:"paint",buffered:true})}catch(x){return go()}'
           'setTimeout(go,300)})();' % (EN_URL, UZ_URL, APP_URL, APP_URL))
+# The ready first screen is shown by this script, placed right after the page's empty containers and after config.js (a site
+# connected to a server has its own catalogue: the ready screen of the demo is not for it). It moves the fitting <template>
+# into the header, the main area and the tab bar; if the page had chosen the still start screen, that screen steps aside.
+PRE_SHOW = ('(function(){var d=document,e=d.documentElement,w=window;if(!w.__pre)return;'
+            'var t=!w.IMORAT_API&&d.getElementById(matchMedia("(max-width:760px)").matches?"pre-m":"pre-d");'
+            'if(!t||!t.content){w.__pre=false;w.__fonts&&w.__fonts();return}'
+            '["hdr","app","tabbar"].forEach(function(id){var s=t.content.querySelector(\'[data-pre="\'+id+\'"]\'),h=d.getElementById(id);if(s&&h)while(s.firstChild)h.appendChild(s.firstChild)});'
+            '(t.getAttribute("data-cls")||"").split(" ").forEach(function(c){c&&e.classList.add(c)});e.classList.add("pre");if(/\\bboot-plain\\b/.test(e.className)){e.classList.remove("boot-plain");var i=d.getElementById("intro");i&&i.parentNode.removeChild(i)}})();')
 _at = body.index("<script>" + main_js + "</script>")
-body = body[:_at] + '<script src="config.js"></script>\n<script>' + LOADER + "</script>" + body[_at + len("<script>" + main_js + "</script>"):]
+body = body[:_at] + "<script>" + LOADER + "</script>" + body[_at + len("<script>" + main_js + "</script>"):]
 body = re.sub(r"<script>([\s\S]*?)</script>", lambda m: m.group(0) if m.group(1) == LOADER else "<script>" + _minify(m.group(1), inline=True) + "</script>", body)
+# config.js (the public settings) runs right after the page's containers; the ready first screen (if any) follows it
+_tb = re.search(r'<nav class="tabbar" id="tabbar"[^>]*></nav>\n', body)
+if not _tb: sys.exit("build aborted: the tab bar container was not found in the page")
+PRE_MARK = "<!--ready-first-screen-->"
+body = body[:_tb.end()] + '<script src="config.js"></script>\n' + PRE_MARK + body[_tb.end():]
 # Web fonts must not hold the first paint: the head only preloads their stylesheet, the page's first script attaches it
 # (CSP forbids an inline onload handler); without scripts the <noscript> copy applies.
 def _fonts(m): return f'<link rel="preload" as="style" href="{m.group(1)}">\n<noscript><link rel="stylesheet" href="{m.group(1)}"></noscript>'
@@ -152,22 +178,56 @@ if _nf != 1: sys.exit("build aborted: expected one Google Fonts stylesheet link 
 # may run. A script smuggled into a store name or a review (<img onerror=…>) does not execute — the app has no inline handlers.
 # 'unsafe-eval' is required by Yandex Maps; localhost is allowed for connections so the test builds can reach a local API.
 import base64, hashlib
-_hashes = " ".join("'sha256-" + base64.b64encode(hashlib.sha256(js.encode("utf-8")).digest()).decode() + "'" for js in re.findall(r"<script>([\s\S]*?)</script>", body))
-CSP = ("default-src 'self'; "
-       f"script-src 'self' {_hashes} 'unsafe-eval' https://api-maps.yandex.ru https://*.api-maps.yandex.ru https://yandex.ru https://*.yandex.ru https://*.yandex.net https://yastatic.net https://accounts.google.com https://appleid.cdn-apple.com; "
-       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com https://*.yandex.ru https://yastatic.net; "
-       "font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https: http://127.0.0.1:* http://localhost:*; media-src 'self' data: blob: https:; "
-       "connect-src 'self' data: blob: https: wss: http://127.0.0.1:* http://localhost:*; frame-src https:; worker-src 'self' blob: https://*.api-maps.yandex.ru https://yastatic.net; manifest-src 'self'; "
-       "object-src 'none'; base-uri 'none'; form-action 'self' https:")
-html = ("<!doctype html>\n<html lang=\"ru\">\n<head>\n<meta charset=\"utf-8\">\n"
-        "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1,viewport-fit=cover\">\n"
-        f"<meta http-equiv=\"Content-Security-Policy\" content=\"{CSP}\">\n"
-        f"{meta}\n{contract_tag}<style>{RESET}</style>\n<link rel=\"preload\" as=\"script\" href=\"config.js\">\n<link rel=\"preload\" as=\"script\" href=\"{APP_URL}\">\n<link rel=\"manifest\" href=\"manifest.webmanifest\">\n<meta name=\"theme-color\" content=\"#FFFFFF\">\n<link rel=\"icon\" type=\"image/png\" href=\"icons/favicon-64.png\">\n<link rel=\"icon\" href=\"favicon.ico\" sizes=\"any\">\n<meta property=\"og:type\" content=\"website\">\n<meta property=\"og:site_name\" content=\"Quriliş Go\">\n<meta property=\"og:title\" content=\"Quriliş Go — стройматериалы из магазинов Ташкента с доставкой\">\n<meta property=\"og:description\" content=\"Сравнение цен 9 магазинов, Usta AI считает материалы, 3D-дизайнер комнаты, мастера и доставка Яндекс.\">\n<meta property=\"og:image\" content=\"https://usmonovm7777-crypto.github.io/Imorat/icons/og-image.png\">\n<meta property=\"og:image:width\" content=\"1200\">\n<meta property=\"og:image:height\" content=\"630\">\n<meta name=\"twitter:card\" content=\"summary_large_image\">\n<link rel=\"apple-touch-icon\" href=\"icons/apple-touch-icon.png\">\n<meta name=\"apple-mobile-web-app-capable\" content=\"yes\">\n<meta name=\"apple-mobile-web-app-title\" content=\"Quriliş Go\">\n<meta name=\"apple-mobile-web-app-status-bar-style\" content=\"default\">\n{head_tags.strip()}\n</head>\n<body>\n{body.strip()}\n</body>\n</html>\n")
+def _page(body, app_link, head_extra=""):
+  _hashes = " ".join("'sha256-" + base64.b64encode(hashlib.sha256(js.encode("utf-8")).digest()).decode() + "'" for js in re.findall(r"<script>([\s\S]*?)</script>", body))
+  CSP = ("default-src 'self'; "
+         f"script-src 'self' {_hashes} 'unsafe-eval' https://api-maps.yandex.ru https://*.api-maps.yandex.ru https://yandex.ru https://*.yandex.ru https://*.yandex.net https://yastatic.net https://accounts.google.com https://appleid.cdn-apple.com; "
+         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com https://*.yandex.ru https://yastatic.net; "
+         "font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https: http://127.0.0.1:* http://localhost:*; media-src 'self' data: blob: https:; "
+         "connect-src 'self' data: blob: https: wss: http://127.0.0.1:* http://localhost:*; frame-src https:; worker-src 'self' blob: https://*.api-maps.yandex.ru https://yastatic.net; manifest-src 'self'; "
+         "object-src 'none'; base-uri 'none'; form-action 'self' https:")
+  html = ("<!doctype html>\n<html lang=\"ru\">\n<head>\n<meta charset=\"utf-8\">\n"
+          "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1,viewport-fit=cover\">\n"
+          f"<meta http-equiv=\"Content-Security-Policy\" content=\"{CSP}\">\n"
+          f"{meta}\n{contract_tag}<style>{RESET}</style>\n<link rel=\"preload\" as=\"script\" href=\"config.js\">\n{app_link}\n{head_extra}<link rel=\"manifest\" href=\"manifest.webmanifest\">\n<meta name=\"theme-color\" content=\"#FFFFFF\">\n<link rel=\"icon\" type=\"image/png\" href=\"icons/favicon-64.png\">\n<link rel=\"icon\" href=\"favicon.ico\" sizes=\"any\">\n<meta property=\"og:type\" content=\"website\">\n<meta property=\"og:site_name\" content=\"Quriliş Go\">\n<meta property=\"og:title\" content=\"Quriliş Go — стройматериалы из магазинов Ташкента с доставкой\">\n<meta property=\"og:description\" content=\"Сравнение цен 9 магазинов, Usta AI считает материалы, 3D-дизайнер комнаты, мастера и доставка Яндекс.\">\n<meta property=\"og:image\" content=\"https://usmonovm7777-crypto.github.io/Imorat/icons/og-image.png\">\n<meta property=\"og:image:width\" content=\"1200\">\n<meta property=\"og:image:height\" content=\"630\">\n<meta name=\"twitter:card\" content=\"summary_large_image\">\n<link rel=\"apple-touch-icon\" href=\"icons/apple-touch-icon.png\">\n<meta name=\"apple-mobile-web-app-capable\" content=\"yes\">\n<meta name=\"apple-mobile-web-app-title\" content=\"Quriliş Go\">\n<meta name=\"apple-mobile-web-app-status-bar-style\" content=\"default\">\n{head_tags.strip()}\n</head>\n<body>\n{body.strip()}\n</body>\n</html>\n")
+  return html
+html = _page(body.replace(PRE_MARK, ""), f'<link rel="preload" as="script" href="{APP_URL}">')
 (ROOT / "index.html").write_text(html, encoding="utf-8")
+# The ready first screen of the home (tools/prerender.js opens the site just written in a headless browser and takes the header,
+# the first blocks and the tab bar as the page script rendered them, at a phone's and at a computer's size). A first-time
+# visitor's browser then has the first screen in the page itself; the page script, when it arrives, renders the same over it.
+# Needs node with the "playwright" package; without it, with PRERENDER=0, or for a site connected to a server (config.js names
+# the server: its catalogue is not the demo's) the page is left as written above and renders from the page script.
+PRE_SIZES = ("m",)  # the phone's first screen only. A computer's is not taken: there the largest element is the banner's headline, and the
+                    # web font arriving later re-wraps it (the page would jump); a computer's line and processor do not need the help.
+_pre_note = "PRERENDER=0"
+if os.environ.get("PRERENDER", "1") != "0":
+    _cfg = (ROOT / "config.js").read_text(encoding="utf-8") if (ROOT / "config.js").exists() else ""
+    if re.search(r'IMORAT_API\s*=\s*"[^"]+"', _cfg): _pre_note = "the site is connected to a server"
+    else:
+        try: _pr = subprocess.run(["node", str(ROOT / "tools" / "prerender.js"), str(ROOT)], capture_output=True, text=True, encoding="utf-8", env={**os.environ, "NODE_PATH": _NODE_PATH}, timeout=420)
+        except (OSError, subprocess.TimeoutExpired) as _e: _pr = None; _pre_note = "prerender did not run: " + str(_e)[:120]
+        if _pr is not None and _pr.returncode == 3: _pre_note = "playwright not found"
+        elif _pr is not None and _pr.returncode: _pre_note = "prerender failed: " + (_pr.stderr.strip().splitlines() or ["?"])[-1][:160]
+        elif _pr is not None:
+            _snap, _tpl, _kept = json.loads(_pr.stdout), "", []
+            for _k in PRE_SIZES:
+                _v = _snap.get(_k) or {}
+                _parts = "".join(f'<div data-pre="{_id}">{_v.get(_id, "")}</div>' for _id in ("hdr", "app", "tabbar"))
+                if not _v.get("stable") or re.search(r"</template|<script|<template", _parts, re.I): continue  # words that change with the hour, or markup a template cannot hold: this size renders from the page script
+                _tpl += f'<template id="pre-{_k}" data-cls="{_v.get("cls", "")}">{_parts}</template>\n'; _kept.append(_k)
+            if _tpl:
+                _lcp = (_snap.get("m") or {}).get("lcp") if "m" in _kept else None  # the phone's largest picture is asked for with the first bytes of the page
+                _extra = (f'<link rel="preload" as="image" href="{_lcp["src"]}" imagesrcset="{_lcp["srcset"]}" imagesizes="{_lcp["sizes"]}" fetchpriority="high" media="(max-width: 760px)">\n'
+                          if _lcp and _lcp.get("srcset") and '"' not in _lcp["src"] + _lcp["srcset"] + _lcp["sizes"] else "")
+                html = _page(body.replace(PRE_MARK, _tpl + "<script>" + PRE_SHOW + "</script>\n"), f'<link rel="x-app" href="{APP_URL}" data-pre="{" ".join(_kept)}">', _extra)
+                (ROOT / "index.html").write_text(html, encoding="utf-8")
+                _pre_note = "ready first screen: " + " + ".join({"m": "phone", "d": "computer"}[k] for k in _kept) + f" ({len(_tpl.encode('utf-8')) // 1024} KB of markup)"
+            else: _pre_note = "the home page changes with the hour — no ready first screen"
 import time
 sw = (ROOT / "tools" / "sw.template.js").read_text(encoding="utf-8").replace("__BUILD__", time.strftime("%Y%m%d%H%M%S")).replace("__APP__", APP_URL)
 (ROOT / "sw.js").write_text(sw, encoding="utf-8")
 print("built index.html", len(html), "bytes, app.js", len(app_js.encode("utf-8")), "bytes, en.js + sw.js;",
       f"scripts minified (−{_min_state['saved'] // 1024} KB);{_css_note}" if _min_state["on"] and _min_state["saved"] else f"scripts as written ({_min_state['why']});", _l10n + ";",
-      f"photo copies: {_thumbs_made} made" if _thumbs_ok else "photo copies incomplete (Pillow is not installed) — the page uses full photos")
+      f"photo copies: {_thumbs_made} made" if _thumbs_ok else "photo copies incomplete (Pillow is not installed) — the page uses full photos", "; " + _pre_note)
 import sys; sys.path.insert(0, str(ROOT / "tools")); import build_seo; build_seo.build()
