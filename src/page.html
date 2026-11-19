@@ -153,7 +153,7 @@ a { color: inherit; }
 html.workm .hdr .search, html.workm .cat-btn, html.workm .cart-btn, html.workm .rail-nav, html.workm .hb[data-act="favs"], html.workm .menu-btn, html.workm .where, html.workm #fab, html.workm #foot, html.workm #cmpBar, html.workm #supBtn,
 html.loginm .hdr .search, html.loginm .cat-btn, html.loginm .cart-btn, html.loginm .rail-nav, html.loginm .hb, html.loginm .menu-btn, html.loginm .where, html.loginm #fab, html.loginm #foot, html.loginm #cmpBar, html.loginm #tabbar, html.loginm #supBtn { display: none !important; }
 html.adminm #supBtn { display: none !important; }
-@media (min-width: 761px) { html.workm .hdr-row .th-btn, html.loginm .hdr-row .th-btn { margin-left: auto; } }
+@media (min-width: 761px) { html.workm .hdr-row .th-btn:not(.sn-btn), html.loginm .hdr-row .th-btn:not(.sn-btn) { margin-left: auto; } } /* the snow button carries the same class: with both pushed, the theme button hung in the middle of the bar */
 html.workm .hdr-row .work-shop { margin-left: 0; }
 .work-shop { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; font-size: 13.5px; }
 html.workm .hdr-row .logo { margin-right: 0; }
@@ -2043,6 +2043,9 @@ html.fx .fx-btn.th-btn, .fx-btn.th-btn { background: var(--surface); color: var(
 .imp-file { cursor: pointer; display: flex; gap: 10px; align-items: center; text-align: left; min-height: 96px; }
 .imp textarea { width: 100%; font: inherit; font-size: 14px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); resize: vertical; }
 .imp-tbl tr.off td { opacity: .5; }
+.imp-tbl .imp-pr { min-width: 190px; } .imp-tbl .imp-pr .num { display: block; font-weight: 700; }
+.pv { display: block; font-size: 12.5px; line-height: 1.35; color: var(--muted); font-weight: 500; } .pv b { font-weight: 700; }
+.pv-good, .pv-good b { color: var(--ok); } .pv-bad, .pv-bad b { color: var(--signal); } .pv-mid b { color: var(--ink); }
 .imp-tbl tr.chk td { background: color-mix(in srgb, var(--signal) 8%, transparent); }
 .imp-tbl select { max-width: 320px; width: 100%; display: block; margin-bottom: 2px; }
 @media (max-width: 640px) { .imp-in { grid-template-columns: 1fr; } .imp-in > .btn { grid-column: 1; } }
@@ -9100,6 +9103,25 @@ function impLoad(rows, src) {
   if (!rows.length) { imp = { rows: [], src, empty: true }; return; }
   imp = { src, rows: rows.slice(0, 1000).map(r => { const cands = impMatch(r.name), best = cands[0]; return { ...r, cands, pick: best && best.s >= .55 && (!cands[1] || best.s - cands[1].s > .04 || best.s >= .8) ? best.id : best && best.s >= .4 ? best.id : "skip", sure: !!(best && best.s >= .55) }; }) };
 }
+/* How a price stands against the same product at the other stores of the marketplace — the offers a buyer sees side by side.
+   Nothing is estimated: the figures are those stores' current prices. "odd" (three times off) usually means the wrong
+   product or another unit (a bag against a kilo), so it asks to check the pair rather than calls the price good or bad. */
+function priceVerdict(p, price, sid) {
+  const others = p.offers.filter(o => o.store !== sid).map(o => o.price).filter(v => v > 0).sort((a, b) => a - b);
+  if (!others.length) return { k: "solo" };
+  const mn = others[0], n = others.length, cheaper = others.filter(v => v < price).length, pct = Math.round(Math.abs(price - mn) / mn * 100);
+  if (price > mn * 3 || price < mn / 3) return { k: "odd", mn };
+  if (price <= mn) return { k: "good", mn, n, pct };
+  return { k: price > mn * 1.1 && cheaper > n / 2 ? "bad" : "mid", mn, n, cheaper, pct };
+}
+function priceVerdictHTML(v, sure) {
+  const stores = n => `${n} ${L(plural(n, ["магазина", "магазинов", "магазинов"]), "ta do‘kon", n === 1 ? "store" : "stores")}`;
+  if (v.k === "odd") return `<small class="pv pv-bad">${sure ? L(`На рынке от ${fmt(v.mn)} — проверьте цену и единицу`, `Bozorda ${fmt(v.mn)} dan — narx va birlikni tekshiring`, `Market from ${fmt(v.mn)} — check the price and the unit`) : L(`На рынке от ${fmt(v.mn)} — похоже, это другой товар`, `Bozorda ${fmt(v.mn)} dan — bu boshqa mahsulotga o‘xshaydi`, `Market from ${fmt(v.mn)} — this looks like another product`)}</small>`;
+  if (!sure) return `<small class="pv">${L("Сверьте товар — потом сравним цену", "Mahsulotni tekshiring — keyin narxni solishtiramiz", "Check the product — then we compare the price")}</small>`;
+  if (v.k === "solo") return `<small class="pv">${L("Только у вас — сравнить не с чем", "Faqat sizda — solishtirib bo‘lmaydi", "Only you sell it — nothing to compare with")}</small>`;
+  if (v.k === "good") return `<small class="pv pv-good"><b>${L("Хорошая цена", "Yaxshi narx", "Good price")}</b> · ${v.pct ? L(`ниже всех на ${v.pct}%`, `hammadan ${v.pct}% arzon`, `${v.pct}% below everyone`) : L("как самая низкая", "eng arzoni bilan teng", "equal to the lowest")}<br>${L(`рынок от ${fmt(v.mn)} · ${v.n} ${plural(v.n, ["магазин", "магазина", "магазинов"])}`, `bozorda ${fmt(v.mn)} dan · ${v.n} ta do‘kon`, `market from ${fmt(v.mn)} · ${v.n} ${v.n === 1 ? "store" : "stores"}`)}</small>`;
+  return `<small class="pv ${v.k === "bad" ? "pv-bad" : "pv-mid"}"><b>${v.k === "bad" ? L("Высокая цена", "Yuqori narx", "High price") : L("Средняя цена", "O‘rtacha narx", "Average price")}</b> · +${v.pct}% ${L("к самой низкой", "eng arzoniga nisbatan", "over the lowest")}<br>${L(`дешевле у ${v.cheaper} из ${stores(v.n)}, рынок от ${fmt(v.mn)}`, `${v.n} ta do‘kondan ${v.cheaper} tasida arzonroq, bozorda ${fmt(v.mn)} dan`, `cheaper at ${v.cheaper} of ${stores(v.n)}, market from ${fmt(v.mn)}`)}</small>`;
+}
 function importHTML(sid) {
   const sells = impSells(sid);
   let body = "";
@@ -9107,14 +9129,15 @@ function importHTML(sid) {
   else if (imp) {
     const r = imp.rows, sure = r.filter(x => x.pick !== "skip" && x.pick !== "new" && x.sure).length, check = r.filter(x => x.pick !== "skip" && x.pick !== "new" && !x.sure).length, none = r.filter(x => x.pick === "skip").length, nw = r.filter(x => x.pick === "new").length;
     body = `<p style="margin:0">${L(`Строк в прайсе: <b>${r.length}</b> · нашли пару: <b>${sure}</b> · проверьте: <b style="color:var(--signal)">${check}</b> · без пары: <b>${none}</b>${nw ? ` · новых товаров: <b>${nw}</b>` : ""}`, `Prays qatorlari: <b>${r.length}</b> · juftligi topildi: <b>${sure}</b> · tekshiring: <b style="color:var(--signal)">${check}</b> · juftsiz: <b>${none}</b>${nw ? ` · yangi mahsulotlar: <b>${nw}</b>` : ""}`, `Rows in the price list: <b>${r.length}</b> · matched: <b>${sure}</b> · check: <b style="color:var(--signal)">${check}</b> · no match: <b>${none}</b>${nw ? ` · new products: <b>${nw}</b>` : ""}`)}</p>
-      <div class="tbl-wrap imp-tbl"><table><thead><tr><th>${L("Строка из прайса", "Prays qatori")}</th><th>${L("Товар на Quriliş Go", "Quriliş Go’dagi mahsulot")}</th><th class="r">${L("Цена", "Narx")}</th><th class="r">${L("Остаток", "Qoldiq")}</th></tr></thead><tbody>
-      ${r.slice(0, imp.all ? 1000 : 60).map((x, i) => { const p = PROD[x.pick], mn = p ? minPrice(p) : 0, odd = p && (x.price > mn * 3 || x.price < mn / 3);
+      <div class="tbl-wrap imp-tbl"><table><thead><tr><th>${L("Строка из прайса", "Prays qatori")}</th><th>${L("Товар на Quriliş Go", "Quriliş Go’dagi mahsulot")}</th><th class="r">${L("Цена и рынок", "Narx va bozor", "Price and market")}</th><th class="r">${L("Остаток", "Qoldiq")}</th></tr></thead><tbody>
+      ${r.slice(0, imp.all ? 1000 : 60).map((x, i) => { const p = PROD[x.pick], pv = p ? priceVerdictHTML(priceVerdict(p, x.price, sid), x.sure) : "";
         return `<tr class="${x.pick === "skip" ? "off" : !x.sure && x.pick !== "new" ? "chk" : ""}"><td style="min-width:150px">${esc(x.name)}</td>
         <td style="min-width:200px"><label class="visually-hidden" for="impP${i}">${L("Товар", "Mahsulot")}</label><select class="sel" id="impP${i}" data-imppick="${i}">${x.cands.map(c => `<option value="${c.id}" ${x.pick === c.id ? "selected" : ""}>${esc(pName(PROD[c.id]))} · ${Math.round(c.s * 100)}%</option>`).join("")}<option value="new" ${x.pick === "new" ? "selected" : ""}>＋ ${L("Новый товар", "Yangi mahsulot")}</option><option value="skip" ${x.pick === "skip" ? "selected" : ""}>${L("Пропустить", "O‘tkazib yuborish")}</option></select>
-        ${p ? `<small style="color:var(--muted)">${sells.has(p.id) ? L("уже продаёте — обновим цену", "allaqachon sotyapsiz — narx yangilanadi") : L("добавим в ваш магазин", "do‘koningizga qo‘shamiz")}</small>` : ""}${odd ? `<br><small style="color:var(--signal)">${L(`на рынке от ${fmt(mn)} — проверьте цену`, `bozorda ${fmt(mn)} dan — narxni tekshiring`, `market from ${fmt(mn)} — check the price`)}</small>` : ""}</td>
-        <td class="r num">${fmt(x.price)}</td><td class="r num">${x.stock ?? "—"}</td></tr>`; }).join("")}
+        ${p ? `<small style="color:var(--muted)">${sells.has(p.id) ? L("уже продаёте — обновим цену", "allaqachon sotyapsiz — narx yangilanadi") : L("добавим в ваш магазин", "do‘koningizga qo‘shamiz")}</small>` : ""}</td>
+        <td class="r imp-pr"><span class="num">${fmt(x.price)}</span>${pv}</td><td class="r num">${x.stock ?? "—"}</td></tr>`; }).join("")}
       </tbody></table></div>
       ${r.length > 60 && !imp.all ? `<button class="btn btn-line" type="button" data-imp="all" style="justify-self:start">${L("Показать все строки", "Barcha qatorlar")} · ${r.length}</button>` : ""}
+      <p style="margin:0;font-size:13px;color:var(--muted)">${L("«Хорошая», «средняя» и «высокая» цена — сравнение с ценами других магазинов Quriliş Go на тот же товар: их покупатель видит рядом с вашей.", "«Yaxshi», «o‘rtacha» va «yuqori» narx — xuddi shu mahsulotning Quriliş Go’dagi boshqa do‘konlar narxlari bilan taqqoslash: xaridor ularni sizniki yonida ko‘radi.", "“Good”, “average” and “high” price is a comparison with the other Quriliş Go stores' prices for the same product: the buyer sees them next to yours.")}${API ? "" : " " + L("В демо цены магазинов — примеры.", "Demoda do‘kon narxlari — namuna.", "In the demo the stores' prices are samples.")}</p>
       <p style="margin:0;font-size:13px;color:var(--muted)">${L("Новые товары получат категорию и вес похожего товара — уточните их потом в списке товаров. Если остаток не указан, у новых позиций будет 10 шт., у старых — прежний.", "Yangi mahsulotlar o‘xshash mahsulot toifasi va vaznini oladi — keyin aniqlashtiring. Qoldiq ko‘rsatilmasa, yangilarida 10 dona, eskilarida avvalgisi qoladi.")}</p>
       <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-primary" type="button" data-imp="apply">${ui("check", 16)} ${L("Применить", "Qo‘llash")} · ${r.length - none}</button><button class="btn btn-line" type="button" data-imp="cancel">${L("Отмена", "Bekor qilish")}</button></div>`;
   }

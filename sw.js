@@ -1,7 +1,7 @@
 /* Quriliş Go service worker: works offline with the last opened catalog, caches photos, shows push notifications. */
-const VERSION = "20261119122308";
+const VERSION = "20261119134825";
 const SHELL = `imorat-shell-${VERSION}`, IMG = "imorat-img-v1";
-const SHELL_FILES = ["./", "index.html", "config.js", "app.js?v=5bbf02c9dd", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png"]; // the page script carries its version in the address; the language files (en.js, uz.js) are cached when they are first used
+const SHELL_FILES = ["./", "index.html", "config.js", "app.js?v=a4d3cc6e26", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png"]; // the page script carries its version in the address; the language files (en.js, uz.js) are cached when they are first used
 
 /* Nothing here may end as an unanswered error: a failed write to the cache is not a failed page (and every such error lands in
    the browser's console as "Uncaught (in promise)"). A response is copied for the cache at once, while its body is untouched —
