@@ -859,9 +859,12 @@ html .drawer.swiped:not(.on), html .ai.swiped:not(.on), html .wpanel.swiped:not(
 .m-hint-b .svc-i { width: 38px; height: 38px; flex: none; border-radius: 11px; display: grid; place-items: center; font-size: 20px; background: var(--surface); }
 .m-hint-t { display: grid; min-width: 0; flex: 1; line-height: 1.25; } .m-hint-t b { font-size: 14px; } .m-hint-t small { font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .m-hint-b > svg { flex: none; color: var(--muted); } .m-hint .fine { margin: 0; }
-      ${totalsCard}
-      ${mastersHintHTML(o.ships.flatMap(sh => sh.lines.map(l => PROD[l.id])).filter(Boolean))}
-      <div class="trk-btns"> border-radius: 14px; padding: 12px 14px; display: grid; gap: 6px; background: var(--surface); }
+/* A tap on the pay button right after typing in a field was lost when it landed on the sum: leaving the field re-counts the
+   order and rewrites the button's text, the piece of text under the finger is gone, and the browser drops the click. The
+   button's inner pieces take no pointer events, so the press always belongs to the button itself. Same for any counted
+   figure inside a button. */
+#payBtn *, button [data-cu] { pointer-events: none; }
+.ck-sumcard { border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; display: grid; gap: 6px; background: var(--surface); }
 .det-t { display: none; }
 @media (max-width: 760px) { /* phones: the cart footer is the total and the buttons; the goods and delivery lines open from the chevron */
   #dFoot .cart-det { display: none; } #dFoot.det .cart-det { display: block; }
@@ -2108,7 +2111,7 @@ html.xmas .cat-btn::before, html.xmas .cart-btn::before, html.xmas .search::befo
   background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 28' preserveAspectRatio='none'%3E%3Cpath fill='%23b3cdea' d='M0 14C5 7 15 5 23 10C29 3 43 2 51 9C57 5 66 5 71 10C77 6 89 6 96 14V20C92 25 85 25 81 20C78 28 70 28 68 21C62 25 54 25 50 20C45 24 38 24 34 20C31 27 24 27 22 20C16 24 8 24 4 20C3 22 1 22 0 20Z'/%3E%3Cpath fill='%23fff' d='M0 12C5 5 15 3 23 8C29 1 43 0 51 7C57 3 66 3 71 8C77 4 89 4 96 12V18C92 22 85 22 81 18C78 25 70 25 68 19C62 22 54 22 50 18C45 21 38 21 34 18C31 24 24 24 22 18C16 21 8 21 4 18C3 19.500 1 19.500 0 18Z'/%3E%3C/svg%3E") 0 0 / 66px 100% round no-repeat; filter: drop-shadow(0 1.5px 1.5px rgba(50, 85, 130, .3)); }
 html.xmas .search::before { left: 10px; right: 10px; }
 html.xmas button.sp::before { left: 62px; right: 22px; top: -10px; }
-html.xmas .sec-head .h-l::before, html.xmas main h1.h-l::before { left: -.12em; right: -.12em; top: -.31em; height: .66em; background-size: 2.1em 100%; }
+html.xmas .sec-head .h-l::before, html.xmas main h1.h-l::before { left: -.12em; right: -.12em; top: -.27em; height: .66em; background-size: 2.1em 100%; }
 html.xmas .logo::before, html.xmas .sp-i::before { content: ""; position: absolute; z-index: 3; left: -8px; top: -13px; width: 31px; height: 26px; pointer-events: none; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 44 36'%3E%3Cpath fill='%23d3232a' d='M6 25C6 12 15 3 26 4C34 5 39 12 39 21C35 15 31 13 27 14C29 18 30 22 30 26Z'/%3E%3Cpath fill='%23a8161d' d='M27 14C29 18 30 22 30 26L24 25.7C24.6 21 25.4 17 27 14Z'/%3E%3Crect x='2.5' y='22.5' width='31' height='10' rx='5' fill='%23fff' stroke='%23b3cdea' stroke-width='1'/%3E%3Ccircle cx='38.5' cy='22.5' r='4.6' fill='%23fff' stroke='%23b3cdea' stroke-width='1'/%3E%3C/svg%3E") center / contain no-repeat; transform: rotate(-17deg); filter: drop-shadow(0 1px 1px rgba(40, 20, 20, .3)); }
 html.xmas .sp-i { position: relative; }
 html.xmas .sp-i::before { left: -6px; top: -12px; width: 29px; height: 24px; }
@@ -2336,7 +2339,7 @@ select { max-width: 100%; }
 .calc .row3 .f label, .calc .row2 .f label { min-height: 2.6em; display: flex; align-items: end; line-height: 1.25; }
 </style>
 <script>/* Before anything is painted: the start screen below is plain markup, so it shows while the rest of the page is still on its
-   way. Here the page learns which start screen it is — the orange launch animation (the app every start, the site once per
+   way. Here the page learns which start screen it is — the orange launch animation (the installed app, every start; a browser tab never — only with ?intro=1; it used to play once per
    visit) or the still mark on the page colour (a repeat visit, reduced motion, tests) — its saved language and theme, and the
    status-bar colour (orange with the animation; showIntro() gives it back). */
 (function () { var de = document.documentElement; try {
@@ -2356,13 +2359,17 @@ select { max-width: 100%; }
   var fresh = true; try { for (var i = 0; i < localStorage.length; i++) if (/^imorat\./.test(localStorage.key(i))) { fresh = false; break; } } catch (e) { fresh = false; }
   var aj = document.querySelector('link[rel="x-app"]'); // the built site: the page script's address; "data-pre" says the page carries the ready first screen
   window.__pre = fresh && !app && de.lang === "ru" && /^(#|#home)?$/.test(location.hash) && /^(\?intro=1)?$/.test(location.search) && !!aj && (" " + (aj.getAttribute("data-pre") || "") + " ").indexOf(matchMedia("(max-width: 760px)").matches ? " m " : " d ") >= 0;
-  var pl = document.querySelector('link[rel="preload"][as="style"]'), fdone = false; // the built site declares the web fonts this way: they load without holding the first paint
-  window.__fonts = function () { if (fdone || !pl) return; fdone = true; var fl = document.createElement("link"); fl.rel = "stylesheet"; fl.href = pl.href; document.head.appendChild(fl); };
-  if (!window.__pre) { window.__fonts(); if (aj) { var al = document.createElement("link"); al.rel = "preload"; al.as = "script"; al.href = aj.getAttribute("href"); document.head.appendChild(al); } }
-  else setTimeout(window.__fonts, 4000); // (a net under the loader)
+  /* The built site carries its own font files; their @font-face rules wait in <style id="wf" media="not all"> and this switch
+     turns them on. On a phone that shows the ready first screen they are turned on after that screen's pictures (the loader);
+     everywhere else here, before anything is drawn. */
+  var wf = document.getElementById("wf");
+  window.__fonts = function () { if (wf) wf.media = "all"; };
+  var phone = matchMedia("(max-width: 760px)").matches;
+  if (!window.__pre || !phone) window.__fonts(); else setTimeout(window.__fonts, 4000); // (a net under the loader)
+  if (!window.__pre && aj) { var al = document.createElement("link"); al.rel = "preload"; al.as = "script"; al.href = aj.getAttribute("href"); document.head.appendChild(al); }
   var seen = false; try { seen = sessionStorage.getItem("imorat.intro") === "1"; } catch (e) {}
   var m = document.querySelector('meta[name="theme-color"]:not([media])'); if (!m) { m = document.createElement("meta"); m.name = "theme-color"; document.head.appendChild(m); }
-  if (!/[?&]intro=1/.test(location.search) && (matchMedia("(prefers-reduced-motion: reduce)").matches || navigator.webdriver || (!app && seen))) { // no animation: the still mark, the header's colour at once
+  if (!/[?&]intro=1/.test(location.search) && (matchMedia("(prefers-reduced-motion: reduce)").matches || navigator.webdriver || !app)) { // no animation: the still mark, the header's colour at once. The launch animation belongs to the installed app; in a browser tab the page itself is the first thing seen
     de.classList.add("boot-plain"); m.content = th === "dark" || (th !== "light" && matchMedia("(prefers-color-scheme: dark)").matches) ? "#1D1A17" : "#FFFFFF"; return;
   }
   de.classList.add("intro-on"); m.content = "#F2661C";
@@ -3243,7 +3250,7 @@ function showIntro() {
     const t = setInterval(() => { if (window.__intro === 2 || !$("#intro")) { clearInterval(t); light(); } }, 80); return;
   }
   window.__intro = 1; // from here the animation is this function's: the loader leaves it alone
-  if (!force && (mqReduce.matches || navigator.webdriver || (!APP_MODE && seen))) { el?.remove(); document.documentElement.classList.remove("boot-plain"); return light(); }
+  if (!force && (mqReduce.matches || navigator.webdriver || !APP_MODE)) { el?.remove(); document.documentElement.classList.remove("boot-plain"); return light(); }
   nativeBar(true);
   if (!el) { el = document.createElement("div"); el.id = "intro"; el.setAttribute("aria-hidden", "true"); el.innerHTML = `<div class="iapp"><svg viewBox="0 0 100 100" fill="#F2661C">${MARK_BRICKS}</svg></div><div class="itx"><b>Quriliş<em>go</em></b><small></small></div>`; document.body.appendChild(el); window.__bootT = Date.now(); }
   document.documentElement.classList.remove("boot-plain"); document.documentElement.classList.add("intro-on");

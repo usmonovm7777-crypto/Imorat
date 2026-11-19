@@ -5,7 +5,7 @@ font links, then <style>, markup and <script>. This script moves the head tags i
 and wraps everything in a complete HTML document, so the site runs on any static host
 (GitHub Pages, Netlify, nginx).
 """
-import re
+import re, json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -30,7 +30,20 @@ def _css_min(m):
     css = re.sub(r"/\*.*?\*/", "", m.group(1), flags=re.S)
     css = re.sub(r"\s*\n\s*", "\n", css).strip()
     return "<style>" + css + "</style>"
+# The typefaces are the site's own files (tools/build_fonts.py made them and tools/fonts.json describes them). The styles get
+# stand-in faces — a system font scaled to the web font's width — right after each web font in the font stacks, so the text
+# keeps its line breaks when the web font arrives.
+FONTS = json.loads((ROOT / "tools" / "fonts.json").read_text(encoding="utf-8")) if (ROOT / "tools" / "fonts.json").exists() else None
+if FONTS:
+    _n1 = body.count('"Unbounded", "Arial Black",'); _n2 = body.count('"Golos Text", system-ui,')
+    if _n1 != 1 or _n2 != 1: sys.exit("build aborted: the font stacks in the page's styles are not the ones this script knows")
+    body = body.replace('"Unbounded", "Arial Black",', '"Unbounded", "Unbounded Fallback", "Unbounded Fallback R",').replace('"Golos Text", system-ui,', '"Golos Text", "Golos Text Fallback", "Golos Text Fallback R", system-ui,')
+    body = body.replace("<style>", "<style>" + FONTS["fallbacks"] + "\n", 1)
 body = re.sub(r"<style>(.*?)</style>", _css_min, body, count=1, flags=re.S)
+# A rule that lost its selector or a brace does not break the page loudly — the browser just drops styles from there on. Such a
+# page is not built.
+_cssx = re.sub(r'"[^"\n]*"|\'[^\'\n]*\'', '""', re.search(r"<style>(.*?)</style>", body, flags=re.S).group(1))
+if _cssx.count("{") != _cssx.count("}") or "${" in _cssx: sys.exit(f"build aborted: the page's styles are damaged (braces {_cssx.count('{')} / {_cssx.count('}')}" + (", script text inside the styles" if "${" in _cssx else "") + ")")
 _css_note = ""
 def _css_esbuild(m):  # a few KB more with esbuild's CSS minifier; kept only if the result still has every rule's braces balanced
     global _css_note
@@ -136,43 +149,57 @@ if not UZ_URL and (ROOT / "uz.js").exists(): (ROOT / "uz.js").unlink()  # a tabl
 # (the download is already running): starting a megabyte of script must not be what the first frame waits for. On a repeat
 # visit (no animation), in a background tab and in automated browsers it starts at once.
 # When the page carries the ready first screen and shows it (window.__pre, see below), the loader waits for that screen's
-# pictures (decoded and painted) before it starts the web fonts and the page script: on a slow phone network the visitor's first
+# pictures (marked data-fs by tools/prerender.js; decoded and painted — where the browser reports its largest paint, that
+# report is the signal, elsewhere two frames after the decoding) before it starts the web fonts and the page script: on a slow phone network the visitor's first
 # screen must not share the line with a megabyte of script. The launch animation then opens on its own clock (about a second
 # on the screen) over the ready screen, without waiting for the page script; showIntro() in the page script takes it over if
 # the script gets there first (window.__intro says who has it).
 LOADER = ('(function(){var d=document,e=d.documentElement,w=window,f={en:"%s",uz:"%s"}[e.lang],l=f?[f,"%s"]:["%s"],n=0;'
+          'if(w.__pre&&w.IMORAT_API){["hdr","app","tabbar"].forEach(function(i){d.getElementById(i).textContent=""});e.classList.remove("pre");w.__pre=false}'
           'function go(){if(n++)return;w.__fonts&&w.__fonts();for(var i=0;i<l.length;i++){var s=d.createElement("script");s.src=l[i];s.async=false;d.body.appendChild(s)}}'
-          'if(w.__pre&&!navigator.webdriver&&d.visibilityState==="visible"){var m=[].slice.call(d.querySelectorAll("#app img,#hdr img")).filter(function(i){return i.getAttribute("loading")!=="lazy"}),k=m.length+1,q=0,el=d.getElementById("intro"),'
+          'if(w.__pre&&!navigator.webdriver&&d.visibilityState==="visible"){var m=[].slice.call(d.querySelectorAll("img[data-fs]")),k=m.length+1,q=0,el=d.getElementById("intro"),'
           'io=function(){if(w.__intro||!el||!/\\bintro-on\\b/.test(e.className))return;w.__intro=1;el.classList.add("out");'
           'setTimeout(function(){e.classList.remove("intro-on");var t=e.getAttribute("data-theme"),c=d.querySelector(\'meta[name="theme-color"]:not([media])\');if(c)c.content=t==="dark"||(t!=="light"&&matchMedia("(prefers-color-scheme: dark)").matches)?"#1D1A17":"#FFFFFF";'
           'el.classList.add("open");if(!(w.CSS&&CSS.registerProperty)||!(CSS.supports&&(CSS.supports("mask-image","none")||CSS.supports("-webkit-mask-image","none"))))el.classList.add("fade")},270);'
           'setTimeout(function(){el.parentNode&&el.parentNode.removeChild(el);w.__intro=2},1150)},'
           'z=function(){if(q++)return;setTimeout(io,Math.max(0,950-(Date.now()-(w.__bootT||Date.now()))));go()},'
-          'y=function(){if(--k<=0)requestAnimationFrame(function(){requestAnimationFrame(function(){setTimeout(z,0)})})};'
+          'L=0,y=function(){if(--k<=0){if(L)setTimeout(z,250);else requestAnimationFrame(function(){requestAnimationFrame(function(){setTimeout(z,0)})})}};'
+          'try{if(w.PerformanceObserver&&(PerformanceObserver.supportedEntryTypes||[]).indexOf("largest-contentful-paint")>=0){new PerformanceObserver(function(a,o){a.getEntries().forEach(function(x){if(x.element&&x.element.hasAttribute&&x.element.hasAttribute("data-fs")){o.disconnect();setTimeout(z,0)}})}).observe({type:"largest-contentful-paint",buffered:true});L=1}}catch(x){}'
           'm.forEach(function(i){if(i.decode)i.decode().then(y,y);else if(i.complete)y();else{i.addEventListener("load",y);i.addEventListener("error",y)}});y();setTimeout(z,2500);return}'
           'if(!/\\bintro-on\\b/.test(e.className)||navigator.webdriver||d.visibilityState!=="visible"||!w.PerformanceObserver)return go();'
           'try{new PerformanceObserver(function(a,o){if(a.getEntriesByName("first-contentful-paint").length){o.disconnect();go()}}).observe({type:"paint",buffered:true})}catch(x){return go()}'
           'setTimeout(go,300)})();' % (EN_URL, UZ_URL, APP_URL, APP_URL))
-# The ready first screen is shown by this script, placed right after the page's empty containers and after config.js (a site
-# connected to a server has its own catalogue: the ready screen of the demo is not for it). It moves the fitting <template>
-# into the header, the main area and the tab bar; if the page had chosen the still start screen, that screen steps aside.
+# The ready first screen is shown by this script, placed right after the page's empty containers. It moves the fitting
+# <template> into the header, the main area and the tab bar; if the page had chosen the still start screen, that screen steps
+# aside. It does not wait for config.js (one more round trip before the first screen). The ready screen is the demo
+# catalogue's, and this script builds it only when config.js names no server; should someone name a server there without
+# rebuilding the site, the loader — which does run after config.js — takes the ready screen away before the page script starts.
 PRE_SHOW = ('(function(){var d=document,e=d.documentElement,w=window;if(!w.__pre)return;'
-            'var t=!w.IMORAT_API&&d.getElementById(matchMedia("(max-width:760px)").matches?"pre-m":"pre-d");'
+            'var t=d.getElementById(matchMedia("(max-width:760px)").matches?"pre-m":"pre-d");'
             'if(!t||!t.content){w.__pre=false;w.__fonts&&w.__fonts();return}'
             '["hdr","app","tabbar"].forEach(function(id){var s=t.content.querySelector(\'[data-pre="\'+id+\'"]\'),h=d.getElementById(id);if(s&&h)while(s.firstChild)h.appendChild(s.firstChild)});'
             '(t.getAttribute("data-cls")||"").split(" ").forEach(function(c){c&&e.classList.add(c)});e.classList.add("pre");if(/\\bboot-plain\\b/.test(e.className)){e.classList.remove("boot-plain");var i=d.getElementById("intro");i&&i.parentNode.removeChild(i)}})();')
 _at = body.index("<script>" + main_js + "</script>")
-body = body[:_at] + "<script>" + LOADER + "</script>" + body[_at + len("<script>" + main_js + "</script>"):]
+body = body[:_at] + '<script src="config.js"></script>\n<script>' + LOADER + "</script>" + body[_at + len("<script>" + main_js + "</script>"):]
 body = re.sub(r"<script>([\s\S]*?)</script>", lambda m: m.group(0) if m.group(1) == LOADER else "<script>" + _minify(m.group(1), inline=True) + "</script>", body)
-# config.js (the public settings) runs right after the page's containers; the ready first screen (if any) follows it
+# the ready first screen (if any) goes right after the page's empty containers
 _tb = re.search(r'<nav class="tabbar" id="tabbar"[^>]*></nav>\n', body)
 if not _tb: sys.exit("build aborted: the tab bar container was not found in the page")
 PRE_MARK = "<!--ready-first-screen-->"
-body = body[:_tb.end()] + '<script src="config.js"></script>\n' + PRE_MARK + body[_tb.end():]
-# Web fonts must not hold the first paint: the head only preloads their stylesheet, the page's first script attaches it
-# (CSP forbids an inline onload handler); without scripts the <noscript> copy applies.
+body = body[:_tb.end()] + PRE_MARK + body[_tb.end():]
+# Web fonts. With the site's own files: the Google Fonts links leave the head; the @font-face rules sit in a <style> that is
+# switched off (media="not all") until the page's first script turns it on — at once, or, on a phone showing the ready first
+# screen, after that screen's pictures. A computer also preloads the two text faces: they are on every screen there, and a
+# face that is already here when the first frame is drawn never has to be swapped in.
+# Without tools/fonts.json the Google stylesheet stays, preloaded so that it does not hold the first paint.
 def _fonts(m): return f'<link rel="preload" as="style" href="{m.group(1)}">\n<noscript><link rel="stylesheet" href="{m.group(1)}"></noscript>'
-head_tags, _nf = re.subn(r'<link rel="stylesheet" href="(https://fonts\.googleapis\.com/[^"]+)">', _fonts, head_tags)
+if FONTS:
+    head_tags = re.sub(r'<link rel="preconnect" href="https://fonts\.(googleapis|gstatic)\.com"[^>]*>\n?', "", head_tags)
+    _wf = (f'<style id="wf" media="not all">{FONTS["faces"]}</style>\n<noscript><style>{FONTS["faces"]}</style></noscript>\n'
+           + "".join(f'<link rel="preload" as="font" type="font/woff2" href="{FONTS["files"][k]["file"]}" crossorigin media="(min-width: 761px)">\n' for k in ("unbounded", "golos")))
+    head_tags, _nf = re.subn(r'<link rel="stylesheet" href="https://fonts\.googleapis\.com/[^"]+">\n?', lambda m: _wf, head_tags)
+else:
+    head_tags, _nf = re.subn(r'<link rel="stylesheet" href="(https://fonts\.googleapis\.com/[^"]+)">', _fonts, head_tags)
 if _nf != 1: sys.exit("build aborted: expected one Google Fonts stylesheet link in the page head, found %d" % _nf)
 # Content-Security-Policy: only the page's own inline scripts (by their hash), its own files and the few services it loads code from
 # may run. A script smuggled into a store name or a review (<img onerror=…>) does not execute — the app has no inline handlers.
@@ -182,8 +209,8 @@ def _page(body, app_link, head_extra=""):
   _hashes = " ".join("'sha256-" + base64.b64encode(hashlib.sha256(js.encode("utf-8")).digest()).decode() + "'" for js in re.findall(r"<script>([\s\S]*?)</script>", body))
   CSP = ("default-src 'self'; "
          f"script-src 'self' {_hashes} 'unsafe-eval' https://api-maps.yandex.ru https://*.api-maps.yandex.ru https://yandex.ru https://*.yandex.ru https://*.yandex.net https://yastatic.net https://accounts.google.com https://appleid.cdn-apple.com; "
-         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com https://*.yandex.ru https://yastatic.net; "
-         "font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https: http://127.0.0.1:* http://localhost:*; media-src 'self' data: blob: https:; "
+         "style-src 'self' 'unsafe-inline'" + ("" if FONTS else " https://fonts.googleapis.com") + " https://accounts.google.com https://*.yandex.ru https://yastatic.net; "
+         "font-src 'self' data:" + ("" if FONTS else " https://fonts.gstatic.com") + "; img-src 'self' data: blob: https: http://127.0.0.1:* http://localhost:*; media-src 'self' data: blob: https:; "
          "connect-src 'self' data: blob: https: wss: http://127.0.0.1:* http://localhost:*; frame-src https:; worker-src 'self' blob: https://*.api-maps.yandex.ru https://yastatic.net; manifest-src 'self'; "
          "object-src 'none'; base-uri 'none'; form-action 'self' https:")
   html = ("<!doctype html>\n<html lang=\"ru\">\n<head>\n<meta charset=\"utf-8\">\n"
@@ -198,8 +225,7 @@ html = _page(body.replace(PRE_MARK, ""), f'<link rel="preload" as="script" href=
 # visitor's browser then has the first screen in the page itself; the page script, when it arrives, renders the same over it.
 # Needs node with the "playwright" package; without it, with PRERENDER=0, or for a site connected to a server (config.js names
 # the server: its catalogue is not the demo's) the page is left as written above and renders from the page script.
-PRE_SIZES = ("m",)  # the phone's first screen only. A computer's is not taken: there the largest element is the banner's headline, and the
-                    # web font arriving later re-wraps it (the page would jump); a computer's line and processor do not need the help.
+PRE_SIZES = ("m", "d")  # a phone's first screen and a computer's
 _pre_note = "PRERENDER=0"
 if os.environ.get("PRERENDER", "1") != "0":
     _cfg = (ROOT / "config.js").read_text(encoding="utf-8") if (ROOT / "config.js").exists() else ""
@@ -217,9 +243,11 @@ if os.environ.get("PRERENDER", "1") != "0":
                 if not _v.get("stable") or re.search(r"</template|<script|<template", _parts, re.I): continue  # words that change with the hour, or markup a template cannot hold: this size renders from the page script
                 _tpl += f'<template id="pre-{_k}" data-cls="{_v.get("cls", "")}">{_parts}</template>\n'; _kept.append(_k)
             if _tpl:
-                _lcp = (_snap.get("m") or {}).get("lcp") if "m" in _kept else None  # the phone's largest picture is asked for with the first bytes of the page
-                _extra = (f'<link rel="preload" as="image" href="{_lcp["src"]}" imagesrcset="{_lcp["srcset"]}" imagesizes="{_lcp["sizes"]}" fetchpriority="high" media="(max-width: 760px)">\n'
-                          if _lcp and _lcp.get("srcset") and '"' not in _lcp["src"] + _lcp["srcset"] + _lcp["sizes"] else "")
+                _extra = ""  # each size's largest picture is asked for with the first bytes of the page
+                for _k, _media in (("m", "(max-width: 760px)"), ("d", "(min-width: 761px)")):
+                    for _lcp in ((_snap.get(_k) or {}).get("lcp") or []) if _k in _kept else []:
+                      if _lcp.get("src") and '"' not in _lcp["src"] + _lcp["srcset"] + _lcp["sizes"]:
+                        _extra += f'<link rel="preload" as="image" href="{_lcp["src"]}"' + (f' imagesrcset="{_lcp["srcset"]}" imagesizes="{_lcp["sizes"]}"' if _lcp["srcset"] else "") + f' fetchpriority="high" media="{_media}">\n'
                 html = _page(body.replace(PRE_MARK, _tpl + "<script>" + PRE_SHOW + "</script>\n"), f'<link rel="x-app" href="{APP_URL}" data-pre="{" ".join(_kept)}">', _extra)
                 (ROOT / "index.html").write_text(html, encoding="utf-8")
                 _pre_note = "ready first screen: " + " + ".join({"m": "phone", "d": "computer"}[k] for k in _kept) + f" ({len(_tpl.encode('utf-8')) // 1024} KB of markup)"

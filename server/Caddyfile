@@ -32,10 +32,10 @@
 	header /index.html Cache-Control "no-cache"
 	header /sw.js Cache-Control "no-cache"
 	header /manifest.webmanifest Cache-Control "no-cache"
-	# the page script and the language files are requested as app.js?v=<hash>, en.js?v=<hash>, uz.js?v=<hash>: a new build has a new address
-	@versioned path /app.js /en.js /uz.js
+	# the page script and the language files are requested as app.js?v=<hash>, en.js?v=<hash>, uz.js?v=<hash>, the font files carry a hash in their names: a new build has a new address
+	@versioned path /app.js /en.js /uz.js /fonts/*.woff2
 	header @versioned Cache-Control "public, max-age=31536000, immutable"
-	@static path *.webp *.png *.jpg *.svg *.ico *.woff2 *.xlsx
+	@static path *.webp *.png *.jpg *.svg *.ico *.xlsx
 	header @static Cache-Control "public, max-age=604800"
 	header X-Content-Type-Options nosniff
 	header Referrer-Policy strict-origin-when-cross-origin

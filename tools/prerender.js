@@ -11,7 +11,7 @@
 const http = require("http"), fs = require("fs"), path = require("path");
 let chromium; try { ({ chromium } = require("playwright")); } catch { process.stderr.write("playwright is not installed\n"); process.exit(3); }
 const ROOT = path.resolve(process.argv[2] || ".");
-const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".webp": "image/webp", ".png": "image/png", ".svg": "image/svg+xml", ".json": "application/json", ".webmanifest": "application/manifest+json", ".ico": "image/x-icon" };
+const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".webp": "image/webp", ".woff2": "font/woff2", ".png": "image/png", ".svg": "image/svg+xml", ".json": "application/json", ".webmanifest": "application/manifest+json", ".ico": "image/x-icon" };
 const srv = http.createServer((req, res) => {
   let p = decodeURIComponent(req.url.split("?")[0]); if (p.endsWith("/")) p += "index.html";
   const f = path.join(ROOT, p);
@@ -29,20 +29,26 @@ const hook = () => {
       for (const rail of wrap.querySelectorAll(".rail")) [...rail.children].forEach((c, i) => { if (i >= 3 && c.getBoundingClientRect().left > innerWidth * 1.4) drop.push(c); });
     }
     for (const c of drop) c.setAttribute("data-snapdrop", "");
-    const pick = id => { const el = document.getElementById(id); if (!el) return ""; const c = el.cloneNode(true); c.querySelectorAll("[data-snapdrop]").forEach(n => n.remove()); return c.innerHTML; };
+    // the pictures of the first screen: marked (data-fs) so the page's loader waits for exactly these before it asks for the
+    // page script, and loaded at once (no lazy loading); the largest of them is asked for with high priority
+    const fs = [], areas = new Map(); let area = 0;
+    for (const i of document.querySelectorAll("#app img, #hdr img")) {
+      if (i.closest("[data-snapdrop]")) continue;
+      const r = i.getBoundingClientRect(), w = Math.min(r.right, innerWidth) - Math.max(r.left, 0), h = Math.min(r.bottom, innerHeight) - Math.max(r.top, 0);
+      if (w <= 0 || h <= 0) continue;
+      fs.push(i); i.setAttribute("data-fs", ""); areas.set(i, w * h); area = Math.max(area, w * h);
+    }
+    const bigs = fs.filter(i => areas.get(i) >= area * 0.98).slice(0, 6); // (a collage has several pictures of one size: any of them may be the one the browser names the largest)
+    for (const i of bigs) i.setAttribute("data-fs", "lcp");
+    const pick = id => { const el = document.getElementById(id); if (!el) return ""; const c = el.cloneNode(true); c.querySelectorAll("[data-snapdrop]").forEach(n => n.remove());
+      c.querySelectorAll("img[data-fs]").forEach(i => { i.removeAttribute("loading"); if (i.getAttribute("data-fs") === "lcp") i.setAttribute("fetchpriority", "high"); else if (i.getAttribute("fetchpriority") === "high") i.removeAttribute("fetchpriority"); });
+      return c.innerHTML; };
     const cls = [...document.documentElement.classList].filter(c => !/^(boot|boot-plain|pre|intro-on|xmas|hd-sc|kb)$/.test(c) && /^[\w-]+$/.test(c)).join(" "); // the page's state classes the layout depends on (r-home: the home's own header on a phone)
     window.__snapOut = { hdr: pick("hdr"), app: pick("app"), tabbar: pick("tabbar"), cls };
     for (const c of drop) c.removeAttribute("data-snapdrop");
+    window.__snapOut.lcp = bigs.map(i => ({ src: i.getAttribute("src"), srcset: i.getAttribute("srcset") || "", sizes: i.getAttribute("sizes") || "", area: Math.round(area) }));
+    for (const i of fs) i.removeAttribute("data-fs");
   };
-};
-/* the largest picture of the first screen: the page's head preloads it, so the browser asks for it with the first bytes */
-const largest = () => {
-  let best = null, area = 0;
-  for (const i of document.querySelectorAll("#app img, #hdr img")) {
-    const r = i.getBoundingClientRect(), w = Math.max(0, Math.min(r.right, innerWidth) - Math.max(r.left, 0)), h = Math.max(0, Math.min(r.bottom, innerHeight) - Math.max(r.top, 0));
-    if (w * h > area) { area = w * h; best = i; }
-  }
-  return best ? { src: best.getAttribute("src"), srcset: best.getAttribute("srcset") || "", sizes: best.getAttribute("sizes") || "", area: Math.round(area) } : null;
 };
 async function take(browser, base, size, time) {
   const ctx = await browser.newContext({ ...size, locale: "ru-RU", timezoneId: "Asia/Tashkent", serviceWorkers: "block" });
@@ -53,7 +59,6 @@ async function take(browser, base, size, time) {
   await page.goto(base, { waitUntil: "load" });
   await page.waitForFunction(() => !!window.__snapOut, null, { timeout: 20000 });
   const out = await page.evaluate(() => window.__snapOut);
-  out.lcp = await page.evaluate(largest);
   await ctx.close();
   return out;
 }
