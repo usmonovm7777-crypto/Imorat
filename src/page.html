@@ -157,10 +157,17 @@ html.adminm #supBtn { display: none !important; }
 html.workm .hdr-row .work-shop { margin-left: 0; }
 .work-shop { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; font-size: 13.5px; }
 html.workm .hdr-row .logo { margin-right: 0; }
-.work-back { background: var(--ink); color: var(--bg); }
-.work-back .wrap { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-block: 8px; font-size: 13.5px; flex-wrap: wrap; }
-.work-back span { display: inline-flex; align-items: center; gap: 6px; }
-.work-back .btn { padding: 7px 14px; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; }
+/* "you are shopping; back to your cabinet": a quiet tinted strip under the header (it was a black band with an orange button — heavy next to the white header). On a phone it is one tappable line. */
+.work-back { background: var(--accent-soft); color: var(--ink); border-bottom: 1px solid color-mix(in srgb, var(--accent) 16%, transparent); }
+.work-back .wrap { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-block: 7px; font-size: 13.5px; }
+.work-back span { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-2, var(--ink)); min-width: 0; }
+.work-back .btn { padding: 7px 14px; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; flex: none; }
+@media (max-width: 760px) {
+  .work-back span { display: none; } /* the button says it all */
+  .work-back .wrap { padding-block: 0; }
+  .work-back .btn.btn-primary, .work-back .btn.btn-primary:hover, .work-back .btn.btn-primary:active { flex: 1; justify-content: flex-start; min-height: 44px; padding: 0; background: none; border: 0; box-shadow: none; color: var(--ink); font-size: 14.5px; font-weight: 600; border-radius: 0; transform: none; }
+  .work-back .btn svg { color: var(--accent); }
+}
 @media (max-width: 760px) { .work-shop span { display: none; } .work-shop { padding: 8px 10px; } html.workm .seller-chip { order: 4; margin-right: auto; } }
 .seller-chip { display: inline-flex; align-items: center; gap: 6px; min-width: 0; max-width: 46vw; padding: 5px 10px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-size: 12.5px; font-weight: 700; }
 .seller-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -392,6 +399,11 @@ html[lang="ru"] #intro .itx small [lang="ru"], html[lang="uz"] #intro .itx small
   /* the keyboard is open (see the visualViewport watcher): no tab bar above the keys; the panel ends where the keyboard begins, and its own colour continues below it, so the page does not show through a translucent keyboard */
   html.kb .tabbar, html.kb .sup-btn { display: none; }
   html.kb .drawer, html.kb .ai, html.kb .wpanel { top: var(--vvt, 0px); bottom: auto; height: var(--vvh, 100%); padding-bottom: 0; box-shadow: 0 var(--vvh, 0px) 0 0 var(--surface); }
+  /* …and the page behind the panel is put away while typing: iOS slides the page under its translucent keyboard, and a heading or a product photo showed through the keys below the panel. With the page hidden there is only the panel's own colour (the search screen has the page's colour) */
+  html.kb:has(.ai.on, .drawer.on, .wpanel.on), html.kb:has(.ai.on, .drawer.on, .wpanel.on) body { background: var(--surface); }
+  html.kb:has(.ss.on), html.kb:has(.ss.on) body { background: var(--bg); }
+  html.kb:has(.ai.on, .drawer.on, .wpanel.on, .ss.on) :is(#hdr, #app, #foot, #fab, #scrim, #apiBar, #snow, .snow) { visibility: hidden; }
+  html.kb .ss { top: var(--vvt, 0px); bottom: auto; height: var(--vvh, 100%); }
   html .mega-panel { padding-bottom: var(--nav-h); }
 }
 
@@ -841,7 +853,15 @@ html .drawer.swiped:not(.on), html .ai.swiped:not(.on), html .wpanel.swiped:not(
 .ship-th > span { position: relative; flex: none; }
 .ship-th .mini { width: 52px; height: 52px; border-radius: 10px; }
 .ship-th i { position: absolute; left: 4px; bottom: 4px; min-width: 20px; padding: 1px 5px; border-radius: 8px; background: var(--ink); color: var(--bg); font-size: 10.5px; font-style: normal; font-weight: 700; line-height: 1.4; text-align: center; }
-.ck-sumcard { border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; display: grid; gap: 6px; background: var(--surface); }
+.m-hint { border: 1px solid var(--line); border-radius: 16px; padding: 12px; display: grid; gap: 8px; background: var(--surface); }
+.m-hint-h { display: grid; line-height: 1.25; } .m-hint-h b { font-family: var(--f-display); font-size: 15px; } .m-hint-h small { font-size: 12.5px; color: var(--muted); }
+.m-hint-b { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 14px; background: var(--raised); border: 1px solid var(--line); text-align: left; min-width: 0; min-height: 56px; }
+.m-hint-b .svc-i { width: 38px; height: 38px; flex: none; border-radius: 11px; display: grid; place-items: center; font-size: 20px; background: var(--surface); }
+.m-hint-t { display: grid; min-width: 0; flex: 1; line-height: 1.25; } .m-hint-t b { font-size: 14px; } .m-hint-t small { font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.m-hint-b > svg { flex: none; color: var(--muted); } .m-hint .fine { margin: 0; }
+      ${totalsCard}
+      ${mastersHintHTML(o.ships.flatMap(sh => sh.lines.map(l => PROD[l.id])).filter(Boolean))}
+      <div class="trk-btns"> border-radius: 14px; padding: 12px 14px; display: grid; gap: 6px; background: var(--surface); }
 .det-t { display: none; }
 @media (max-width: 760px) { /* phones: the cart footer is the total and the buttons; the goods and delivery lines open from the chevron */
   #dFoot .cart-det { display: none; } #dFoot.det .cart-det { display: block; }
@@ -3545,6 +3565,22 @@ const navUA = () => Date.now() - navUAAt < 700;
 window.addEventListener("touchstart", e => { const x = e.touches[0]?.clientX ?? 99; edgeOn = e.touches.length === 1 && (x < 30 || x > innerWidth - 30); edgeT = edgeOn ? Date.now() : 0; }, { passive: true, capture: true });
 for (const ev of ["touchmove", "touchend", "touchcancel"]) window.addEventListener(ev, () => { if (edgeOn) edgeT = Date.now(); }, { passive: true, capture: true });
 window.addEventListener("click", () => { edgeOn = false; edgeT = 0; }, true); // a tap on a control at the edge is not a swipe
+/* An iPhone's swipe from the screen edge goes a page back, and a panel open at that moment closed too: two steps for one
+   gesture. While a panel is open, a touch that begins at the edge is taken from the system (the panel itself follows the
+   finger and closes — swipeClose), and a plain tap there still presses what is under it. If the system steps back anyway
+   (its Back button, an older iOS), the panel closes and the page is brought back — histUndo. */
+let edgeTap = null, histUndo = 0, histUndoWant = null;
+window.addEventListener("touchstart", e => {
+  edgeTap = null; if (!IOS || e.touches.length !== 1 || !histPanelOn() || !e.cancelable) return;
+  const t = e.touches[0]; if (t.clientX > 24 && t.clientX < innerWidth - 24) return;
+  e.preventDefault(); edgeTap = { at: Date.now(), x: t.clientX, y: t.clientY, el: e.target };
+}, { passive: false, capture: true });
+window.addEventListener("touchend", e => {
+  const s = edgeTap; edgeTap = null; if (!s) return; const t = e.changedTouches[0], dx = t.clientX - s.x;
+  if (s.x <= 24 && dx > 70 && Math.abs(t.clientY - s.y) < dx && !s.el.closest?.("#drawer, #ai, #wid")) return histClosePanels(false); // a sheet or a window (they do not follow the finger sideways): the swipe from the left edge closes it
+  if (Date.now() - s.at > 600 || Math.abs(t.clientX - s.x) > 10 || Math.abs(t.clientY - s.y) > 10) return;
+  const c = s.el.closest?.("button, a, input, select, textarea, label, summary, [data-act], [role=button]"); if (c) { c.focus?.({ preventScroll: true }); c.click(); }
+}, true);
 function histClosePanels(instant) {
   const de = document.documentElement; if (instant) de.classList.add("nav-ua");
   closeModal(); if (drawerView) closeDrawer(); if (aiOpen) closeAI(); if (widOpen) closeWidgets(); if ($("#authM")?.classList.contains("on")) closeAuth(); if ($("#ss")?.classList.contains("on")) closeSS();
@@ -3558,7 +3594,12 @@ window.addEventListener("popstate", e => {
     if (histPanelOn() && !IOS) history.pushState({ qgPanel: 1 }, "", location.href); // another panel was opened meanwhile: it needs its entry
     return;
   }
-  if (histPanelOn()) { histClosePanels(navUA()); return; }
+  if (histUndo) { setTimeout(() => { histUndo = 0; }, 0); return; } // the step forward that brings the page back (see below); its hashchange, if any, comes before the timer
+  if (histPanelOn()) {
+    histClosePanels(navUA());
+    if (IOS) { histUndo = Date.now(); histUndoWant = null; history.forward(); setTimeout(() => { if (histUndo) { histUndo = 0; routeTo(); } }, 1500); } // an iPhone has no entry for the panel: the step went a page back — return to the page the panel was on
+    return;
+  }
   if (e.state?.qgPanel || e.state?.qgSpent) history.back(); // an entry a panel left behind (an older visit, Forward): step over it
 });
 function setPanel(el, on) {
@@ -4130,10 +4171,7 @@ document.addEventListener("click", e => { // seller tab bar: open the cabinet (i
   const id = b.dataset.stab; if (drawerView) closeDrawer();
   if (route.view !== "seller") { sellerTab = id; LS.set("imorat.sellerTab", id); setHash("seller"); return; }
   if (document.getElementById("stp-" + id)) {
-    sellerShowTab(id);
-    const sec = document.getElementById("stp-" + id), bar = document.querySelector(".stabs");
-    const y = sec.getBoundingClientRect().top + scrollY - (bar ? bar.offsetHeight + (parseFloat(getComputedStyle(bar).top) || 0) : 0) - 8;
-    window.scrollTo({ top: Math.max(0, y), behavior: animOK() ? "smooth" : "auto" }); return;
+    sellerShowTab(id); return; // the section changes in place: the page stays where it is (only a page scrolled past the cabinet's tabs comes back up to them — sellerShowTab does that)
   }
   // the demo cabinet is one page: the tab scrolls to its part
   const t = document.querySelector(`[data-sec="${id}"]`) || (id === "store" ? document.getElementById("sStore") : null);
@@ -4972,6 +5010,7 @@ function dCheckout() {
       ${payAtStore(d) || noDisc() ? "" : `<div class="f"><label for="fPromo">${L("Промокод", "Promokod")}</label><div class="promo-row"><input id="fPromo" value="${esc(promo)}" placeholder="IMORAT5" autocomplete="off" autocapitalize="characters"><button class="btn btn-line" type="button" data-act="promo">${L("Применить", "Qo‘llash")}</button></div><span class="promo-msg" id="promoMsg"></span></div>`}
       <div class="f"><label for="fComment">${L("Комментарий к заказу", "Buyurtmaga izoh", "Order comment")} <small class="mu">${L("— увидят магазин и курьер", "— do‘kon va kuryer ko‘radi", "— the store and the courier see it")}</small></label><textarea id="fComment" name="comment" rows="2" maxlength="500" placeholder="${L("Позвоните за 10 минут; нужен один оттенок из одной партии", "10 daqiqa oldin qo‘ng‘iroq qiling; bir partiyadan bir tus kerak", "Call 10 minutes ahead; one shade from one batch")}">${esc(d.comment)}</textarea></div>
     </fieldset>
+    ${mastersHintHTML(cartLines().map(l => l.p))}
     <div id="shipBox" style="display:grid;gap:8px"></div>
     <div class="ck-sumcard"><div id="totals" style="display:grid;gap:6px"></div></div>
   </form>`;
@@ -5186,6 +5225,7 @@ function dTrack() {
       ${timeline}
       ${trkRouteHTML(o, s, st)}
       ${totalsCard}
+      ${mastersHintHTML(o.ships.flatMap(sh => sh.lines.map(l => PROD[l.id])).filter(Boolean))}
       <div class="trk-btns"><button class="btn btn-line" type="button" data-repeat="${o.num}">${ui("repeat", 18)} ${L("Повторить", "Takrorlash")}</button><button class="btn btn-dark" type="button" data-act="close-drawer">${L("Продолжить покупки", "Xaridni davom ettirish")}</button></div>
       <div class="trk-links">${o.api && o.status === "active" && o.ships.every(x => ["unpaid", "new", "assembling", "cancelled"].includes(x.status)) ? `<button class="lnk" type="button" data-act="order-cancel" style="color:var(--muted)">${L("Отменить заказ", "Buyurtmani bekor qilish")}</button>` : ""}${o.api ? `<button class="lnk" type="button" data-act="order-support">${ui("headset", 15)} ${L("Вопрос по заказу — написать в поддержку", "Buyurtma bo‘yicha savol — yordamga yozish", "A question about this order — write to support")}</button>` : ""}</div>
     </div></div>`;
@@ -9257,6 +9297,32 @@ const mName = m => (lang === "uz" && m.nameUz ? uzNew(m.nameUz) : lang === "en" 
 const mAbout = m => (m.demo ? L(m.aboutRu, m.aboutUz) : m.about || "");
 const mInitials = n => String(n || "?").split(/\s+/).map(w => w[0]).join("").slice(0, 2).toUpperCase();
 const mHue = id => [...String(id)].reduce((a, c) => a + c.charCodeAt(0) * 37, 0) % 360;
+/* Which tradespeople the goods of a cart or an order usually call for: by a product's subcategory, then its category.
+   A hint only: nothing is added to the order, the buyer opens the list of such masters or ignores it. A trade is offered
+   only when the list has at least one such master (with the server, once the list has been loaded). */
+const MASTER_FOR = { "build/brick": "mason", "build/gkl": "drywall", "build/roof": "roof", metal: "weld", plumb: "plumb", "heat/ac": "ac", "heat/vent": "ac", heat: "plumb",
+  elec: "elec", light: "elec", paint: "paint", wall: "paint", tile: "tile", floor: "floor", doors: "door", "kitchen/ksink": "plumb", kitchen: "furn", furn: "furn", "security/cctv": "elec", "security/locks": "door" };
+function masterFor(p) {
+  if (!p) return null;
+  if (p.cat === "build" && p.sub === "dry") return /плит|кафел/i.test(p.ru) ? "tile" : /цемент|бетон|пескобетон|стяжк/i.test(p.ru) ? "concrete" : "paint"; // dry mixes: tile adhesive, cement, plaster and putty
+  return MASTER_FOR[p.cat + "/" + p.sub] || MASTER_FOR[p.cat] || null;
+}
+function mastersHintHTML(prods) {
+  const by = new Map(); // trade → the goods that call for it
+  for (const p of prods) { const sp = masterFor(p); if (sp) by.set(sp, [...(by.get(sp) || []), p]); }
+  if (!by.size) return "";
+  if (API && !mApi.list) loadMasters(); // (the list arrives; the hint is shown with the next render)
+  const all = mastersAll().filter(m => !m.mine), known = !API || !!mApi.list;
+  if (!known) return "";
+  const rows = [...by].map(([sp, ps]) => ({ sp, ps, k: all.filter(m => (m.specs || []).includes(sp)).length, def: MSPECS().find(x => x[0] === sp) }))
+    .filter(r => r.def && r.k > 0).sort((a, b) => b.ps.length - a.ps.length || b.k - a.k).slice(0, 3);
+  if (!rows.length) return "";
+  return `<section class="m-hint" aria-label="${L("Мастера для этого заказа", "Bu buyurtma uchun ustalar", "Pros for this order")}">
+    <div class="m-hint-h"><b>${L("Понадобится мастер?", "Usta kerakmi?", "Need a pro?")}</b><small>${L("Подобрали по товарам в заказе", "Buyurtmadagi tovarlarga qarab tanladik", "Picked by the goods in the order")}</small></div>
+    ${rows.map(r => `<button type="button" class="m-hint-b" data-mfind="${r.sp}"><span class="svc-i" aria-hidden="true">${r.def[2]}</span><span class="m-hint-t"><b>${esc(r.def[1])} · ${r.k} ${L(plural(r.k, ["мастер", "мастера", "мастеров"]), "ta usta", r.k === 1 ? "pro" : "pros")}</b><small>${L("К товару:", "Tovar:", "For:")} ${esc(pName(r.ps[0]))}${r.ps.length > 1 ? ` ${L("и ещё", "va yana", "and")} ${r.ps.length - 1}${L("", " ta", " more")}` : ""}</small></span>${ui("chev", 16)}</button>`).join("")}
+    <p class="fine">${L("Мастер — отдельно от заказа: о цене и времени вы договариваетесь с ним сами. Товары в корзине сохранятся.", "Usta buyurtmadan alohida: narx va vaqtni u bilan o‘zingiz kelishasiz. Savatdagi tovarlar saqlanadi.", "A pro is separate from the order: you agree the price and the time with them yourself. Your cart is kept.")}</p>
+  </section>`;
+}
 function mastersAll() {
   if (API) return mApi.list || [];
   return [...(myMasterDemo ? [{ ...myMasterDemo, mine: true, stars: null, reviews: 0, done: 0 }] : []), ...MASTERS_DEMO];
@@ -11199,7 +11265,12 @@ function pageSlide(dir, render) {
 }
 /* View transitions snapshot the whole page; WebKit does that slowly on a page this size, so Safari gets a plain route change. */
 const SAFARI = /AppleWebKit/.test(navigator.userAgent) && !/Chrome|Chromium|CriOS|Edg|OPR|Android/.test(navigator.userAgent);
-window.addEventListener("hashchange", () => {
+window.addEventListener("hashchange", e => {
+  if (histUndo) { // a step back taken with a panel open is being undone: the page on the screen is already the right one
+    if (histUndoWant == null) { try { histUndoWant = new URL(e.oldURL).hash; } catch { histUndoWant = ""; } if (location.hash !== histUndoWant) return; }
+    if (location.hash === histUndoWant) histUndo = 0;
+    return;
+  }
   if (navUA()) { navUAAt = 0; if (isPhone()) navDir(navKey()); navSliding = true; try { routeTo(); } finally { navSliding = false; } return; } // the system has already shown the step
   if (isPhone() && animOK()) { const dir = navDir(navKey()); return dir ? pageSlide(dir, routeTo) : routeTo(); }
   if (document.startViewTransition && motionOK() && !SAFARI) document.startViewTransition(routeTo); else routeTo();
