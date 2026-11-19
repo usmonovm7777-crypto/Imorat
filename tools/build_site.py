@@ -137,7 +137,22 @@ def _minify(js, inline=False):
     finally: os.unlink(tmp)
     _min_state["saved"] += len(js.encode("utf-8")) - len(out.encode("utf-8"))
     return out
+# The page script goes out minified together with its source map (app.js.map): whoever opens the browser's developer tools —
+# we, looking at a visitor's error report — sees readable lines instead of one endless one. The map is fetched only by those
+# tools, never by an ordinary visit. (The script's source is this repository's src/page.html anyway.)
+_MAP_JS = ("const e=require('esbuild');let s='';process.stdin.setEncoding('utf8');process.stdin.on('data',d=>s+=d).on('end',()=>{"
+           "const r=e.transformSync(s,{minify:true,target:'es2020',charset:'utf8',legalComments:'none',sourcemap:'external',sourcefile:'app.src.js',sourcesContent:true});"
+           "process.stdout.write(JSON.stringify({map:r.map}))})")
+_app_src = app_js
 app_js = _minify(app_js).rstrip() + "\n"
+_map_note = ""
+if _min_state["on"] and app_js.rstrip() != _app_src.rstrip():
+    _mr = subprocess.run(["node", "-e", _MAP_JS], input=_app_src, capture_output=True, text=True, encoding="utf-8", env={**os.environ, "NODE_PATH": _NODE_PATH})
+    try: _map = json.loads(_mr.stdout)["map"] if not _mr.returncode else ""
+    except (ValueError, KeyError): _map = ""
+    if _map:
+        (ROOT / "app.js.map").write_text(_map, encoding="utf-8"); app_js = app_js.rstrip() + "\n//# sourceMappingURL=app.js.map\n"; _map_note = " with its source map;"
+if not _map_note and (ROOT / "app.js.map").exists(): (ROOT / "app.js.map").unlink()
 APP_URL = "app.js?v=" + _ver(app_js)
 (ROOT / "app.js").write_text(app_js, encoding="utf-8")
 (ROOT / "en.js").write_text(en_js, encoding="utf-8")
@@ -256,6 +271,6 @@ import time
 sw = (ROOT / "tools" / "sw.template.js").read_text(encoding="utf-8").replace("__BUILD__", time.strftime("%Y%m%d%H%M%S")).replace("__APP__", APP_URL)
 (ROOT / "sw.js").write_text(sw, encoding="utf-8")
 print("built index.html", len(html), "bytes, app.js", len(app_js.encode("utf-8")), "bytes, en.js + sw.js;",
-      f"scripts minified (−{_min_state['saved'] // 1024} KB);{_css_note}" if _min_state["on"] and _min_state["saved"] else f"scripts as written ({_min_state['why']});", _l10n + ";",
+      f"scripts minified (−{_min_state['saved'] // 1024} KB);{_map_note}{_css_note}" if _min_state["on"] and _min_state["saved"] else f"scripts as written ({_min_state['why']});", _l10n + ";",
       f"photo copies: {_thumbs_made} made" if _thumbs_ok else "photo copies incomplete (Pillow is not installed) — the page uses full photos", "; " + _pre_note)
 import sys; sys.path.insert(0, str(ROOT / "tools")); import build_seo; build_seo.build()
